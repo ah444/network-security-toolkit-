@@ -262,9 +262,19 @@ Project/
 ### Algorithms
 | Algorithm | Type | Strengths |
 |-----------|------|-----------|
-| **Random Forest** | Ensemble | High accuracy, robust |
-| **Logistic Regression** | Linear | Fast, interpretable |
-| **K-Nearest Neighbors** | Instance-based | Simple, no training |
+| **Random Forest** | Ensemble | High accuracy, robust, handles imbalanced data |
+| **Logistic Regression** | Linear | Fast, interpretable, good baseline |
+| **K-Nearest Neighbors** | Instance-based | Simple, no training phase |
+| **Support Vector Machine** | Kernel-based | Effective in high-dimensional spaces |
+| **Decision Tree** | Tree-based | Interpretable, fast inference |
+| **Naive Bayes** | Probabilistic | Fast, handles large datasets |
+| **Gradient Boosting** | Ensemble | High accuracy, sequential learning |
+| **AdaBoost** | Ensemble | Combines weak learners effectively |
+| **Extra Trees** | Ensemble | Fast, randomized splits |
+| **XGBoost** *(optional)* | Boosting | State-of-the-art performance |
+| **LightGBM** *(optional)* | Boosting | Fast training, memory efficient |
+
+> **Note:** XGBoost and LightGBM require additional installation (`pip install xgboost lightgbm`)
 
 ### Attack Classes Detected
 - BENIGN (Normal traffic)
@@ -287,9 +297,10 @@ Project/
 5. **Feature Selection** - SelectKBest (k configurable)
 6. **Balancing** - 8 methods available
 7. **Split** - Train/Val/Test (customizable)
-8. **Training** - Multiple algorithms
-9. **Evaluation** - Accuracy, Confusion Matrix
-10. **Export** - Save models as .pkl
+8. **Model Selection** - Choose from 11 algorithms
+9. **Training** - Selected models trained in parallel
+10. **Evaluation** - Accuracy, F1 Score, AUC, Confusion Matrix
+11. **Export** - Save models as .pkl
 
 ---
 
