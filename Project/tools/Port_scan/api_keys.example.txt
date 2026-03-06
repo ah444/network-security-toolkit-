@@ -1,0 +1,11 @@
+# API Keys Configuration File
+# Copy this file to 'api_keys.txt' and fill in your actual API keys
+# DO NOT commit api_keys.txt to version control!
+
+# OpenRouter API Key (for Deepseek AI vulnerability analysis)
+# Get your key at: https://openrouter.ai/
+openrouter=your_openrouter_api_key_here
+
+# AbuseIPDB API Key (for IP reputation checking)
+# Get your key at: https://www.abuseipdb.com/api
+abuseipdb=your_abuseipdb_api_key_here

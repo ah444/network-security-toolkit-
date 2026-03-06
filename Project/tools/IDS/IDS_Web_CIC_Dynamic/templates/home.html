@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Home - Intrusion Detection System</title>
+  <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <!-- Nav Bar -->
+  <nav class="navbar">
+    <a href="/" class="nav-logo">Intrusion Detection System</a>
+    <ul class="nav-menu">
+      <li class="nav-item"><a href="/dynamic_ids" class="nav-link">Dynamic Intrusion Detection System</a></li>
+    </ul>
+  </nav>
+
+  <!-- Page Content -->
+  <div class="container">
+    <h1>Welcome to IDS System</h1>
+    
+    <div class="section">
+      <h2>Dynamic IDS Model Trainer</h2>
+      <p>Train and customize your own Intrusion Detection System models with our advanced ML training platform.</p>
+      <div class="features-grid">
+        <div class="feature-card">
+          <h3>Custom Dataset Training</h3>
+          <p>Upload and train models using your own network traffic datasets in CSV or TXT format.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Model Export</h3>
+          <p>Export your trained models as PKL files for future use in your security infrastructure.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Feature Selection</h3>
+          <p>Choose specific features for training and get recommendations for optimal feature sets.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Model Loading</h3>
+          <p>Load previously trained PKL models to continue training or make predictions.</p>
+        </div>
+      </div>
+      <div class="cta-buttons">
+        <a href="/dynamic_ids" class="custom-btn">Start Training</a>
+      </div>
+    </div>
+  </div>
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

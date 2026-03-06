@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Dynamic IDS Model Trainer</title>
+  <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/style2.css') }}">
+  
+</head>
+<body class="dynamic">
+  <!-- Nav Bar -->
+  <nav class="navbar">
+    <a href="/" class="nav-logo">Intrusion Detection System</a>
+    <ul class="nav-menu">
+      <li class="nav-item"><a href="/" class="nav-link">Home</a></li>
+      <li class="nav-item"><a href="/dynamic_ids" class="nav-link">Dynamic Intrusion Detection System</a></li>
+    </ul>
+  </nav>
+
+  <div class="container">
+    <h1>Dynamic IDS Model Trainer</h1>
+
+    <!-- Option Selection Section -->
+    <div class="section" id="optionSelectionSection">
+      <h2>Do you have a trained model?</h2>
+      <label class="label">
+        <input type="radio" name="modelOption" id="optionTrained" value="trained">
+        Yes, I have a trained model.
+      </label>
+      <label class="label">
+        <input type="radio" name="modelOption" id="optionNotTrained" value="not_trained" checked>
+        No, I need to train a model.
+      </label>
+    </div>
+
+    <!-- Upload Dataset Section -->
+    <div class="section" id="uploadDatasetSection">
+      <h2>Upload Dataset</h2>
+      <form id="uploadForm" enctype="multipart/form-data">
+        <div class="form-group">
+          <label for="dataset" class="label">Select CSV or TXT File:</label>
+          <div class="file-input-wrapper">
+            <input type="file" id="dataset" name="dataset" accept=".csv,.txt" multiple required>
+            <div class="file-input-placeholder">Choose file(s)...</div>
+          </div>
+        </div>
+        <button type="submit" class="btn">Upload File</button>
+      </form>
+      <div id="uploadResult" class="message"></div>
+    </div>
+
+    <!-- Data Preview Section -->
+    <div class="section" id="dataPreviewSection" style="display:none;">
+      <h2>Data Preview</h2>
+      <div class="form-group">
+        <label for="previewRows" class="label">Rows to preview:</label>
+        <input type="number" id="previewRows" name="previewRows" value="10" min="1" max="100">
+        <button id="refreshPreviewBtn" class="btn btn-sm">Refresh Preview</button>
+      </div>
+      <div id="dataStats" class="stats-box"></div>
+      <div id="dataPreviewTable" class="table-container"></div>
+    </div>
+
+    <!-- Load Model Section -->
+    <div class="section" id="loadModelSection" style="display:none;">
+      <h2>Load Exported Model</h2>
+      <form id="loadModelForm" enctype="multipart/form-data">
+        <div class="form-group">
+          <label for="modelFile" class="label">Select Model File (.pkl):</label>
+          <div class="file-input-wrapper">
+            <input type="file" id="modelFile" name="model_file" accept=".pkl" required>
+            <div class="file-input-placeholder" id="modelFilePlaceholder">Choose file...</div>
+          </div>
+        </div>
+        <button type="submit" class="btn">Load Model</button>
+      </form>
+      <div id="loadModelResult" class="message"></div>
+    </div>
+
+    <!-- Class Imbalance Analysis Section -->
+    <div class="section" id="classImbalanceSection" style="display:none;">
+      <h2>Class Distribution Analysis</h2>
+      <div class="form-group">
+        <label for="targetForDist" class="label">Select Target for Class Distribution:</label>
+        <select id="targetForDist" name="targetForDist" required></select>
+      </div>
+      <button id="analyzeClassBtn" class="btn">Analyze Class Distribution</button>
+      <div id="classDistributionResult" class="message"></div>
+      
+      <!-- Target Value Filter Section -->
+      <div id="targetValueFilterSection" style="display:none; margin-top: 20px;">
+        <h3>Filter Target Values</h3>
+        <p class="section-description">Remove unwanted classes/labels from your dataset. Select the values you want to <strong>remove</strong>.</p>
+        <div class="form-group">
+          <label for="targetValuesToRemove" class="label">Select Values to Remove (Ctrl+Click for multiple):</label>
+          <select id="targetValuesToRemove" name="targetValuesToRemove" multiple></select>
+        </div>
+        <div class="button-group">
+          <button id="removeTargetValuesBtn" class="btn btn-danger">Remove Selected Values</button>
+          <button id="skipTargetFilterBtn" class="btn btn-secondary">Skip (Keep All Values)</button>
+        </div>
+        <div id="targetFilterResult" class="message"></div>
+      </div>
+      
+      <div id="smoteOption" style="display:none;">
+        <div class="form-group">
+          <label for="balancingMethod" class="label">Select Balancing Method:</label>
+          <select id="balancingMethod" name="balancingMethod">
+            <option value="none">None (Use Original Data)</option>
+            <option value="class_weight">Class Weights (Recommended - Fast)</option>
+            <option value="smote">SMOTE (Synthetic Minority Oversampling)</option>
+            <option value="smote_enn">SMOTE-ENN (SMOTE + Edited Nearest Neighbors)</option>
+            <option value="adasyn">ADASYN (Adaptive Synthetic Sampling)</option>
+            <option value="borderline_smote">Borderline-SMOTE (Focus on Boundary)</option>
+            <option value="random_undersample">Random Undersampling (Fast)</option>
+            <option value="tomek">Tomek Links (Clean Boundaries)</option>
+            <option value="smote_tomek">SMOTE + Tomek Links (Combined)</option>
+          </select>
+          <p class="balancing-hint" id="balancingHint">Select a method to handle class imbalance in your dataset.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Feature Recommendation Section -->
+    <div class="section" id="recommendationSection" style="display:none;">
+      <h2>Feature Recommendation</h2>
+      <div class="form-group">
+        <label for="kValue" class="label">Enter k value for top features:</label>
+        <input type="number" id="kValue" name="kValue" value="10" min="1" required>
+      </div>
+      <div class="form-group">
+        <label for="targetForRec" class="label">Select Target for Recommendation:</label>
+        <select id="targetForRec" name="targetForRec" required></select>
+      </div>
+      <button id="recommendBtn" class="btn">Recommend Features</button>
+      <div id="recommendationResult" class="message"></div>
+    </div>
+
+    <!-- Configuration Section -->
+    <div class="section" id="configSection" style="display:none;">
+      <h2>Select Features & Target</h2>
+      <form id="configForm" enctype="multipart/form-data">
+        <div class="form-group">
+          <label for="inputFeatures" class="label">Select Input Features (Ctrl+Click for multiple):</label>
+          <select id="inputFeatures" name="inputFeatures" multiple required></select>
+        </div>
+        <div class="form-group">
+          <label for="targetColumn" class="label">Select Target:</label>
+          <select id="targetColumn" name="targetColumn" required></select>
+        </div>
+        
+        <!-- Model Selection Section -->
+        <div class="form-group">
+          <label for="modelSelection" class="label">Select Models to Train (Ctrl+Click for multiple):</label>
+          <select id="modelSelection" name="modelSelection" multiple required>
+            <!-- Models will be loaded dynamically via JavaScript -->
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label for="trainTestSlider" class="label">Train/Test Split Ratio:</label>
+          <div class="slider-container">
+            <input type="range" id="trainTestSlider" name="trainTestSlider" min="10" max="50" value="30" step="5">
+            <span id="splitLabel" class="slider-label">Train: 70% | Val: 15% | Test: 15%</span>
+          </div>
+        </div>
+        <button type="submit" class="btn">Train Model</button>
+      </form>
+      <div id="configResult" class="message"></div>
+      
+      <!-- Confusion Matrix Section -->
+      <div id="confusionMatrixSection" style="display:none; margin-top: 20px;">
+        <h3>Confusion Matrix</h3>
+        <div class="form-group">
+          <label for="cmModelSelect" class="label">Select Model:</label>
+          <select id="cmModelSelect" name="cmModelSelect"></select>
+          <label for="cmDatasetType" class="label" style="margin-left: 15px;">Dataset:</label>
+          <select id="cmDatasetType" name="cmDatasetType">
+            <option value="test">Test</option>
+            <option value="validation">Validation</option>
+          </select>
+          <button id="showConfusionMatrixBtn" class="btn btn-sm" style="margin-left: 10px;">Show Matrix</button>
+        </div>
+        <div id="confusionMatrixDisplay" class="confusion-matrix-container"></div>
+      </div>
+    </div>
+
+    <!-- Prediction Section (Session Model) -->
+    <div class="section" id="predictionSection" style="display:none;">
+      <h2>Make a Prediction (Current Session Model)</h2>
+      <form id="predictionForm" enctype="multipart/form-data">
+        <div class="form-group">
+          <label for="algorithmSelect" class="label">Choose The Algorithm:</label>
+          <select id="algorithmSelect" name="algorithmSelect" required></select>
+        </div>
+        <div id="dynamicInputs"></div>
+        <button type="submit" class="btn">Predict</button>
+      </form>
+      <div id="predictionResult" class="message"></div>
+    </div>
+
+    <!-- Export Model Section -->
+    <div class="section" id="exportSection" style="display:none;">
+      <h2>Export Model</h2>
+      <form id="exportForm" enctype="multipart/form-data">
+        <div class="form-group">
+          <label for="modelName" class="label">Model Base Name:</label>
+          <input type="text" id="modelName" name="modelName" placeholder="Enter model name" required>
+        </div>
+        <button type="submit" class="btn">Export Models</button>
+      </form>
+      <div id="exportResult" class="message"></div>
+    </div>
+
+    <!-- Prediction Section (Loaded Model) -->
+    <div class="section" id="loadedFeaturesSection" style="display:none;">
+      <h2>Make a Prediction (Loaded Model)</h2>
+      <form id="predictLoadedForm" enctype="multipart/form-data">
+        <div id="loadedDynamicInputs"></div>
+        <button type="submit" class="btn">Predict</button>
+      </form>
+      <div id="loadedPredictionResult" class="message"></div>
+    </div>
+  </div>
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
