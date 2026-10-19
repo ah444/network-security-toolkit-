@@ -63,6 +63,7 @@
     <!-- Load Model Section -->
     <div class="section" id="loadModelSection" style="display:none;">
       <h2>Load Exported Model</h2>
+      <p class="section-description">⏸️ Paused until v5.0-rc1: model files were pickles, which can run code when opened. They will return as signed bundles.</p>
       <form id="loadModelForm" enctype="multipart/form-data">
         <div class="form-group">
           <label for="modelFile" class="label">Select Model File (.pkl):</label>
@@ -201,6 +202,7 @@
     <!-- Export Model Section -->
     <div class="section" id="exportSection" style="display:none;">
       <h2>Export Model</h2>
+      <p class="section-description">⏸️ Paused until v5.0-rc1 (exports will become signed bundles). Training and predicting in this session still work.</p>
       <form id="exportForm" enctype="multipart/form-data">
         <div class="form-group">
           <label for="modelName" class="label">Model Base Name:</label>

@@ -1,6 +1,7 @@
 from flask import Flask, render_template, jsonify, request
 import os
-import pickle
+import re
+from pathlib import Path
 import numpy as np
 import pandas as pd
 import threading
@@ -258,6 +259,40 @@ CHUNK_THRESHOLD = 100 * 1024 * 1024      # 100 MB
 LARGE_FILE_THRESHOLD = 500 * 1024 * 1024   # 500 MB
 DASK_BLOCKSIZE = 10e6  # 10 MB
 LARGE_DATASET_THRESHOLD = 100000  # Used to decide algorithm selection.
+
+# ---------------------------
+# Model files: paused until signed bundles exist (plan step 0.3 -> 0.4g)
+# ---------------------------
+MODEL_FILES_PAUSED = (
+    "Loading and exporting model files is paused until v5.0-rc1: they were pickle "
+    "files, which can run code when opened. Training and predicting in this session "
+    "still work."
+)
+
+_EXPORT_NAME = re.compile(r"[A-Za-z0-9_-]{1,80}")
+
+
+def safe_model_basename(name):
+    """Return the export base name if it only uses letters, digits, '_' and '-' (1-80 chars).
+
+    Raises ValueError otherwise, so names like '../../x' or 'a/b' can never
+    leave the models folder (S4).
+    """
+    if not isinstance(name, str) or not _EXPORT_NAME.fullmatch(name):
+        raise ValueError("Model name may only use letters, digits, '_' and '-' (max 80).")
+    return name
+
+
+def unique_export_path(directory, base_name, algorithm):
+    """Path for a new export that never overwrites an existing file (name, name-1, ...)."""
+    directory = Path(directory)
+    stem = f"{safe_model_basename(base_name)}_{safe_model_basename(algorithm)}"
+    candidate = directory / f"{stem}.pkl"
+    counter = 1
+    while candidate.exists():
+        candidate = directory / f"{stem}-{counter}.pkl"
+        counter += 1
+    return candidate
 
 # ---------------------------
 # ML API Endpoints
@@ -1485,38 +1520,10 @@ def get_confusion_matrix():
 
 @app.route("/export_model", methods=["POST"])
 def export_model():
-    req = request.get_json()
-    base_name = req.get("model_name", "untitled")
-    try:
-        exported_files = []
-        logging.info(f"Exporting models with accuracies: {model_config.get('accuracies')}")
-        for algo, model in model_config["models"].items():
-            filename = f"{base_name}_{algo}.pkl"
-            filepath = os.path.join(models_dir, filename)
-            algo_accuracies = {
-                "validation": model_config["accuracies"]["validation"].get(algo),
-                "test": model_config["accuracies"]["test"].get(algo)
-            }
-            model_data = {
-                "model": model,
-                "scaler": model_config["scaler"],
-                "label_encoders": model_config["label_encoders"],
-                "target_enc": model_config["target_enc"],
-                "features": model_config["features"],
-                "numeric_features": model_config["numeric_features"],
-                "accuracies": algo_accuracies
-            }
-            with open(filepath, "wb") as f:
-                pickle.dump(model_data, f)
-            exported_files.append(filename)
-        return jsonify({
-            "message": f"Models exported to {models_dir}",
-            "files": exported_files,
-            "path": models_dir
-        })
-    except Exception as e:
-        logging.exception("Export failed")
-        return jsonify({"error": f"Export failed: {str(e)}"}), 500
+    # Paused (plan step 0.3): exports were unsigned pickles that nothing can
+    # load safely. Signed bundles replace them in step 0.4g, using
+    # safe_model_basename() and unique_export_path().
+    return jsonify({"error": MODEL_FILES_PAUSED}), 503
 
 @app.route("/predict", methods=["POST"])
 def predict_endpoint():
@@ -1571,6 +1578,8 @@ def predict_endpoint():
 @app.route("/predict_loaded/", methods=["POST"])
 def predict_loaded_endpoint():
     logging.info("Received predict_loaded request")
+    if not loaded_model_config:
+        return jsonify({"error": "No model loaded. " + MODEL_FILES_PAUSED}), 400
     try:
         req = request.get_json()
         values = req.get("values")
@@ -1637,72 +1646,10 @@ def predict_loaded_endpoint():
 
 @app.route("/load_model", methods=["POST"])
 def load_model_endpoint():
-    if "model_file" not in request.files:
-        return jsonify({"error": "Model file is required."}), 400
-
-    model_file = request.files["model_file"]
-    try:
-        model_data = pickle.load(model_file)
-    except Exception as e:
-        return jsonify({"error": f"Error loading model file: {str(e)}"}), 500
-
-    # Validate that the model file contains necessary information
-    required_keys = ["features", "model", "target_enc"]
-    missing_keys = [key for key in required_keys if key not in model_data]
-    if missing_keys:
-        return jsonify({"error": f"Invalid model file. Missing required data: {', '.join(missing_keys)}"}), 400
-
-    global loaded_model_config
-    loaded_model_config = model_data
-
-    # Process accuracies for display
-    accuracies = model_data.get("accuracies", {})
-    if not isinstance(accuracies, dict):
-        accuracies = {"validation": {}, "test": {}}
-    else:
-        if not isinstance(accuracies.get("validation"), dict):
-            val_acc = accuracies.get("validation")
-            test_acc = accuracies.get("test")
-            accuracies = {"validation": {"accuracy": val_acc}, "test": {"accuracy": test_acc}}
-
-    def format_accuracies(acc_dict):
-        formatted = {}
-        for algo, acc in acc_dict.items():
-            try:
-                formatted[algo] = f"{acc * 100:.2f}%"
-            except Exception:
-                formatted[algo] = "N/A"
-        return formatted
-
-    organized_accuracies = {
-        "Validation": format_accuracies(accuracies.get("validation", {})),
-        "Test": format_accuracies(accuracies.get("test", {}))
-    }
-
-    # Create feature info for building the prediction form
-    features_info = []
-    model_features = model_data.get("features", [])
-    
-    # Determine feature types based on model data
-    for feat in model_features:
-        # Check if feature has a label encoder (categorical)
-        if "label_encoders" in model_data and feat in model_data["label_encoders"]:
-            encoder = model_data["label_encoders"][feat]
-            classes = encoder.classes_.tolist()
-            features_info.append({"name": feat, "type": "categorical", "classes": classes})
-        else:
-            # Assume numeric if no label encoder
-            features_info.append({"name": feat, "type": "numeric"})
-    
-    # Track numeric features for client-side conversion
-    numeric_features = [feat["name"] for feat in features_info if feat["type"] == "numeric"]
-    loaded_model_config["numeric_features"] = numeric_features
-
-    return jsonify({
-        "message": "Model loaded successfully.",
-        "features_info": features_info,
-        "accuracies": organized_accuracies
-    })
+    # Paused (plan step 0.3, S1): this route used to pickle.load() any uploaded
+    # file, which lets a crafted file run code on this machine. It returns in
+    # step 0.4g and will accept only signed bundles. The uploaded file is never read.
+    return jsonify({"error": MODEL_FILES_PAUSED}), 503
 
 # ---------------------------
 # New Routes for the Home Page and Navigation
