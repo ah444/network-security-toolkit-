@@ -8,11 +8,9 @@ Uses: scaler.pkl, label_encoder.pkl, config.json, and model files.
 import os
 import json
 import pickle
-import warnings
 
-# Suppress sklearn version warnings (models work fine across versions)
-warnings.filterwarnings('ignore', category=UserWarning, module='sklearn')
-warnings.filterwarnings('ignore', message='.*unpickle.*')
+# Library warnings (e.g. scikit-learn version mismatch when loading the
+# models) are deliberately NOT silenced: they signal unreliable results.
 
 import numpy as np
 import pandas as pd

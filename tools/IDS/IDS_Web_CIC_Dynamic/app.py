@@ -5,7 +5,6 @@ import numpy as np
 import pandas as pd
 import threading
 import logging
-import warnings
 
 
 # For ML training and prediction
@@ -43,11 +42,12 @@ from imblearn.under_sampling import RandomUnderSampler, TomekLinks
 from imblearn.combine import SMOTEENN, SMOTETomek
 
 # ---------------------------
-# Logging and warnings setup
+# Logging setup
 # ---------------------------
+# Library warnings are deliberately NOT silenced (B19): they flag problems
+# such as models pickled with a different scikit-learn version.
 logging.basicConfig(level=logging.INFO)
 logging.getLogger("scapy.runtime").setLevel(logging.ERROR)
-warnings.filterwarnings("ignore")
 
 
 def recommend_balancing_method(class_counts, total_samples, num_features, num_classes):
