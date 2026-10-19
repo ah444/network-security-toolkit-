@@ -17,6 +17,31 @@ warnings.filterwarnings('ignore', message='.*unpickle.*')
 import numpy as np
 import pandas as pd
 
+# Features derived from the attack label itself (data leakage, plan L1).
+LABEL_DERIVED_FEATURES = {"Attempted Category"}
+
+
+def leakage_warning(features):
+    """
+    Return a warning if the model uses a label-derived feature, else None.
+
+    Args:
+        features: List of feature names the model expects
+
+    Returns:
+        str or None: Warning text to show the user
+    """
+    leaked = [f for f in features if f in LABEL_DERIVED_FEATURES]
+    if not leaked:
+        return None
+    return (
+        f"⚠️  WARNING: this model uses {', '.join(leaked)}, a feature derived from the "
+        "attack label itself.\n"
+        "   Its predictions are NOT reliable: changing only this value flips the result\n"
+        "   (e.g. -1 turns every sample into BENIGN). See docs/baseline/FINDINGS.md.\n"
+        "   This model is kept only until the v5.0 model replaces it."
+    )
+
 # ============================================================
 # IDSModel Class - Handles model loading and prediction
 # ============================================================
@@ -106,7 +131,11 @@ class IDSModel:
             print(f"✅ Model loaded: {model_name}")
             print(f"📊 Features ({len(self.features)}): {self.features}")
             print(f"🏷️ Classes ({len(self.classes)}): {self.classes[:5]}..." if len(self.classes) > 5 else f"🏷️ Classes: {self.classes}")
-            
+
+            warning = leakage_warning(self.features)
+            if warning:
+                print(warning)
+
             self.loaded = True
             return True
             
