@@ -7,6 +7,8 @@ requires-python = ">=3.11"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# The repo root is importable, so tests can use the toolkit/ package before it is installable.
+pythonpath = ["."]
 addopts = "-ra"
 
 [tool.ruff]

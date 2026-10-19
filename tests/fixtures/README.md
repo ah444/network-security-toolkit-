@@ -23,4 +23,4 @@ The real-data samples are cut from the local datasets in `data/raw/`, which are 
 |---|---|---|
 | Original "MachineLearningCSV" (full, 79 columns) | `cic2017_original_sample.csv` | From the real file |
 | Filtered column subset of the original (15 columns) | `cic_ddos_sample.csv` | From the real file |
-| "Improved" re-labelled version (`Timestamp`, IPs, `Attempted Category`) | — | **Not available locally.** Added only from a real download, never reconstructed from memory, because a wrong header fixture would make the profile tests pass against a format that doesn't exist |
+| "Improved" re-labelled version (`Timestamp`, IPs, `Attempted Category`) | — (built inside `tests/ml/test_profiles.py`) | **Full header not available locally.** The test builds a partial header only from the 8 real feature names in the v4 model's `config.json`, which was trained on this version. A full fixture is added only from a real download, never reconstructed from memory, because a wrong header fixture would make the profile tests pass against a format that doesn't exist |

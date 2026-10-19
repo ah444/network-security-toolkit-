@@ -79,6 +79,23 @@ Profiled on 2026-10-19 with a read-only streaming pass over each full file.
 
 ---
 
+## Profile detection (step 0.4a)
+
+`toolkit/ids_core` recognises each file from its content (header names, or value patterns for headerless files), never from the file name. Checked on 2026-10-20 with a full load of every file above:
+
+| File | Profile / variant | Header | Label | Blocked as features | Split strategy | Warnings |
+|---|---|---|---|---|---|---|
+| `CIC-2017.csv` | `cic_ids2017` / `original` | yes | `Label` | — | `stratified` | `CIC_NO_TIME_COLUMN` |
+| `DDOS(CIC-2017)_FILTERED_TEST.csv` | `cic_ids2017` / `original_subset` | yes | `Label` | — | `stratified` | `COLUMN_SUBSET`, `CIC_NO_TIME_COLUMN` |
+| `KDDTrain+.txt` | `nsl_kdd` / `full` | yes | `attack` | `level` | `official` | — |
+| `KDDTest+.txt` | `nsl_kdd` / `full` | **no**, names applied | `attack` | `level` | `official` | `HEADERLESS_NAMES_APPLIED` |
+
+The loader's SHA-256, row counts, empty-cell and `inf` counts match the tables above. On `CIC-2017.csv` it also confirmed that `Fwd Header Length.1` is identical to `Fwd Header Length` in all 2,830,743 rows, so it is dropped, and it rewrote the 2,180 `Web Attack �` labels as `Web Attack -`.
+
+**Not covered yet (no local file):** UNSW-NB15 and the full header of the "improved" CIC-IDS2017 version. Their schemas aren't reconstructed from memory. Until a real file is available, a UNSW CSV loads with the generic profile (`UNKNOWN_SCHEMA`), and the improved CIC version is recognised only from the 8 feature names in the v4 `config.json`.
+
+---
+
 ## Licences and citations (0.5b, still to complete)
 
 | Dataset | Official page | Citation | Licence / redistribution |
