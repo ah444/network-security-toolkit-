@@ -18,6 +18,19 @@ def test_cic_sample_keeps_original_header_and_classes(fixtures_dir):
     assert Counter(row[-1].strip() for row in rows) == {"BENIGN": 100, "DDoS": 100}
 
 
+def test_cic2017_original_sample_matches_real_format(fixtures_dir):
+    header, rows = _read(fixtures_dir / "cic2017_original_sample.csv")
+    assert len(header) == 79
+    assert header[0] == " Destination Port" and header[-1] == " Label"
+    assert " Fwd Header Length.1" in header  # duplicate column, as in the real file
+    assert not {"Timestamp", " Timestamp", "Flow ID", " Flow ID"} & set(header)
+    labels = {row[-1] for row in rows}
+    assert len(labels) == 15
+    assert "Web Attack � XSS" in labels  # replacement character kept on purpose
+    assert any(cell.strip() == "inf" for row in rows for cell in row)
+    assert any(cell.strip() == "" for row in rows for cell in row[:-1])
+
+
 def test_nslkdd_train_sample_has_header_and_level_column(fixtures_dir):
     header, rows = _read(fixtures_dir / "nslkdd_train_sample.txt")
     assert header[-2:] == ["attack", "level"]

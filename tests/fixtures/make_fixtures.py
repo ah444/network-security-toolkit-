@@ -49,6 +49,44 @@ def cic_ddos_sample() -> None:
     _write_csv(HERE / "cic_ddos_sample.csv", header, rows)
 
 
+def cic2017_original_sample() -> None:
+    """Rows from the full original CIC-IDS2017 file (79 columns), all 15 labels.
+
+    Up to 8 evenly spaced rows per label, plus the first 3 rows that contain an
+    infinite value (spelled ``inf`` in this file) and the first 3 that contain
+    an empty cell. The header is
+    kept exactly (leading spaces, ``Fwd Header Length.1``), and so are the
+    ``Web Attack � ...`` labels with the replacement character.
+    Two streaming passes, so the ~1 GB file is never loaded into memory.
+    """
+    source = RAW / "CIC-2017.csv"
+    per_label = 8
+    with source.open(encoding="utf-8", newline="") as handle:
+        reader = csv.reader(handle)
+        header = next(reader)
+        counts = defaultdict(int)
+        for row in reader:
+            counts[row[-1]] += 1
+
+    wanted = {label: {int(i * total / per_label) for i in range(min(per_label, total))}
+              for label, total in counts.items()}
+    seen = defaultdict(int)
+    picked, inf_rows, nan_rows = [], [], []
+    with source.open(encoding="utf-8", newline="") as handle:
+        reader = csv.reader(handle)
+        next(reader)
+        for row in reader:
+            label = row[-1]
+            if seen[label] in wanted[label]:
+                picked.append(row)
+            seen[label] += 1
+            if len(inf_rows) < 3 and any(c.strip().lower() in ("inf", "infinity") for c in row):
+                inf_rows.append(row)
+            if len(nan_rows) < 3 and any(cell.strip() in ("", "NaN") for cell in row[:-1]):
+                nan_rows.append(row)
+    _write_csv(HERE / "cic2017_original_sample.csv", header, picked + inf_rows + nan_rows)
+
+
 def nslkdd_samples() -> None:
     """NSL-KDD train sample (with header) and test sample (no header, like the source)."""
     with (RAW / "KDDTrain+.txt").open(encoding="utf-8", newline="") as handle:
@@ -112,6 +150,7 @@ def xss_header() -> None:
 
 if __name__ == "__main__":
     cic_ddos_sample()
+    cic2017_original_sample()
     nslkdd_samples()
     label_leak()
     xss_header()
