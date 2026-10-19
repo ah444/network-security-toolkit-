@@ -1,0 +1,764 @@
+{
+ "generated_at": "2026-10-19T17:51:57+00:00",
+ "repo_commit": "2bdc139bf31565e4e761e827abac253aaa3fefb4",
+ "app_code_commit": "da41472588e4634c383f4dc4ff9f16bd7aae702a",
+ "app_file": "tools/IDS/IDS_Web_CIC_Dynamic/app.py",
+ "environment": {
+  "python": "3.14.3",
+  "os": "Windows-10-10.0.19044-SP0",
+  "cpu_count": 8,
+  "single_core_env": {
+   "LOKY_MAX_CPU_COUNT": "1",
+   "OMP_NUM_THREADS": "1",
+   "OPENBLAS_NUM_THREADS": "1",
+   "MKL_NUM_THREADS": "1"
+  },
+  "libraries": {
+   "flask": "3.1.3",
+   "numpy": "2.3.5",
+   "pandas": "2.3.3",
+   "scikit-learn": "1.8.0",
+   "imbalanced-learn": "0.14.1",
+   "xgboost": "3.2.0",
+   "lightgbm": "4.6.0",
+   "dask": "2026.1.2",
+   "joblib": "1.6.0"
+  }
+ },
+ "models": [
+  "random_forest",
+  "logistic_regression",
+  "decision_tree"
+ ],
+ "test_size": 0.3,
+ "dataset": {
+  "name": "cic_ddos",
+  "file": "data/raw/DDOS(CIC-2017)_FILTERED_TEST.csv",
+  "sha256": "42381db8eaa54a36eeacda06ff3394d973d30cabe9bff7429fff2d3c165095ef",
+  "target": " Label"
+ },
+ "scenario": "S1_all_features_recommended_balancing",
+ "click_sequence": [
+  "upload",
+  "analyze_class_distribution (take the app's recommended balancing method)",
+  "configure: ALL columns except the target as features, recommended balancing, models ['random_forest', 'logistic_regression', 'decision_tree'], test_size 0.3"
+ ],
+ "runs": [
+  {
+   "features_used": [
+    "Bwd Packet Length Max",
+    " Bwd Packet Length Mean",
+    " Bwd Packet Length Std",
+    " Flow IAT Max",
+    " Fwd IAT Std",
+    " Max Packet Length",
+    " Packet Length Mean",
+    " Packet Length Std",
+    " Packet Length Variance",
+    " Average Packet Size",
+    " Avg Bwd Segment Size",
+    "Idle Mean",
+    " Idle Max",
+    " Idle Min"
+   ],
+   "balancing_method": "none",
+   "split_info": {
+    "split_ratio": "70% / 15% / 15%",
+    "test_size": 33862,
+    "train_size": 158021,
+    "val_size": 33862
+   },
+   "class_labels": [
+    "BENIGN",
+    "DDoS"
+   ],
+   "train_seconds": 16.05,
+   "models": {
+    "decision_tree": {
+     "validation": {
+      "accuracy": 0.9992617092906503,
+      "weighted_f1": 0.999261736711829,
+      "auc": 0.9993352728637809,
+      "macro_f1": 0.9992475630091986,
+      "balanced_accuracy": 0.9992847232581538,
+      "classes_in_split": 2,
+      "confusion_matrix": [
+       [
+        14597,
+        8
+       ],
+       [
+        17,
+        19240
+       ]
+      ]
+     },
+     "test": {
+      "accuracy": 0.9991731144055284,
+      "weighted_f1": 0.9991731477294021,
+      "auc": 0.9991965616541982,
+      "macro_f1": 0.9991579920315556,
+      "balanced_accuracy": 0.9991983166155209,
+      "classes_in_split": 2,
+      "confusion_matrix": [
+       [
+        14648,
+        9
+       ],
+       [
+        19,
+        19186
+       ]
+      ]
+     }
+    },
+    "logistic_regression": {
+     "validation": {
+      "accuracy": 0.9541669127635698,
+      "weighted_f1": 0.9542758499660194,
+      "auc": 0.9900333649797259,
+      "macro_f1": 0.953526181525493,
+      "balanced_accuracy": 0.9560805883096579,
+      "classes_in_split": 2,
+      "confusion_matrix": [
+       [
+        14167,
+        438
+       ],
+       [
+        1114,
+        18143
+       ]
+      ]
+     },
+     "test": {
+      "accuracy": 0.9519520406355206,
+      "weighted_f1": 0.9520694212995827,
+      "auc": 0.9899776965375944,
+      "macro_f1": 0.9513310433463953,
+      "balanced_accuracy": 0.9539897544718519,
+      "classes_in_split": 2,
+      "confusion_matrix": [
+       [
+        14205,
+        452
+       ],
+       [
+        1175,
+        18030
+       ]
+      ]
+     }
+    },
+    "random_forest": {
+     "validation": {
+      "accuracy": 0.9991435827771543,
+      "weighted_f1": 0.9991436216369043,
+      "auc": 0.9998143901112925,
+      "macro_f1": 0.9991271874953502,
+      "balanced_accuracy": 0.9991725946541543,
+      "classes_in_split": 2,
+      "confusion_matrix": [
+       [
+        14596,
+        9
+       ],
+       [
+        20,
+        19237
+       ]
+      ]
+     },
+     "test": {
+      "accuracy": 0.9992026460339023,
+      "weighted_f1": 0.9992026813729376,
+      "auc": 0.9997182114734433,
+      "macro_f1": 0.9991880702882221,
+      "balanced_accuracy": 0.999232430008439,
+      "classes_in_split": 2,
+      "confusion_matrix": [
+       [
+        14649,
+        8
+       ],
+       [
+        19,
+        19186
+       ]
+      ]
+     }
+    }
+   },
+   "steps": {
+    "columns_after_upload": [
+     "Bwd Packet Length Max",
+     " Bwd Packet Length Mean",
+     " Bwd Packet Length Std",
+     " Flow IAT Max",
+     " Fwd IAT Std",
+     " Max Packet Length",
+     " Packet Length Mean",
+     " Packet Length Std",
+     " Packet Length Variance",
+     " Average Packet Size",
+     " Avg Bwd Segment Size",
+     "Idle Mean",
+     " Idle Max",
+     " Idle Min",
+     " Label"
+    ],
+    "recommendation": {
+     "alternatives": [
+      "class_weight"
+     ],
+     "analysis": {
+      "dataset_size": "very_large",
+      "dimensionality": "low",
+      "imbalance_ratio": 0.7633,
+      "imbalance_severity": "mild",
+      "is_multiclass": false,
+      "majority_class_count": 128027,
+      "minority_class_count": 97718,
+      "num_classes": 2,
+      "num_features": 14,
+      "total_samples": 225745
+     },
+     "reason": "The dataset is relatively balanced (ratio: 76.33%). No balancing may be needed, but Class Weights can help slightly.",
+     "recommended": "none"
+    }
+   }
+  },
+  {
+   "features_used": [
+    "Bwd Packet Length Max",
+    " Bwd Packet Length Mean",
+    " Bwd Packet Length Std",
+    " Flow IAT Max",
+    " Fwd IAT Std",
+    " Max Packet Length",
+    " Packet Length Mean",
+    " Packet Length Std",
+    " Packet Length Variance",
+    " Average Packet Size",
+    " Avg Bwd Segment Size",
+    "Idle Mean",
+    " Idle Max",
+    " Idle Min"
+   ],
+   "balancing_method": "none",
+   "split_info": {
+    "split_ratio": "70% / 15% / 15%",
+    "test_size": 33862,
+    "train_size": 158021,
+    "val_size": 33862
+   },
+   "class_labels": [
+    "BENIGN",
+    "DDoS"
+   ],
+   "train_seconds": 17.42,
+   "models": {
+    "decision_tree": {
+     "validation": {
+      "accuracy": 0.9992617092906503,
+      "weighted_f1": 0.999261736711829,
+      "auc": 0.9993352728637809,
+      "macro_f1": 0.9992475630091986,
+      "balanced_accuracy": 0.9992847232581538,
+      "classes_in_split": 2,
+      "confusion_matrix": [
+       [
+        14597,
+        8
+       ],
+       [
+        17,
+        19240
+       ]
+      ]
+     },
+     "test": {
+      "accuracy": 0.9991731144055284,
+      "weighted_f1": 0.9991731477294021,
+      "auc": 0.9991965616541982,
+      "macro_f1": 0.9991579920315556,
+      "balanced_accuracy": 0.9991983166155209,
+      "classes_in_split": 2,
+      "confusion_matrix": [
+       [
+        14648,
+        9
+       ],
+       [
+        19,
+        19186
+       ]
+      ]
+     }
+    },
+    "logistic_regression": {
+     "validation": {
+      "accuracy": 0.9541669127635698,
+      "weighted_f1": 0.9542758499660194,
+      "auc": 0.9900333649797259,
+      "macro_f1": 0.953526181525493,
+      "balanced_accuracy": 0.9560805883096579,
+      "classes_in_split": 2,
+      "confusion_matrix": [
+       [
+        14167,
+        438
+       ],
+       [
+        1114,
+        18143
+       ]
+      ]
+     },
+     "test": {
+      "accuracy": 0.9519520406355206,
+      "weighted_f1": 0.9520694212995827,
+      "auc": 0.9899776965375944,
+      "macro_f1": 0.9513310433463953,
+      "balanced_accuracy": 0.9539897544718519,
+      "classes_in_split": 2,
+      "confusion_matrix": [
+       [
+        14205,
+        452
+       ],
+       [
+        1175,
+        18030
+       ]
+      ]
+     }
+    },
+    "random_forest": {
+     "validation": {
+      "accuracy": 0.9991435827771543,
+      "weighted_f1": 0.9991436216369043,
+      "auc": 0.9998143901112925,
+      "macro_f1": 0.9991271874953502,
+      "balanced_accuracy": 0.9991725946541543,
+      "classes_in_split": 2,
+      "confusion_matrix": [
+       [
+        14596,
+        9
+       ],
+       [
+        20,
+        19237
+       ]
+      ]
+     },
+     "test": {
+      "accuracy": 0.9992026460339023,
+      "weighted_f1": 0.9992026813729376,
+      "auc": 0.9997182114734433,
+      "macro_f1": 0.9991880702882221,
+      "balanced_accuracy": 0.999232430008439,
+      "classes_in_split": 2,
+      "confusion_matrix": [
+       [
+        14649,
+        8
+       ],
+       [
+        19,
+        19186
+       ]
+      ]
+     }
+    }
+   },
+   "steps": {
+    "columns_after_upload": [
+     "Bwd Packet Length Max",
+     " Bwd Packet Length Mean",
+     " Bwd Packet Length Std",
+     " Flow IAT Max",
+     " Fwd IAT Std",
+     " Max Packet Length",
+     " Packet Length Mean",
+     " Packet Length Std",
+     " Packet Length Variance",
+     " Average Packet Size",
+     " Avg Bwd Segment Size",
+     "Idle Mean",
+     " Idle Max",
+     " Idle Min",
+     " Label"
+    ],
+    "recommendation": {
+     "alternatives": [
+      "class_weight"
+     ],
+     "analysis": {
+      "dataset_size": "very_large",
+      "dimensionality": "low",
+      "imbalance_ratio": 0.7633,
+      "imbalance_severity": "mild",
+      "is_multiclass": false,
+      "majority_class_count": 128027,
+      "minority_class_count": 97718,
+      "num_classes": 2,
+      "num_features": 14,
+      "total_samples": 225745
+     },
+     "reason": "The dataset is relatively balanced (ratio: 76.33%). No balancing may be needed, but Class Weights can help slightly.",
+     "recommended": "none"
+    }
+   }
+  },
+  {
+   "features_used": [
+    "Bwd Packet Length Max",
+    " Bwd Packet Length Mean",
+    " Bwd Packet Length Std",
+    " Flow IAT Max",
+    " Fwd IAT Std",
+    " Max Packet Length",
+    " Packet Length Mean",
+    " Packet Length Std",
+    " Packet Length Variance",
+    " Average Packet Size",
+    " Avg Bwd Segment Size",
+    "Idle Mean",
+    " Idle Max",
+    " Idle Min"
+   ],
+   "balancing_method": "none",
+   "split_info": {
+    "split_ratio": "70% / 15% / 15%",
+    "test_size": 33862,
+    "train_size": 158021,
+    "val_size": 33862
+   },
+   "class_labels": [
+    "BENIGN",
+    "DDoS"
+   ],
+   "train_seconds": 15.15,
+   "models": {
+    "decision_tree": {
+     "validation": {
+      "accuracy": 0.9992617092906503,
+      "weighted_f1": 0.999261736711829,
+      "auc": 0.9993352728637809,
+      "macro_f1": 0.9992475630091986,
+      "balanced_accuracy": 0.9992847232581538,
+      "classes_in_split": 2,
+      "confusion_matrix": [
+       [
+        14597,
+        8
+       ],
+       [
+        17,
+        19240
+       ]
+      ]
+     },
+     "test": {
+      "accuracy": 0.9991731144055284,
+      "weighted_f1": 0.9991731477294021,
+      "auc": 0.9991965616541982,
+      "macro_f1": 0.9991579920315556,
+      "balanced_accuracy": 0.9991983166155209,
+      "classes_in_split": 2,
+      "confusion_matrix": [
+       [
+        14648,
+        9
+       ],
+       [
+        19,
+        19186
+       ]
+      ]
+     }
+    },
+    "logistic_regression": {
+     "validation": {
+      "accuracy": 0.9541669127635698,
+      "weighted_f1": 0.9542758499660194,
+      "auc": 0.9900333649797259,
+      "macro_f1": 0.953526181525493,
+      "balanced_accuracy": 0.9560805883096579,
+      "classes_in_split": 2,
+      "confusion_matrix": [
+       [
+        14167,
+        438
+       ],
+       [
+        1114,
+        18143
+       ]
+      ]
+     },
+     "test": {
+      "accuracy": 0.9519520406355206,
+      "weighted_f1": 0.9520694212995827,
+      "auc": 0.9899776965375944,
+      "macro_f1": 0.9513310433463953,
+      "balanced_accuracy": 0.9539897544718519,
+      "classes_in_split": 2,
+      "confusion_matrix": [
+       [
+        14205,
+        452
+       ],
+       [
+        1175,
+        18030
+       ]
+      ]
+     }
+    },
+    "random_forest": {
+     "validation": {
+      "accuracy": 0.9991435827771543,
+      "weighted_f1": 0.9991436216369043,
+      "auc": 0.9998143901112925,
+      "macro_f1": 0.9991271874953502,
+      "balanced_accuracy": 0.9991725946541543,
+      "classes_in_split": 2,
+      "confusion_matrix": [
+       [
+        14596,
+        9
+       ],
+       [
+        20,
+        19237
+       ]
+      ]
+     },
+     "test": {
+      "accuracy": 0.9992026460339023,
+      "weighted_f1": 0.9992026813729376,
+      "auc": 0.9997182114734433,
+      "macro_f1": 0.9991880702882221,
+      "balanced_accuracy": 0.999232430008439,
+      "classes_in_split": 2,
+      "confusion_matrix": [
+       [
+        14649,
+        8
+       ],
+       [
+        19,
+        19186
+       ]
+      ]
+     }
+    }
+   },
+   "steps": {
+    "columns_after_upload": [
+     "Bwd Packet Length Max",
+     " Bwd Packet Length Mean",
+     " Bwd Packet Length Std",
+     " Flow IAT Max",
+     " Fwd IAT Std",
+     " Max Packet Length",
+     " Packet Length Mean",
+     " Packet Length Std",
+     " Packet Length Variance",
+     " Average Packet Size",
+     " Avg Bwd Segment Size",
+     "Idle Mean",
+     " Idle Max",
+     " Idle Min",
+     " Label"
+    ],
+    "recommendation": {
+     "alternatives": [
+      "class_weight"
+     ],
+     "analysis": {
+      "dataset_size": "very_large",
+      "dimensionality": "low",
+      "imbalance_ratio": 0.7633,
+      "imbalance_severity": "mild",
+      "is_multiclass": false,
+      "majority_class_count": 128027,
+      "minority_class_count": 97718,
+      "num_classes": 2,
+      "num_features": 14,
+      "total_samples": 225745
+     },
+     "reason": "The dataset is relatively balanced (ratio: 76.33%). No balancing may be needed, but Class Weights can help slightly.",
+     "recommended": "none"
+    }
+   }
+  }
+ ],
+ "spread": {
+  "decision_tree": {
+   "validation": {
+    "accuracy": {
+     "mean": 0.9992617092906503,
+     "min": 0.9992617092906503,
+     "max": 0.9992617092906503,
+     "spread": 0.0
+    },
+    "weighted_f1": {
+     "mean": 0.999261736711829,
+     "min": 0.999261736711829,
+     "max": 0.999261736711829,
+     "spread": 0.0
+    },
+    "macro_f1": {
+     "mean": 0.9992475630091985,
+     "min": 0.9992475630091986,
+     "max": 0.9992475630091986,
+     "spread": 0.0
+    },
+    "balanced_accuracy": {
+     "mean": 0.9992847232581538,
+     "min": 0.9992847232581538,
+     "max": 0.9992847232581538,
+     "spread": 0.0
+    }
+   },
+   "test": {
+    "accuracy": {
+     "mean": 0.9991731144055284,
+     "min": 0.9991731144055284,
+     "max": 0.9991731144055284,
+     "spread": 0.0
+    },
+    "weighted_f1": {
+     "mean": 0.9991731477294022,
+     "min": 0.9991731477294021,
+     "max": 0.9991731477294021,
+     "spread": 0.0
+    },
+    "macro_f1": {
+     "mean": 0.9991579920315555,
+     "min": 0.9991579920315556,
+     "max": 0.9991579920315556,
+     "spread": 0.0
+    },
+    "balanced_accuracy": {
+     "mean": 0.9991983166155208,
+     "min": 0.9991983166155209,
+     "max": 0.9991983166155209,
+     "spread": 0.0
+    }
+   }
+  },
+  "logistic_regression": {
+   "validation": {
+    "accuracy": {
+     "mean": 0.9541669127635698,
+     "min": 0.9541669127635698,
+     "max": 0.9541669127635698,
+     "spread": 0.0
+    },
+    "weighted_f1": {
+     "mean": 0.9542758499660194,
+     "min": 0.9542758499660194,
+     "max": 0.9542758499660194,
+     "spread": 0.0
+    },
+    "macro_f1": {
+     "mean": 0.953526181525493,
+     "min": 0.953526181525493,
+     "max": 0.953526181525493,
+     "spread": 0.0
+    },
+    "balanced_accuracy": {
+     "mean": 0.9560805883096579,
+     "min": 0.9560805883096579,
+     "max": 0.9560805883096579,
+     "spread": 0.0
+    }
+   },
+   "test": {
+    "accuracy": {
+     "mean": 0.9519520406355206,
+     "min": 0.9519520406355206,
+     "max": 0.9519520406355206,
+     "spread": 0.0
+    },
+    "weighted_f1": {
+     "mean": 0.9520694212995827,
+     "min": 0.9520694212995827,
+     "max": 0.9520694212995827,
+     "spread": 0.0
+    },
+    "macro_f1": {
+     "mean": 0.9513310433463952,
+     "min": 0.9513310433463953,
+     "max": 0.9513310433463953,
+     "spread": 0.0
+    },
+    "balanced_accuracy": {
+     "mean": 0.9539897544718517,
+     "min": 0.9539897544718519,
+     "max": 0.9539897544718519,
+     "spread": 0.0
+    }
+   }
+  },
+  "random_forest": {
+   "validation": {
+    "accuracy": {
+     "mean": 0.9991435827771543,
+     "min": 0.9991435827771543,
+     "max": 0.9991435827771543,
+     "spread": 0.0
+    },
+    "weighted_f1": {
+     "mean": 0.9991436216369043,
+     "min": 0.9991436216369043,
+     "max": 0.9991436216369043,
+     "spread": 0.0
+    },
+    "macro_f1": {
+     "mean": 0.9991271874953501,
+     "min": 0.9991271874953502,
+     "max": 0.9991271874953502,
+     "spread": 0.0
+    },
+    "balanced_accuracy": {
+     "mean": 0.9991725946541544,
+     "min": 0.9991725946541543,
+     "max": 0.9991725946541543,
+     "spread": 0.0
+    }
+   },
+   "test": {
+    "accuracy": {
+     "mean": 0.9992026460339023,
+     "min": 0.9992026460339023,
+     "max": 0.9992026460339023,
+     "spread": 0.0
+    },
+    "weighted_f1": {
+     "mean": 0.9992026813729376,
+     "min": 0.9992026813729376,
+     "max": 0.9992026813729376,
+     "spread": 0.0
+    },
+    "macro_f1": {
+     "mean": 0.9991880702882221,
+     "min": 0.9991880702882221,
+     "max": 0.9991880702882221,
+     "spread": 0.0
+    },
+    "balanced_accuracy": {
+     "mean": 0.9992324300084391,
+     "min": 0.999232430008439,
+     "max": 0.999232430008439,
+     "spread": 0.0
+    }
+   }
+  }
+ }
+}

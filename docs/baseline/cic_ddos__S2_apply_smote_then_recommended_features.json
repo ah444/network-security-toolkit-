@@ -1,0 +1,864 @@
+{
+ "generated_at": "2026-10-19T17:51:57+00:00",
+ "repo_commit": "2bdc139bf31565e4e761e827abac253aaa3fefb4",
+ "app_code_commit": "da41472588e4634c383f4dc4ff9f16bd7aae702a",
+ "app_file": "tools/IDS/IDS_Web_CIC_Dynamic/app.py",
+ "environment": {
+  "python": "3.14.3",
+  "os": "Windows-10-10.0.19044-SP0",
+  "cpu_count": 8,
+  "single_core_env": {
+   "LOKY_MAX_CPU_COUNT": "1",
+   "OMP_NUM_THREADS": "1",
+   "OPENBLAS_NUM_THREADS": "1",
+   "MKL_NUM_THREADS": "1"
+  },
+  "libraries": {
+   "flask": "3.1.3",
+   "numpy": "2.3.5",
+   "pandas": "2.3.3",
+   "scikit-learn": "1.8.0",
+   "imbalanced-learn": "0.14.1",
+   "xgboost": "3.2.0",
+   "lightgbm": "4.6.0",
+   "dask": "2026.1.2",
+   "joblib": "1.6.0"
+  }
+ },
+ "models": [
+  "random_forest",
+  "logistic_regression",
+  "decision_tree"
+ ],
+ "test_size": 0.3,
+ "dataset": {
+  "name": "cic_ddos",
+  "file": "data/raw/DDOS(CIC-2017)_FILTERED_TEST.csv",
+  "sha256": "42381db8eaa54a36eeacda06ff3394d973d30cabe9bff7429fff2d3c165095ef",
+  "target": " Label"
+ },
+ "scenario": "S2_apply_smote_then_recommended_features",
+ "click_sequence": [
+  "upload",
+  "apply_smote on the FULL dataset (the 'Apply SMOTE' preview button)",
+  "recommend_features k=10 (computed on the SMOTE-balanced full data)",
+  "configure: the 10 recommended features, balancing 'none', models ['random_forest', 'logistic_regression', 'decision_tree'], test_size 0.3"
+ ],
+ "runs": [
+  {
+   "features_used": [
+    " Bwd Packet Length Mean",
+    " Avg Bwd Segment Size",
+    "Bwd Packet Length Max",
+    " Bwd Packet Length Std",
+    " Packet Length Mean",
+    " Average Packet Size",
+    " Packet Length Std",
+    " Max Packet Length",
+    " Packet Length Variance",
+    " Flow IAT Max"
+   ],
+   "balancing_method": "none",
+   "split_info": {
+    "split_ratio": "70% / 15% / 15%",
+    "test_size": 29316,
+    "train_size": 136805,
+    "val_size": 29315
+   },
+   "class_labels": [
+    "BENIGN",
+    "DDoS"
+   ],
+   "train_seconds": 11.5,
+   "models": {
+    "decision_tree": {
+     "validation": {
+      "accuracy": 0.9992836431860822,
+      "weighted_f1": 0.9992836431694104,
+      "auc": 0.9993158912565386,
+      "macro_f1": 0.9992836431727449,
+      "balanced_accuracy": 0.9992836490034696,
+      "classes_in_split": 2,
+      "confusion_matrix": [
+       [
+        14649,
+        8
+       ],
+       [
+        13,
+        14645
+       ]
+      ]
+     },
+     "test": {
+      "accuracy": 0.9990790012279983,
+      "weighted_f1": 0.9990790007103798,
+      "auc": 0.9991108384587563,
+      "macro_f1": 0.9990789734491348,
+      "balanced_accuracy": 0.9990784229290213,
+      "classes_in_split": 2,
+      "confusion_matrix": [
+       [
+        14564,
+        15
+       ],
+       [
+        12,
+        14725
+       ]
+      ]
+     }
+    },
+    "logistic_regression": {
+     "validation": {
+      "accuracy": 0.8023537438171584,
+      "weighted_f1": 0.7960305787741999,
+      "auc": 0.9557409633277723,
+      "macro_f1": 0.7960318037189973,
+      "balanced_accuracy": 0.8023597503184499,
+      "classes_in_split": 2,
+      "confusion_matrix": [
+       [
+        14341,
+        316
+       ],
+       [
+        5478,
+        9180
+       ]
+      ]
+     },
+     "test": {
+      "accuracy": 0.8055669259107655,
+      "weighted_f1": 0.799518411532053,
+      "auc": 0.956669287075194,
+      "macro_f1": 0.7997031168416464,
+      "balanced_accuracy": 0.8065125105490103,
+      "classes_in_split": 2,
+      "confusion_matrix": [
+       [
+        14316,
+        263
+       ],
+       [
+        5437,
+        9300
+       ]
+      ]
+     }
+    },
+    "random_forest": {
+     "validation": {
+      "accuracy": 0.9993177554153164,
+      "weighted_f1": 0.9993177553914997,
+      "auc": 0.9997899831702607,
+      "macro_f1": 0.9993177553954691,
+      "balanced_accuracy": 0.9993177623963876,
+      "classes_in_split": 2,
+      "confusion_matrix": [
+       [
+        14650,
+        7
+       ],
+       [
+        13,
+        14645
+       ]
+      ]
+     },
+     "test": {
+      "accuracy": 0.9991131122936281,
+      "weighted_f1": 0.9991131119633937,
+      "auc": 0.9997579621828873,
+      "macro_f1": 0.9991130858748876,
+      "balanced_accuracy": 0.9991127188340903,
+      "classes_in_split": 2,
+      "confusion_matrix": [
+       [
+        14565,
+        14
+       ],
+       [
+        12,
+        14725
+       ]
+      ]
+     }
+    }
+   },
+   "steps": {
+    "columns_after_upload": [
+     "Bwd Packet Length Max",
+     " Bwd Packet Length Mean",
+     " Bwd Packet Length Std",
+     " Flow IAT Max",
+     " Fwd IAT Std",
+     " Max Packet Length",
+     " Packet Length Mean",
+     " Packet Length Std",
+     " Packet Length Variance",
+     " Average Packet Size",
+     " Avg Bwd Segment Size",
+     "Idle Mean",
+     " Idle Max",
+     " Idle Min",
+     " Label"
+    ],
+    "apply_smote": {
+     "original_shape": [
+      225745,
+      15
+     ],
+     "balanced_shape": [
+      195436,
+      15
+     ],
+     "class_counts": {
+      "BENIGN": 97718,
+      "DDoS": 97718
+     }
+    },
+    "recommended_features": [
+     [
+      " Bwd Packet Length Mean",
+      127342.1462891122
+     ],
+     [
+      " Avg Bwd Segment Size",
+      127342.14628910364
+     ],
+     [
+      "Bwd Packet Length Max",
+      111625.44477371027
+     ],
+     [
+      " Bwd Packet Length Std",
+      111458.3464134759
+     ],
+     [
+      " Packet Length Mean",
+      54769.76816054602
+     ],
+     [
+      " Average Packet Size",
+      54674.41995653439
+     ],
+     [
+      " Packet Length Std",
+      51559.312356330935
+     ],
+     [
+      " Max Packet Length",
+      43125.61817324993
+     ],
+     [
+      " Packet Length Variance",
+      42780.531079498665
+     ],
+     [
+      " Flow IAT Max",
+      2061.3917121430914
+     ]
+    ]
+   }
+  },
+  {
+   "features_used": [
+    " Bwd Packet Length Mean",
+    " Avg Bwd Segment Size",
+    "Bwd Packet Length Max",
+    " Bwd Packet Length Std",
+    " Packet Length Mean",
+    " Average Packet Size",
+    " Packet Length Std",
+    " Max Packet Length",
+    " Packet Length Variance",
+    " Flow IAT Max"
+   ],
+   "balancing_method": "none",
+   "split_info": {
+    "split_ratio": "70% / 15% / 15%",
+    "test_size": 29316,
+    "train_size": 136805,
+    "val_size": 29315
+   },
+   "class_labels": [
+    "BENIGN",
+    "DDoS"
+   ],
+   "train_seconds": 11.28,
+   "models": {
+    "decision_tree": {
+     "validation": {
+      "accuracy": 0.9992836431860822,
+      "weighted_f1": 0.9992836431694104,
+      "auc": 0.9993158912565386,
+      "macro_f1": 0.9992836431727449,
+      "balanced_accuracy": 0.9992836490034696,
+      "classes_in_split": 2,
+      "confusion_matrix": [
+       [
+        14649,
+        8
+       ],
+       [
+        13,
+        14645
+       ]
+      ]
+     },
+     "test": {
+      "accuracy": 0.9990790012279983,
+      "weighted_f1": 0.9990790007103798,
+      "auc": 0.9991108384587563,
+      "macro_f1": 0.9990789734491348,
+      "balanced_accuracy": 0.9990784229290213,
+      "classes_in_split": 2,
+      "confusion_matrix": [
+       [
+        14564,
+        15
+       ],
+       [
+        12,
+        14725
+       ]
+      ]
+     }
+    },
+    "logistic_regression": {
+     "validation": {
+      "accuracy": 0.8023537438171584,
+      "weighted_f1": 0.7960305787741999,
+      "auc": 0.9557409633277723,
+      "macro_f1": 0.7960318037189973,
+      "balanced_accuracy": 0.8023597503184499,
+      "classes_in_split": 2,
+      "confusion_matrix": [
+       [
+        14341,
+        316
+       ],
+       [
+        5478,
+        9180
+       ]
+      ]
+     },
+     "test": {
+      "accuracy": 0.8055669259107655,
+      "weighted_f1": 0.799518411532053,
+      "auc": 0.956669287075194,
+      "macro_f1": 0.7997031168416464,
+      "balanced_accuracy": 0.8065125105490103,
+      "classes_in_split": 2,
+      "confusion_matrix": [
+       [
+        14316,
+        263
+       ],
+       [
+        5437,
+        9300
+       ]
+      ]
+     }
+    },
+    "random_forest": {
+     "validation": {
+      "accuracy": 0.9993177554153164,
+      "weighted_f1": 0.9993177553914997,
+      "auc": 0.9997899831702607,
+      "macro_f1": 0.9993177553954691,
+      "balanced_accuracy": 0.9993177623963876,
+      "classes_in_split": 2,
+      "confusion_matrix": [
+       [
+        14650,
+        7
+       ],
+       [
+        13,
+        14645
+       ]
+      ]
+     },
+     "test": {
+      "accuracy": 0.9991131122936281,
+      "weighted_f1": 0.9991131119633937,
+      "auc": 0.9997579621828873,
+      "macro_f1": 0.9991130858748876,
+      "balanced_accuracy": 0.9991127188340903,
+      "classes_in_split": 2,
+      "confusion_matrix": [
+       [
+        14565,
+        14
+       ],
+       [
+        12,
+        14725
+       ]
+      ]
+     }
+    }
+   },
+   "steps": {
+    "columns_after_upload": [
+     "Bwd Packet Length Max",
+     " Bwd Packet Length Mean",
+     " Bwd Packet Length Std",
+     " Flow IAT Max",
+     " Fwd IAT Std",
+     " Max Packet Length",
+     " Packet Length Mean",
+     " Packet Length Std",
+     " Packet Length Variance",
+     " Average Packet Size",
+     " Avg Bwd Segment Size",
+     "Idle Mean",
+     " Idle Max",
+     " Idle Min",
+     " Label"
+    ],
+    "apply_smote": {
+     "original_shape": [
+      225745,
+      15
+     ],
+     "balanced_shape": [
+      195436,
+      15
+     ],
+     "class_counts": {
+      "BENIGN": 97718,
+      "DDoS": 97718
+     }
+    },
+    "recommended_features": [
+     [
+      " Bwd Packet Length Mean",
+      127342.1462891122
+     ],
+     [
+      " Avg Bwd Segment Size",
+      127342.14628910364
+     ],
+     [
+      "Bwd Packet Length Max",
+      111625.44477371027
+     ],
+     [
+      " Bwd Packet Length Std",
+      111458.3464134759
+     ],
+     [
+      " Packet Length Mean",
+      54769.76816054602
+     ],
+     [
+      " Average Packet Size",
+      54674.41995653439
+     ],
+     [
+      " Packet Length Std",
+      51559.312356330935
+     ],
+     [
+      " Max Packet Length",
+      43125.61817324993
+     ],
+     [
+      " Packet Length Variance",
+      42780.531079498665
+     ],
+     [
+      " Flow IAT Max",
+      2061.3917121430914
+     ]
+    ]
+   }
+  },
+  {
+   "features_used": [
+    " Bwd Packet Length Mean",
+    " Avg Bwd Segment Size",
+    "Bwd Packet Length Max",
+    " Bwd Packet Length Std",
+    " Packet Length Mean",
+    " Average Packet Size",
+    " Packet Length Std",
+    " Max Packet Length",
+    " Packet Length Variance",
+    " Flow IAT Max"
+   ],
+   "balancing_method": "none",
+   "split_info": {
+    "split_ratio": "70% / 15% / 15%",
+    "test_size": 29316,
+    "train_size": 136805,
+    "val_size": 29315
+   },
+   "class_labels": [
+    "BENIGN",
+    "DDoS"
+   ],
+   "train_seconds": 11.01,
+   "models": {
+    "decision_tree": {
+     "validation": {
+      "accuracy": 0.9992836431860822,
+      "weighted_f1": 0.9992836431694104,
+      "auc": 0.9993158912565386,
+      "macro_f1": 0.9992836431727449,
+      "balanced_accuracy": 0.9992836490034696,
+      "classes_in_split": 2,
+      "confusion_matrix": [
+       [
+        14649,
+        8
+       ],
+       [
+        13,
+        14645
+       ]
+      ]
+     },
+     "test": {
+      "accuracy": 0.9990790012279983,
+      "weighted_f1": 0.9990790007103798,
+      "auc": 0.9991108384587563,
+      "macro_f1": 0.9990789734491348,
+      "balanced_accuracy": 0.9990784229290213,
+      "classes_in_split": 2,
+      "confusion_matrix": [
+       [
+        14564,
+        15
+       ],
+       [
+        12,
+        14725
+       ]
+      ]
+     }
+    },
+    "logistic_regression": {
+     "validation": {
+      "accuracy": 0.8023537438171584,
+      "weighted_f1": 0.7960305787741999,
+      "auc": 0.9557409633277723,
+      "macro_f1": 0.7960318037189973,
+      "balanced_accuracy": 0.8023597503184499,
+      "classes_in_split": 2,
+      "confusion_matrix": [
+       [
+        14341,
+        316
+       ],
+       [
+        5478,
+        9180
+       ]
+      ]
+     },
+     "test": {
+      "accuracy": 0.8055669259107655,
+      "weighted_f1": 0.799518411532053,
+      "auc": 0.956669287075194,
+      "macro_f1": 0.7997031168416464,
+      "balanced_accuracy": 0.8065125105490103,
+      "classes_in_split": 2,
+      "confusion_matrix": [
+       [
+        14316,
+        263
+       ],
+       [
+        5437,
+        9300
+       ]
+      ]
+     }
+    },
+    "random_forest": {
+     "validation": {
+      "accuracy": 0.9993177554153164,
+      "weighted_f1": 0.9993177553914997,
+      "auc": 0.9997899831702607,
+      "macro_f1": 0.9993177553954691,
+      "balanced_accuracy": 0.9993177623963876,
+      "classes_in_split": 2,
+      "confusion_matrix": [
+       [
+        14650,
+        7
+       ],
+       [
+        13,
+        14645
+       ]
+      ]
+     },
+     "test": {
+      "accuracy": 0.9991131122936281,
+      "weighted_f1": 0.9991131119633937,
+      "auc": 0.9997579621828873,
+      "macro_f1": 0.9991130858748876,
+      "balanced_accuracy": 0.9991127188340903,
+      "classes_in_split": 2,
+      "confusion_matrix": [
+       [
+        14565,
+        14
+       ],
+       [
+        12,
+        14725
+       ]
+      ]
+     }
+    }
+   },
+   "steps": {
+    "columns_after_upload": [
+     "Bwd Packet Length Max",
+     " Bwd Packet Length Mean",
+     " Bwd Packet Length Std",
+     " Flow IAT Max",
+     " Fwd IAT Std",
+     " Max Packet Length",
+     " Packet Length Mean",
+     " Packet Length Std",
+     " Packet Length Variance",
+     " Average Packet Size",
+     " Avg Bwd Segment Size",
+     "Idle Mean",
+     " Idle Max",
+     " Idle Min",
+     " Label"
+    ],
+    "apply_smote": {
+     "original_shape": [
+      225745,
+      15
+     ],
+     "balanced_shape": [
+      195436,
+      15
+     ],
+     "class_counts": {
+      "BENIGN": 97718,
+      "DDoS": 97718
+     }
+    },
+    "recommended_features": [
+     [
+      " Bwd Packet Length Mean",
+      127342.1462891122
+     ],
+     [
+      " Avg Bwd Segment Size",
+      127342.14628910364
+     ],
+     [
+      "Bwd Packet Length Max",
+      111625.44477371027
+     ],
+     [
+      " Bwd Packet Length Std",
+      111458.3464134759
+     ],
+     [
+      " Packet Length Mean",
+      54769.76816054602
+     ],
+     [
+      " Average Packet Size",
+      54674.41995653439
+     ],
+     [
+      " Packet Length Std",
+      51559.312356330935
+     ],
+     [
+      " Max Packet Length",
+      43125.61817324993
+     ],
+     [
+      " Packet Length Variance",
+      42780.531079498665
+     ],
+     [
+      " Flow IAT Max",
+      2061.3917121430914
+     ]
+    ]
+   }
+  }
+ ],
+ "spread": {
+  "decision_tree": {
+   "validation": {
+    "accuracy": {
+     "mean": 0.9992836431860822,
+     "min": 0.9992836431860822,
+     "max": 0.9992836431860822,
+     "spread": 0.0
+    },
+    "weighted_f1": {
+     "mean": 0.9992836431694104,
+     "min": 0.9992836431694104,
+     "max": 0.9992836431694104,
+     "spread": 0.0
+    },
+    "macro_f1": {
+     "mean": 0.9992836431727449,
+     "min": 0.9992836431727449,
+     "max": 0.9992836431727449,
+     "spread": 0.0
+    },
+    "balanced_accuracy": {
+     "mean": 0.9992836490034694,
+     "min": 0.9992836490034696,
+     "max": 0.9992836490034696,
+     "spread": 0.0
+    }
+   },
+   "test": {
+    "accuracy": {
+     "mean": 0.9990790012279983,
+     "min": 0.9990790012279983,
+     "max": 0.9990790012279983,
+     "spread": 0.0
+    },
+    "weighted_f1": {
+     "mean": 0.9990790007103798,
+     "min": 0.9990790007103798,
+     "max": 0.9990790007103798,
+     "spread": 0.0
+    },
+    "macro_f1": {
+     "mean": 0.9990789734491349,
+     "min": 0.9990789734491348,
+     "max": 0.9990789734491348,
+     "spread": 0.0
+    },
+    "balanced_accuracy": {
+     "mean": 0.9990784229290212,
+     "min": 0.9990784229290213,
+     "max": 0.9990784229290213,
+     "spread": 0.0
+    }
+   }
+  },
+  "logistic_regression": {
+   "validation": {
+    "accuracy": {
+     "mean": 0.8023537438171585,
+     "min": 0.8023537438171584,
+     "max": 0.8023537438171584,
+     "spread": 0.0
+    },
+    "weighted_f1": {
+     "mean": 0.7960305787741998,
+     "min": 0.7960305787741999,
+     "max": 0.7960305787741999,
+     "spread": 0.0
+    },
+    "macro_f1": {
+     "mean": 0.7960318037189973,
+     "min": 0.7960318037189973,
+     "max": 0.7960318037189973,
+     "spread": 0.0
+    },
+    "balanced_accuracy": {
+     "mean": 0.8023597503184497,
+     "min": 0.8023597503184499,
+     "max": 0.8023597503184499,
+     "spread": 0.0
+    }
+   },
+   "test": {
+    "accuracy": {
+     "mean": 0.8055669259107655,
+     "min": 0.8055669259107655,
+     "max": 0.8055669259107655,
+     "spread": 0.0
+    },
+    "weighted_f1": {
+     "mean": 0.7995184115320532,
+     "min": 0.799518411532053,
+     "max": 0.799518411532053,
+     "spread": 0.0
+    },
+    "macro_f1": {
+     "mean": 0.7997031168416463,
+     "min": 0.7997031168416464,
+     "max": 0.7997031168416464,
+     "spread": 0.0
+    },
+    "balanced_accuracy": {
+     "mean": 0.8065125105490103,
+     "min": 0.8065125105490103,
+     "max": 0.8065125105490103,
+     "spread": 0.0
+    }
+   }
+  },
+  "random_forest": {
+   "validation": {
+    "accuracy": {
+     "mean": 0.9993177554153164,
+     "min": 0.9993177554153164,
+     "max": 0.9993177554153164,
+     "spread": 0.0
+    },
+    "weighted_f1": {
+     "mean": 0.9993177553914997,
+     "min": 0.9993177553914997,
+     "max": 0.9993177553914997,
+     "spread": 0.0
+    },
+    "macro_f1": {
+     "mean": 0.999317755395469,
+     "min": 0.9993177553954691,
+     "max": 0.9993177553954691,
+     "spread": 0.0
+    },
+    "balanced_accuracy": {
+     "mean": 0.9993177623963877,
+     "min": 0.9993177623963876,
+     "max": 0.9993177623963876,
+     "spread": 0.0
+    }
+   },
+   "test": {
+    "accuracy": {
+     "mean": 0.9991131122936281,
+     "min": 0.9991131122936281,
+     "max": 0.9991131122936281,
+     "spread": 0.0
+    },
+    "weighted_f1": {
+     "mean": 0.9991131119633937,
+     "min": 0.9991131119633937,
+     "max": 0.9991131119633937,
+     "spread": 0.0
+    },
+    "macro_f1": {
+     "mean": 0.9991130858748876,
+     "min": 0.9991130858748876,
+     "max": 0.9991130858748876,
+     "spread": 0.0
+    },
+    "balanced_accuracy": {
+     "mean": 0.9991127188340903,
+     "min": 0.9991127188340903,
+     "max": 0.9991127188340903,
+     "spread": 0.0
+    }
+   }
+  }
+ }
+}
