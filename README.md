@@ -21,8 +21,11 @@ This project is being reworked into **v5.0 ("correct & safe")**; see [docs/IMPRO
 - **Web trainer: exporting and loading model files is paused** until v5.0-rc1, because they were pickle files that can run code when opened. Training and predicting inside a session still work.
 - Web trainer data lives in memory, one workspace per browser session (tabs of the same browser share it). It is lost when the app restarts, removed after 240 minutes without use (`TOOLKIT_WORKSPACE_IDLE_MIN`), or with the **Clear workspace** button. Only one training runs at a time per workspace. If you serve the app over HTTPS, set `TOOLKIT_HTTPS=1` so the session cookie is marked `Secure`.
 - The port scanner sends service banners to a third-party AI service (OpenRouter/DeepSeek) when an API key is configured. Don't scan systems whose banners you may not share. Consent and redaction come in v5.0 step 0.6.
-- The CVE lookup uses a retired MITRE search page and may return nothing (replaced by the NVD API in v5.0).
-- Tested on Windows with Python 3.14. The code is being made portable to Linux and macOS, but it is not tested on real Linux/macOS machines.
+- The CVE lookup uses a retired MITRE search page and may return nothing (replaced by the NVD API in v5.0). CVE and AI lookups for open ports run one at a time, so scans with many open ports are slow.
+- The port scanner logs an `ERROR` line when the optional `api_keys.txt` is missing; it still works, just without AbuseIPDB and AI lookups.
+- The CLI's v4 model files were saved with scikit-learn 1.6.1; this setup has 1.8.0, so loading them prints version warnings (shown on purpose, not hidden). Predictions also print a harmless "X does not have valid feature names" warning. Both go away with the v5 model.
+- Starting the web trainer from the launcher menu prints its address (`http://127.0.0.1:5000/`) but doesn't open a browser; stop it with Ctrl+C to get back to the menu.
+- Tested on Windows with Python 3.14 (122 automated tests plus a scripted walk-through of every menu path, `scripts/menu_walkthrough.py`). The code is being made portable to Linux and macOS, but it is not tested on real Linux/macOS machines.
 - Only scan systems you are authorised to scan.
 
 ---
