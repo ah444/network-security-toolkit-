@@ -56,8 +56,15 @@ env/
 # ==============================
 *.csv
 !dataset/*.csv
-uploads/*.csv
-!uploads/.gitkeep
+!tests/fixtures/*.csv
+
+# Local datasets (never committed; see docs/datasets.md)
+data/
+
+# Web IDS: uploaded files and exported models are runtime data
+**/uploads/*
+!**/uploads/.gitkeep
+tools/IDS/IDS_Web_CIC_Dynamic/models/
 
 # ==============================
 # IDE and Editor
@@ -98,3 +105,21 @@ temp/
 scan_results.json
 scan_results.csv
 scan_results.txt
+
+# ==============================
+# Runtime secrets & local state (signing key, session key, runs, logs)
+# ==============================
+instance/
+.env
+
+# ==============================
+# Tooling caches & archives
+# ==============================
+.pytest_cache/
+.ruff_cache/
+*.zip
+
+# ==============================
+# Personal editor/assistant settings
+# ==============================
+.claude/settings.local.json
