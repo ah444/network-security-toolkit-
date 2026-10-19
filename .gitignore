@@ -1,0 +1,100 @@
+# ==============================
+# Security - API Keys and Secrets
+# ==============================
+api_keys.txt
+*.env
+.env.*
+secrets.txt
+credentials.txt
+
+# ==============================
+# Python
+# ==============================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environments
+venv/
+ENV/
+env/
+.venv/
+
+# ==============================
+# Jupyter Notebooks
+# ==============================
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# ==============================
+# Machine Learning Models (uncomment if you don't want to track them)
+# ==============================
+# *.pkl
+# *.joblib
+# *.h5
+# *.model
+
+# ==============================
+# Datasets (large files)
+# ==============================
+*.csv
+!dataset/*.csv
+uploads/*.csv
+!uploads/.gitkeep
+
+# ==============================
+# IDE and Editor
+# ==============================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.pydevproject
+.settings/
+
+# ==============================
+# OS Generated Files
+# ==============================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# ==============================
+# Logs and Temp Files
+# ==============================
+*.log
+*.tmp
+*.temp
+logs/
+temp/
+
+# ==============================
+# Scan Results (Port Scanner output)
+# ==============================
+scan_results.json
+scan_results.csv
+scan_results.txt

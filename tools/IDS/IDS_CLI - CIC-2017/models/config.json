@@ -1,0 +1,38 @@
+{
+  "version": "4.0",
+  "dataset": "improved-cicids2017",
+  "classes": [
+    "BENIGN",
+    "Botnet",
+    "Botnet - Attempted",
+    "DDoS",
+    "DoS GoldenEye",
+    "DoS Hulk",
+    "DoS Hulk - Attempted",
+    "DoS Slowhttptest",
+    "DoS Slowhttptest - Attempted",
+    "DoS Slowloris",
+    "DoS Slowloris - Attempted",
+    "FTP-Patator",
+    "FTP-Patator - Attempted",
+    "Portscan",
+    "SSH-Patator",
+    "SSH-Patator - Attempted"
+  ],
+  "features": [
+    "Attempted Category",
+    "Bwd Segment Size Avg",
+    "Bwd Packet Length Mean",
+    "Bwd Packet Length Std",
+    "Bwd Packet Length Max",
+    "Subflow Bwd Bytes",
+    "Packet Length Std",
+    "Packet Length Mean"
+  ],
+  "best_model": "random_forest",
+  "datasets": [
+    "improved-cicids2017",
+    "improved-csecicids2018"
+  ],
+  "fine_tuned": false
+}
