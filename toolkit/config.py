@@ -25,3 +25,14 @@ class LeakageConfig:
     id_unique_min_rows: int = 1_000  # below this, most integer features look unique
     id_increasing_min_rows: int = 20
     random_state: int = 0
+
+
+@dataclass(frozen=True)
+class SplitConfig:
+    """Train/test split settings (plan D9, step 0.4b)."""
+
+    test_size: float = 0.2
+    random_state: int = 42  # the seed the v4 app used for its split
+    # Time-column checks before a temporal split; above these the split falls back.
+    max_time_parse_failure: float = 0.01  # share of non-empty values that don't parse
+    max_time_missing: float = 0.01  # share of empty values

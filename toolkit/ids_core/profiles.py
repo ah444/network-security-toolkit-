@@ -43,8 +43,10 @@ class ProfileMatch:
     column_names: tuple[str, ...]  # stripped, unique, in file order
     label_column: str | None
     blocked_columns: tuple[str, ...] = ()  # never features: label-derived, IDs, time
-    split_strategy: str = "stratified"  # official | temporal_per_class | stratified
+    # official | temporal | temporal_per_class | group | stratified (see split.py)
+    split_strategy: str = "stratified"
     time_column: str | None = None
+    group_column: str | None = None
     label_replacements: tuple[tuple[str, str], ...] = ()  # applied to label values
     warnings: tuple[str, ...] = ()
 

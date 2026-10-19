@@ -96,6 +96,21 @@ The loader's SHA-256, row counts, empty-cell and `inf` counts match the tables a
 
 ---
 
+## Dedupe and split (step 0.4b)
+
+`toolkit/ids_core/split.py` with the profile's split strategy, checked on 2026-10-20 (default `SplitConfig`: 20 % test, seed 42):
+
+| File | Copies removed | Conflicting rows¹ | Strategy | Train / test rows | Warnings |
+|---|---|---|---|---|---|
+| `CIC-2017.csv` | 308,381 (10.9 %) | 1,396 | `stratified` | 2,017,889 / 504,473 | `STRATIFIED_SCORES_MAY_BE_OPTIMISTIC` |
+| `DDOS(CIC-2017)_FILTERED_TEST.csv` | 23,416 | 72 | `stratified` | 161,864 / 40,465 | `STRATIFIED_SCORES_MAY_BE_OPTIMISTIC` |
+| `KDDTrain+.txt` + `KDDTest+.txt` | 0 in train; 610 test rows also in train | 31 | `official` | 125,973 / 21,934 | `OFFICIAL_TEST_OVERLAP_REMOVED`, `CLASS_MISSING_FROM_TEST`, `CLASS_MISSING_FROM_TRAIN` |
+
+¹ Same feature values, different labels: counted, not removed.
+
+- **CIC:** every one of the 15 classes is on both sides, but the smallest are tiny: Heartbleed 9 / 2, Infiltration 29 / 7, Sql Injection 17 / 4. With no time column the split is stratified, so the scores may be optimistic.
+- **NSL-KDD:** the copies are compared without `level`. 17 attack types occur only in KDDTest+ (e.g. `apache2` 737, `mscan` 996), and `spy` (2) and `warezclient` (890) occur only in KDDTrain+. This is how the published files were designed (unseen attacks in test), so it is reported, not "fixed".
+
 ## Licences and citations (0.5b, still to complete)
 
 | Dataset | Official page | Citation | Licence / redistribution |
