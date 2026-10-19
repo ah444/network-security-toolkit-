@@ -403,7 +403,7 @@ def upload():
 
             except Exception as e:
                 logging.exception("Error reading file")
-                return jsonify({"error": f"Error reading {file.filename}: {str(e)}"}), 500
+                return jsonify({"error": f"Could not read {file.filename} as a CSV/TXT dataset. Check the file format."}), 400
             finally:
                 save_path.unlink(missing_ok=True)
         else:
@@ -441,7 +441,7 @@ def upload():
         })
     except Exception as e:
         logging.exception("Error combining files")
-        return jsonify({"error": f"Error combining files: {str(e)}"}), 500
+        return jsonify({"error": "Could not combine the uploaded files."}), 500
 
 @app.route("/preview_data", methods=["POST"])
 def preview_data():
@@ -551,8 +551,8 @@ def filter_target_values():
             "message": f"Successfully removed {len(values_to_remove)} class(es) ({removed_rows:,} rows). {len(remaining_values)} classes remaining with {new_count:,} total rows."
         })
     except Exception as e:
-        logging.error(f"Error filtering target values: {str(e)}")
-        return jsonify({"error": f"Error filtering target values: {str(e)}"}), 500
+        logging.exception("Error filtering target values")
+        return jsonify({"error": "Could not filter the target values."}), 500
 
 @app.route("/get_target_values", methods=["POST"])
 def get_target_values():
@@ -642,8 +642,8 @@ def reset_smote():
         logging.info("SMOTE status reset - reverting to original dataset")
         return jsonify({"success": True})
     except Exception as e:
-        logging.error(f"Error resetting SMOTE status: {str(e)}")
-        return jsonify({"success": False, "error": str(e)}), 500 # Return the error message
+        logging.exception("Error resetting SMOTE status")
+        return jsonify({"success": False, "error": "Could not reset the balanced dataset."}), 500
 @app.route("/apply_smote", methods=["POST"])
 def apply_smote_endpoint():
     """
@@ -968,7 +968,7 @@ def apply_smote_endpoint():
     except Exception as e:
         logging.exception(f"Error applying SMOTE: {str(e)}")
         return jsonify({
-            "error": f"Error applying SMOTE: {str(e)}",
+            "error": "SMOTE could not be applied to this dataset.",
             "smote_applied": False,
             "suggestion": "Try using memory_efficient=true, reducing downsample_ratio, or setting max_per_class to limit dataset size."
         }), 500
@@ -1042,7 +1042,7 @@ def recommend_features():
         })
     except Exception as e:
         logging.exception("Error during feature selection")
-        return jsonify({"error": f"Error during feature selection: {str(e)}"}), 500
+        return jsonify({"error": "Feature selection failed for this dataset."}), 500
 
 @app.route("/get_available_models", methods=["GET"])
 def get_available_models():
@@ -1264,7 +1264,7 @@ def configure():
         X_test_scaled = scaler.transform(X_test)
     except Exception as e:
         logging.exception("Error scaling data")
-        return jsonify({"error": f"Error scaling data: {str(e)}"}), 400
+        return jsonify({"error": "Could not scale the data. Are all selected features numeric or categorical columns?"}), 400
 
     y_train = y_train.astype(int)
     y_val = y_val.astype(int)
@@ -1603,8 +1603,9 @@ def predict_endpoint():
     try:
         input_data = {feat: [values.get(feat)] for feat in feature_names}
         input_df = pd.DataFrame(input_data, columns=feature_names)
-    except Exception as e:
-        return jsonify({"error": f"Error building input data: {e}"}), 400
+    except Exception:
+        logging.exception("Error building input data")
+        return jsonify({"error": "Could not build an input row from the given values."}), 400
 
     for col in model_config["categorical_features"]:
         if col in input_df.columns:
@@ -1612,8 +1613,9 @@ def predict_endpoint():
             if le:
                 try:
                     input_df[col] = le.transform(input_df[col].astype(str))
-                except Exception as e:
-                    return jsonify({"error": f"Error encoding feature '{col}': {e}"}), 400
+                except Exception:
+                    logging.exception("Error encoding feature %s", col)
+                    return jsonify({"error": f"Unknown value for feature '{col}'."}), 400
 
     # Models that require scaling
     models_needing_scaling = ["logistic_regression", "svm", "knn", "naive_bayes"]
@@ -1621,8 +1623,9 @@ def predict_endpoint():
     if algo in models_needing_scaling:
         try:
             input_transformed = model_config["scaler"].transform(input_df)
-        except Exception as e:
-            return jsonify({"error": f"Error scaling input data: {e}"}), 400
+        except Exception:
+            logging.exception("Error scaling input data")
+            return jsonify({"error": "Could not scale the input values."}), 400
     else:
         input_transformed = input_df
 
@@ -1633,8 +1636,9 @@ def predict_endpoint():
             attack_prediction = model_config["target_enc"].inverse_transform(pred)[0]
         else:
             attack_prediction = pred[0]
-    except Exception as e:
-        return jsonify({"error": f"Prediction error: {e}"}), 500
+    except Exception:
+        logging.exception("Prediction error")
+        return jsonify({"error": "Prediction failed for these input values."}), 500
     return jsonify({"prediction": attack_prediction})
 
 @app.route("/predict_loaded/", methods=["POST"])
@@ -1704,7 +1708,7 @@ def predict_loaded_endpoint():
         return jsonify({"prediction": prediction})
     except Exception as e:
         logging.exception("Prediction error")
-        return jsonify({"error": f"Prediction error: {e}"}), 500
+        return jsonify({"error": "Prediction failed for these input values."}), 500
 
 @app.route("/load_model", methods=["POST"])
 def load_model_endpoint():
