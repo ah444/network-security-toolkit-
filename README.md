@@ -2,10 +2,26 @@
 
 A comprehensive network security tool combining **Network Reconnaissance** and **Machine Learning-based Intrusion Detection System (IDS)**.
 
-![Python](https://img.shields.io/badge/Python-3.8%2B-blue)
-![Flask](https://img.shields.io/badge/Flask-2.0%2B-green)
-![scikit-learn](https://img.shields.io/badge/scikit--learn-1.0%2B-orange)
-![imbalanced-learn](https://img.shields.io/badge/imbalanced--learn-0.9%2B-red)
+![Python](https://img.shields.io/badge/Python-3.11%2B-blue)
+![Flask](https://img.shields.io/badge/Flask-3.1-green)
+![scikit-learn](https://img.shields.io/badge/scikit--learn-1.8-orange)
+![imbalanced-learn](https://img.shields.io/badge/imbalanced--learn-0.14-red)
+
+---
+
+## ⚠️ Project status — read first
+
+This project is being reworked into **v5.0 ("correct & safe")**; see [docs/IMPROVEMENT_PLAN.md](docs/IMPROVEMENT_PLAN.md) and the day-to-day [docs/V5.0_CHECKLIST.md](docs/V5.0_CHECKLIST.md). A measured baseline of the current version ([docs/baseline/FINDINGS.md](docs/baseline/FINDINGS.md)) showed that **earlier accuracy claims were not valid**:
+
+- **IDS CLI model (v4):** it uses `Attempted Category`, a feature derived from the attack label itself. Changing only that value flips the prediction (e.g. `-1` turns every sample into BENIGN), and none of the CLI's 4 built-in sample flows is classified as intended. **The previously stated ~97–98 % accuracy is withdrawn.** The CLI now prints a warning when this model is loaded. A replacement model trained without leakage is planned in v5.0.
+- **Web IDS trainer:** results it shows today are **optimistic**. "Apply SMOTE" and "Recommend Features" run on the *whole* dataset before the train/test split, duplicate rows can land in both train and test, and label-derived columns (e.g. NSL-KDD `level`) are not blocked. The recommender even ranked `level` among the top 10 features. The app reports accuracy and weighted F1 only, which hide weak minority classes: on NSL-KDD, random forest shows 99.8 % accuracy but 76.6 % macro-F1.
+
+### Known limitations (current version)
+- Results from the web trainer are inflated by the leakage above, until v5.0 step 0.4.
+- The port scanner sends service banners to a third-party AI service (OpenRouter/DeepSeek) when an API key is configured. Don't scan systems whose banners you may not share. Consent and redaction come in v5.0 step 0.6.
+- The CVE lookup uses a retired MITRE search page and may return nothing (replaced by the NVD API in v5.0).
+- Tested on Windows with Python 3.14. The code is being made portable to Linux and macOS, but it is not tested on real Linux/macOS machines.
+- Only scan systems you are authorised to scan.
 
 ---
 
@@ -30,17 +46,16 @@ A comprehensive network security tool combining **Network Reconnaissance** and *
 - 🔍 TCP/UDP port scanning
 - 🖥️ OS detection via TTL analysis
 - 🏷️ Service banner grabbing
-- 🔐 CVE vulnerability lookup (via MITRE)
-- 🤖 AI-powered vulnerability analysis (via DeepSeek)
+- 🔐 CVE vulnerability lookup (via MITRE; the search page is retired, see Known limitations)
+- 🤖 AI-powered vulnerability analysis (via DeepSeek on OpenRouter; **sends service banners to a third-party service**)
 - 📊 IP reputation check (via AbuseIPDB)
 - 📁 Export results to JSON/CSV/TXT
 
 ### 2. Intrusion Detection System (CLI)
 - 🧠 Machine Learning-based detection
-- 📊 Random Forest & XGBoost models
-- 🎯 16 attack classes detection
-- ⚡ Real-time prediction
-- 📈 High accuracy (~97%)
+- 📊 Random Forest & XGBoost models (v4, 16 classes of the "improved" CIC-IDS2017 labelling)
+- ⌨️ Manual feature input or built-in sample flows
+- ⚠️ **No valid accuracy figure:** the v4 model relies on the label-derived `Attempted Category` feature (see **Project status** at the top). It will be replaced in v5.0.
 
 ### 3. Intrusion Detection System (Web) ⭐ NEW FEATURES
 - 🌐 Web-based UI with Flask
@@ -60,34 +75,43 @@ A comprehensive network security tool combining **Network Reconnaissance** and *
 ## 🚀 Installation
 
 ### Prerequisites
-- Python 3.8+
+- Python 3.11 or newer (developed and tested with Python 3.14 on Windows)
 - pip
 
 ### Steps
+Everything runs locally; no account or online service is needed for the IDS.
 
 ```bash
-# Clone the repository
-git clone https://github.com/yourusername/network-security-toolkit.git
-cd network-security-toolkit
+# 1. Open a terminal in the project folder (the folder that contains main.py)
 
-# Create virtual environment (recommended)
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+# 2. Create a virtual environment in .venv
+python -m venv .venv
 
-# Install dependencies
-pip install -r requirements.txt
+# 3. Activate it
+#    Windows (PowerShell):  .venv\Scripts\Activate.ps1
+#    Windows (cmd):         .venv\Scripts\activate.bat
+#    Linux / macOS:         source .venv/bin/activate
+
+# 4. Install the pinned dependencies
+python -m pip install -r requirements.txt
 ```
 
 ### Dependencies
-```
-flask>=2.0.0
-pandas>=1.3.0
-numpy>=1.21.0
-scikit-learn>=1.0.0
-xgboost>=1.5.0
-imbalanced-learn>=0.9.0
-requests>=2.26.0
-dask>=2022.1.0
+Versions are **pinned** so results are reproducible and the bundled models load:
+- `requirements.txt`: runtime libraries (Flask, pandas, numpy, dask, scikit-learn, imbalanced-learn, XGBoost, LightGBM, requests)
+- `requirements-dev.txt`: adds the development tools (pytest, ruff, pip-audit)
+- `requirements.lock`: the complete environment, for an exact rebuild (`python -m pip install -r requirements.lock`)
+
+### Datasets
+Datasets are **not** part of the repository. Put them in `data/raw/`; see [docs/datasets.md](docs/datasets.md) for the expected files, their SHA-256 fingerprints and known data-quality issues.
+
+### Development & tests
+```bash
+python -m pip install -r requirements-dev.txt
+python -m pytest              # run the test suite
+python -m ruff check .        # lint
+python -m pip_audit -r requirements.lock   # check dependencies for known vulnerabilities
+git config core.hooksPath .githooks         # once per clone: run lint + tests before every commit
 ```
 
 ---
@@ -212,9 +236,18 @@ Customize data splits:
 ```
 Project/
 ├── main.py                          # Main entry point
-├── requirements.txt                 # Dependencies
+├── requirements.txt                 # Pinned runtime dependencies
+├── requirements-dev.txt             # + pytest, ruff, pip-audit
+├── requirements.lock                # Exact environment
+├── pyproject.toml                   # pytest / ruff configuration
 ├── .gitignore                       # Git ignore rules
+├── .githooks/pre-commit             # Lint + tests before every commit
 ├── README.md                        # This file
+│
+├── data/raw/                        # Local datasets (gitignored, see docs/datasets.md)
+├── docs/                            # Improvement plan, v5.0 checklist, datasets, baseline
+├── scripts/baseline_v4.py           # Reproduces the "before" baseline (docs/baseline/)
+├── tests/                           # pytest suite + small fixtures
 │
 └── tools/
     ├── Port_scan/                   # Network Reconnaissance
@@ -252,12 +285,9 @@ Project/
 
 ## 🤖 Machine Learning Models
 
-### Supported Datasets
-- **CIC-IDS-2017** - Canadian Institute for Cybersecurity
-- **CIC-IDS-2018** - Updated version
-- **NSL-KDD** - Network intrusion dataset
-- **UNSW-NB15** - Australian dataset
-- **Custom CSV/TXT** - Any properly formatted dataset
+### Datasets
+- **Used and profiled:** CIC-IDS2017 (original "MachineLearningCSV" variant and a filtered DDoS subset) and NSL-KDD. Details, SHA-256 fingerprints and data-quality issues are in [docs/datasets.md](docs/datasets.md).
+- **Not tested yet:** CIC-IDS2018, UNSW-NB15 and other CSV/TXT files. They can be uploaded to the web trainer, but they haven't been verified.
 
 ### Algorithms
 | Algorithm | Type | Strengths |
@@ -274,22 +304,13 @@ Project/
 | **XGBoost** *(optional)* | Boosting | State-of-the-art performance |
 | **LightGBM** *(optional)* | Boosting | Fast training, memory efficient |
 
-> **Note:** XGBoost and LightGBM require additional installation (`pip install xgboost lightgbm`)
+> **Note:** XGBoost and LightGBM are included in `requirements.txt`.
 
-### Attack Classes Detected
-- BENIGN (Normal traffic)
-- Botnet
-- DDoS
-- DoS (GoldenEye, Hulk, Slowhttptest, Slowloris)
-- FTP-Patator
-- SSH-Patator
-- Portscan
-- Web Attacks
-- Infiltration
-- Heartbleed
-- And more...
+### Attack Classes
+- **CLI model (v4):** 16 classes of the "improved" CIC-IDS2017 labelling (BENIGN, Botnet, DDoS, DoS GoldenEye/Hulk/Slowhttptest/Slowloris, FTP-Patator, Portscan, SSH-Patator, and several "… - Attempted" variants). See the warning under **Project status** at the top.
+- **Web trainer:** whatever classes the uploaded dataset contains. The original CIC-IDS2017 file has 15 (BENIGN, DoS Hulk, PortScan, DDoS, DoS GoldenEye, FTP-Patator, SSH-Patator, DoS slowloris, DoS Slowhttptest, Bot, three Web Attack types, Infiltration, Heartbleed); see [docs/datasets.md](docs/datasets.md).
 
-### Training Pipeline
+### Training Pipeline (current version)
 1. **Data Upload** - CSV/TXT with headers
 2. **Preview** - View data statistics
 3. **Class Analysis** - Distribution & imbalance detection
@@ -301,6 +322,8 @@ Project/
 9. **Training** - Selected models trained in parallel
 10. **Evaluation** - Accuracy, F1 Score, AUC, Confusion Matrix
 11. **Export** - Save models as .pkl
+
+> ⚠️ **Known flaw:** steps 5 and 6 (feature recommendation and the "Apply SMOTE" preview) run on the **whole** dataset *before* the split in step 7, so information from the test rows leaks into training. v5.0 reorders this so that **split comes first** and selection and balancing are fitted on training data only.
 
 ---
 
@@ -382,7 +405,7 @@ SMOTE-ENN cleans noisy synthetic samples.
 Alternatives: Class Weights, SMOTE + Tomek, ADASYN
 ```
 
-### IDS Prediction
+### IDS Prediction (output format only, not a real result)
 ```
 ================================================================
 🎯 PREDICTION RESULT
@@ -420,17 +443,16 @@ For datasets >500K rows:
 
 ## 🤝 Contributing
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit changes (`git commit -m 'Add amazing feature'`)
-4. Push to branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+1. Create a branch (`git checkout -b fix/short-name`)
+2. Write a test for the correct behaviour first, then make the fix
+3. Make sure `python -m pytest` and `python -m ruff check .` pass (the pre-commit hook runs both)
+4. Commit with a clear message
 
 ---
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+Intended licence: **MIT**. The `LICENSE` file has not been added yet (planned in v5.1, see [docs/IMPROVEMENT_PLAN.md](docs/IMPROVEMENT_PLAN.md) D20). Datasets keep their own terms; see [docs/datasets.md](docs/datasets.md).
 
 ---
 
@@ -455,5 +477,3 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ---
 
 <p align="center">Made with ❤️ for cybersecurity</p>
-"# network-security-toolkit-" 
-"# network-security-toolkit-" 

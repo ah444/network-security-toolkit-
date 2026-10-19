@@ -1,16 +1,29 @@
-# 🛡️ IDS Models - CIC-IDS2017
+# 🛡️ IDS Models - CIC-IDS2017 (v4)
 
-## Current Version: 4.0
+## ⚠️ Status: leaky model, kept only until v5.0 replaces it
 
-### Files Included:
+The v4 model uses **`Attempted Category`** as an input feature. That value comes from the attack **label** itself (the "… - Attempted" classes), so the model can read the answer from its input. A measured baseline ([docs/baseline/FINDINGS.md](../../../../docs/baseline/FINDINGS.md), section 7; data in [docs/baseline/cli_v4.json](../../../../docs/baseline/cli_v4.json)) shows:
+
+- **None of the CLI's 4 built-in sample flows is classified as intended.** With `Attempted Category = 0.0` (the value the samples use), both models predict an "… - Attempted" class for every sample, including the "BENIGN-like" one.
+- **Changing only `Attempted Category` flips the result.** At `-1`, every sample (including the DDoS-like and PortScan-like ones) becomes BENIGN with 0.88–1.00 confidence.
+- **The accuracy figures previously listed here (~97–98 %) are withdrawn.** They came from evaluating with this leaked feature, and the original test data isn't available to re-measure them.
+
+The CLI prints a warning when this model is loaded. A replacement is planned in v5.0: it is trained in the fixed web trainer (leakage guard on, split before any balancing or feature selection) and exported as a signed bundle (see [docs/IMPROVEMENT_PLAN.md](../../../../docs/IMPROVEMENT_PLAN.md), D12).
+
+### Version note
+The `.pkl` files were saved with **scikit-learn 1.6.1** (and numpy 2.x). Loading them with a different scikit-learn version raises `InconsistentVersionWarning` and may give wrong results. The CLI currently hides these warnings; this is fixed in v5.0 step 0.3.
+
+---
+
+## Files Included
 - `config.json` - Model configuration (features, classes, best model)
 - `scaler.pkl` - RobustScaler for feature normalization
 - `label_encoder.pkl` - LabelEncoder for class labels
 - `random_forest.pkl` - Random Forest classifier model
 - `xgboost.pkl` - XGBoost classifier model
 
-### Features Used (8 features):
-1. Attempted Category
+## Features Used (8 features)
+1. Attempted Category  ⚠️ label-derived (see above)
 2. Bwd Segment Size Avg
 3. Bwd Packet Length Mean
 4. Bwd Packet Length Std
@@ -19,7 +32,7 @@
 7. Packet Length Std
 8. Packet Length Mean
 
-### Classes Detected (16 classes):
+## Classes (16 classes, "improved" CIC-IDS2017 labelling)
 - BENIGN
 - Botnet / Botnet - Attempted
 - DDoS
@@ -33,58 +46,14 @@
 
 ---
 
-## ⚠️ Important Note on Model Version
+## Training details (as originally documented, not verifiable)
 
-### Current Models (v4.0)
-The current models include `Attempted Category` as a feature. This feature is derived from the label naming convention in the dataset and may provide artificially high accuracy.
+The training code (`notebook_v5_fixed.ipynb`, referenced in earlier versions of this file) is **not in the project**, so the original training run can't be reproduced or checked. The original documentation stated:
 
-### Recommended: Version 5.0
-For production use, regenerate models using `notebook_v5_fixed.ipynb` which:
-- ✅ Excludes label-derived features (no data leakage)
-- ✅ Uses only real packet features extractable from network traffic
-- ✅ Provides more realistic accuracy expectations (85-92%)
+- Dataset: improved CIC-IDS2017 / CSE-CIC-IDS2018 (Kaggle), see `config.json` → `datasets`
+- Train/Val/Test split 70 / 15 / 15, RobustScaler, SelectKBest (F-test), 5-fold StratifiedKFold
 
----
-
-## How to Regenerate Models
-
-### Option 1: Using Jupyter Notebook (Recommended)
-```bash
-# Open the notebook
-jupyter notebook notebook_v5_fixed.ipynb
-
-# Run all cells to generate new models
-```
-
-### Option 2: Using Google Colab
-1. Upload `notebook_v5_fixed.ipynb` to Google Colab
-2. Upload your Kaggle API key (`kaggle.json`)
-3. Run all cells
-4. Download the generated `models/` folder
-
-### Dataset Required
-- **Source**: [Kaggle - Improved CIC-IDS 2017/2018](https://www.kaggle.com/datasets/ernie55ernie/improved-cicids2017-and-csecicids2018)
-- **Size**: ~10GB (includes both 2017 and 2018 datasets)
-
----
-
-## Model Performance
-
-### Random Forest (Best Model)
-| Metric | Score |
-|--------|-------|
-| Train Accuracy | ~99% |
-| Test Accuracy | ~98% |
-| F1 Score (weighted) | ~98% |
-
-### XGBoost
-| Metric | Score |
-|--------|-------|
-| Train Accuracy | ~99% |
-| Test Accuracy | ~97% |
-| F1 Score (weighted) | ~97% |
-
-*Note: Accuracy is high due to `Attempted Category` feature. Expect 85-92% with v5.0 models.*
+The dataset available locally is the **original** CIC-IDS2017 variant (15 classes, no `Attempted Category`; see [docs/datasets.md](../../../../docs/datasets.md)), so v5.0 does not retrain this exact model. It trains a new one through the fixed pipeline, and every training run is recorded (dataset hash, split, features, versions, metrics).
 
 ---
 
@@ -93,13 +62,11 @@ jupyter notebook notebook_v5_fixed.ipynb
 ```python
 from IDS_with_Machine_Learning import IDSModel
 
-# Initialize and load model
 ids = IDSModel()
-ids.load('random_forest')
+ids.load('random_forest')   # prints the leakage warning for this v4 model
 
-# Make prediction
 features = {
-    "Attempted Category": 0.0,
+    "Attempted Category": 0.0,   # label-derived: this value largely decides the output
     "Bwd Segment Size Avg": 156.5,
     "Bwd Packet Length Mean": 312.4,
     "Bwd Packet Length Std": 425.8,
@@ -111,13 +78,3 @@ features = {
 result = ids.predict(features_dict=features)
 print(f"Prediction: {result['label']} (Confidence: {result['confidence']:.2%})")
 ```
-
----
-
-## Training Details
-
-- **Dataset**: CIC-IDS-2017 (improved version)
-- **Train/Val/Test Split**: 70% / 15% / 15%
-- **Scaling**: RobustScaler
-- **Feature Selection**: SelectKBest with F-test
-- **Cross-Validation**: 5-fold StratifiedKFold
