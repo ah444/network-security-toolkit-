@@ -1,0 +1,20 @@
+#!/bin/sh
+# Pre-commit check: lint + tests must pass before any commit.
+# Enabled once per clone with:  git config core.hooksPath .githooks
+# Works with Git for Windows (Git Bash) and on Linux/macOS.
+
+if [ -x ".venv/Scripts/python.exe" ]; then
+    PY=".venv/Scripts/python.exe"      # Windows
+elif [ -x ".venv/bin/python" ]; then
+    PY=".venv/bin/python"              # Linux / macOS
+else
+    echo "pre-commit: .venv not found. Create it first:"
+    echo "  python -m venv .venv  &&  .venv python -m pip install -r requirements-dev.txt"
+    exit 1
+fi
+
+echo "pre-commit: ruff check"
+"$PY" -m ruff check . || exit 1
+
+echo "pre-commit: pytest"
+"$PY" -m pytest -q || exit 1

@@ -1,0 +1,30 @@
+# Tool configuration only (packaging comes in v5.1, see docs/IMPROVEMENT_PLAN.md D18).
+[project]
+name = "network-security-toolkit"
+version = "4.0.0"
+description = "Network reconnaissance + ML intrusion detection toolkit"
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.ruff]
+# Flags syntax newer than Python 3.11 so the code stays runnable on older
+# Pythons without installing them (plan D19, Python policy B).
+target-version = "py311"
+line-length = 100
+extend-exclude = [".venv", "data"]
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "B", "S602", "S604", "PLW1514"]
+preview = true
+
+# Legacy findings in the original files, frozen at the baseline import.
+# New code must be clean. Remove a code from this list in the same commit
+# that fixes it (ratchet: the list only ever shrinks).
+[tool.ruff.lint.per-file-ignores]
+"tools/IDS/IDS_CLI - CIC-2017/IDS_with_Machine_Learning.py" = ["E402", "F401", "PLW1514", "F541", "B904", "E722"]
+"tools/IDS/IDS_Web_CIC_Dynamic/app.py" = ["F401", "F541", "B905", "F841"]
+"tools/Port_scan/Port_Scan.py" = ["PLW1514", "B007"]
+"tests/**" = ["S101"]
