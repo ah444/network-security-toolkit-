@@ -18,6 +18,7 @@ This project is being reworked into **v5.0 ("correct & safe")**; see [docs/IMPRO
 
 ### Known limitations (current version)
 - Results from the web trainer are inflated by the leakage above, until v5.0 step 0.4.
+- **Web trainer: exporting and loading model files is paused** until v5.0-rc1, because they were pickle files that can run code when opened. Training and predicting inside a session still work.
 - The port scanner sends service banners to a third-party AI service (OpenRouter/DeepSeek) when an API key is configured. Don't scan systems whose banners you may not share. Consent and redaction come in v5.0 step 0.6.
 - The CVE lookup uses a retired MITRE search page and may return nothing (replaced by the NVD API in v5.0).
 - Tested on Windows with Python 3.14. The code is being made portable to Linux and macOS, but it is not tested on real Linux/macOS machines.
