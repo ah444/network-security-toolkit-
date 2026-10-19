@@ -443,6 +443,13 @@ The shipped default bundle is trained with the versions pinned in the lock file,
 
 **Dataset note:** the CSV in `uploads/` only covers BENIGN vs DDoS, so a model trained on it detects DDoS only. For the 16-class CLI model you need the improved CIC-IDS2017 files (Kaggle). The web trainer must handle large uploads (D16 chunked loading). Optional later: `toolkit train --from-run run.json` re-runs a saved TrainingRun headlessly through the **same** pipeline code, which keeps option B's benefit without a second code path.
 
+**Dataset status (2026-10-19, details in `docs/datasets.md`):** `data/raw/CIC-2017.csv` is the **original** CIC-IDS2017 "MachineLearningCSV" variant: 2,830,743 rows, **15 classes**, 10.9 % exact duplicates (PortScan 43 %, SSH-Patator 45 %), `inf`/empty cells, and **no time, IP or Flow ID columns**. So:
+- a CIC CLI model is possible now, with 15 classes rather than v4's 16 "improved" classes, and the leaky `Attempted Category` doesn't exist in this file;
+- its split must be **dedupe → stratified with the optimistic-score warning** (no temporal or group split is possible on this file);
+- Heartbleed (11), Sql Injection (21) and Infiltration (36) are too small to score reliably.
+
+The beta-exit decision is now about accepting that caveat, not about availability.
+
 **Decision point at `5.0-beta` exit (not rc2):** at the end of beta, check whether CIC-IDS2017 is downloaded, hashed and passes profile detection. If not, **commit to the NSL-KDD fallback right then**, so 0.5 can start during rc1 instead of hitting a wall at rc2.
 
 **Fallback if CIC-IDS2017 isn't available at the beta decision point:** ship the default CLI bundle trained on **NSL-KDD** (`KDDTrain+` / `KDDTest+`, already on disk). It is multi-class (normal + DoS / Probe / R2L / U2R and their sub-types) and comes with an **official train/test split**, which is much better than a two-class DDoS model. It ships with an honest note: NSL-KDD comes from 1999-era traffic (KDD'99 lineage), so it shows the pipeline works but is not representative of modern traffic. The CIC model replaces it in a later release once the data is available. This way one unavailable download never blocks v5.0.
