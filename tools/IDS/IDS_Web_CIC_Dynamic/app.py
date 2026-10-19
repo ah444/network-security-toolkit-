@@ -2,6 +2,8 @@ from flask import Flask, render_template, jsonify, request
 import os
 import re
 from pathlib import Path
+from uuid import uuid4
+from werkzeug.utils import secure_filename
 import numpy as np
 import pandas as pd
 import threading
@@ -272,6 +274,12 @@ MODEL_FILES_PAUSED = (
 _EXPORT_NAME = re.compile(r"[A-Za-z0-9_-]{1,80}")
 
 
+def safe_upload_name(original):
+    """Unique, sanitised file name for an upload (no path parts, no '..'), S2/S3."""
+    cleaned = secure_filename(original or "") or "upload"
+    return f"{uuid4().hex}_{cleaned}"
+
+
 def safe_model_basename(name):
     """Return the export base name if it only uses letters, digits, '_' and '-' (1-80 chars).
 
@@ -314,13 +322,13 @@ def upload():
 
     for file in files:
         if file.filename.lower().endswith((".csv", ".txt")):
+            # Unique, sanitised name inside uploads/ (S2, S3). The file is deleted
+            # as soon as it has been read into memory (S11).
+            save_path = Path(uploads_dir) / safe_upload_name(file.filename)
+            if save_path.resolve().parent != Path(uploads_dir).resolve():
+                return jsonify({"error": "Invalid file name."}), 400
             try:
-                save_path = os.path.join(uploads_dir, file.filename)
-                if not os.path.exists(save_path):
-                    file.save(save_path)
-                else:
-                    logging.info(f"File {file.filename} already exists. Skipping re-save.")
-
+                file.save(save_path)
                 file_size = os.path.getsize(save_path)
                 logging.info(f"Processing file {file.filename} of size {file_size/1024/1024:.2f} MB")
 
@@ -344,6 +352,8 @@ def upload():
             except Exception as e:
                 logging.exception("Error reading file")
                 return jsonify({"error": f"Error reading {file.filename}: {str(e)}"}), 500
+            finally:
+                save_path.unlink(missing_ok=True)
         else:
             return jsonify({"error": f"Unsupported file type: {file.filename}"}), 400
 
