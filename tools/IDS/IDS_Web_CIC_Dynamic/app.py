@@ -280,6 +280,28 @@ def _upload_too_large(_error):
     return jsonify({"error": f"Upload too large (limit: {MAX_UPLOAD_MB} MB)."}), 413
 
 
+CONTENT_SECURITY_POLICY = "; ".join([
+    "default-src 'self'",
+    "script-src 'self'",                  # no inline scripts, no eval (S5 second layer)
+    "style-src 'self' 'unsafe-inline'",   # inline style="" is still used; tightened in v5.1
+    "img-src 'self' data:",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "frame-ancestors 'none'",
+])
+
+
+@app.after_request
+def _security_headers(response):
+    """Security headers on every response (S5, S10)."""
+    response.headers["Content-Security-Policy"] = CONTENT_SECURITY_POLICY
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "no-referrer"
+    return response
+
+
 @app.before_request
 def _block_cross_site_requests():
     """Interim CSRF protection (S10) until the v5.1 token: reject state-changing
@@ -1733,5 +1755,24 @@ def dynamic_ids_page():
 # ---------------------------
 # Main entry point
 # ---------------------------
+def run_server():
+    """Serve the app on this computer only (127.0.0.1), S6.
+
+    - Default: waitress, a production-grade pure-Python server (works on every OS).
+    - TOOLKIT_DEBUG=1: Flask's debug server, for development only. Never use it
+      when other people can reach the machine: its debugger can run code.
+    - TOOLKIT_PORT: port number (default 5000).
+    """
+    host = "127.0.0.1"
+    port = int(os.environ.get("TOOLKIT_PORT", "5000"))
+    print(f"IDS web app running at http://{host}:{port}/  (press Ctrl+C to stop)")
+    if os.environ.get("TOOLKIT_DEBUG") == "1":
+        print("WARNING: debug mode is ON (TOOLKIT_DEBUG=1). Development use only.")
+        app.run(host=host, port=port, debug=True)
+    else:
+        from waitress import serve
+        serve(app, host=host, port=port)
+
+
 if __name__ == "__main__":
-    app.run(debug=True)
+    run_server()

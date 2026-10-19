@@ -59,5 +59,6 @@ tomli_w==1.2.0
 toolz==1.2.0
 tzdata==2026.5
 urllib3==2.8.0
+waitress==3.0.2
 Werkzeug==3.1.9
 xgboost==3.2.0
