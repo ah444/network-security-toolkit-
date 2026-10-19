@@ -5,6 +5,18 @@ var loaded_model_config = {};
 var confusionMatrixData = {};
 var classLabels = [];
 
+// Escape text before it is inserted into HTML (S5). CSV headers, cell values,
+// class names, error messages and predictions all come from user-controlled data.
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+
 document.addEventListener("DOMContentLoaded", function() {
 
   /********** DYNAMIC IDS FUNCTIONALITY **********/
@@ -46,17 +58,17 @@ document.addEventListener("DOMContentLoaded", function() {
           const stats = result.stats;
           dataStats.innerHTML = `
             <div class="stats-grid">
-              <div class="stat-item"><strong>Total Rows:</strong> ${stats.total_rows.toLocaleString()}</div>
-              <div class="stat-item"><strong>Total Columns:</strong> ${stats.total_columns}</div>
-              <div class="stat-item"><strong>Numeric Columns:</strong> ${stats.numeric_columns}</div>
-              <div class="stat-item"><strong>Categorical Columns:</strong> ${stats.categorical_columns}</div>
+              <div class="stat-item"><strong>Total Rows:</strong> ${escapeHtml(stats.total_rows.toLocaleString())}</div>
+              <div class="stat-item"><strong>Total Columns:</strong> ${escapeHtml(stats.total_columns)}</div>
+              <div class="stat-item"><strong>Numeric Columns:</strong> ${escapeHtml(stats.numeric_columns)}</div>
+              <div class="stat-item"><strong>Categorical Columns:</strong> ${escapeHtml(stats.categorical_columns)}</div>
             </div>
           `;
           
           // Build preview table
           let tableHTML = '<table class="preview-table"><thead><tr>';
           result.columns.forEach(col => {
-            tableHTML += `<th>${col}</th>`;
+            tableHTML += `<th>${escapeHtml(col)}</th>`;
           });
           tableHTML += '</tr></thead><tbody>';
           
@@ -68,7 +80,7 @@ document.addEventListener("DOMContentLoaded", function() {
               if (typeof cellValue === 'string' && cellValue.length > 30) {
                 cellValue = cellValue.substring(0, 27) + '...';
               }
-              tableHTML += `<td>${cellValue !== null && cellValue !== undefined ? cellValue : ''}</td>`;
+              tableHTML += `<td>${escapeHtml(cellValue !== null && cellValue !== undefined ? cellValue : '')}</td>`;
             });
             tableHTML += '</tr>';
           });
@@ -76,11 +88,11 @@ document.addEventListener("DOMContentLoaded", function() {
           tableHTML += '</tbody></table>';
           dataPreviewTable.innerHTML = tableHTML;
         } else {
-          dataStats.innerHTML = "Error: " + result.error;
+          dataStats.textContent = "Error: " + result.error;
         }
       })
       .catch(error => {
-        dataStats.innerHTML = "Error loading preview: " + error;
+        dataStats.textContent = "Error loading preview: " + error;
       });
     }
 
@@ -196,7 +208,7 @@ document.addEventListener("DOMContentLoaded", function() {
       .then(response => response.json())
       .then(result => {
         if (result.success) {
-          resultDiv.innerHTML = `<span style='color: #28a745;'>✅ ${result.message}</span>`;
+          resultDiv.innerHTML = `<span style='color: #28a745;'>✅ ${escapeHtml(result.message)}</span>`;
           
           // Update the target value filter dropdown with remaining values
           populateTargetValueFilter(result.new_class_counts);
@@ -207,11 +219,11 @@ document.addEventListener("DOMContentLoaded", function() {
           // Re-trigger class analysis to update the distribution display
           document.getElementById("analyzeClassBtn").click();
         } else {
-          resultDiv.innerHTML = `<span style='color: #dc3545;'>❌ Error: ${result.error}</span>`;
+          resultDiv.innerHTML = `<span style='color: #dc3545;'>❌ Error: ${escapeHtml(result.error)}</span>`;
         }
       })
       .catch(error => {
-        resultDiv.innerHTML = `<span style='color: #dc3545;'>❌ Error: ${error}</span>`;
+        resultDiv.innerHTML = `<span style='color: #dc3545;'>❌ Error: ${escapeHtml(error)}</span>`;
       });
     });
 
@@ -267,22 +279,22 @@ document.addEventListener("DOMContentLoaded", function() {
         return;
       }
       
-      let html = `<div class="cm-header"><strong>${modelName}</strong> - ${datasetType.charAt(0).toUpperCase() + datasetType.slice(1)} Set</div>`;
+      let html = `<div class="cm-header"><strong>${escapeHtml(modelName)}</strong> - ${escapeHtml(datasetType.charAt(0).toUpperCase() + datasetType.slice(1))} Set</div>`;
       html += '<table class="confusion-matrix">';
       
       // Header row with predicted labels
-      html += '<tr><th></th><th colspan="' + matrix.length + '">Predicted</th></tr>';
+      html += '<tr><th></th><th colspan="' + escapeHtml(matrix.length) + '">Predicted</th></tr>';
       html += '<tr><th></th>';
       
       // Use labels if available, otherwise use indices
       const displayLabels = labels && labels.length === matrix.length ? labels : 
-                           matrix.map((_, i) => `Class ${i}`);
+                           matrix.map((_, i) => `Class ${escapeHtml(i)}`);
       
       displayLabels.forEach(label => {
         // Truncate long labels
         const truncLabel = typeof label === 'string' && label.length > 12 ? 
                           label.substring(0, 10) + '...' : label;
-        html += `<th title="${label}">${truncLabel}</th>`;
+        html += `<th title="${escapeHtml(label)}">${escapeHtml(truncLabel)}</th>`;
       });
       html += '</tr>';
       
@@ -292,7 +304,7 @@ document.addEventListener("DOMContentLoaded", function() {
         const rowLabel = displayLabels[i];
         const truncLabel = typeof rowLabel === 'string' && rowLabel.length > 12 ? 
                           rowLabel.substring(0, 10) + '...' : rowLabel;
-        html += `<th title="${rowLabel}">${truncLabel}</th>`;
+        html += `<th title="${escapeHtml(rowLabel)}">${escapeHtml(truncLabel)}</th>`;
         
         // Calculate row total for percentage
         const rowTotal = row.reduce((sum, val) => sum + val, 0);
@@ -302,9 +314,9 @@ document.addEventListener("DOMContentLoaded", function() {
           const isCorrect = i === j;
           const percentage = rowTotal > 0 ? ((val / rowTotal) * 100).toFixed(1) : 0;
           const bgColor = isCorrect ? 
-            `rgba(0, 128, 0, ${Math.min(val / rowTotal, 0.8)})` : 
-            `rgba(255, 0, 0, ${Math.min(val / rowTotal, 0.5)})`;
-          html += `<td style="background-color: ${bgColor}; color: ${val > rowTotal * 0.5 ? 'white' : 'black'}" title="${val} (${percentage}%)">${val}</td>`;
+            `rgba(0, 128, 0, ${escapeHtml(Math.min(val / rowTotal, 0.8))})` : 
+            `rgba(255, 0, 0, ${escapeHtml(Math.min(val / rowTotal, 0.5))})`;
+          html += `<td style="background-color: ${escapeHtml(bgColor)}; color: ${escapeHtml(val > rowTotal * 0.5 ? 'white' : 'black')}" title="${escapeHtml(val)} (${escapeHtml(percentage)}%)">${escapeHtml(val)}</td>`;
         });
         html += '</tr>';
       });
@@ -342,11 +354,11 @@ document.addEventListener("DOMContentLoaded", function() {
           if (result.confusion_matrix) {
             displayConfusionMatrix(result.confusion_matrix, result.class_labels, modelName, datasetType);
           } else {
-            document.getElementById("confusionMatrixDisplay").innerHTML = "Error: " + result.error;
+            document.getElementById("confusionMatrixDisplay").textContent = "Error: " + result.error;
           }
         })
         .catch(error => {
-          document.getElementById("confusionMatrixDisplay").innerHTML = "Error: " + error;
+          document.getElementById("confusionMatrixDisplay").textContent = "Error: " + error;
         });
       }
     });
@@ -455,11 +467,11 @@ document.addEventListener("DOMContentLoaded", function() {
           // Load available models for selection
           loadAvailableModels();
         } else {
-          uploadResult.innerHTML = "Error: " + result.error;
+          uploadResult.textContent = "Error: " + result.error;
         }
       })
       .catch(error => {
-        uploadResult.innerHTML = "Error: " + error;
+        uploadResult.textContent = "Error: " + error;
         console.error("Upload fetch error:", error);
       });
     });
@@ -507,20 +519,20 @@ document.addEventListener("DOMContentLoaded", function() {
           }
           let accHTML = "<strong>Accuracies:</strong><br>";
           if (result.accuracies.Validation && result.accuracies.Validation[loadedKey]) {
-            accHTML += `<u>Validation - ${loadedKey}:</u> ${result.accuracies.Validation[loadedKey]}<br>`;
+            accHTML += `<u>Validation - ${escapeHtml(loadedKey)}:</u> ${escapeHtml(result.accuracies.Validation[loadedKey])}<br>`;
           }
           if (result.accuracies.Test && result.accuracies.Test[loadedKey]) {
-            accHTML += `<u>Test - ${loadedKey}:</u> ${result.accuracies.Test[loadedKey]}<br>`;
+            accHTML += `<u>Test - ${escapeHtml(loadedKey)}:</u> ${escapeHtml(result.accuracies.Test[loadedKey])}<br>`;
           }
-          loadResult.innerHTML = result.message + "<br>" + accHTML;
+          loadResult.innerHTML = escapeHtml(result.message) + "<br>" + accHTML;
           buildLoadedPredictionForm(result.features_info);
           document.getElementById("loadedFeaturesSection").style.display = "block";
         } else {
-          loadResult.innerHTML = "Error: " + result.error;
+          loadResult.textContent = "Error: " + result.error;
         }
       })
       .catch(error => {
-        loadResult.innerHTML = "Error: " + error;
+        loadResult.textContent = "Error: " + error;
         console.error("Load model fetch error:", error);
       });
     });
@@ -554,7 +566,7 @@ document.addEventListener("DOMContentLoaded", function() {
           recHTML += "<strong>Recommended Features:</strong><br>";
           const recommendedList = [];
           result.recommended_features.forEach(item => {
-            recHTML += `${item[0]} (Score: ${item[1].toFixed(2)})<br>`;
+            recHTML += `${escapeHtml(item[0])} (Score: ${escapeHtml(item[1].toFixed(2))})<br>`;
             recommendedList.push(item[0]);
           });
           recommendationResult.innerHTML = recHTML;
@@ -566,11 +578,11 @@ document.addEventListener("DOMContentLoaded", function() {
             }
           }
         } else {
-          recommendationResult.innerHTML = "Error: " + result.error;
+          recommendationResult.textContent = "Error: " + result.error;
         }
       })
       .catch(error => {
-        recommendationResult.innerHTML = "Error: " + error;
+        recommendationResult.textContent = "Error: " + error;
       });
     });
 
@@ -606,10 +618,10 @@ document.addEventListener("DOMContentLoaded", function() {
           distHTML += "<strong>Class Distribution:</strong><br>";
           distHTML += `<table><tr><th>Class</th><th>Count</th><th>Percentage</th></tr>`;
           result.sorted_classes.forEach(([className, percentage]) => {
-            distHTML += `<tr><td>${className}</td><td>${result.class_counts[className].toLocaleString()}</td><td>${percentage.toFixed(2)}%</td></tr>`;
+            distHTML += `<tr><td>${escapeHtml(className)}</td><td>${escapeHtml(result.class_counts[className].toLocaleString())}</td><td>${escapeHtml(percentage.toFixed(2))}%</td></tr>`;
           });
           distHTML += `</table>`;
-          distHTML += `<p>Total samples: ${result.total_samples.toLocaleString()}</p>`;
+          distHTML += `<p>Total samples: ${escapeHtml(result.total_samples.toLocaleString())}</p>`;
           
           // Populate target value filter dropdown
           populateTargetValueFilter(result.class_counts);
@@ -652,22 +664,22 @@ document.addEventListener("DOMContentLoaded", function() {
             } else {
               ratioDisplay = '0%';
             }
-            distHTML += `<div class='analysis-item'><span class='analysis-label'>Imbalance Ratio:</span> <span class='analysis-value'>${ratioDisplay}</span></div>`;
-            distHTML += `<div class='analysis-item'><span class='analysis-label'>Severity:</span> <span class='analysis-value severity-${analysis.imbalance_severity}'>${analysis.imbalance_severity.toUpperCase()}</span></div>`;
-            distHTML += `<div class='analysis-item'><span class='analysis-label'>Dataset Size:</span> <span class='analysis-value'>${analysis.total_samples.toLocaleString()} (${analysis.dataset_size})</span></div>`;
-            distHTML += `<div class='analysis-item'><span class='analysis-label'>Features:</span> <span class='analysis-value'>${analysis.num_features} (${analysis.dimensionality} dimensionality)</span></div>`;
-            distHTML += `<div class='analysis-item'><span class='analysis-label'>Classes:</span> <span class='analysis-value'>${analysis.num_classes} ${analysis.is_multiclass ? '(multi-class)' : '(binary)'}</span></div>`;
-            distHTML += `<div class='analysis-item'><span class='analysis-label'>Smallest Class:</span> <span class='analysis-value ${analysis.minority_class_count < 6 ? "severity-extreme" : ""}'>${analysis.minority_class_count.toLocaleString()} samples</span></div>`;
+            distHTML += `<div class='analysis-item'><span class='analysis-label'>Imbalance Ratio:</span> <span class='analysis-value'>${escapeHtml(ratioDisplay)}</span></div>`;
+            distHTML += `<div class='analysis-item'><span class='analysis-label'>Severity:</span> <span class='analysis-value severity-${escapeHtml(analysis.imbalance_severity)}'>${escapeHtml(analysis.imbalance_severity.toUpperCase())}</span></div>`;
+            distHTML += `<div class='analysis-item'><span class='analysis-label'>Dataset Size:</span> <span class='analysis-value'>${escapeHtml(analysis.total_samples.toLocaleString())} (${escapeHtml(analysis.dataset_size)})</span></div>`;
+            distHTML += `<div class='analysis-item'><span class='analysis-label'>Features:</span> <span class='analysis-value'>${escapeHtml(analysis.num_features)} (${escapeHtml(analysis.dimensionality)} dimensionality)</span></div>`;
+            distHTML += `<div class='analysis-item'><span class='analysis-label'>Classes:</span> <span class='analysis-value'>${escapeHtml(analysis.num_classes)} ${escapeHtml(analysis.is_multiclass ? '(multi-class)' : '(binary)')}</span></div>`;
+            distHTML += `<div class='analysis-item'><span class='analysis-label'>Smallest Class:</span> <span class='analysis-value ${escapeHtml(analysis.minority_class_count < 6 ? "severity-extreme" : "")}'>${escapeHtml(analysis.minority_class_count.toLocaleString())} samples</span></div>`;
             distHTML += `</div>`;
             
             // Show recommendation
             distHTML += `<div class='recommendation-section'>`;
-            distHTML += `<h4>✅ Recommended Method: <span class='recommended-method'>${methodNames[rec.recommended] || rec.recommended}</span></h4>`;
-            distHTML += `<p class='recommendation-reason'>${rec.reason}</p>`;
+            distHTML += `<h4>✅ Recommended Method: <span class='recommended-method'>${escapeHtml(methodNames[rec.recommended] || rec.recommended)}</span></h4>`;
+            distHTML += `<p class='recommendation-reason'>${escapeHtml(rec.reason)}</p>`;
             
             // Show alternatives
             if (rec.alternatives && rec.alternatives.length > 0) {
-              distHTML += `<p class='alternatives'><strong>Alternatives:</strong> ${rec.alternatives.map(m => methodNames[m] || m).join(', ')}</p>`;
+              distHTML += `<p class='alternatives'><strong>Alternatives:</strong> ${escapeHtml(rec.alternatives.map(m => methodNames[m] || m).join(', '))}</p>`;
             }
             distHTML += `</div></div>`;
             
@@ -706,11 +718,11 @@ document.addEventListener("DOMContentLoaded", function() {
           
           classDistributionResult.innerHTML = distHTML;
         } else {
-          classDistributionResult.innerHTML = "Error: " + result.error;
+          classDistributionResult.textContent = "Error: " + result.error;
         }
       })
       .catch(error => {
-        classDistributionResult.innerHTML = "Error: " + error;
+        classDistributionResult.textContent = "Error: " + error;
       });
     });
 
@@ -763,11 +775,11 @@ document.addEventListener("DOMContentLoaded", function() {
       .then(response => response.json())
       .then(result => {
         if (result.message) {
-          let configHTML = result.message + "<br><br>";
+          let configHTML = escapeHtml(result.message) + "<br><br>";
           
           // Display split information
           if (result.split_info) {
-            configHTML += `<div class='info-message'>Data Split: ${result.split_info.split_ratio} (Train: ${result.split_info.train_size} | Val: ${result.split_info.val_size} | Test: ${result.split_info.test_size})</div><br>`;
+            configHTML += `<div class='info-message'>Data Split: ${escapeHtml(result.split_info.split_ratio)} (Train: ${escapeHtml(result.split_info.train_size)} | Val: ${escapeHtml(result.split_info.val_size)} | Test: ${escapeHtml(result.split_info.test_size)})</div><br>`;
           }
           
           // Display balancing status
@@ -783,7 +795,7 @@ document.addEventListener("DOMContentLoaded", function() {
               "smote_tomek": "SMOTE + Tomek Links"
             };
             const methodName = methodNames[result.balancing_method] || result.balancing_method;
-            configHTML += `<div class='success-message'>${methodName} successfully applied to balance classes!</div><br>`;
+            configHTML += `<div class='success-message'>${escapeHtml(methodName)} successfully applied to balance classes!</div><br>`;
           }
           
           // Display Validation Metrics
@@ -810,10 +822,10 @@ document.addEventListener("DOMContentLoaded", function() {
             const f1 = result.f1_scores && result.f1_scores.validation && result.f1_scores.validation[algo];
             const auc = result.auc_scores && result.auc_scores.validation && result.auc_scores.validation[algo];
             configHTML += `<tr>
-              <td>${algoName}</td>
-              <td>${(acc * 100).toFixed(2)}%</td>
-              <td>${f1 !== null && f1 !== undefined ? (f1 * 100).toFixed(2) + '%' : 'N/A'}</td>
-              <td>${auc !== null && auc !== undefined ? (auc * 100).toFixed(2) + '%' : 'N/A'}</td>
+              <td>${escapeHtml(algoName)}</td>
+              <td>${escapeHtml((acc * 100).toFixed(2))}%</td>
+              <td>${escapeHtml(f1 !== null && f1 !== undefined ? (f1 * 100).toFixed(2) + '%' : 'N/A')}</td>
+              <td>${escapeHtml(auc !== null && auc !== undefined ? (auc * 100).toFixed(2) + '%' : 'N/A')}</td>
             </tr>`;
           });
           configHTML += "</tbody></table><br>";
@@ -826,10 +838,10 @@ document.addEventListener("DOMContentLoaded", function() {
             const f1 = result.f1_scores && result.f1_scores.test && result.f1_scores.test[algo];
             const auc = result.auc_scores && result.auc_scores.test && result.auc_scores.test[algo];
             configHTML += `<tr>
-              <td>${algoName}</td>
-              <td>${(acc * 100).toFixed(2)}%</td>
-              <td>${f1 !== null && f1 !== undefined ? (f1 * 100).toFixed(2) + '%' : 'N/A'}</td>
-              <td>${auc !== null && auc !== undefined ? (auc * 100).toFixed(2) + '%' : 'N/A'}</td>
+              <td>${escapeHtml(algoName)}</td>
+              <td>${escapeHtml((acc * 100).toFixed(2))}%</td>
+              <td>${escapeHtml(f1 !== null && f1 !== undefined ? (f1 * 100).toFixed(2) + '%' : 'N/A')}</td>
+              <td>${escapeHtml(auc !== null && auc !== undefined ? (auc * 100).toFixed(2) + '%' : 'N/A')}</td>
             </tr>`;
           });
           configHTML += "</tbody></table>";
@@ -874,11 +886,11 @@ document.addEventListener("DOMContentLoaded", function() {
           document.getElementById("predictionSection").style.display = "block";
           document.getElementById("exportSection").style.display = "block";
         } else {
-          configResult.innerHTML = "Error: " + result.error;
+          configResult.textContent = "Error: " + result.error;
         }
       })
       .catch(error => {
-        configResult.innerHTML = "Error: " + error;
+        configResult.textContent = "Error: " + error;
       });
     });
 
@@ -898,13 +910,13 @@ document.addEventListener("DOMContentLoaded", function() {
       .then(response => response.json())
       .then(result => {
         if (result.files) {
-          exportResult.innerHTML = "Export successful! Files: " + result.files.join(", ");
+          exportResult.textContent = "Export successful! Files: " + result.files.join(", ");
         } else {
-          exportResult.innerHTML = "Error: " + result.error;
+          exportResult.textContent = "Error: " + result.error;
         }
       })
       .catch(error => {
-        exportResult.innerHTML = "Error: " + error;
+        exportResult.textContent = "Error: " + error;
       });
     });
 
@@ -1000,15 +1012,15 @@ document.addEventListener("DOMContentLoaded", function() {
       .then(response => response.json())
       .then(result => {
         if (result.prediction !== undefined) {
-          predictionResult.innerHTML = "Predicted Value: " + result.prediction;
+          predictionResult.textContent = "Predicted Value: " + result.prediction;
           console.log("Prediction result (session model):", result.prediction);
         } else {
-          predictionResult.innerHTML = "Error: " + result.error;
+          predictionResult.textContent = "Error: " + result.error;
           console.error("Session model prediction error:", result.error);
         }
       })
       .catch(error => {
-        predictionResult.innerHTML = "Error: " + error;
+        predictionResult.textContent = "Error: " + error;
         console.error("Session model fetch error:", error);
       });
     });
@@ -1046,14 +1058,14 @@ document.addEventListener("DOMContentLoaded", function() {
       .then(result => {
         console.log("Predict loaded result:", result);
         if (result.prediction !== undefined) {
-          loadedPredictionResult.innerHTML = "Predicted Value: " + result.prediction;
+          loadedPredictionResult.textContent = "Predicted Value: " + result.prediction;
         } else {
-          loadedPredictionResult.innerHTML = "Error: " + result.error;
+          loadedPredictionResult.textContent = "Error: " + result.error;
           console.error("Loaded model prediction error:", result.error);
         }
       })
       .catch(error => {
-        loadedPredictionResult.innerHTML = "Error: " + error;
+        loadedPredictionResult.textContent = "Error: " + error;
         console.error("Loaded model fetch error:", error);
       });
     });

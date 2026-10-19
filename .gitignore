@@ -123,3 +123,4 @@ instance/
 # Personal editor/assistant settings
 # ==============================
 .claude/settings.local.json
+.claude/launch.json
