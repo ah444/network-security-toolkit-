@@ -1,6 +1,8 @@
-from flask import Flask, render_template, jsonify, request
+from flask import Flask, render_template, jsonify, request, session
 import os
 import re
+import secrets
+import time
 from pathlib import Path
 from uuid import uuid4
 from werkzeug.utils import secure_filename
@@ -313,15 +315,69 @@ def _block_cross_site_requests():
     return None
 
 # ---------------------------
-# Global variables for ML functionality
+# Workspaces: one per browser session (S7, R4)
 # ---------------------------
-data_store = {       # Store uploaded dataset.
-    "df": None,           # Original dataset
-    "df_balanced": None,  # SMOTE-balanced dataset
-    "smote_applied": False # Flag to track if SMOTE has been applied
-}
-model_config = {}     # Stores configuration and trained models.
-loaded_model_config = {}  # For loaded models and dataset.
+# The session cookie only holds a random workspace ID; the data stays in this
+# process's memory. The signing key is random per process unless
+# TOOLKIT_SECRET_KEY is set (workspaces don't survive a restart anyway).
+app.secret_key = os.environ.get("TOOLKIT_SECRET_KEY") or secrets.token_hex(32)
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Strict",
+    # Only behind HTTPS: browsers drop Secure cookies on plain http://127.0.0.1.
+    SESSION_COOKIE_SECURE=os.environ.get("TOOLKIT_HTTPS") == "1",
+)
+
+# Workspaces unused for this long are dropped to free memory (not while training).
+WORKSPACE_IDLE_SECONDS = int(os.environ.get("TOOLKIT_WORKSPACE_IDLE_MIN", "240")) * 60
+
+
+class Workspace:
+    """Everything one browser session has uploaded and trained."""
+
+    def __init__(self):
+        self.data_store = {
+            "df": None,             # Original dataset
+            "df_balanced": None,    # SMOTE-balanced dataset
+            "smote_applied": False  # Flag to track if SMOTE has been applied
+        }
+        self.model_config = {}         # Configuration and trained models.
+        self.loaded_model_config = {}  # For loaded models and dataset.
+        self.training = threading.Lock()  # held while /configure trains (one at a time)
+        self.last_used = time.monotonic()
+
+
+_workspaces = {}
+_workspaces_lock = threading.Lock()
+
+
+def _drop_idle_workspaces(now):
+    for ws_id, ws in list(_workspaces.items()):
+        if now - ws.last_used > WORKSPACE_IDLE_SECONDS and not ws.training.locked():
+            del _workspaces[ws_id]
+            logging.info("Dropped idle workspace")
+
+
+def current_workspace():
+    """The calling browser session's workspace, created on first use."""
+    now = time.monotonic()
+    with _workspaces_lock:
+        _drop_idle_workspaces(now)
+        ws = _workspaces.get(session.get("ws"))
+        if ws is None:
+            ws_id = secrets.token_urlsafe(16)
+            ws = _workspaces[ws_id] = Workspace()
+            session["ws"] = ws_id
+        ws.last_used = now
+        return ws
+
+
+@app.route("/workspace", methods=["DELETE"])
+def clear_workspace():
+    """Forget this session's dataset and models; the next request starts a new workspace."""
+    with _workspaces_lock:
+        _workspaces.pop(session.pop("ws", None), None)
+    return jsonify({"message": "Workspace cleared."})
 
 # Directories for file uploads and exported models.
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -381,6 +437,7 @@ def unique_export_path(directory, base_name, algorithm):
 # ---------------------------
 @app.route("/upload", methods=["POST"])
 def upload():
+    data_store = current_workspace().data_store
     if "dataset" not in request.files:
         return jsonify({"error": "No files uploaded."}), 400
     files = request.files.getlist("dataset")
@@ -468,6 +525,7 @@ def upload():
 @app.route("/preview_data", methods=["POST"])
 def preview_data():
     """Return preview of uploaded dataset (first N rows)"""
+    data_store = current_workspace().data_store
     req = json_body()
     num_rows = int_param(req, "num_rows", 10, 1, 100)  # clamped (S9)
     
@@ -500,6 +558,7 @@ def preview_data():
 @app.route("/filter_target_values", methods=["POST"])
 def filter_target_values():
     """Remove selected values from the target column (remove rows with those values)"""
+    data_store = current_workspace().data_store
     req = json_body()
     target_column = req.get("target_column")
     values_to_remove = req.get("values_to_remove", [])
@@ -579,6 +638,7 @@ def filter_target_values():
 @app.route("/get_target_values", methods=["POST"])
 def get_target_values():
     """Get unique values in the target column"""
+    data_store = current_workspace().data_store
     req = json_body()
     target_column = req.get("target_column")
     
@@ -604,6 +664,7 @@ def get_target_values():
 
 @app.route("/analyze_class_distribution", methods=["POST"])
 def analyze_class_distribution():
+    data_store = current_workspace().data_store
     req = json_body()
     target = req.get("target")
     if data_store["df"] is None or not target:
@@ -658,6 +719,7 @@ def analyze_class_distribution():
 @app.route("/reset_smote", methods=["POST"])
 def reset_smote():
     """Reset the SMOTE status and revert to using the original dataset"""
+    data_store = current_workspace().data_store
     try:
         data_store["smote_applied"] = False
         data_store["df_balanced"] = None
@@ -676,6 +738,7 @@ def apply_smote_endpoint():
     training data to prevent data leakage. This endpoint shows how the 
     balanced dataset would look like for exploratory purposes.
     """
+    data_store = current_workspace().data_store
     req = json_body()
     target = req.get("target")
     # Get memory-efficient options if provided
@@ -997,6 +1060,7 @@ def apply_smote_endpoint():
 
 @app.route("/recommend_features", methods=["POST"])
 def recommend_features():
+    data_store = current_workspace().data_store
     req = json_body()
     target = req.get("target")
     k_val = int_param(req, "k", 10, 1, 10_000)  # clamped (S9)
@@ -1093,6 +1157,18 @@ def get_available_models():
 
 @app.route("/configure", methods=["POST"])
 def configure():
+    ws = current_workspace()
+    if not ws.training.acquire(blocking=False):
+        return jsonify({"error": "A training run is already in progress in this workspace. "
+                                 "Wait for it to finish."}), 409
+    try:
+        return _configure_training(ws)
+    finally:
+        ws.training.release()
+
+
+def _configure_training(ws):
+    data_store, model_config = ws.data_store, ws.model_config
     req = json_body()
     features = req.get("input_features")
     target = req.get("target")
@@ -1571,6 +1647,7 @@ def configure():
 @app.route("/get_confusion_matrix", methods=["POST"])
 def get_confusion_matrix():
     """Get confusion matrix for a specific model"""
+    model_config = current_workspace().model_config
     req = json_body()
     model_name = req.get("model_name")
     dataset_type = req.get("dataset_type", "test")  # "validation" or "test"
@@ -1611,6 +1688,7 @@ def export_model():
 
 @app.route("/predict", methods=["POST"])
 def predict_endpoint():
+    model_config = current_workspace().model_config
     req = json_body()
     if not model_config:
         return jsonify({"error": "Models not trained yet. Please run /configure first."}), 400
@@ -1665,6 +1743,7 @@ def predict_endpoint():
 
 @app.route("/predict_loaded/", methods=["POST"])
 def predict_loaded_endpoint():
+    loaded_model_config = current_workspace().loaded_model_config
     logging.info("Received predict_loaded request")
     req = json_body()
     if not loaded_model_config:
@@ -1749,7 +1828,7 @@ def homepage():
 
 @app.route("/dynamic_ids")
 def dynamic_ids_page():
-    return render_template("dynamic_ids.html")
+    return render_template("dynamic_ids.html", idle_minutes=WORKSPACE_IDLE_SECONDS // 60)
 
 
 # ---------------------------

@@ -31,6 +31,11 @@
         <input type="radio" name="modelOption" id="optionNotTrained" value="not_trained" checked>
         No, I need to train a model.
       </label>
+      <div class="workspace-bar">
+        <button type="button" id="clearWorkspaceBtn" class="btn btn-secondary btn-sm">Clear workspace</button>
+        <span class="section-description">Your dataset and models stay in memory for this browser session only, and are removed after {{ idle_minutes }} minutes without use.</span>
+      </div>
+      <div id="clearWorkspaceResult" class="message"></div>
     </div>
 
     <!-- Upload Dataset Section -->

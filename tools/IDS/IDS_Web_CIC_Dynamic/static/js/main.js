@@ -760,7 +760,10 @@ document.addEventListener("DOMContentLoaded", function() {
       console.log("Balancing Method:", balancingMethod);
       console.log("Test Size:", testSize);
       console.log("Selected Models:", selectedModels);
-      
+
+      // One training at a time (the server also answers 409 to a second request)
+      const trainButton = configForm.querySelector('button[type="submit"]');
+      trainButton.disabled = true;
       fetch("/configure", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -891,6 +894,28 @@ document.addEventListener("DOMContentLoaded", function() {
       })
       .catch(error => {
         configResult.textContent = "Error: " + error;
+      })
+      .finally(() => {
+        trainButton.disabled = false;
+      });
+    });
+
+    // Clear workspace: the server forgets this session's dataset and models
+    const clearWorkspaceBtn = document.getElementById("clearWorkspaceBtn");
+    clearWorkspaceBtn.addEventListener("click", function() {
+      if (!window.confirm("Remove the uploaded dataset and trained models from this session?")) {
+        return;
+      }
+      const clearWorkspaceResult = document.getElementById("clearWorkspaceResult");
+      fetch("/workspace", { method: "DELETE" })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error("HTTP " + response.status);
+        }
+        window.location.reload();
+      })
+      .catch(error => {
+        clearWorkspaceResult.textContent = "Error: " + error.message;
       });
     });
 
