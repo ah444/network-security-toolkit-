@@ -35,3 +35,17 @@ def test_baseline_complete(repo_root, datasets_doc, dataset, scenario):
             assert {"accuracy", "macro_f1", "balanced_accuracy", "confusion_matrix"} <= set(
                 metrics["test"]
             )
+
+
+def test_cli_v4_baseline_complete(repo_root):
+    record = json.loads((repo_root / "docs" / "baseline" / "cli_v4.json").read_text(
+        encoding="utf-8"))
+    assert re.fullmatch(r"[0-9a-f]{40}", record["cli_code_commit"])
+    assert record["documented_claims"]["random_forest"]["test_accuracy"]
+    assert "Attempted Category" in record["features"]
+    assert set(record["model_files_sha256"]) >= {"random_forest.pkl", "xgboost.pkl"}
+    for model in ("random_forest", "xgboost"):
+        entry = record["models"][model]
+        assert entry["loaded"]
+        assert set(entry["predictions"]) == set(record["samples"])
+        assert set(entry["attempted_category_sweep"]) == set(record["samples"])

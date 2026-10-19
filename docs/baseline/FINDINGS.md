@@ -23,6 +23,13 @@ With the recommended `class_weight` balancing, logistic regression reaches only 
 ## 6. CIC DDoS is almost trivially separable
 Tree models reach **99.9 %** on the binary BENIGN/DDoS file with 14 features. This matches the plan's note under the leakage guard: single packet-size features can separate these two classes almost perfectly, which is why the v5.0 guard only *warns* about strong continuous features instead of blocking them. 23,416 duplicate rows (L4) in this file also sit on both sides of the random split; their effect is measured in v5.0 by comparing with a deduplicated split.
 
+## 7. The v4 CLI model is driven by the leaked `Attempted Category` input (L1)
+Source: [`cli_v4.json`](cli_v4.json). The v4 test data isn't available, so accuracy can't be re-measured. Instead the CLI's own 4 built-in presets were predicted, and then re-predicted with **only** `Attempted Category` changed.
+- **None of the 4 presets is classified as what it is meant to be.** With the shipped value `Attempted Category = 0.0`, both models label every preset as an "**- Attempted**" class. The "BENIGN-like" preset becomes `DoS Slowhttptest - Attempted`, and the "DDoS-like" and "PortScan-like" presets become `SSH-Patator - Attempted` / `DoS Slowloris - Attempted`.
+- **Changing only that one input flips the result.** At `Attempted Category = -1`, every preset, including the DDoS-like and PortScan-like ones, becomes **BENIGN** with 0.88–1.00 confidence. At `0`, `1` or `2` it becomes various "Attempted" classes. The real traffic features barely matter.
+- So the v4 model mostly reads the answer from a field derived from the label. This confirms the warning in `models/README.md` with direct evidence, and it means the CLI's ~97–98 % accuracy claim says nothing about detecting real traffic.
+- Loading the v4 files on this machine raises `InconsistentVersionWarning` (pickled with scikit-learn **1.6.1**, loaded with **1.8.0**) for the scaler, label encoder, random forest and every tree, plus an XGBoost serialization warning. The CLI hides all of them with its global `filterwarnings` (B18, B19).
+
 ## What v5.0 must show against this baseline
 - The same datasets through the fixed pipeline: deduplicated, split before any SMOTE or feature selection, `level` blocked, macro-F1 and balanced accuracy reported.
 - Expected direction: lower headline accuracy on NSL-KDD (no `level`, no synthetic test rows) and a smaller gap between accuracy and macro-F1 being visible to the user. The size of any change will be measured, not assumed.

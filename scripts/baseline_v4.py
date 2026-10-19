@@ -236,13 +236,118 @@ def _spread(runs: list) -> dict:
     return summary
 
 
+CLI_PATH = ROOT / "tools" / "IDS" / "IDS_CLI - CIC-2017" / "IDS_with_Machine_Learning.py"
+# Claims documented in tools/IDS/IDS_CLI - CIC-2017/models/README.md ("Model Performance").
+CLI_DOCUMENTED_CLAIMS = {
+    "random_forest": {"train_accuracy": "~99%", "test_accuracy": "~98%", "weighted_f1": "~98%"},
+    "xgboost": {"train_accuracy": "~99%", "test_accuracy": "~97%", "weighted_f1": "~97%"},
+    "readme_note": "Accuracy is high due to `Attempted Category` feature. "
+                   "Expect 85-92% with v5.0 models.",
+}
+# The 4 built-in samples, copied verbatim from the CLI's main() (option 2).
+CLI_SAMPLES = {
+    "a_benign_like": {"Attempted Category": 0.0, "Bwd Segment Size Avg": 156.5,
+                      "Bwd Packet Length Mean": 312.4, "Bwd Packet Length Std": 425.8,
+                      "Bwd Packet Length Max": 1460.0, "Subflow Bwd Bytes": 4892.0,
+                      "Packet Length Std": 498.2, "Packet Length Mean": 245.6},
+    "b_ddos_like": {"Attempted Category": 0.0, "Bwd Segment Size Avg": 0.0,
+                    "Bwd Packet Length Mean": 0.0, "Bwd Packet Length Std": 0.0,
+                    "Bwd Packet Length Max": 0.0, "Subflow Bwd Bytes": 0.0,
+                    "Packet Length Std": 28.5, "Packet Length Mean": 74.0},
+    "c_portscan_like": {"Attempted Category": 0.0, "Bwd Segment Size Avg": 0.0,
+                        "Bwd Packet Length Mean": 0.0, "Bwd Packet Length Std": 0.0,
+                        "Bwd Packet Length Max": 0.0, "Subflow Bwd Bytes": 0.0,
+                        "Packet Length Std": 0.0, "Packet Length Mean": 44.0},
+    "d_slowloris_like": {"Attempted Category": 0.0, "Bwd Segment Size Avg": 174.0,
+                         "Bwd Packet Length Mean": 174.0, "Bwd Packet Length Std": 0.0,
+                         "Bwd Packet Length Max": 174.0, "Subflow Bwd Bytes": 174.0,
+                         "Packet Length Std": 87.5, "Packet Length Mean": 119.5},
+}
+
+
+def cli_baseline(out_dir: Path = OUT_DIR) -> Path:
+    """Record the v4 CLI model's documented claims and its predictions on the 4 samples.
+
+    The v4 test data is not available, so these predictions (not accuracy) are the
+    CLI baseline. Library warnings raised while loading are recorded, because the
+    CLI itself hides them (B19) and they show the pickle version mismatch (B18).
+    """
+    import contextlib
+    import io
+    import warnings
+
+    spec = importlib.util.spec_from_file_location("ids_cli_baseline", CLI_PATH)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules["ids_cli_baseline"] = module
+    spec.loader.exec_module(module)
+
+    models = {}
+    for model_name in ("random_forest", "xgboost"):
+        ids = module.IDSModel()
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            with contextlib.redirect_stdout(io.StringIO()):
+                loaded = ids.load(model_name)
+            predictions = {}
+            if loaded:
+                for sample_name, sample in CLI_SAMPLES.items():
+                    result = ids.predict(features_dict=sample)
+                    top = sorted(result["probabilities"].items(), key=lambda kv: -kv[1])[:3]
+                    predictions[sample_name] = {
+                        "label": str(result["label"]),
+                        "confidence": result["confidence"],
+                        "top3": [[str(label), prob] for label, prob in top],
+                    }
+            # Leak probe (L1): vary ONLY the label-derived feature, keep traffic features fixed.
+            sweep = {}
+            if loaded:
+                for sample_name, sample in CLI_SAMPLES.items():
+                    sweep[sample_name] = {}
+                    for value in (-1.0, 0.0, 1.0, 2.0):
+                        result = ids.predict(features_dict={**sample, "Attempted Category": value})
+                        sweep[sample_name][str(value)] = [str(result["label"]),
+                                                          result["confidence"]]
+        models[model_name] = {
+            "loaded": loaded,
+            "predictions": predictions,
+            "attempted_category_sweep": sweep,
+            "warnings": sorted({f"{w.category.__name__}: {str(w.message)[:200]}"
+                                for w in caught}),
+        }
+
+    record = {
+        "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "repo_commit": _git("rev-parse", "HEAD"),
+        "cli_code_commit": _git("log", "-1", "--format=%H", "--",
+                                CLI_PATH.relative_to(ROOT).as_posix()),
+        "environment": _environment(),
+        "model_files_sha256": {
+            p.name: _sha256(p) for p in sorted((CLI_PATH.parent / "models").glob("*.pkl"))
+        },
+        "features": json.loads(
+            (CLI_PATH.parent / "models" / "config.json").read_text(encoding="utf-8")
+        )["features"],
+        "documented_claims": CLI_DOCUMENTED_CLAIMS,
+        "note": "No v4 test data is available locally, so accuracy cannot be re-measured. "
+                "Every sample sets 'Attempted Category' = 0.0, a label-derived feature (L1). "
+                "'attempted_category_sweep' re-predicts each sample with only that feature "
+                "changed (-1, 0, 1, 2) to show how much it alone decides the output.",
+        "samples": CLI_SAMPLES,
+        "models": models,
+    }
+    out_file = out_dir / "cli_v4.json"
+    out_file.write_text(json.dumps(record, indent=1), encoding="utf-8")
+    return out_file
+
+
 def _pct(value: float) -> str:
     return f"{value * 100:.2f}"
 
 
 def write_report(out_dir: Path = OUT_DIR) -> Path:
     """Build docs/baseline/README.md from the JSON results."""
-    records = [json.loads(p.read_text(encoding="utf-8")) for p in sorted(out_dir.glob("*.json"))]
+    records = [json.loads(p.read_text(encoding="utf-8"))
+               for p in sorted(out_dir.glob("*__*.json"))]  # web runs only, not cli_v4.json
     if not records:
         raise SystemExit("no baseline JSON files found")
     first = records[0]
@@ -321,7 +426,12 @@ def main() -> None:
                         help="use the small fixtures and 1 run (sanity check only)")
     parser.add_argument("--report", action="store_true",
                         help="only rebuild docs/baseline/README.md from existing JSON files")
+    parser.add_argument("--cli", action="store_true",
+                        help="only record the v4 CLI baseline (docs/baseline/cli_v4.json)")
     args = parser.parse_args()
+    if args.cli:
+        print("wrote", cli_baseline().relative_to(ROOT).as_posix())
+        return
     if args.report:
         print("wrote", write_report().relative_to(ROOT).as_posix())
         return
@@ -364,6 +474,8 @@ def main() -> None:
             out_file = out_dir / f"{ds_name}__{scenario}.json"
             out_file.write_text(json.dumps(record, indent=1), encoding="utf-8")
             print(f"    wrote {out_file.relative_to(ROOT).as_posix()}", flush=True)
+    if not args.quick:
+        print("wrote", cli_baseline().relative_to(ROOT).as_posix(), flush=True)
     print("wrote", write_report(out_dir).relative_to(ROOT).as_posix(), flush=True)
 
 

@@ -1,0 +1,416 @@
+{
+ "generated_at": "2026-10-19T18:31:26+00:00",
+ "repo_commit": "c8dcf8d0f2390d50f7e45114e02b4e3349f767d1",
+ "cli_code_commit": "da41472588e4634c383f4dc4ff9f16bd7aae702a",
+ "environment": {
+  "python": "3.14.3",
+  "os": "Windows-10-10.0.19044-SP0",
+  "cpu_count": 8,
+  "single_core_env": {
+   "LOKY_MAX_CPU_COUNT": "1",
+   "OMP_NUM_THREADS": "1",
+   "OPENBLAS_NUM_THREADS": "1",
+   "MKL_NUM_THREADS": "1"
+  },
+  "libraries": {
+   "flask": "3.1.3",
+   "numpy": "2.3.5",
+   "pandas": "2.3.3",
+   "scikit-learn": "1.8.0",
+   "imbalanced-learn": "0.14.1",
+   "xgboost": "3.2.0",
+   "lightgbm": "4.6.0",
+   "dask": "2026.1.2",
+   "joblib": "1.6.0"
+  }
+ },
+ "model_files_sha256": {
+  "label_encoder.pkl": "cb453fd631323e1a90cf564f723983f9eb76eef250ebd190976540b693170df4",
+  "random_forest.pkl": "a57df4a04ea90da8aaa76f2b27088705eab8daef84901dadcc67d6672809084d",
+  "scaler.pkl": "e88fc1317021acfcd1d88b948563ba0b8557aaaea3954e70f53ae3883e5f0dc6",
+  "xgboost.pkl": "43650b4020b27afcd7634a3b7f98e468548c98b5c39551e4c7b9ac9e6d3403b5"
+ },
+ "features": [
+  "Attempted Category",
+  "Bwd Segment Size Avg",
+  "Bwd Packet Length Mean",
+  "Bwd Packet Length Std",
+  "Bwd Packet Length Max",
+  "Subflow Bwd Bytes",
+  "Packet Length Std",
+  "Packet Length Mean"
+ ],
+ "documented_claims": {
+  "random_forest": {
+   "train_accuracy": "~99%",
+   "test_accuracy": "~98%",
+   "weighted_f1": "~98%"
+  },
+  "xgboost": {
+   "train_accuracy": "~99%",
+   "test_accuracy": "~97%",
+   "weighted_f1": "~97%"
+  },
+  "readme_note": "Accuracy is high due to `Attempted Category` feature. Expect 85-92% with v5.0 models."
+ },
+ "note": "No v4 test data is available locally, so accuracy cannot be re-measured. Every sample sets 'Attempted Category' = 0.0, a label-derived feature (L1). 'attempted_category_sweep' re-predicts each sample with only that feature changed (-1, 0, 1, 2) to show how much it alone decides the output.",
+ "samples": {
+  "a_benign_like": {
+   "Attempted Category": 0.0,
+   "Bwd Segment Size Avg": 156.5,
+   "Bwd Packet Length Mean": 312.4,
+   "Bwd Packet Length Std": 425.8,
+   "Bwd Packet Length Max": 1460.0,
+   "Subflow Bwd Bytes": 4892.0,
+   "Packet Length Std": 498.2,
+   "Packet Length Mean": 245.6
+  },
+  "b_ddos_like": {
+   "Attempted Category": 0.0,
+   "Bwd Segment Size Avg": 0.0,
+   "Bwd Packet Length Mean": 0.0,
+   "Bwd Packet Length Std": 0.0,
+   "Bwd Packet Length Max": 0.0,
+   "Subflow Bwd Bytes": 0.0,
+   "Packet Length Std": 28.5,
+   "Packet Length Mean": 74.0
+  },
+  "c_portscan_like": {
+   "Attempted Category": 0.0,
+   "Bwd Segment Size Avg": 0.0,
+   "Bwd Packet Length Mean": 0.0,
+   "Bwd Packet Length Std": 0.0,
+   "Bwd Packet Length Max": 0.0,
+   "Subflow Bwd Bytes": 0.0,
+   "Packet Length Std": 0.0,
+   "Packet Length Mean": 44.0
+  },
+  "d_slowloris_like": {
+   "Attempted Category": 0.0,
+   "Bwd Segment Size Avg": 174.0,
+   "Bwd Packet Length Mean": 174.0,
+   "Bwd Packet Length Std": 0.0,
+   "Bwd Packet Length Max": 174.0,
+   "Subflow Bwd Bytes": 174.0,
+   "Packet Length Std": 87.5,
+   "Packet Length Mean": 119.5
+  }
+ },
+ "models": {
+  "random_forest": {
+   "loaded": true,
+   "predictions": {
+    "a_benign_like": {
+     "label": "DoS Slowhttptest - Attempted",
+     "confidence": 0.40608333333333335,
+     "top3": [
+      [
+       "DoS Slowhttptest - Attempted",
+       0.40608333333333335
+      ],
+      [
+       "DoS Hulk - Attempted",
+       0.32766666666666666
+      ],
+      [
+       "DoS Slowloris - Attempted",
+       0.18625
+      ]
+     ]
+    },
+    "b_ddos_like": {
+     "label": "SSH-Patator - Attempted",
+     "confidence": 0.4060238095238096,
+     "top3": [
+      [
+       "SSH-Patator - Attempted",
+       0.4060238095238096
+      ],
+      [
+       "BENIGN",
+       0.35
+      ],
+      [
+       "DoS Slowloris - Attempted",
+       0.16388532028150885
+      ]
+     ]
+    },
+    "c_portscan_like": {
+     "label": "DoS Slowloris - Attempted",
+     "confidence": 0.34380914237353677,
+     "top3": [
+      [
+       "DoS Slowloris - Attempted",
+       0.34380914237353677
+      ],
+      [
+       "BENIGN",
+       0.34
+      ],
+      [
+       "SSH-Patator - Attempted",
+       0.1965
+      ]
+     ]
+    },
+    "d_slowloris_like": {
+     "label": "DoS Slowloris - Attempted",
+     "confidence": 0.6071129358596389,
+     "top3": [
+      [
+       "DoS Slowloris - Attempted",
+       0.6071129358596389
+      ],
+      [
+       "BENIGN",
+       0.18
+      ],
+      [
+       "FTP-Patator - Attempted",
+       0.09904761904761905
+      ]
+     ]
+    }
+   },
+   "attempted_category_sweep": {
+    "a_benign_like": {
+     "-1.0": [
+      "BENIGN",
+      0.8793333333333334
+     ],
+     "0.0": [
+      "DoS Slowhttptest - Attempted",
+      0.40608333333333335
+     ],
+     "1.0": [
+      "DoS Slowhttptest - Attempted",
+      0.3920833333333333
+     ],
+     "2.0": [
+      "DoS Slowhttptest - Attempted",
+      0.3920833333333333
+     ]
+    },
+    "b_ddos_like": {
+     "-1.0": [
+      "BENIGN",
+      1.0
+     ],
+     "0.0": [
+      "SSH-Patator - Attempted",
+      0.4060238095238096
+     ],
+     "1.0": [
+      "SSH-Patator - Attempted",
+      0.5060238095238097
+     ],
+     "2.0": [
+      "SSH-Patator - Attempted",
+      0.6760238095238096
+     ]
+    },
+    "c_portscan_like": {
+     "-1.0": [
+      "BENIGN",
+      1.0
+     ],
+     "0.0": [
+      "DoS Slowloris - Attempted",
+      0.34380914237353677
+     ],
+     "1.0": [
+      "BENIGN",
+      0.34
+     ],
+     "2.0": [
+      "SSH-Patator - Attempted",
+      0.4065000000000001
+     ]
+    },
+    "d_slowloris_like": {
+     "-1.0": [
+      "BENIGN",
+      1.0
+     ],
+     "0.0": [
+      "DoS Slowloris - Attempted",
+      0.6071129358596389
+     ],
+     "1.0": [
+      "DoS Slowloris - Attempted",
+      0.58
+     ],
+     "2.0": [
+      "DoS Slowloris - Attempted",
+      0.58
+     ]
+    }
+   },
+   "warnings": [
+    "InconsistentVersionWarning: Trying to unpickle estimator DecisionTreeClassifier from version 1.6.1 when using version 1.8.0. This might lead to breaking code or invalid results. Use at your own risk. For more info please refer t",
+    "InconsistentVersionWarning: Trying to unpickle estimator LabelEncoder from version 1.6.1 when using version 1.8.0. This might lead to breaking code or invalid results. Use at your own risk. For more info please refer to:\nhttps:/",
+    "InconsistentVersionWarning: Trying to unpickle estimator RandomForestClassifier from version 1.6.1 when using version 1.8.0. This might lead to breaking code or invalid results. Use at your own risk. For more info please refer t",
+    "InconsistentVersionWarning: Trying to unpickle estimator RobustScaler from version 1.6.1 when using version 1.8.0. This might lead to breaking code or invalid results. Use at your own risk. For more info please refer to:\nhttps:/",
+    "UserWarning: X does not have valid feature names, but RobustScaler was fitted with feature names"
+   ]
+  },
+  "xgboost": {
+   "loaded": true,
+   "predictions": {
+    "a_benign_like": {
+     "label": "DoS Slowhttptest - Attempted",
+     "confidence": 0.9945251941680908,
+     "top3": [
+      [
+       "DoS Slowhttptest - Attempted",
+       0.9945251941680908
+      ],
+      [
+       "DoS Hulk - Attempted",
+       0.002518489258363843
+      ],
+      [
+       "BENIGN",
+       0.00227513094432652
+      ]
+     ]
+    },
+    "b_ddos_like": {
+     "label": "DoS Slowloris - Attempted",
+     "confidence": 0.7697283625602722,
+     "top3": [
+      [
+       "DoS Slowloris - Attempted",
+       0.7697283625602722
+      ],
+      [
+       "DoS Hulk - Attempted",
+       0.1177491769194603
+      ],
+      [
+       "BENIGN",
+       0.1042264923453331
+      ]
+     ]
+    },
+    "c_portscan_like": {
+     "label": "DoS Slowloris - Attempted",
+     "confidence": 0.7724319100379944,
+     "top3": [
+      [
+       "DoS Slowloris - Attempted",
+       0.7724319100379944
+      ],
+      [
+       "DoS Hulk - Attempted",
+       0.11816275119781494
+      ],
+      [
+       "BENIGN",
+       0.10459256917238235
+      ]
+     ]
+    },
+    "d_slowloris_like": {
+     "label": "DoS Slowloris - Attempted",
+     "confidence": 0.9542176127433777,
+     "top3": [
+      [
+       "DoS Slowloris - Attempted",
+       0.9542176127433777
+      ],
+      [
+       "BENIGN",
+       0.028061851859092712
+      ],
+      [
+       "DoS Hulk - Attempted",
+       0.014748171903192997
+      ]
+     ]
+    }
+   },
+   "attempted_category_sweep": {
+    "a_benign_like": {
+     "-1.0": [
+      "BENIGN",
+      0.9998505115509033
+     ],
+     "0.0": [
+      "DoS Slowhttptest - Attempted",
+      0.9945251941680908
+     ],
+     "1.0": [
+      "Botnet - Attempted",
+      0.9624810814857483
+     ],
+     "2.0": [
+      "DoS Slowloris - Attempted",
+      0.4781333804130554
+     ]
+    },
+    "b_ddos_like": {
+     "-1.0": [
+      "BENIGN",
+      0.9998373985290527
+     ],
+     "0.0": [
+      "DoS Slowloris - Attempted",
+      0.7697283625602722
+     ],
+     "1.0": [
+      "Botnet - Attempted",
+      0.9922643899917603
+     ],
+     "2.0": [
+      "BENIGN",
+      0.8907341361045837
+     ]
+    },
+    "c_portscan_like": {
+     "-1.0": [
+      "BENIGN",
+      0.9999337196350098
+     ],
+     "0.0": [
+      "DoS Slowloris - Attempted",
+      0.7724319100379944
+     ],
+     "1.0": [
+      "Botnet - Attempted",
+      0.9925023317337036
+     ],
+     "2.0": [
+      "BENIGN",
+      0.9181995987892151
+     ]
+    },
+    "d_slowloris_like": {
+     "-1.0": [
+      "BENIGN",
+      0.9999363422393799
+     ],
+     "0.0": [
+      "DoS Slowloris - Attempted",
+      0.9542176127433777
+     ],
+     "1.0": [
+      "Botnet - Attempted",
+      0.9885928630828857
+     ],
+     "2.0": [
+      "DoS Slowloris - Attempted",
+      0.6356471180915833
+     ]
+    }
+   },
+   "warnings": [
+    "InconsistentVersionWarning: Trying to unpickle estimator LabelEncoder from version 1.6.1 when using version 1.8.0. This might lead to breaking code or invalid results. Use at your own risk. For more info please refer to:\nhttps:/",
+    "InconsistentVersionWarning: Trying to unpickle estimator RobustScaler from version 1.6.1 when using version 1.8.0. This might lead to breaking code or invalid results. Use at your own risk. For more info please refer to:\nhttps:/",
+    "UserWarning: X does not have valid feature names, but RobustScaler was fitted with feature names",
+    "UserWarning: [21:31:26] WARNING: C:\\actions-runner\\_work\\xgboost\\xgboost\\src\\gbm\\../common/error_msg.h:83: If you are loading a serialized model (like pickle in Python, RDS in R) or\nconfiguration generated by an o"
+   ]
+  }
+ }
+}
