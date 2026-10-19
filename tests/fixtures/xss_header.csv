@@ -1,0 +1,4 @@
+<img src=x onerror=alert(1)>,"""><script>alert(2)</script>",pkt_len,Label
+<b>bold</b>,<svg onload=alert(3)>,60,<script>alert(4)</script>
+plain,text,1500,BENIGN
+x,y,40,DDoS
