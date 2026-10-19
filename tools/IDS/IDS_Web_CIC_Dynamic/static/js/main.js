@@ -314,9 +314,9 @@ document.addEventListener("DOMContentLoaded", function() {
           const isCorrect = i === j;
           const percentage = rowTotal > 0 ? ((val / rowTotal) * 100).toFixed(1) : 0;
           const bgColor = isCorrect ? 
-            `rgba(0, 128, 0, ${escapeHtml(Math.min(val / rowTotal, 0.8))})` : 
+            `rgba(0, 128, 0, ${escapeHtml(Math.min(val / rowTotal, 0.5))})` :  // max 0.5: dark text stays >= 4.5:1 
             `rgba(255, 0, 0, ${escapeHtml(Math.min(val / rowTotal, 0.5))})`;
-          html += `<td style="background-color: ${escapeHtml(bgColor)}; color: ${escapeHtml(val > rowTotal * 0.5 ? 'white' : 'black')}" title="${escapeHtml(val)} (${escapeHtml(percentage)}%)">${escapeHtml(val)}</td>`;
+          html += `<td style="background-color: ${escapeHtml(bgColor)}; color: black" title="${escapeHtml(val)} (${escapeHtml(percentage)}%)">${escapeHtml(val)}</td>`;
         });
         html += '</tr>';
       });
@@ -929,6 +929,7 @@ document.addEventListener("DOMContentLoaded", function() {
         group.className = "form-group";
         const label = document.createElement("label");
         label.textContent = feature.name + ":";
+        label.htmlFor = feature.name;
         group.appendChild(label);
         let input;
         if (feature.type === "numeric") {
@@ -964,6 +965,7 @@ document.addEventListener("DOMContentLoaded", function() {
         group.className = "form-group";
         const label = document.createElement("label");
         label.textContent = feature.name + ":";
+        label.htmlFor = feature.name;
         group.appendChild(label);
         let input;
         if (feature.type === "numeric") {

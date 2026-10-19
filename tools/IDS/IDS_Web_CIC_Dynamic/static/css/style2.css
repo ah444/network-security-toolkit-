@@ -2,10 +2,7 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-}
-*:not(h1):not(h2) {
-  color: white !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', Arial, sans-serif;
 }
 body {
   margin: 0;
@@ -61,7 +58,6 @@ body {
   max-width: 800px;
   margin: 2rem auto;
   padding: 2rem;
-  color:white;
 }
 
 .section {
@@ -72,12 +68,10 @@ body {
   margin-bottom: 2rem;
   transition: transform 0.3s;
   border: 1px solid rgba(255, 255, 255, 0.2);
-  color:white;
 }
 
 .section:hover {
   transform: translateY(-2px);
-  color:white;
 }
 
 h1 {
@@ -131,7 +125,6 @@ input[type="number"]:focus,
 input[type="text"]:focus,
 select:focus {
   border-color: #4361ee;
-  outline: none;
   box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
 }
 
@@ -318,7 +311,6 @@ select {
 input[type="text"]:focus,
 input[type="number"]:focus,
 select:focus {
-  outline: none;
   border-color: #4361ee;
   box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
 }
@@ -402,6 +394,16 @@ select[multiple] {
   font-weight: bold;
 }
 
+  label {
+    color: #e2e8f0;
+  }
+
+  .file-input-placeholder {
+    color: #cbd5e0;
+  }
+}
+/* (end of dark-mode block: everything below applies in both themes) */
+
 /* Message Styles */
 .success-message {
   background-color: #000000;
@@ -445,11 +447,11 @@ select[multiple] {
 }
 
 .stat-item {
-  color: #2d3748 !important;
+  color: inherit;
 }
 
 .stat-item strong {
-  color: #4361ee !important;
+  color: inherit;
 }
 
 .table-container {
@@ -504,7 +506,6 @@ select[multiple] {
   -webkit-appearance: none;
   background: #e2e8f0;
   border-radius: 4px;
-  outline: none;
 }
 
 #trainTestSlider::-webkit-slider-thumb {
@@ -523,7 +524,7 @@ select[multiple] {
 
 .slider-label {
   font-size: 0.9rem;
-  color: white !important;
+  color: inherit;
   font-weight: 600;
   background: rgba(67, 97, 238, 0.3);
   padding: 5px 12px;
@@ -539,7 +540,7 @@ select[multiple] {
 .cm-header {
   font-size: 1.1rem;
   margin-bottom: 10px;
-  color: #2d3748 !important;
+  color: inherit;
 }
 
 .confusion-matrix {
@@ -554,7 +555,7 @@ select[multiple] {
   border: 1px solid #e2e8f0;
   text-align: center;
   min-width: 60px;
-  color: #2d3748 !important;
+  color: #2d3748;
 }
 
 .confusion-matrix th {
@@ -571,16 +572,16 @@ select[multiple] {
 .cm-legend {
   margin-top: 10px;
   font-size: 0.85rem;
-  color: #4a5568 !important;
+  color: inherit;
 }
 
 .cm-correct {
-  color: #28a745 !important;
+  color: #15803d;
   margin-right: 15px;
 }
 
 .cm-incorrect {
-  color: #dc3545 !important;
+  color: #b91c1c;
 }
 
 /* Small button variant - matches big button style */
@@ -624,7 +625,6 @@ select[multiple] {
 
 #balancingMethod:focus {
   border-color: #4361ee;
-  outline: none;
   box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.2);
 }
 
@@ -639,17 +639,18 @@ select[multiple] {
   background: rgba(67, 97, 238, 0.1);
   border-radius: 8px;
   font-size: 0.9rem;
-  color: #4a5568 !important;
+  color: inherit;
   line-height: 1.5;
   border-left: 4px solid #4361ee;
 }
 
 .balancing-hint strong {
-  color: #28a745 !important;
+  color: #15803d;
 }
 
 /* Recommendation Box Styles */
 .recommendation-box {
+  color: #e2e8f0;
   background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
   border: 1px solid #4361ee;
   border-radius: 12px;
@@ -745,7 +746,7 @@ select[multiple] {
 
 /* Column Management Section Styles */
 .section-description {
-  color: #9ca3af;
+  color: inherit;
   font-size: 0.95rem;
   margin-bottom: 20px;
   line-height: 1.5;
@@ -798,4 +799,36 @@ select[multiple] {
 #targetValuesToRemove {
   min-height: 150px;
   width: 100%;
+}
+
+/* Dark-mode overrides for the shared rules above */
+@media (prefers-color-scheme: dark) {
+  .cm-correct,
+  .balancing-hint strong {
+    color: #4ade80;
+  }
+
+  .cm-incorrect {
+    color: #fca5a5;
+  }
+}
+
+/* Visible keyboard focus (accessibility, plan D2) */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid #3730a3;
+  outline-offset: 2px;
+}
+
+@media (prefers-color-scheme: dark) {
+  a:focus-visible,
+  button:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    outline-color: #fbbf24;
+  }
 }
