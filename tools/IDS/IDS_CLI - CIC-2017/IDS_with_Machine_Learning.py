@@ -7,7 +7,9 @@ Uses: scaler.pkl, label_encoder.pkl, config.json, and model files.
 
 import os
 import json
+import hashlib
 import pickle
+from importlib import metadata
 
 # Library warnings (e.g. scikit-learn version mismatch when loading the
 # models) are deliberately NOT silenced: they signal unreliable results.
@@ -17,6 +19,56 @@ import pandas as pd
 
 # Features derived from the attack label itself (data leakage, plan L1).
 LABEL_DERIVED_FEATURES = {"Attempted Category"}
+
+# Only .pkl files whose SHA-256 is pinned here are ever unpickled (plan D11, step 0.3).
+MANIFEST_NAME = "manifest.json"
+
+
+class UntrustedModelFile(Exception):
+    """A model file is missing from the manifest or its SHA-256 does not match."""
+
+
+def _installed_version(package):
+    """Installed version of a package, or None if it is not installed."""
+    try:
+        return metadata.version(package)
+    except metadata.PackageNotFoundError:
+        return None
+
+
+def _sha256(path):
+    digest = hashlib.sha256()
+    with open(path, 'rb') as f:
+        for chunk in iter(lambda: f.read(1 << 20), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def version_mismatch_warning(trained_with):
+    """
+    Compare the library versions the models were saved with against the installed ones.
+
+    Args:
+        trained_with: dict from the manifest, e.g. {"scikit-learn": "1.6.1", "numpy": "2"}
+
+    Returns:
+        str or None: Warning text if a relevant version differs
+    """
+    problems = []
+    saved = trained_with.get("scikit-learn")
+    installed = _installed_version("scikit-learn")
+    if saved and installed and saved.split(".")[:2] != installed.split(".")[:2]:
+        problems.append(f"scikit-learn {saved} (installed: {installed})")
+    saved = trained_with.get("numpy")
+    installed = _installed_version("numpy")
+    if saved and installed and saved.split(".")[0] != installed.split(".")[0]:
+        problems.append(f"numpy {saved}.x (installed: {installed})")
+    if not problems:
+        return None
+    return (
+        "⚠️  Version mismatch: these model files were saved with " + ", ".join(problems) + ".\n"
+        "   Loading pickles across versions can silently give wrong predictions."
+    )
 
 
 def leakage_warning(features):
@@ -86,46 +138,60 @@ class IDSModel:
                 print(f"❌ Config file not found: {config_path}")
                 return False
             
-            with open(config_path, 'r') as f:
+            with open(config_path, 'r', encoding='utf-8') as f:
                 self.config = json.load(f)
-            
+
             self.features = self.config.get('features', [])
             self.classes = self.config.get('classes', [])
-            
+
             # Determine which model to load
             if model_name is None:
                 model_name = self.config.get('best_model', 'random_forest')
-            
+
             self.model_name = model_name
-            
-            # Load scaler
+
+            manifest = self._read_manifest()
+            if manifest is None:
+                print(f"❌ {MANIFEST_NAME} not found in {self.models_dir}: refusing to load any model file")
+                return False
+
+            # Verify every file BEFORE unpickling any of them.
             scaler_path = os.path.join(self.models_dir, 'scaler.pkl')
-            if os.path.exists(scaler_path):
-                with open(scaler_path, 'rb') as f:
-                    self.scaler = pickle.load(f)
-                print(f"✅ Scaler loaded")
-            else:
-                print(f"⚠️ Scaler not found, predictions may be inaccurate")
-            
-            # Load label encoder
             encoder_path = os.path.join(self.models_dir, 'label_encoder.pkl')
-            if os.path.exists(encoder_path):
-                with open(encoder_path, 'rb') as f:
-                    self.label_encoder = pickle.load(f)
-                print(f"✅ Label encoder loaded ({len(self.label_encoder.classes_)} classes)")
-            else:
+            model_path = os.path.join(self.models_dir, f'{model_name}.pkl')
+            if not os.path.exists(encoder_path):
                 print(f"❌ Label encoder not found: {encoder_path}")
                 return False
-            
-            # Load model
-            model_path = os.path.join(self.models_dir, f'{model_name}.pkl')
             if not os.path.exists(model_path):
                 print(f"❌ Model file not found: {model_path}")
                 return False
-            
+            to_check = [encoder_path, model_path]
+            if os.path.exists(scaler_path):
+                to_check.insert(0, scaler_path)
+            for path in to_check:
+                self._verify_trusted(path, manifest)
+
+            warning = version_mismatch_warning(manifest.get('trained_with', {}))
+            if warning:
+                print(warning)
+
+            # Load scaler
+            if os.path.exists(scaler_path):
+                with open(scaler_path, 'rb') as f:
+                    self.scaler = pickle.load(f)
+                print("✅ Scaler loaded")
+            else:
+                print("⚠️ Scaler not found, predictions may be inaccurate")
+
+            # Load label encoder
+            with open(encoder_path, 'rb') as f:
+                self.label_encoder = pickle.load(f)
+            print(f"✅ Label encoder loaded ({len(self.label_encoder.classes_)} classes)")
+
+            # Load model
             with open(model_path, 'rb') as f:
                 self.model = pickle.load(f)
-            
+
             print(f"✅ Model loaded: {model_name}")
             print(f"📊 Features ({len(self.features)}): {self.features}")
             print(f"🏷️ Classes ({len(self.classes)}): {self.classes[:5]}..." if len(self.classes) > 5 else f"🏷️ Classes: {self.classes}")
@@ -136,10 +202,30 @@ class IDSModel:
 
             self.loaded = True
             return True
-            
+
+        except UntrustedModelFile as e:
+            print(f"❌ Refusing to load {e}: the file is not trusted "
+                  f"(its SHA-256 is not pinned in {MANIFEST_NAME}). Nothing was loaded.")
+            return False
         except Exception as e:
             print(f"❌ Error loading model: {e}")
             return False
+
+    def _read_manifest(self):
+        """Return the trusted-files manifest, or None if it is missing."""
+        path = os.path.join(self.models_dir, MANIFEST_NAME)
+        if not os.path.exists(path):
+            return None
+        with open(path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+
+    @staticmethod
+    def _verify_trusted(path, manifest):
+        """Raise UntrustedModelFile unless the file's SHA-256 matches the manifest."""
+        name = os.path.basename(path)
+        expected = manifest.get('files', {}).get(name)
+        if expected is None or _sha256(path) != expected:
+            raise UntrustedModelFile(name)
     
     def predict(self, features_dict=None, features_array=None):
         """
@@ -224,14 +310,16 @@ class IDSModel:
     
     def get_available_models(self):
         """
-        List available model files in models directory.
-        
+        List the trusted model files (those pinned in the manifest) that exist.
+
         Returns:
             list: List of model names (without .pkl extension)
         """
+        manifest = self._read_manifest() or {}
         models = []
-        for f in os.listdir(self.models_dir):
-            if f.endswith('.pkl') and f not in ['scaler.pkl', 'label_encoder.pkl']:
+        for f in sorted(manifest.get('files', {})):
+            if f.endswith('.pkl') and f not in ['scaler.pkl', 'label_encoder.pkl'] \
+                    and os.path.exists(os.path.join(self.models_dir, f)):
                 models.append(f.replace('.pkl', ''))
         return models
 

@@ -2,6 +2,13 @@
 
 import pytest
 
+# Loading the v4 pickles raises known version warnings; they are asserted in
+# test_cli_bundle_trust.py::test_cli_v4_version_mismatch_warns, not here.
+pytestmark = pytest.mark.filterwarnings(
+    "ignore::sklearn.exceptions.InconsistentVersionWarning",
+    "ignore:.*serialized model.*:UserWarning",
+)
+
 
 def test_warning_text_for_label_derived_feature(cli_module):
     message = cli_module.leakage_warning(["Bwd Packet Length Mean", "Attempted Category"])

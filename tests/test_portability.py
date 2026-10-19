@@ -19,7 +19,6 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 SCAN_ROOTS = ["main.py", "tools", "toolkit"]
 
 BASELINE = {
-    "tools/IDS/IDS_CLI - CIC-2017/IDS_with_Machine_Learning.py": {"open_without_encoding": 1},
     "tools/Port_scan/Port_Scan.py": {"open_without_encoding": 4},
 }
 
