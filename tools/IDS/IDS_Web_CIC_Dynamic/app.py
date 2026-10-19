@@ -238,6 +238,58 @@ def recommend_balancing_method(class_counts, total_samples, num_features, num_cl
 # Set template_folder and static_folder as needed for the ML part.
 app = Flask(__name__, template_folder='templates', static_folder='static')
 
+# Upload size limit (S9). Large enough for the full CIC-IDS2017 file (~1 GB);
+# change with the TOOLKIT_MAX_UPLOAD_MB environment variable.
+MAX_UPLOAD_MB = int(os.environ.get("TOOLKIT_MAX_UPLOAD_MB", "2048"))
+app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_MB * 1024 * 1024
+
+
+class BadRequestBody(Exception):
+    """The request body or one of its values is invalid (answered with HTTP 400)."""
+
+
+def json_body():
+    """Return the request's JSON object, or raise BadRequestBody (S9, S10 interim).
+
+    Requiring a JSON object (Content-Type: application/json) also means a plain
+    HTML form on another website can't trigger these routes.
+    """
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        raise BadRequestBody("Request body must be a JSON object (Content-Type: application/json).")
+    return data
+
+
+def int_param(data, key, default, low, high):
+    """Read an integer value from a JSON body, clamped to [low, high]."""
+    value = data.get(key, default)
+    try:
+        number = int(value)
+    except (TypeError, ValueError):
+        raise BadRequestBody(f"'{key}' must be a whole number.") from None
+    return max(low, min(high, number))
+
+
+@app.errorhandler(BadRequestBody)
+def _bad_request_body(error):
+    return jsonify({"error": str(error)}), 400
+
+
+@app.errorhandler(413)
+def _upload_too_large(_error):
+    return jsonify({"error": f"Upload too large (limit: {MAX_UPLOAD_MB} MB)."}), 413
+
+
+@app.before_request
+def _block_cross_site_requests():
+    """Interim CSRF protection (S10) until the v5.1 token: reject state-changing
+    requests whose Origin header names another site."""
+    if request.method in ("POST", "PUT", "PATCH", "DELETE"):
+        origin = request.headers.get("Origin")
+        if origin is not None and origin.rstrip("/") != request.host_url.rstrip("/"):
+            return jsonify({"error": "Cross-site request blocked."}), 403
+    return None
+
 # ---------------------------
 # Global variables for ML functionality
 # ---------------------------
@@ -394,8 +446,8 @@ def upload():
 @app.route("/preview_data", methods=["POST"])
 def preview_data():
     """Return preview of uploaded dataset (first N rows)"""
-    req = request.get_json()
-    num_rows = req.get("num_rows", 10)  # Default to 10 rows
+    req = json_body()
+    num_rows = int_param(req, "num_rows", 10, 1, 100)  # clamped (S9)
     
     if data_store["df"] is None:
         return jsonify({"error": "No dataset uploaded."}), 400
@@ -426,7 +478,7 @@ def preview_data():
 @app.route("/filter_target_values", methods=["POST"])
 def filter_target_values():
     """Remove selected values from the target column (remove rows with those values)"""
-    req = request.get_json()
+    req = json_body()
     target_column = req.get("target_column")
     values_to_remove = req.get("values_to_remove", [])
     
@@ -505,7 +557,7 @@ def filter_target_values():
 @app.route("/get_target_values", methods=["POST"])
 def get_target_values():
     """Get unique values in the target column"""
-    req = request.get_json()
+    req = json_body()
     target_column = req.get("target_column")
     
     if data_store["df"] is None:
@@ -530,7 +582,7 @@ def get_target_values():
 
 @app.route("/analyze_class_distribution", methods=["POST"])
 def analyze_class_distribution():
-    req = request.get_json()
+    req = json_body()
     target = req.get("target")
     if data_store["df"] is None or not target:
         return jsonify({"error": "Dataset not uploaded or target not specified."}), 400
@@ -602,7 +654,7 @@ def apply_smote_endpoint():
     training data to prevent data leakage. This endpoint shows how the 
     balanced dataset would look like for exploratory purposes.
     """
-    req = request.get_json()
+    req = json_body()
     target = req.get("target")
     # Get memory-efficient options if provided
     downsample_ratio = req.get("downsample_ratio", 1.0)  # Default: no downsampling
@@ -923,9 +975,9 @@ def apply_smote_endpoint():
 
 @app.route("/recommend_features", methods=["POST"])
 def recommend_features():
-    req = request.get_json()
+    req = json_body()
     target = req.get("target")
-    k_val = req.get("k", 10)  # default is 10 features
+    k_val = int_param(req, "k", 10, 1, 10_000)  # clamped (S9)
     
     # Check if we have any dataset available
     if data_store["df"] is None or not target:
@@ -1019,7 +1071,7 @@ def get_available_models():
 
 @app.route("/configure", methods=["POST"])
 def configure():
-    req = request.get_json()
+    req = json_body()
     features = req.get("input_features")
     target = req.get("target")
     balancing_method = req.get("balancing_method", "none")  # New: multiple balancing options
@@ -1497,7 +1549,7 @@ def configure():
 @app.route("/get_confusion_matrix", methods=["POST"])
 def get_confusion_matrix():
     """Get confusion matrix for a specific model"""
-    req = request.get_json()
+    req = json_body()
     model_name = req.get("model_name")
     dataset_type = req.get("dataset_type", "test")  # "validation" or "test"
     
@@ -1537,9 +1589,9 @@ def export_model():
 
 @app.route("/predict", methods=["POST"])
 def predict_endpoint():
+    req = json_body()
     if not model_config:
         return jsonify({"error": "Models not trained yet. Please run /configure first."}), 400
-    req = request.get_json()
     values = req.get("values")
     algo = req.get("algorithm")
     if not values:
@@ -1588,10 +1640,10 @@ def predict_endpoint():
 @app.route("/predict_loaded/", methods=["POST"])
 def predict_loaded_endpoint():
     logging.info("Received predict_loaded request")
+    req = json_body()
     if not loaded_model_config:
         return jsonify({"error": "No model loaded. " + MODEL_FILES_PAUSED}), 400
     try:
-        req = request.get_json()
         values = req.get("values")
         if not values:
             logging.error("No input values provided")
