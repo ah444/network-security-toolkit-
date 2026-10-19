@@ -22,6 +22,10 @@ stratified          none (rows of a single-row class go    -
                     to train)
 ==================  =====================================  ===============================
 
+Official split: by default both published files are used exactly as they are (scores
+stay comparable with other work); copies and test rows that also occur in train are
+counted and reported. ``SplitConfig.official_dedupe`` (strict mode) removes them.
+
 Time validation: the empty share and the unparseable share stay under the limits in
 ``SplitConfig``; ``d/m/Y`` vs ``m/d/Y`` is resolved from the values (one reading fails)
 or from the file order (one reading goes backwards less), and is harmless when both
@@ -77,6 +81,8 @@ WARNING_CODES = (
     "STRATIFIED_SCORES_MAY_BE_OPTIMISTIC",
     "CLASS_MISSING_FROM_TEST",
     "CLASS_MISSING_FROM_TRAIN",
+    "OFFICIAL_TEST_OVERLAP_KEPT",
+    "OFFICIAL_COPIES_KEPT",
     "OFFICIAL_TEST_OVERLAP_REMOVED",
     "TIME_MISSING_ROWS_DROPPED",
     "LABEL_MISSING_ROWS_DROPPED",
@@ -98,10 +104,13 @@ class DedupeStats:
     conflicting_rows: int  # kept rows whose features equal another row's, label differs
     compared_columns: int
     ignored_columns: tuple[str, ...]
+    applied: bool = True  # False: official files kept as published, copies only counted
+    copies_found: int = 0  # copies in the (training) frame, removed or not
     # Official split only: the separate test file.
     test_rows_before: int = 0
-    test_removed: int = 0  # copies inside the test file + rows also in train
-    test_overlap_removed: int = 0  # of which: rows also in train
+    test_copies: int = 0  # copies inside the test file
+    test_overlap: int = 0  # test rows that also occur in train
+    test_removed: int = 0  # strict mode: copies + overlap; otherwise 0
 
 
 @dataclass(frozen=True)
@@ -135,6 +144,7 @@ class SplitResult:
     time_column: str | None  # used by the split (temporal strategies only)
     group_column: str | None  # used by the split (group only)
     time_check: TimeCheck | None
+    official_mode: str | None  # "as_published" | "deduplicated" (official split only)
     dedupe: DedupeStats
     coverage: tuple[ClassCoverage, ...]
     rows_without_label: int
@@ -165,6 +175,7 @@ def dedupe(frame: pd.DataFrame, label: str,
         rows_before=len(frame),
         rows_after=len(kept),
         removed=int(copies.sum()),
+        copies_found=int(copies.sum()),
         removed_per_class=tuple(sorted((str(k), int(v)) for k, v in removed.items() if v)),
         conflicting_rows=conflicting,
         compared_columns=len(columns),
@@ -385,17 +396,33 @@ def _coverage(train: pd.Series, test: pd.Series) -> tuple[ClassCoverage, ...]:
                  for n in names)
 
 
-def _official_test(train: pd.DataFrame, test_frame: pd.DataFrame, label: str,
-                   ignored: Sequence[str]) -> tuple[pd.DataFrame, int, int]:
-    lacking = [c for c in train.columns if c not in test_frame.columns]
+def _official(frame: pd.DataFrame, kept: pd.DataFrame, stats: DedupeStats,
+              test_frame: pd.DataFrame, config: SplitConfig):
+    """Train and test of an official split, the updated stats and the warnings."""
+    lacking = [c for c in frame.columns if c not in test_frame.columns]
     if lacking:
         raise ValueError(f"The official test file lacks columns: {lacking}")
-    test, stats = dedupe(test_frame[list(train.columns)], label, ignored)
-    compared = [c for c in train.columns if c not in stats.ignored_columns]
-    both = pd.concat([train[compared].astype(object), test[compared].astype(object)],
-                     ignore_index=True)
-    overlap = both.duplicated(keep="first").to_numpy()[len(train):]
-    return test[~overlap], stats.removed + int(overlap.sum()), int(overlap.sum())
+    test = test_frame[list(frame.columns)]
+    compared = [c for c in frame.columns if c not in stats.ignored_columns]
+    copies = test.duplicated(subset=compared, keep="first").to_numpy()
+    in_train = (test[compared].astype(object)
+                .merge(kept[compared].astype(object).assign(_in_train=True),
+                       on=compared, how="left")["_in_train"].notna().to_numpy())
+    stats = replace(stats, test_rows_before=len(test), test_copies=int(copies.sum()),
+                    test_overlap=int(in_train.sum()))
+    found: list[str] = []
+    if config.official_dedupe:
+        drop = copies | in_train
+        stats = replace(stats, test_removed=int(drop.sum()))
+        if in_train.any():
+            found.append("OFFICIAL_TEST_OVERLAP_REMOVED")
+        return kept, test[~drop], stats, found
+    stats = replace(stats, applied=False, rows_after=len(frame), removed=0, removed_per_class=())
+    if in_train.any():
+        found.append("OFFICIAL_TEST_OVERLAP_KEPT")
+    if stats.copies_found or copies.any():
+        found.append("OFFICIAL_COPIES_KEPT")
+    return frame, test, stats, found
 
 
 def split_dataset(
@@ -448,18 +475,14 @@ def split_dataset(
     time_check: TimeCheck | None = None
     times: pd.Series | None = None
     used_group: str | None = None
-    test_part: pd.DataFrame | None = None
     for candidate in (requested, *FALLBACKS[requested]):
         try:
             if candidate == "official":
                 if test_frame is None:
                     raise _Failed("OFFICIAL_TEST_FILE_MISSING")
-                train_part = kept
-                test_part, removed, overlap = _official_test(kept, test_frame, label, ignored)
-                stats = replace(stats, test_rows_before=len(test_frame), test_removed=removed,
-                                test_overlap_removed=overlap)
-                if overlap:
-                    result_warnings.append("OFFICIAL_TEST_OVERLAP_REMOVED")
+                train_part, test_part, stats, found = _official(frame, kept, stats,
+                                                                test_frame, config)
+                result_warnings.extend(found)
             elif candidate in TEMPORAL:
                 if time_check is None:
                     time_check, times = check_time_column(kept, time_column, config, sources)
@@ -506,6 +529,8 @@ def split_dataset(
         time_column=time_column if candidate in TEMPORAL else None,
         group_column=used_group if candidate == "group" else None,
         time_check=time_check,
+        official_mode=(("deduplicated" if config.official_dedupe else "as_published")
+                       if candidate == "official" else None),
         dedupe=stats,
         coverage=coverage,
         rows_without_label=without_label,

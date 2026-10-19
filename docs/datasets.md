@@ -104,12 +104,12 @@ The loader's SHA-256, row counts, empty-cell and `inf` counts match the tables a
 |---|---|---|---|---|---|
 | `CIC-2017.csv` | 308,381 (10.9 %) | 1,396 | `stratified` | 2,017,889 / 504,473 | `STRATIFIED_SCORES_MAY_BE_OPTIMISTIC` |
 | `DDOS(CIC-2017)_FILTERED_TEST.csv` | 23,416 | 72 | `stratified` | 161,864 / 40,465 | `STRATIFIED_SCORES_MAY_BE_OPTIMISTIC` |
-| `KDDTrain+.txt` + `KDDTest+.txt` | 0 in train; 610 test rows also in train | 31 | `official` | 125,973 / 21,934 | `OFFICIAL_TEST_OVERLAP_REMOVED`, `CLASS_MISSING_FROM_TEST`, `CLASS_MISSING_FROM_TRAIN` |
+| `KDDTrain+.txt` + `KDDTest+.txt` | none (kept as published); 610 test rows also in train | 31 | `official` | 125,973 / 22,544 (strict mode: 125,973 / 21,934) | `OFFICIAL_TEST_OVERLAP_KEPT` (strict: `_REMOVED`), `CLASS_MISSING_FROM_TEST`, `CLASS_MISSING_FROM_TRAIN` |
 
 ¹ Same feature values, different labels: counted, not removed.
 
 - **CIC:** every one of the 15 classes is on both sides, but the smallest are tiny: Heartbleed 9 / 2, Infiltration 29 / 7, Sql Injection 17 / 4. With no time column the split is stratified, so the scores may be optimistic.
-- **NSL-KDD:** the copies are compared without `level`. 17 attack types occur only in KDDTest+ (e.g. `apache2` 737, `mscan` 996), and `spy` (2) and `warezclient` (890) occur only in KDDTrain+. This is how the published files were designed (unseen attacks in test), so it is reported, not "fixed".
+- **NSL-KDD:** both files are used exactly as published by default, so results are comparable with other work. Neither file has copies inside it, but 610 KDDTest+ rows (2.7 %) also occur in KDDTrain+ (compared without `level`). They are reported, and removed only in strict mode (`SplitConfig(official_dedupe=True)`); default scores are therefore slightly optimistic. 17 attack types occur only in KDDTest+ (e.g. `apache2` 737, `mscan` 996), and `spy` (2) and `warezclient` (890) occur only in KDDTrain+. This is how the published files were designed (unseen attacks in test), so it is reported, not "fixed".
 
 ## Licences and citations (0.5b, still to complete)
 

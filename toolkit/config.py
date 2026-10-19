@@ -36,3 +36,6 @@ class SplitConfig:
     # Time-column checks before a temporal split; above these the split falls back.
     max_time_parse_failure: float = 0.01  # share of non-empty values that don't parse
     max_time_missing: float = 0.01  # share of empty values
+    # Official split (published train + test files): False keeps both files as published,
+    # so scores stay comparable; True ("strict") removes copies and test rows also in train.
+    official_dedupe: bool = False

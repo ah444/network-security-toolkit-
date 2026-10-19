@@ -95,6 +95,7 @@ def test_nslkdd_uses_official_split(fixtures_dir):
     result = split_dataset(train.frame, "attack", profile=train.profile, test_frame=test.frame)
 
     assert (result.strategy, result.requested, result.reason_codes) == ("official", "official", ())
+    assert result.official_mode == "as_published"
     assert len(result.train) == len(train.frame)
     assert len(result.test) == len(test.frame)
     assert "CLASS_MISSING_FROM_TRAIN" in result.warnings, "KDDTest+ has attack types KDDTrain+ lacks"
@@ -102,14 +103,44 @@ def test_nslkdd_uses_official_split(fixtures_dir):
     assert {"apache2", "mailbomb"} <= unseen
 
 
-def test_official_test_rows_also_in_train_are_removed():
-    train = pd.DataFrame({"x": [1, 2, 3, 4], "Label": ["a", "b", "a", "b"]})
-    test = pd.DataFrame({"x": [2, 5, 5, 6], "Label": ["b", "a", "a", "b"]})
+def _overlapping_official_files():
+    train = pd.DataFrame({"x": [1, 2, 3, 4, 4], "Label": ["a", "b", "a", "b", "b"]})
+    test = pd.DataFrame({"x": [2, 5, 5, 6, 1], "Label": ["b", "a", "a", "b", "a"]})
+    return train, test
+
+
+def test_official_files_kept_as_published_by_default():
+    """Benchmark mode: both files exactly as published; overlaps and copies only reported."""
+    train, test = _overlapping_official_files()
     result = split_dataset(train, "Label", strategy="official", test_frame=test)
+    assert result.official_mode == "as_published"
+    pd.testing.assert_frame_equal(result.train, train)
+    pd.testing.assert_frame_equal(result.test, test)
+    d = result.dedupe
+    assert (d.applied, d.copies_found, d.removed, d.rows_after) == (False, 1, 0, 5)
+    assert (d.test_rows_before, d.test_copies, d.test_overlap, d.test_removed) == (5, 1, 2, 0)
+    assert {"OFFICIAL_TEST_OVERLAP_KEPT", "OFFICIAL_COPIES_KEPT"} <= set(result.warnings)
+    assert "OFFICIAL_TEST_OVERLAP_REMOVED" not in result.warnings
+
+
+def test_official_strict_mode_removes_copies_and_overlap():
+    train, test = _overlapping_official_files()
+    result = split_dataset(train, "Label", strategy="official", test_frame=test,
+                           config=SplitConfig(official_dedupe=True))
+    assert result.official_mode == "deduplicated"
+    assert list(result.train["x"]) == [1, 2, 3, 4]
     assert list(result.test["x"]) == [5, 6]
-    assert result.dedupe.test_removed == 2, "one copy inside the test file + one row also in train"
-    assert result.dedupe.test_overlap_removed == 1
+    d = result.dedupe
+    assert (d.applied, d.copies_found, d.removed) == (True, 1, 1)
+    assert (d.test_copies, d.test_overlap, d.test_removed) == (1, 2, 3)
     assert "OFFICIAL_TEST_OVERLAP_REMOVED" in result.warnings
+
+
+def test_official_mode_only_for_official_split():
+    frame = pd.DataFrame({"x": [1, 1, 2, 3] * 10, "Label": ["a", "a", "b", "b"] * 10})
+    result = split_dataset(frame, "Label", strategy="stratified")
+    assert result.official_mode is None
+    assert result.dedupe.applied and result.dedupe.removed == 37, "other splits always dedupe"
 
 
 def test_official_without_test_file_falls_back():
