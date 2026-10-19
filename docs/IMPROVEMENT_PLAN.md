@@ -361,6 +361,8 @@ For each candidate feature, on the **training split only**, fit a depth-limited 
 
 **ID-like column check:** flag a column only if it is **integer or text** and is (a) ≥ 99% unique **or** (b) strictly increasing with row order. Continuous floats are never flagged by uniqueness alone, because real features like `Flow Duration` and `Flow Bytes/s` are also almost all unique.
 
+*Implemented in step 0.4a with three refinements found by tests and the real-data check (details in `docs/V5.0_CHECKLIST.md`): the tree is limited by **leaves** (8, the capacity of a depth-3 tree, or 2 per class when there are more classes), because a greedy depth-3 tree misses an exact copy of a label with more than 8 classes; the name pattern is `attempted category`, not `attempted`, which would block the legitimate NSL-KDD feature `su_attempted`; the "≥ 99 % unique" rule needs at least 1,000 rows, since on small samples most integer features look unique.*
+
 **Rejected suggestion:** "flag columns constant in train but not in test." Choosing features by looking at the test set would break the test-isolation invariant below. Drift between train and test may only be **reported** after the test set has been scored, never used to select features.
 
 The user can **override** a block or warning via an allowlist, and every override (feature, score, reason) is recorded in the TrainingRun. The user can **override** a block or warning via an allowlist, and every override (feature, score, reason) is recorded in the TrainingRun. Thresholds live in `config.py` so tests can rely on them. On very large datasets the check runs on a stratified sample of the training split (size recorded).
