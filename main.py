@@ -47,7 +47,22 @@ def run_tool(relative_path):
     except Exception as e:
         print(f"Error running {script_path}: {e}")
 
+CLI_IDS = "IDS/IDS_CLI - CIC-2017/IDS_with_Machine_Learning.py"
+WEB_IDS = "IDS/IDS_Web_CIC_Dynamic/app.py"
+
+
+def ask_yes_no(question):
+    """Ask until the answer is 'y' or 'n'; return True for 'y'."""
+    while True:
+        answer = input(question).strip().lower()
+        if answer in ("y", "n"):
+            return answer == "y"
+        print("Please enter 'y' or 'n'.")
+
+
 def main_menu():
+    # Flat loop: every sub-menu returns here instead of calling back into the menus,
+    # so the call stack stays the same however many times a tool is run.
     while True:
         welcome_message()
         print("1. Network Recon")
@@ -57,13 +72,16 @@ def main_menu():
         choice = input("Enter your choice [1-4]: ").strip()
         if choice == "1":
             run_tool("Port_scan/Port_Scan.py")
-            intrusion_prompt()
+            if intrusion_prompt():
+                intrusion_menu()
         elif choice == "2":
-            run_tool("IDS/IDS_CLI - CIC-2017/IDS_with_Machine_Learning.py")
-            prompt_repeat_detection()
+            run_tool(CLI_IDS)
+            if prompt_repeat_detection():
+                intrusion_menu()
         elif choice == "3":
-            run_tool("IDS/IDS_Web_CIC_Dynamic/app.py")
-            prompt_repeat_detection()
+            run_tool(WEB_IDS)
+            if prompt_repeat_detection():
+                intrusion_menu()
         elif choice == "4":
             print("Exiting the program. Goodbye!")
             sys.exit(0)
@@ -72,18 +90,15 @@ def main_menu():
             time.sleep(1)
 
 def intrusion_prompt():
-    while True:
-        cont = input("Proceed to Intrusion Detection? (y/n): ").strip().lower()
-        if cont == "y":
-            intrusion_menu()
-            break
-        elif cont == "n":
-            print("Exiting. Thank you!")
-            sys.exit(0)
-        else:
-            print("Please enter 'y' or 'n'.")
+    """After a recon run: True to go on to intrusion detection, False for the main menu."""
+    if ask_yes_no("Proceed to Intrusion Detection? (y/n): "):
+        return True
+    print("\nReturning to Main Menu...")
+    time.sleep(1)
+    return False
 
 def intrusion_menu():
+    """Run detection tools until the user returns to the main menu."""
     while True:
         clear_screen()
         print("Intrusion Detection Options:")
@@ -92,32 +107,25 @@ def intrusion_menu():
         print("3. Return to Main Menu")
         choice = input("Enter your choice [1-3]: ").strip()
         if choice == "1":
-            run_tool("IDS/IDS_CLI - CIC-2017/IDS_with_Machine_Learning.py")
-            prompt_repeat_detection()
-            break
+            run_tool(CLI_IDS)
         elif choice == "2":
-            run_tool("IDS/IDS_Web_CIC_Dynamic/app.py")
-            prompt_repeat_detection()
-            break
+            run_tool(WEB_IDS)
         elif choice == "3":
-            break
+            return
         else:
             print("Invalid choice. Please try again.")
             time.sleep(1)
+            continue
+        if not prompt_repeat_detection():
+            return
 
 def prompt_repeat_detection():
-    """After a detection run, ask the user if they want to repeat."""
-    while True:
-        rpt = input("\nDo you want to perform another detection? (y/n): ").strip().lower()
-        if rpt == "y":
-            intrusion_menu()
-            return
-        elif rpt == "n":
-            print("\nReturning to Main Menu...")
-            time.sleep(1)
-            return
-        else:
-            print("Please enter 'y' or 'n'.")
+    """After a detection run: True to run another detection, False for the main menu."""
+    if ask_yes_no("\nDo you want to perform another detection? (y/n): "):
+        return True
+    print("\nReturning to Main Menu...")
+    time.sleep(1)
+    return False
 
 if __name__ == "__main__":
     main_menu()
