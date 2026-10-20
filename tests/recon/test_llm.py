@@ -7,6 +7,7 @@ import json
 import pytest
 
 from toolkit.recon import text as recon_text
+from toolkit.recon import probes
 
 BANNER = "SSH-2.0-OpenSSH_8.9p1 Ubuntu-3ubuntu0.1 host=db01.corp.internal user=admin"
 EVIL_REPLY = (
@@ -26,7 +27,7 @@ def nvd_openssh(fixtures_dir):
 
 
 def test_only_redacted_version_sent(scanner, fake_session, nvd_openssh, no_nvd_wait):
-    software = scanner.product_version(BANNER)
+    software = probes.product_version(BANNER)
     assert software == "OpenSSH 8.9"
     session = fake_session(get=nvd_openssh, post=_ai_reply("Keep OpenSSH updated."))
     intel = scanner.Intel({"openrouter": "or-test-key"}, use_ai=True, session=session)

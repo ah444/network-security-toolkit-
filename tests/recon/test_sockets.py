@@ -4,6 +4,8 @@ import socket
 
 import pytest
 
+from toolkit.recon import probes
+
 
 @pytest.fixture
 def recorded(scanner, monkeypatch):
@@ -45,7 +47,7 @@ def test_no_socket_leak_on_errors(scanner, tcp_server, recorded, monkeypatch):
 
 def test_tls_handshake_failure_closes_socket(scanner, tcp_server, recorded, monkeypatch):
     port = tcp_server(b"not TLS at all\r\n")
-    monkeypatch.setattr(scanner, "TLS_PORTS", {port})
+    monkeypatch.setitem(probes.PROBES, port, probes.Probe(tls=True))
     result = scanner.scan_tcp_port("127.0.0.1", port)
     assert (result.state, result.banner) == ("open", "")
     assert len(recorded) == 1 and recorded[0].fileno() == -1
@@ -58,5 +60,5 @@ def test_closed_port(scanner, free_port):
 def test_http_banner_from_server_header(scanner, tcp_server, monkeypatch):
     port = tcp_server(b"HTTP/1.0 200 OK\r\nServer: Apache/2.4.49 (Unix)\r\n\r\n",
                       read_first=True)
-    monkeypatch.setattr(scanner, "HTTP_PORTS", {port})
+    monkeypatch.setitem(probes.PROBES, port, probes.Probe("http"))
     assert scanner.scan_tcp_port("127.0.0.1", port).banner == "Apache/2.4.49 (Unix)"

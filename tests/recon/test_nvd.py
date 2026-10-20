@@ -4,6 +4,8 @@ import json
 
 import pytest
 
+from toolkit.recon import probes
+
 # Real replies of the NVD CVE API 2.0, saved on 2026-10-20 (tests/fixtures/README.md).
 OPENSSH = "nvd_openssh_8.9.json"
 EMPTY = "nvd_no_results.json"
@@ -78,5 +80,5 @@ def test_requests_are_spaced_without_a_key(scanner, nvd_reply, fake_session, mon
     ("nginx", None),
     ("", None),
 ])
-def test_product_version(scanner, banner, software):
-    assert scanner.product_version(banner) == software
+def test_product_version(banner, software):
+    assert probes.product_version(banner) == software

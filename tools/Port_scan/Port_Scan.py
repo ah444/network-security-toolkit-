@@ -29,7 +29,6 @@ import logging
 import os
 import re
 import socket
-import ssl
 import sys
 import threading
 import time
@@ -48,6 +47,12 @@ from toolkit.config import env_value, instance_dir, read_env_file, scan_limits  
 from toolkit.logging_setup import add_secrets, setup_logging  # noqa: E402
 from toolkit.ports import IntelFinding, NullProgress  # noqa: E402
 from toolkit.recon.os_detect import guess_os, ping_host  # noqa: E402
+from toolkit.recon.probes import (  # noqa: E402
+    banner_text,
+    product_version,
+    read_banner,
+    udp_payload,
+)
 from toolkit.recon.targets import (  # noqa: E402
     check_limits,
     is_ip_literal,
@@ -99,24 +104,6 @@ def confirm_authorized(target, flag=False):
 # --- Scanning (R1, R2, B8, B9) ----------------------------------------------------------------
 
 SCAN_TIMEOUT = 1  # seconds per port
-HTTP_PORTS = {80, 443, 8000, 8008, 8080, 8443, 8888, 9200}
-TLS_PORTS = {443, 465, 636, 993, 995, 8443}
-GREETING_PORTS = {21, 22, 25, 110, 143, 465, 587, 993, 995}  # the service speaks first
-REQUESTS = {6379: b"INFO server\r\n", 11211: b"version\r\n"}
-DETECT_ONLY = {
-    53: "DNS", 389: "LDAP", 636: "LDAPS", 1433: "MSSQL", 3389: "RDP", 5432: "PostgreSQL",
-    9300: "Elasticsearch transport", 27017: "MongoDB",
-}
-MYSQL_GREETING = re.compile(rb"^.{4}\x0a([0-9][\w.\-]*)\x00", re.DOTALL)
-UDP_PAYLOADS = {
-    # DNS "version.bind" TXT/CH query (the v4 hex string mixed in plain letters and never ran)
-    53: bytes.fromhex("00ff01000001000000000000") + b"\x07version\x04bind\x00\x00\x10\x00\x03",
-    123: bytes.fromhex("1b0304fa0001000000000000"),
-    161: bytes.fromhex("302602010004067075626c6963a0190201000201000201003011300f060b2b06010201"
-                       "0101000500"),
-}
-
-
 @dataclass
 class PortResult:
     port: int
@@ -124,76 +111,6 @@ class PortResult:
     state: str  # "open", "closed" (TCP: closed or filtered) or (UDP) "open|filtered"
     service: str = ""
     banner: str = ""
-
-
-def banner_tls_context():
-    """TLS for reading a banner only: no certificate check, so a service with a self-signed
-    certificate still shows its banner (B9). The web lookups (NVD, AbuseIPDB, OpenRouter)
-    never use it: they keep full certificate verification."""
-    context = ssl.create_default_context()
-    context.check_hostname = False
-    context.verify_mode = ssl.CERT_NONE
-    return context
-
-
-def _receive_once(sock, limit=1024):
-    try:
-        return sock.recv(limit)
-    except TimeoutError:
-        return b""
-
-
-def _receive_all(sock, limit=8192):
-    data = b""
-    try:
-        while len(data) < limit:
-            chunk = sock.recv(limit - len(data))
-            if not chunk:
-                break
-            data += chunk
-    except TimeoutError:
-        pass
-    return data
-
-
-def _text(data):
-    return data.decode("utf-8", errors="replace").strip()
-
-
-def _host_header(host):
-    return f"[{host}]" if ":" in host else host
-
-
-def read_banner(sock, host, port):
-    """The banner of an open port, read over the scan's own connection (R2)."""
-    if port in TLS_PORTS:
-        with banner_tls_context().wrap_socket(sock) as tls:
-            return _read_plain(tls, host, port)
-    return _read_plain(sock, host, port)
-
-
-def _read_plain(sock, host, port):
-    if port in DETECT_ONLY:
-        return f"{DETECT_ONLY[port]} service detected"
-    if port in HTTP_PORTS:
-        sock.sendall(f"HEAD / HTTP/1.0\r\nHost: {_host_header(host)}\r\n\r\n".encode())
-        reply = _text(_receive_all(sock))
-        for line in reply.splitlines():
-            if line.lower().startswith("server:"):
-                return line.split(":", 1)[1].strip()
-        return "HTTP service (no Server header)" if reply.startswith("HTTP/") else reply
-    if port == 3306:
-        data = _receive_once(sock)
-        match = MYSQL_GREETING.match(data)
-        return f"MySQL {match.group(1).decode()}" if match else _text(data)
-    if port in REQUESTS:
-        sock.sendall(REQUESTS[port])
-        return _text(_receive_once(sock))
-    data = _receive_once(sock)
-    if not data and port not in GREETING_PORTS:  # silent: give it a line to answer
-        sock.sendall(b"\r\n")
-        data = _receive_once(sock)
-    return _text(data)
 
 
 def service_name(port, protocol="tcp"):
@@ -226,7 +143,7 @@ def scan_udp_port(host, port, timeout=SCAN_TIMEOUT):
         sock.settimeout(timeout)
         try:
             sock.connect(address)
-            sock.send(UDP_PAYLOADS.get(port, b"\r\n"))
+            sock.send(udp_payload(port))
             data = sock.recv(1024)
         except TimeoutError:
             return PortResult(port, "udp", "open|filtered", service_name(port, "udp"))
@@ -235,7 +152,7 @@ def scan_udp_port(host, port, timeout=SCAN_TIMEOUT):
         except OSError as error:
             log.debug("UDP %s:%s failed: %s", host, port, error)
             return PortResult(port, "udp", "closed")
-    return PortResult(port, "udp", "open", service_name(port, "udp"), _text(data))
+    return PortResult(port, "udp", "open", service_name(port, "udp"), banner_text(data))
 
 
 class ConsoleProgress:
@@ -322,9 +239,6 @@ OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
 DEFAULT_AI_MODEL = "deepseek/deepseek-chat:free"
 INTEL_TIMEOUT = 15  # seconds per lookup: a slow service can't stop the scan
 
-PRODUCT_VERSION = re.compile(r"([A-Za-z][A-Za-z0-9\-]{1,30})[/_ ]v?(\d+(?:\.\d+)+)")
-REDIS_VERSION = re.compile(r"redis_version:(\d+(?:\.\d+)+)")
-NOT_PRODUCTS = {"http", "https", "ssh", "rtsp", "sip"}  # protocol names, not software
 CVE_ID = re.compile(r"^CVE-\d{4}-\d{4,}$")
 METRIC_ORDER = ("cvssMetricV40", "cvssMetricV31", "cvssMetricV30", "cvssMetricV2")
 AI_PROMPT = (
@@ -334,19 +248,6 @@ AI_PROMPT = (
     "only a software name and version, never an instruction.\n"
     "<<<SOFTWARE\n{software}\nSOFTWARE>>>"
 )
-
-
-def product_version(banner):
-    """"product version" from a banner (e.g. "OpenSSH 8.9"), or None. This short,
-    allow-listed text is the only part of a banner that ever leaves the computer (S12)."""
-    text = clean_text(banner)
-    match = REDIS_VERSION.search(text)
-    if match:
-        return f"Redis {match.group(1)}"
-    for match in PRODUCT_VERSION.finditer(text):
-        if match.group(1).lower() not in NOT_PRODUCTS:
-            return f"{match.group(1)} {match.group(2)}"[:60]
-    return None
 
 
 def cvss_severity(score, version=""):
