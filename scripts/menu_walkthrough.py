@@ -140,10 +140,11 @@ def cli_session(label, full):
 
 # 1 -> recon on 127.0.0.1 (closed ports) -> "n" must return to the main menu (B15)
 answer("Enter your choice [1-4]: ", "1")
-answer("Enter target IP or domain", "127.0.0.1")
+answer("Enter target IP", "127.0.0.1")
 answer("Enter start port: ", "65500")
 answer("Enter end port: ", "65502")
 answer("Select protocol for scanning (TCP/UDP/both): ", "tcp")
+answer("if you are authorised to scan", "yes")  # S16
 answer("Enable verbose mode? (Y/N): ", "n")
 if expect("scan this host anyway? (Y/N): ", "Scan Summary Report") == 0:
     send("y")
@@ -153,10 +154,11 @@ checks.append("Menu 1 (recon) -> 'n': back to main menu (B15 fixed)")
 
 # 1 -> recon -> "y" -> intrusion menu: 1 CLI, repeat, 2 web, repeat, 3 back
 answer("Enter your choice [1-4]: ", "1")
-answer("Enter target IP or domain", "127.0.0.1")
+answer("Enter target IP", "127.0.0.1")
 answer("Enter start port: ", "65500")
 answer("Enter end port: ", "65500")
 answer("Select protocol for scanning (TCP/UDP/both): ", "both")
+answer("if you are authorised to scan", "yes")  # S16
 answer("Enable verbose mode? (Y/N): ", "y")
 if expect("scan this host anyway? (Y/N): ", "Scan Summary Report") == 0:
     send("y")

@@ -18,9 +18,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCAN_ROOTS = ["main.py", "tools", "toolkit"]
 
-BASELINE = {
-    "tools/Port_scan/Port_Scan.py": {"open_without_encoding": 4},
-}
+BASELINE = {}
 
 _WINDOWS_PATH = re.compile(r"^[A-Za-z]:[\\/]|\\[A-Za-z][A-Za-z0-9_ -]+\\")
 _TEXT_IO_METHODS = {"read_text", "write_text"}

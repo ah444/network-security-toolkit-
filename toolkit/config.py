@@ -97,3 +97,33 @@ class EvaluationConfig:
     # Re-running a TrainingRun: metrics must match exactly with one worker; with more,
     # thread scheduling in some libraries (e.g. LightGBM) may change the last digits.
     parallel_metric_tolerance: float = 0.005
+
+
+@dataclass(frozen=True)
+class ScanConfig:
+    """Port scanner limits (plan S16, step 0.6)."""
+
+    max_hosts: int = 256  # one /24 network
+    max_probes: int = 65_536  # host x port checks; TCP and UDP count separately
+
+
+def scan_limits(environ: Mapping[str, str] | None = None) -> ScanConfig:
+    """``TOOLKIT_SCAN_MAX_HOSTS`` / ``TOOLKIT_SCAN_MAX_PROBES``, else the defaults.
+
+    A value that isn't a positive whole number is an error, so a typo can't lift a limit.
+    """
+    environ = os.environ if environ is None else environ
+    values = {}
+    for field, variable in (("max_hosts", "TOOLKIT_SCAN_MAX_HOSTS"),
+                            ("max_probes", "TOOLKIT_SCAN_MAX_PROBES")):
+        raw = environ.get(variable, "").strip()
+        if not raw:
+            continue
+        try:
+            value = int(raw)
+        except ValueError:
+            value = 0
+        if value < 1:
+            raise ValueError(f"{variable} must be a whole number >= 1, not {raw!r}")
+        values[field] = value
+    return ScanConfig(**values)

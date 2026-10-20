@@ -21,12 +21,13 @@ This project is being reworked into **v5.0 ("correct & safe")**; see [docs/IMPRO
 - Exported models are signed **`.bundle`** files that load only on the toolkit install that made them. The signing key is created in `instance/signing.key` on the first export: back up the `instance/` folder. If the key is lost, the bundles can't be loaded any more; retrain from the run's record in `instance/runs/`. Loading bundles from another computer comes in v5.1.
 - Training runs inside the request: the page waits without a progress bar or cancel button (background jobs come in v5.1). On the full CIC file this takes many minutes and about 6 GB of memory.
 - Web trainer data lives in memory, one workspace per browser session (tabs of the same browser share it). It is lost when the app restarts, removed after 240 minutes without use (`TOOLKIT_WORKSPACE_IDLE_MIN`), or with the **Clear workspace** button. Only one training runs at a time per workspace. If you serve the app over HTTPS, set `TOOLKIT_HTTPS=1` so the session cookie is marked `Secure`.
-- The port scanner sends service banners to a third-party AI service (OpenRouter/DeepSeek) when an API key is configured. Don't scan systems whose banners you may not share. Consent and redaction come in v5.0 step 0.6.
-- The CVE lookup uses a retired MITRE search page and may return nothing (replaced by the NVD API in v5.0). CVE and AI lookups for open ports run one at a time, so scans with many open ports are slow.
-- The port scanner logs an `ERROR` line when the optional `api_keys.txt` is missing; it still works, just without AbuseIPDB and AI lookups.
+- Port scanner, what leaves your computer: CVE lookups send the detected software name and version (for example `OpenSSH 8.9`) to the public NVD API. The optional AI explanation (OpenRouter) and the AbuseIPDB check run only after you agree in that scan, and the AI gets the same software name only, never the raw banner.
+- CVEs come from an NVD **keyword search** on that name and version, so the list can include CVEs that don't affect the exact build, or miss some. Severity comes from the CVSS scores only. Lookups run one at a time with a 15 s timeout each; without an NVD key, NVD allows about one request every 6 seconds, so scans with many open ports are slow (parallel lookups come in v5.1).
+- The OS guess comes from the ping TTL, so it is only a rough family guess (Windows, Linux/macOS/BSD, network device). Hosts that don't answer ping, and IPv6 targets on Windows (no TTL shown), get no guess. On Windows, closed and firewalled TCP ports look the same, so both are reported as closed. A UDP port that doesn't answer is reported as `open|filtered`.
+- Scans are limited to 256 hosts and 65,536 host×port checks (`TOOLKIT_SCAN_MAX_HOSTS`, `TOOLKIT_SCAN_MAX_PROBES`), and each one asks you to confirm you are authorised (`--i-am-authorized` in scripts).
 - No model is shipped with the project: train and export one in the web trainer first. The CLI lists the exports in `instance/bundles` and opens only bundles exported on this install. Large models (for example Random Forest on the full CIC file, about 2 GB) take minutes to load and need several times their size in memory. A bundle made with a different scikit-learn, imbalanced-learn, XGBoost or LightGBM minor version is refused (retrain it); smaller version differences are shown as a warning.
 - Starting the web trainer from the launcher menu prints its address (`http://127.0.0.1:5000/`) but doesn't open a browser; stop it with Ctrl+C to get back to the menu.
-- Tested on Windows with Python 3.14 (362 automated tests, a scripted walk-through of every menu path, `scripts/menu_walkthrough.py`, and a browser session through the whole web trainer on real CIC-IDS2017 and NSL-KDD data, see `docs/release/`). The code is being made portable to Linux and macOS, but it is not tested on real Linux/macOS machines.
+- Tested on Windows with Python 3.14 (416 automated tests, a scripted walk-through of every menu path, `scripts/menu_walkthrough.py`, and a browser session through the whole web trainer on real CIC-IDS2017 and NSL-KDD data, see `docs/release/`). The code is being made portable to Linux and macOS, but it is not tested on real Linux/macOS machines.
 - Only scan systems you are authorised to scan.
 
 ---
@@ -52,10 +53,11 @@ This project is being reworked into **v5.0 ("correct & safe")**; see [docs/IMPRO
 - 🔍 TCP/UDP port scanning
 - 🖥️ OS detection via TTL analysis
 - 🏷️ Service banner grabbing
-- 🔐 CVE vulnerability lookup (via MITRE; the search page is retired, see Known limitations)
-- 🤖 AI-powered vulnerability analysis (via DeepSeek on OpenRouter; **sends service banners to a third-party service**)
-- 📊 IP reputation check (via AbuseIPDB)
-- 📁 Export results to JSON/CSV/TXT
+- 🌐 IPv4, IPv6, networks (CIDR) and domain names
+- 🔐 CVE lookup via the NVD CVE API 2.0, with CVSS scores; severity comes from CVSS only
+- 🤖 Optional AI explanation (OpenRouter), only after you agree; it receives the software name and version only, and its reply is shown as plain text marked "may be wrong"
+- 📊 IP reputation check (via AbuseIPDB), only after you agree
+- 📁 Export results to JSON/CSV/TXT (UTF-8, in `instance/scans/`, never overwritten, safe to open in a spreadsheet)
 
 ### 2. Intrusion Detection System (CLI)
 - 🧠 Predicts with any model bundle exported by the web trainer (features, classes and best model come from the bundle)
@@ -142,9 +144,10 @@ python tools/Port_scan/Port_Scan.py
 ```
 
 Features:
-- Enter target IP or domain
-- Specify port range
+- Enter target IP (IPv4 or IPv6), network (CIDR) or domain
+- Specify port range (1-65535)
 - Choose TCP/UDP/both protocols
+- Confirm you are authorised to scan the target (or pass `--i-am-authorized`)
 - View vulnerability reports
 - Export results
 
@@ -351,8 +354,10 @@ print(leaderboard_table(result))
 
 ## 🔑 API Keys Setup
 
-### Required APIs (for Port Scanner)
-1. **OpenRouter** (for AI vulnerability analysis)
+### Optional APIs (for Port Scanner)
+The scanner works without any key. CVE lookups use the NVD API, which works without a key but allows more requests with one.
+
+1. **OpenRouter** (for the optional AI explanation)
    - Sign up: https://openrouter.ai/
    - Get API key
 
@@ -360,7 +365,12 @@ print(leaderboard_table(result))
    - Sign up: https://www.abuseipdb.com/
    - Get API key
 
+3. **NVD** (optional, faster CVE lookups)
+   - Request a key: https://nvd.nist.gov/developers/request-an-api-key
+
 ### Configuration
+Set environment variables (`OPENROUTER_API_KEY`, `ABUSEIPDB_API_KEY`, `NVD_API_KEY`, optionally `OPENROUTER_MODEL`), or put the same `NAME=value` lines in a `.env` file in the project folder. The older key file still works as a fallback:
+
 ```bash
 # Copy the example file
 cp tools/Port_scan/api_keys.example.txt tools/Port_scan/api_keys.txt
@@ -373,9 +383,10 @@ Format:
 ```
 openrouter=your_openrouter_api_key_here
 abuseipdb=your_abuseipdb_api_key_here
+nvd=your_nvd_api_key_here
 ```
 
-⚠️ **Never commit `api_keys.txt` to Git!** (It's in .gitignore)
+⚠️ **Never commit `api_keys.txt` or `.env` to Git!** (Both are in .gitignore)
 
 ---
 
