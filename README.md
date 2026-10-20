@@ -17,7 +17,7 @@ This project is being reworked into **v5.0 ("correct & safe")**; see [docs/IMPRO
 - **Web IDS trainer:** results it shows today are **optimistic**. "Apply SMOTE" and "Recommend Features" run on the *whole* dataset before the train/test split, duplicate rows can land in both train and test, and label-derived columns (e.g. NSL-KDD `level`) are not blocked. The recommender even ranked `level` among the top 10 features. The app reports accuracy and weighted F1 only, which hide weak minority classes: on NSL-KDD, random forest shows 99.8 % accuracy but 76.6 % macro-F1.
 
 ### Known limitations (current version)
-- Results from the web trainer are inflated by the leakage above, until v5.0 step 0.4.
+- Results from the web trainer are still inflated by the leakage above. The leakage-free ML core (`toolkit/ids_core`, steps 0.4a–0.4d, see "ML core" below) is finished and tested, but the web trainer switches to it only in step 0.4g (5.0-rc1).
 - **Web trainer: exporting and loading model files is paused** until v5.0-rc1, because they were pickle files that can run code when opened. Training and predicting inside a session still work.
 - Web trainer data lives in memory, one workspace per browser session (tabs of the same browser share it). It is lost when the app restarts, removed after 240 minutes without use (`TOOLKIT_WORKSPACE_IDLE_MIN`), or with the **Clear workspace** button. Only one training runs at a time per workspace. If you serve the app over HTTPS, set `TOOLKIT_HTTPS=1` so the session cookie is marked `Secure`.
 - The port scanner sends service banners to a third-party AI service (OpenRouter/DeepSeek) when an API key is configured. Don't scan systems whose banners you may not share. Consent and redaction come in v5.0 step 0.6.
@@ -25,7 +25,7 @@ This project is being reworked into **v5.0 ("correct & safe")**; see [docs/IMPRO
 - The port scanner logs an `ERROR` line when the optional `api_keys.txt` is missing; it still works, just without AbuseIPDB and AI lookups.
 - The CLI's v4 model files were saved with scikit-learn 1.6.1; this setup has 1.8.0, so loading them prints version warnings (shown on purpose, not hidden). Predictions also print a harmless "X does not have valid feature names" warning. Both go away with the v5 model.
 - Starting the web trainer from the launcher menu prints its address (`http://127.0.0.1:5000/`) but doesn't open a browser; stop it with Ctrl+C to get back to the menu.
-- Tested on Windows with Python 3.14 (122 automated tests plus a scripted walk-through of every menu path, `scripts/menu_walkthrough.py`). The code is being made portable to Linux and macOS, but it is not tested on real Linux/macOS machines.
+- Tested on Windows with Python 3.14 (295 automated tests, a scripted walk-through of every menu path, `scripts/menu_walkthrough.py`, and a replay of the web trainer's recorded click sequences, see `docs/release/`). The code is being made portable to Linux and macOS, but it is not tested on real Linux/macOS machines.
 - Only scan systems you are authorised to scan.
 
 ---
@@ -329,6 +329,29 @@ Project/
 11. **Export** - Save models as .pkl
 
 > ⚠️ **Known flaw:** steps 5 and 6 (feature recommendation and the "Apply SMOTE" preview) run on the **whole** dataset *before* the split in step 7, so information from the test rows leaks into training. v5.0 reorders this so that **split comes first** and selection and balancing are fitted on training data only.
+
+### ML core (v5.0, library only for now)
+`toolkit/ids_core` is the new, leakage-free pipeline. It has no web or network code and is used from Python today; the web trainer and CLI switch to it in v5.0-rc1.
+
+1. **Load** (`datasets.load_dataset`): encoding and separator sniffed, header spaces stripped, exact dtype downcast, SHA-256; the dataset family (CIC-IDS2017, NSL-KDD or generic) is recognised from the content, not the file name.
+2. **Split** (`split.split_dataset`): exact copies removed first, then the profile's split: `official` (NSL-KDD's own files, kept as published), `temporal` / `temporal_per_class` (validated time column), `group`, or `stratified` with an "optimistic" warning. Every fallback has a reason code.
+3. **Leakage guard** (`leakage.check_leakage`, training split only): blocks label copies, IDs, IPs and timestamps.
+4. **Train** (`pipeline.train_models`): one pipeline per model, fitted on training rows only: impute → encode → scale → select → balance → model. Every seed is fixed and CPU use is capped by `TOOLKIT_MAX_WORKERS`.
+5. **Evaluate** (`evaluation.evaluate`): cross-validation on the training split, the model chosen by CV macro-F1 **before** the test split is used, then the test split scored once; macro-F1, balanced accuracy, per-class recall and a leaderboard.
+
+```python
+from toolkit.ids_core.datasets import load_dataset
+from toolkit.ids_core.split import split_dataset
+from toolkit.ids_core.leakage import check_leakage
+from toolkit.ids_core.evaluation import evaluate, leaderboard_table
+
+data = load_dataset("data/raw/CIC-2017.csv")
+split = split_dataset(data.frame, "Label", profile=data.profile)
+guard = check_leakage(split.train, "Label", profile_blocked=data.profile.blocked_columns)
+result = evaluate(split.train, split.test, "Label", features=guard.features,
+                  models=("random_forest", "xgboost"), balancer="recommended")
+print(leaderboard_table(result))
+```
 
 ---
 

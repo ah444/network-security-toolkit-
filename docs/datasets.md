@@ -50,7 +50,7 @@ Profiled on 2026-10-19 with a read-only streaming pass over each full file.
 - **Profile:** CIC "original" variant. Strip header spaces, drop `Fwd Header Length.1` as a duplicate, normalise `Web Attack � …` → `Web Attack - …`, and treat `inf` and empty cells explicitly.
 - **Split strategy:** there is no time column, so `temporal_per_class` is impossible. Grouping by capture file is also impossible, because the 8 days were combined into one file with no file or day column. Per plan D9 this means **dedupe → stratified split, with a visible warning** that scores may be optimistic. The warning is written into the TrainingRun and the model card.
 - **CLI model (0.5):** a CIC model trained on this file has **15 classes**, not the 16 of the old v4 model. The v4 classes (`… - Attempted`) come from the *improved* version, which is not available. The leaky `Attempted Category` feature doesn't exist in this file at all.
-- **Dataset decision (beta exit):** CIC-IDS2017 *is* available, so the NSL-KDD fallback is not needed for availability. Whether the "optimistic random split" caveat is acceptable for the CLI default, or whether the improved version should be downloaded for a temporal split, stays open until the beta-exit decision.
+- **Dataset decision (beta exit, 2026-10-20): this file is the training dataset for the default CLI model (0.5).** See "Dataset decision" below.
 
 ---
 
@@ -110,6 +110,22 @@ The loader's SHA-256, row counts, empty-cell and `inf` counts match the tables a
 
 - **CIC:** every one of the 15 classes is on both sides, but the smallest are tiny: Heartbleed 9 / 2, Infiltration 29 / 7, Sql Injection 17 / 4. With no time column the split is stratified, so the scores may be optimistic.
 - **NSL-KDD:** both files are used exactly as published by default, so results are comparable with other work. Neither file has copies inside it, but 610 KDDTest+ rows (2.7 %) also occur in KDDTrain+ (compared without `level`). They are reported, and removed only in strict mode (`SplitConfig(official_dedupe=True)`); default scores are therefore slightly optimistic. 17 attack types occur only in KDDTest+ (e.g. `apache2` 737, `mscan` 996), and `spy` (2) and `warezclient` (890) occur only in KDDTrain+. This is how the published files were designed (unseen attacks in test), so it is reported, not "fixed".
+
+## Dataset decision (5.0-beta exit, 2026-10-20)
+
+**Decision (user): the default CLI model of step 0.5 is trained on `CIC-2017.csv`, the original CIC-IDS2017 "MachineLearningCSV" variant** (SHA-256 in section 1). The NSL-KDD fallback (plan D12) is not used.
+
+Why:
+- It is available locally, hashed, profile-detected (`cic_ids2017` / `original`) and split-validated (0.4b), so step 0.5 isn't blocked.
+- It covers modern traffic and 15 classes. NSL-KDD comes from 1999-era traffic, and on its official test file macro-F1 drops to 0.26 because 17 attack types exist only there (0.4d real-data check).
+- The 0.4d real-data check on this file: XGBoost selected by CV macro-F1 0.854 ± 0.043, test macro-F1 0.886, balanced accuracy 0.892.
+
+Accepted caveats, written into the TrainingRun and the model card:
+- **No time column**, so the split is dedupe → **stratified** (`STRATIFIED_SCORES_MAY_BE_OPTIMISTIC`): flows from the same attack session can be on both sides, so scores may be optimistic.
+- **15 classes, not v4's 16**: v4's `… - Attempted` classes come from the improved version.
+- **Tiny classes** can't be scored reliably: Heartbleed (9 train / 2 test after dedupe), Sql Injection (17 / 4), Infiltration (29 / 7).
+
+Revisit: if the improved CIC-IDS2017 (with timestamps) is downloaded, its header is added to the CIC profile from the real file, and the model can be retrained with a `temporal_per_class` split in a later release.
 
 ## Licences and citations (0.5b, still to complete)
 
