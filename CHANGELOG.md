@@ -4,6 +4,41 @@ All notable changes to this project. Versions follow the roadmap in
 [docs/IMPROVEMENT_PLAN.md](docs/IMPROVEMENT_PLAN.md); day-to-day progress is in
 [docs/V5.0_CHECKLIST.md](docs/V5.0_CHECKLIST.md).
 
+## [5.0] — 2026-10-21
+
+Release of v5.0 "correct & safe": the checks of the plan's §8 pass, the ML report
+measures v4 against the fixed ML core, and a fresh install was walked through end to end.
+No code behaviour changed since 5.0-rc2. Project version: `5.0.0`.
+
+**Test result:** 419 automated tests passed (`python -m pytest`), ruff clean. Fresh clone
+of 5.0-rc2 with a new venv from `requirements.lock` (`pip check` clean), a model exported
+through the web routes and a walk-through of every menu path; web trainer at 375 px in light
+and dark mode with 0 texts below WCAG AA ([record](docs/release/5.0-final-ui-and-install.md)).
+Every §8 check is mapped to its tests ([audit](docs/release/5.0-section8-audit.md)).
+Windows 10 Enterprise LTSC 2021, Python 3.14.3, scikit-learn 1.8.0.
+
+### Added
+- **ML report** (`scripts/ml_report.py` → [`docs/report/`](docs/report/FINDINGS.md)): the
+  baseline datasets and scenarios re-run on the v5 core, 3 runs each, with macro-F1,
+  balanced accuracy, per-class recall and CV mean ± std, plus NSL-KDD on its official
+  test file. Main results:
+  - CIC-IDS2017 DDoS: trees stay at 99.9 % after removing 23,416 duplicate rows; logistic
+    regression rises from 95.1 % to 98.1 % macro-F1 (S1).
+  - NSL-KDD, random split of `KDDTrain+`: random forest accuracy is still 99.8 %, but its
+    macro-F1 is 68.8 % without the label-derived `level` (v4: 76.6 %).
+  - NSL-KDD, official `KDDTest+`: **72.1 % accuracy, 27.0 % macro-F1**. 17 attack types
+    (16.6 % of the test rows) never appear in the training file.
+  - v4's ~81 % for "SMOTE + 10 recommended features" was measured on mostly synthetic test
+    rows with `level` as a feature; on real test rows v5 gets 44.3 % macro-F1.
+  `--case` and `--jobs` run single cases, with their runs side by side on one core each.
+- `tests/test_docs_claims.py` checks that every test named in the §8 audit exists;
+  `tests/test_portability.py::test_python_policy` checks `requires-python >= 3.11` and
+  ruff's `py311` target.
+
+### Changed
+- README: Linux and macOS are not tested on real machines (OS-specific logic is
+  unit-tested only); links to the ML report.
+
 ## [5.0-rc2] — 2026-10-20
 
 Fourth checkpoint of v5.0: **the CLI predicts with the models you train and export in the

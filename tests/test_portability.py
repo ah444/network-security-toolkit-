@@ -120,3 +120,12 @@ eol = '\r\n'
         {"open_without_encoding": 3, "shell_true": 1, "hardcoded_windows_path": 2}
     )
     assert _findings(ast.parse(good)) == Counter()
+
+
+def test_python_policy():
+    """Python policy (plan §8): runs on 3.11+, and ruff flags syntax newer than 3.11."""
+    import tomllib
+
+    config = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    assert config["project"]["requires-python"] == ">=3.11"
+    assert config["tool"]["ruff"]["target-version"] == "py311"

@@ -1,0 +1,495 @@
+{
+ "generated_at": "2026-10-20T19:17:55+00:00",
+ "repo_commit": "dde85b5",
+ "environment": {
+  "python": "3.14.3",
+  "platform": "Windows-10-10.0.19044-SP0",
+  "single_core": {
+   "LOKY_MAX_CPU_COUNT": "1",
+   "OMP_NUM_THREADS": "1",
+   "OPENBLAS_NUM_THREADS": "1",
+   "MKL_NUM_THREADS": "1"
+  },
+  "versions": {
+   "python": "3.14.3",
+   "platform": "Windows-10-10.0.19044-SP0",
+   "scikit-learn": "1.8.0",
+   "numpy": "2.3.5",
+   "pandas": "2.3.3",
+   "scipy": "1.18.1",
+   "imbalanced-learn": "0.14.1",
+   "xgboost": "3.2.0",
+   "lightgbm": "4.6.0",
+   "joblib": "1.6.0",
+   "threadpoolctl": "3.7.0"
+  }
+ },
+ "dataset": {
+  "name": "cic_ddos",
+  "file": "DDOS(CIC-2017)_FILTERED_TEST.csv",
+  "sha256": "42381db8eaa54a36eeacda06ff3394d973d30cabe9bff7429fff2d3c165095ef",
+  "rows": 225745,
+  "profile": "cic_ids2017 (original_subset)",
+  "test_file": null,
+  "test_sha256": null
+ },
+ "baseline": "cic_ddos__S1_all_features_recommended_balancing.json",
+ "scenario": "S1",
+ "scenario_title": "every column as a candidate, recommended balancing",
+ "models": [
+  "random_forest",
+  "logistic_regression",
+  "decision_tree"
+ ],
+ "runs": [
+  {
+   "run_id": "20261020T191432Z-4694f264",
+   "seconds": 59.2,
+   "split": {
+    "strategy": "stratified",
+    "warnings": [
+     "STRATIFIED_SCORES_MAY_BE_OPTIMISTIC"
+    ],
+    "rows_before_dedupe": 225745,
+    "duplicates_removed": 23416,
+    "test_rows": 40465
+   },
+   "leakage": {
+    "blocked": [],
+    "warned": [
+     "Bwd Packet Length Mean",
+     "Avg Bwd Segment Size"
+    ]
+   },
+   "features": [
+    "Bwd Packet Length Max",
+    "Bwd Packet Length Mean",
+    "Bwd Packet Length Std",
+    "Flow IAT Max",
+    "Fwd IAT Std",
+    "Max Packet Length",
+    "Packet Length Mean",
+    "Packet Length Std",
+    "Packet Length Variance",
+    "Average Packet Size",
+    "Avg Bwd Segment Size",
+    "Idle Mean",
+    "Idle Max",
+    "Idle Min"
+   ],
+   "balancing": {
+    "requested": "recommended",
+    "method": "none",
+    "recommendation": {
+     "recommended": "none",
+     "reason_code": "MILD_IMBALANCE",
+     "reason": "The classes are fairly balanced (ratio 63.41%); balancing may not be needed.",
+     "alternatives": [
+      "class_weight"
+     ],
+     "imbalance_ratio": 0.6341,
+     "severity": "mild",
+     "size": "very_large",
+     "dimensionality": "low",
+     "train_rows": 161864,
+     "classes": 2,
+     "majority_count": 99054,
+     "minority_count": 62810,
+     "features": 14
+    }
+   },
+   "selection": {
+    "selector": "none",
+    "k_features": null
+   },
+   "selected_model": "random_forest",
+   "classes_only_in_test": [],
+   "failures": [],
+   "models": {
+    "random_forest": {
+     "test": {
+      "accuracy": 0.9990856295564068,
+      "weighted_f1": 0.9990856242287888,
+      "macro_f1": 0.9990373506822942,
+      "balanced_accuracy": 0.999031536068026,
+      "rows": 40465
+     },
+     "test_recall_per_class": {
+      "BENIGN": 0.9987899630620303,
+      "DDoS": 0.9992731090740218
+     },
+     "test_support_per_class": {
+      "BENIGN": 15702,
+      "DDoS": 24763
+     },
+     "cv_macro_f1_mean": 0.9989853922121451,
+     "cv_macro_f1_std": 7.29856012459754e-05
+    },
+    "decision_tree": {
+     "test": {
+      "accuracy": 0.9991103422710985,
+      "weighted_f1": 0.9991103319025769,
+      "macro_f1": 0.9990633573160428,
+      "balanced_accuracy": 0.9990517274826365,
+      "rows": 40465
+     },
+     "test_recall_per_class": {
+      "BENIGN": 0.9987899630620303,
+      "DDoS": 0.9993134919032427
+     },
+     "test_support_per_class": {
+      "BENIGN": 15702,
+      "DDoS": 24763
+     },
+     "cv_macro_f1_mean": 0.9988813077852519,
+     "cv_macro_f1_std": 0.00015479753880401036
+    },
+    "logistic_regression": {
+     "test": {
+      "accuracy": 0.9816384529840603,
+      "weighted_f1": 0.9815637170829842,
+      "macro_f1": 0.9805170679336027,
+      "balanced_accuracy": 0.9768998733647765,
+      "rows": 40465
+     },
+     "test_recall_per_class": {
+      "BENIGN": 0.9557381225321615,
+      "DDoS": 0.9980616241973913
+     },
+     "test_support_per_class": {
+      "BENIGN": 15702,
+      "DDoS": 24763
+     },
+     "cv_macro_f1_mean": 0.9793536228107443,
+     "cv_macro_f1_std": 0.0014616413659836363
+    }
+   }
+  },
+  {
+   "run_id": "20261020T191531Z-d120554f",
+   "seconds": 83.2,
+   "split": {
+    "strategy": "stratified",
+    "warnings": [
+     "STRATIFIED_SCORES_MAY_BE_OPTIMISTIC"
+    ],
+    "rows_before_dedupe": 225745,
+    "duplicates_removed": 23416,
+    "test_rows": 40465
+   },
+   "leakage": {
+    "blocked": [],
+    "warned": [
+     "Bwd Packet Length Mean",
+     "Avg Bwd Segment Size"
+    ]
+   },
+   "features": [
+    "Bwd Packet Length Max",
+    "Bwd Packet Length Mean",
+    "Bwd Packet Length Std",
+    "Flow IAT Max",
+    "Fwd IAT Std",
+    "Max Packet Length",
+    "Packet Length Mean",
+    "Packet Length Std",
+    "Packet Length Variance",
+    "Average Packet Size",
+    "Avg Bwd Segment Size",
+    "Idle Mean",
+    "Idle Max",
+    "Idle Min"
+   ],
+   "balancing": {
+    "requested": "recommended",
+    "method": "none",
+    "recommendation": {
+     "recommended": "none",
+     "reason_code": "MILD_IMBALANCE",
+     "reason": "The classes are fairly balanced (ratio 63.41%); balancing may not be needed.",
+     "alternatives": [
+      "class_weight"
+     ],
+     "imbalance_ratio": 0.6341,
+     "severity": "mild",
+     "size": "very_large",
+     "dimensionality": "low",
+     "train_rows": 161864,
+     "classes": 2,
+     "majority_count": 99054,
+     "minority_count": 62810,
+     "features": 14
+    }
+   },
+   "selection": {
+    "selector": "none",
+    "k_features": null
+   },
+   "selected_model": "random_forest",
+   "classes_only_in_test": [],
+   "failures": [],
+   "models": {
+    "random_forest": {
+     "test": {
+      "accuracy": 0.9990856295564068,
+      "weighted_f1": 0.9990856242287888,
+      "macro_f1": 0.9990373506822942,
+      "balanced_accuracy": 0.999031536068026,
+      "rows": 40465
+     },
+     "test_recall_per_class": {
+      "BENIGN": 0.9987899630620303,
+      "DDoS": 0.9992731090740218
+     },
+     "test_support_per_class": {
+      "BENIGN": 15702,
+      "DDoS": 24763
+     },
+     "cv_macro_f1_mean": 0.9989853922121451,
+     "cv_macro_f1_std": 7.29856012459754e-05
+    },
+    "decision_tree": {
+     "test": {
+      "accuracy": 0.9991103422710985,
+      "weighted_f1": 0.9991103319025769,
+      "macro_f1": 0.9990633573160428,
+      "balanced_accuracy": 0.9990517274826365,
+      "rows": 40465
+     },
+     "test_recall_per_class": {
+      "BENIGN": 0.9987899630620303,
+      "DDoS": 0.9993134919032427
+     },
+     "test_support_per_class": {
+      "BENIGN": 15702,
+      "DDoS": 24763
+     },
+     "cv_macro_f1_mean": 0.9988813077852519,
+     "cv_macro_f1_std": 0.00015479753880401036
+    },
+    "logistic_regression": {
+     "test": {
+      "accuracy": 0.9816384529840603,
+      "weighted_f1": 0.9815637170829842,
+      "macro_f1": 0.9805170679336027,
+      "balanced_accuracy": 0.9768998733647765,
+      "rows": 40465
+     },
+     "test_recall_per_class": {
+      "BENIGN": 0.9557381225321615,
+      "DDoS": 0.9980616241973913
+     },
+     "test_support_per_class": {
+      "BENIGN": 15702,
+      "DDoS": 24763
+     },
+     "cv_macro_f1_mean": 0.9793536228107443,
+     "cv_macro_f1_std": 0.0014616413659836363
+    }
+   }
+  },
+  {
+   "run_id": "20261020T191655Z-19e1bef2",
+   "seconds": 60.2,
+   "split": {
+    "strategy": "stratified",
+    "warnings": [
+     "STRATIFIED_SCORES_MAY_BE_OPTIMISTIC"
+    ],
+    "rows_before_dedupe": 225745,
+    "duplicates_removed": 23416,
+    "test_rows": 40465
+   },
+   "leakage": {
+    "blocked": [],
+    "warned": [
+     "Bwd Packet Length Mean",
+     "Avg Bwd Segment Size"
+    ]
+   },
+   "features": [
+    "Bwd Packet Length Max",
+    "Bwd Packet Length Mean",
+    "Bwd Packet Length Std",
+    "Flow IAT Max",
+    "Fwd IAT Std",
+    "Max Packet Length",
+    "Packet Length Mean",
+    "Packet Length Std",
+    "Packet Length Variance",
+    "Average Packet Size",
+    "Avg Bwd Segment Size",
+    "Idle Mean",
+    "Idle Max",
+    "Idle Min"
+   ],
+   "balancing": {
+    "requested": "recommended",
+    "method": "none",
+    "recommendation": {
+     "recommended": "none",
+     "reason_code": "MILD_IMBALANCE",
+     "reason": "The classes are fairly balanced (ratio 63.41%); balancing may not be needed.",
+     "alternatives": [
+      "class_weight"
+     ],
+     "imbalance_ratio": 0.6341,
+     "severity": "mild",
+     "size": "very_large",
+     "dimensionality": "low",
+     "train_rows": 161864,
+     "classes": 2,
+     "majority_count": 99054,
+     "minority_count": 62810,
+     "features": 14
+    }
+   },
+   "selection": {
+    "selector": "none",
+    "k_features": null
+   },
+   "selected_model": "random_forest",
+   "classes_only_in_test": [],
+   "failures": [],
+   "models": {
+    "random_forest": {
+     "test": {
+      "accuracy": 0.9990856295564068,
+      "weighted_f1": 0.9990856242287888,
+      "macro_f1": 0.9990373506822942,
+      "balanced_accuracy": 0.999031536068026,
+      "rows": 40465
+     },
+     "test_recall_per_class": {
+      "BENIGN": 0.9987899630620303,
+      "DDoS": 0.9992731090740218
+     },
+     "test_support_per_class": {
+      "BENIGN": 15702,
+      "DDoS": 24763
+     },
+     "cv_macro_f1_mean": 0.9989853922121451,
+     "cv_macro_f1_std": 7.29856012459754e-05
+    },
+    "decision_tree": {
+     "test": {
+      "accuracy": 0.9991103422710985,
+      "weighted_f1": 0.9991103319025769,
+      "macro_f1": 0.9990633573160428,
+      "balanced_accuracy": 0.9990517274826365,
+      "rows": 40465
+     },
+     "test_recall_per_class": {
+      "BENIGN": 0.9987899630620303,
+      "DDoS": 0.9993134919032427
+     },
+     "test_support_per_class": {
+      "BENIGN": 15702,
+      "DDoS": 24763
+     },
+     "cv_macro_f1_mean": 0.9988813077852519,
+     "cv_macro_f1_std": 0.00015479753880401036
+    },
+    "logistic_regression": {
+     "test": {
+      "accuracy": 0.9816384529840603,
+      "weighted_f1": 0.9815637170829842,
+      "macro_f1": 0.9805170679336027,
+      "balanced_accuracy": 0.9768998733647765,
+      "rows": 40465
+     },
+     "test_recall_per_class": {
+      "BENIGN": 0.9557381225321615,
+      "DDoS": 0.9980616241973913
+     },
+     "test_support_per_class": {
+      "BENIGN": 15702,
+      "DDoS": 24763
+     },
+     "cv_macro_f1_mean": 0.9793536228107443,
+     "cv_macro_f1_std": 0.0014616413659836363
+    }
+   }
+  }
+ ],
+ "spread": {
+  "random_forest": {
+   "accuracy": {
+    "mean": 0.9990856295564067,
+    "min": 0.9990856295564068,
+    "max": 0.9990856295564068,
+    "spread": 0.0
+   },
+   "weighted_f1": {
+    "mean": 0.9990856242287888,
+    "min": 0.9990856242287888,
+    "max": 0.9990856242287888,
+    "spread": 0.0
+   },
+   "macro_f1": {
+    "mean": 0.9990373506822942,
+    "min": 0.9990373506822942,
+    "max": 0.9990373506822942,
+    "spread": 0.0
+   },
+   "balanced_accuracy": {
+    "mean": 0.999031536068026,
+    "min": 0.999031536068026,
+    "max": 0.999031536068026,
+    "spread": 0.0
+   }
+  },
+  "decision_tree": {
+   "accuracy": {
+    "mean": 0.9991103422710985,
+    "min": 0.9991103422710985,
+    "max": 0.9991103422710985,
+    "spread": 0.0
+   },
+   "weighted_f1": {
+    "mean": 0.9991103319025769,
+    "min": 0.9991103319025769,
+    "max": 0.9991103319025769,
+    "spread": 0.0
+   },
+   "macro_f1": {
+    "mean": 0.9990633573160427,
+    "min": 0.9990633573160428,
+    "max": 0.9990633573160428,
+    "spread": 0.0
+   },
+   "balanced_accuracy": {
+    "mean": 0.9990517274826365,
+    "min": 0.9990517274826365,
+    "max": 0.9990517274826365,
+    "spread": 0.0
+   }
+  },
+  "logistic_regression": {
+   "accuracy": {
+    "mean": 0.9816384529840603,
+    "min": 0.9816384529840603,
+    "max": 0.9816384529840603,
+    "spread": 0.0
+   },
+   "weighted_f1": {
+    "mean": 0.9815637170829842,
+    "min": 0.9815637170829842,
+    "max": 0.9815637170829842,
+    "spread": 0.0
+   },
+   "macro_f1": {
+    "mean": 0.9805170679336027,
+    "min": 0.9805170679336027,
+    "max": 0.9805170679336027,
+    "spread": 0.0
+   },
+   "balanced_accuracy": {
+    "mean": 0.9768998733647765,
+    "min": 0.9768998733647765,
+    "max": 0.9768998733647765,
+    "spread": 0.0
+   }
+  }
+ }
+}

@@ -45,3 +45,23 @@ def test_dataset_licences_recorded(repo_root):
     fixtures = _read(repo_root, "tests/fixtures/README.md")
     assert "Sharafaldin" in fixtures and "Tavallaee" in fixtures
     assert "UNSW" not in fixtures, "UNSW-NB15 rows may not be redistributed"
+
+
+def test_section8_audit_names_real_tests(repo_root):
+    """5.0 final: every test the §8 audit points to exists (no stale references)."""
+    import re
+
+    audit = _read(repo_root, "docs/release/5.0-section8-audit.md")
+    missing = []
+    for line in audit.splitlines():
+        current = None
+        for match in re.finditer(r"`(tests/[\w/]+\.py)?(?:::(test_\w+))?", line):
+            path, name = match.groups()
+            if path:
+                current = path
+                assert (repo_root / path).is_file(), path
+            if name:
+                source = (repo_root / current).read_text(encoding="utf-8")
+                if f"def {name}(" not in source:
+                    missing.append(f"{current}::{name}")
+    assert missing == []

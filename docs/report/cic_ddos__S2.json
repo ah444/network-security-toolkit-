@@ -1,0 +1,447 @@
+{
+ "generated_at": "2026-10-20T19:21:55+00:00",
+ "repo_commit": "dde85b5",
+ "environment": {
+  "python": "3.14.3",
+  "platform": "Windows-10-10.0.19044-SP0",
+  "single_core": {
+   "LOKY_MAX_CPU_COUNT": "1",
+   "OMP_NUM_THREADS": "1",
+   "OPENBLAS_NUM_THREADS": "1",
+   "MKL_NUM_THREADS": "1"
+  },
+  "versions": {
+   "python": "3.14.3",
+   "platform": "Windows-10-10.0.19044-SP0",
+   "scikit-learn": "1.8.0",
+   "numpy": "2.3.5",
+   "pandas": "2.3.3",
+   "scipy": "1.18.1",
+   "imbalanced-learn": "0.14.1",
+   "xgboost": "3.2.0",
+   "lightgbm": "4.6.0",
+   "joblib": "1.6.0",
+   "threadpoolctl": "3.7.0"
+  }
+ },
+ "dataset": {
+  "name": "cic_ddos",
+  "file": "DDOS(CIC-2017)_FILTERED_TEST.csv",
+  "sha256": "42381db8eaa54a36eeacda06ff3394d973d30cabe9bff7429fff2d3c165095ef",
+  "rows": 225745,
+  "profile": "cic_ids2017 (original_subset)",
+  "test_file": null,
+  "test_sha256": null
+ },
+ "baseline": "cic_ddos__S2_apply_smote_then_recommended_features.json",
+ "scenario": "S2",
+ "scenario_title": "SMOTE + 10 best features (F-test), fitted on the training split only",
+ "models": [
+  "random_forest",
+  "logistic_regression",
+  "decision_tree"
+ ],
+ "runs": [
+  {
+   "run_id": "20261020T191756Z-4de6ab4d",
+   "seconds": 89.1,
+   "split": {
+    "strategy": "stratified",
+    "warnings": [
+     "STRATIFIED_SCORES_MAY_BE_OPTIMISTIC"
+    ],
+    "rows_before_dedupe": 225745,
+    "duplicates_removed": 23416,
+    "test_rows": 40465
+   },
+   "leakage": {
+    "blocked": [],
+    "warned": [
+     "Bwd Packet Length Mean",
+     "Avg Bwd Segment Size"
+    ]
+   },
+   "features": [
+    "Bwd Packet Length Max",
+    "Bwd Packet Length Mean",
+    "Bwd Packet Length Std",
+    "Flow IAT Max",
+    "Fwd IAT Std",
+    "Max Packet Length",
+    "Packet Length Mean",
+    "Packet Length Std",
+    "Packet Length Variance",
+    "Average Packet Size",
+    "Avg Bwd Segment Size",
+    "Idle Mean",
+    "Idle Max",
+    "Idle Min"
+   ],
+   "balancing": {
+    "requested": "smote",
+    "method": "smote",
+    "recommendation": null
+   },
+   "selection": {
+    "selector": "f_classif",
+    "k_features": 10
+   },
+   "selected_model": "random_forest",
+   "classes_only_in_test": [],
+   "failures": [],
+   "models": {
+    "random_forest": {
+     "test": {
+      "accuracy": 0.9988879278388731,
+      "weighted_f1": 0.9988878954253846,
+      "macro_f1": 0.9988291557014419,
+      "balanced_accuracy": 0.998800094774915,
+      "rows": 40465
+     },
+     "test_recall_per_class": {
+      "BENIGN": 0.9984078461342504,
+      "DDoS": 0.9991923434155797
+     },
+     "test_support_per_class": {
+      "BENIGN": 15702,
+      "DDoS": 24763
+     },
+     "cv_macro_f1_mean": 0.9988552920219854,
+     "cv_macro_f1_std": 7.850147412209576e-05
+    },
+    "decision_tree": {
+     "test": {
+      "accuracy": 0.9988632151241814,
+      "weighted_f1": 0.9988631886203835,
+      "macro_f1": 0.9988031508922728,
+      "balanced_accuracy": 0.9987799033603045,
+      "rows": 40465
+     },
+     "test_recall_per_class": {
+      "BENIGN": 0.9984078461342504,
+      "DDoS": 0.9991519605863587
+     },
+     "test_support_per_class": {
+      "BENIGN": 15702,
+      "DDoS": 24763
+     },
+     "cv_macro_f1_mean": 0.9987707160856475,
+     "cv_macro_f1_std": 9.939898522901712e-05
+    },
+    "logistic_regression": {
+     "test": {
+      "accuracy": 0.986333868775485,
+      "weighted_f1": 0.9862965008969267,
+      "macro_f1": 0.9855356237112697,
+      "balanced_accuracy": 0.9830199680308518,
+      "rows": 40465
+     },
+     "test_recall_per_class": {
+      "BENIGN": 0.9682206088396382,
+      "DDoS": 0.9978193272220652
+     },
+     "test_support_per_class": {
+      "BENIGN": 15702,
+      "DDoS": 24763
+     },
+     "cv_macro_f1_mean": 0.9851958252441971,
+     "cv_macro_f1_std": 0.0011140975730444505
+    }
+   }
+  },
+  {
+   "run_id": "20261020T191925Z-bb1a5b47",
+   "seconds": 72.4,
+   "split": {
+    "strategy": "stratified",
+    "warnings": [
+     "STRATIFIED_SCORES_MAY_BE_OPTIMISTIC"
+    ],
+    "rows_before_dedupe": 225745,
+    "duplicates_removed": 23416,
+    "test_rows": 40465
+   },
+   "leakage": {
+    "blocked": [],
+    "warned": [
+     "Bwd Packet Length Mean",
+     "Avg Bwd Segment Size"
+    ]
+   },
+   "features": [
+    "Bwd Packet Length Max",
+    "Bwd Packet Length Mean",
+    "Bwd Packet Length Std",
+    "Flow IAT Max",
+    "Fwd IAT Std",
+    "Max Packet Length",
+    "Packet Length Mean",
+    "Packet Length Std",
+    "Packet Length Variance",
+    "Average Packet Size",
+    "Avg Bwd Segment Size",
+    "Idle Mean",
+    "Idle Max",
+    "Idle Min"
+   ],
+   "balancing": {
+    "requested": "smote",
+    "method": "smote",
+    "recommendation": null
+   },
+   "selection": {
+    "selector": "f_classif",
+    "k_features": 10
+   },
+   "selected_model": "random_forest",
+   "classes_only_in_test": [],
+   "failures": [],
+   "models": {
+    "random_forest": {
+     "test": {
+      "accuracy": 0.9988879278388731,
+      "weighted_f1": 0.9988878954253846,
+      "macro_f1": 0.9988291557014419,
+      "balanced_accuracy": 0.998800094774915,
+      "rows": 40465
+     },
+     "test_recall_per_class": {
+      "BENIGN": 0.9984078461342504,
+      "DDoS": 0.9991923434155797
+     },
+     "test_support_per_class": {
+      "BENIGN": 15702,
+      "DDoS": 24763
+     },
+     "cv_macro_f1_mean": 0.9988552920219854,
+     "cv_macro_f1_std": 7.850147412209576e-05
+    },
+    "decision_tree": {
+     "test": {
+      "accuracy": 0.9988632151241814,
+      "weighted_f1": 0.9988631886203835,
+      "macro_f1": 0.9988031508922728,
+      "balanced_accuracy": 0.9987799033603045,
+      "rows": 40465
+     },
+     "test_recall_per_class": {
+      "BENIGN": 0.9984078461342504,
+      "DDoS": 0.9991519605863587
+     },
+     "test_support_per_class": {
+      "BENIGN": 15702,
+      "DDoS": 24763
+     },
+     "cv_macro_f1_mean": 0.9987707160856475,
+     "cv_macro_f1_std": 9.939898522901712e-05
+    },
+    "logistic_regression": {
+     "test": {
+      "accuracy": 0.986333868775485,
+      "weighted_f1": 0.9862965008969267,
+      "macro_f1": 0.9855356237112697,
+      "balanced_accuracy": 0.9830199680308518,
+      "rows": 40465
+     },
+     "test_recall_per_class": {
+      "BENIGN": 0.9682206088396382,
+      "DDoS": 0.9978193272220652
+     },
+     "test_support_per_class": {
+      "BENIGN": 15702,
+      "DDoS": 24763
+     },
+     "cv_macro_f1_mean": 0.9851958252441971,
+     "cv_macro_f1_std": 0.0011140975730444505
+    }
+   }
+  },
+  {
+   "run_id": "20261020T192037Z-582e7cb4",
+   "seconds": 77.8,
+   "split": {
+    "strategy": "stratified",
+    "warnings": [
+     "STRATIFIED_SCORES_MAY_BE_OPTIMISTIC"
+    ],
+    "rows_before_dedupe": 225745,
+    "duplicates_removed": 23416,
+    "test_rows": 40465
+   },
+   "leakage": {
+    "blocked": [],
+    "warned": [
+     "Bwd Packet Length Mean",
+     "Avg Bwd Segment Size"
+    ]
+   },
+   "features": [
+    "Bwd Packet Length Max",
+    "Bwd Packet Length Mean",
+    "Bwd Packet Length Std",
+    "Flow IAT Max",
+    "Fwd IAT Std",
+    "Max Packet Length",
+    "Packet Length Mean",
+    "Packet Length Std",
+    "Packet Length Variance",
+    "Average Packet Size",
+    "Avg Bwd Segment Size",
+    "Idle Mean",
+    "Idle Max",
+    "Idle Min"
+   ],
+   "balancing": {
+    "requested": "smote",
+    "method": "smote",
+    "recommendation": null
+   },
+   "selection": {
+    "selector": "f_classif",
+    "k_features": 10
+   },
+   "selected_model": "random_forest",
+   "classes_only_in_test": [],
+   "failures": [],
+   "models": {
+    "random_forest": {
+     "test": {
+      "accuracy": 0.9988879278388731,
+      "weighted_f1": 0.9988878954253846,
+      "macro_f1": 0.9988291557014419,
+      "balanced_accuracy": 0.998800094774915,
+      "rows": 40465
+     },
+     "test_recall_per_class": {
+      "BENIGN": 0.9984078461342504,
+      "DDoS": 0.9991923434155797
+     },
+     "test_support_per_class": {
+      "BENIGN": 15702,
+      "DDoS": 24763
+     },
+     "cv_macro_f1_mean": 0.9988552920219854,
+     "cv_macro_f1_std": 7.850147412209576e-05
+    },
+    "decision_tree": {
+     "test": {
+      "accuracy": 0.9988632151241814,
+      "weighted_f1": 0.9988631886203835,
+      "macro_f1": 0.9988031508922728,
+      "balanced_accuracy": 0.9987799033603045,
+      "rows": 40465
+     },
+     "test_recall_per_class": {
+      "BENIGN": 0.9984078461342504,
+      "DDoS": 0.9991519605863587
+     },
+     "test_support_per_class": {
+      "BENIGN": 15702,
+      "DDoS": 24763
+     },
+     "cv_macro_f1_mean": 0.9987707160856475,
+     "cv_macro_f1_std": 9.939898522901712e-05
+    },
+    "logistic_regression": {
+     "test": {
+      "accuracy": 0.986333868775485,
+      "weighted_f1": 0.9862965008969267,
+      "macro_f1": 0.9855356237112697,
+      "balanced_accuracy": 0.9830199680308518,
+      "rows": 40465
+     },
+     "test_recall_per_class": {
+      "BENIGN": 0.9682206088396382,
+      "DDoS": 0.9978193272220652
+     },
+     "test_support_per_class": {
+      "BENIGN": 15702,
+      "DDoS": 24763
+     },
+     "cv_macro_f1_mean": 0.9851958252441971,
+     "cv_macro_f1_std": 0.0011140975730444505
+    }
+   }
+  }
+ ],
+ "spread": {
+  "random_forest": {
+   "accuracy": {
+    "mean": 0.9988879278388731,
+    "min": 0.9988879278388731,
+    "max": 0.9988879278388731,
+    "spread": 0.0
+   },
+   "weighted_f1": {
+    "mean": 0.9988878954253847,
+    "min": 0.9988878954253846,
+    "max": 0.9988878954253846,
+    "spread": 0.0
+   },
+   "macro_f1": {
+    "mean": 0.998829155701442,
+    "min": 0.9988291557014419,
+    "max": 0.9988291557014419,
+    "spread": 0.0
+   },
+   "balanced_accuracy": {
+    "mean": 0.998800094774915,
+    "min": 0.998800094774915,
+    "max": 0.998800094774915,
+    "spread": 0.0
+   }
+  },
+  "decision_tree": {
+   "accuracy": {
+    "mean": 0.9988632151241813,
+    "min": 0.9988632151241814,
+    "max": 0.9988632151241814,
+    "spread": 0.0
+   },
+   "weighted_f1": {
+    "mean": 0.9988631886203835,
+    "min": 0.9988631886203835,
+    "max": 0.9988631886203835,
+    "spread": 0.0
+   },
+   "macro_f1": {
+    "mean": 0.9988031508922729,
+    "min": 0.9988031508922728,
+    "max": 0.9988031508922728,
+    "spread": 0.0
+   },
+   "balanced_accuracy": {
+    "mean": 0.9987799033603045,
+    "min": 0.9987799033603045,
+    "max": 0.9987799033603045,
+    "spread": 0.0
+   }
+  },
+  "logistic_regression": {
+   "accuracy": {
+    "mean": 0.986333868775485,
+    "min": 0.986333868775485,
+    "max": 0.986333868775485,
+    "spread": 0.0
+   },
+   "weighted_f1": {
+    "mean": 0.9862965008969266,
+    "min": 0.9862965008969267,
+    "max": 0.9862965008969267,
+    "spread": 0.0
+   },
+   "macro_f1": {
+    "mean": 0.9855356237112697,
+    "min": 0.9855356237112697,
+    "max": 0.9855356237112697,
+    "spread": 0.0
+   },
+   "balanced_accuracy": {
+    "mean": 0.9830199680308519,
+    "min": 0.9830199680308518,
+    "max": 0.9830199680308518,
+    "spread": 0.0
+   }
+  }
+ }
+}

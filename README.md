@@ -14,7 +14,7 @@ A comprehensive network security tool combining **Network Reconnaissance** and *
 This project is being reworked into **v5.0 ("correct & safe")**; see [docs/IMPROVEMENT_PLAN.md](docs/IMPROVEMENT_PLAN.md) and the day-to-day [docs/V5.0_CHECKLIST.md](docs/V5.0_CHECKLIST.md). A measured baseline of the current version ([docs/baseline/FINDINGS.md](docs/baseline/FINDINGS.md)) showed that **earlier accuracy claims were not valid**:
 
 - **IDS CLI model (v4):** it uses `Attempted Category`, a feature derived from the attack label itself. Changing only that value flips the prediction (e.g. `-1` turns every sample into BENIGN), and none of the CLI's 4 built-in sample flows is classified as intended. **The previously stated ~97–98 % accuracy is withdrawn.** Its files were deleted in v5.0 step 0.5: the CLI now uses the models you train and export in the fixed web trainer, and shows each one's real metrics from its training record (see the CLI's [model card](<tools/IDS/IDS_CLI - CIC-2017/models/README.md>)).
-- **Web IDS trainer (v4):** its results were **optimistic**. "Apply SMOTE" and "Recommend Features" ran on the *whole* dataset before the train/test split, duplicate rows could land in both train and test, and label-derived columns (e.g. NSL-KDD `level`) were not blocked. The recommender even ranked `level` among the top 10 features. The app reported accuracy and weighted F1 only, which hide weak minority classes: on NSL-KDD, random forest showed 99.8 % accuracy but 76.6 % macro-F1. **Since 5.0-rc1 (step 0.4g) the web trainer runs on the leakage-free ML core** described under "ML core" below.
+- **Web IDS trainer (v4):** its results were **optimistic**. "Apply SMOTE" and "Recommend Features" ran on the *whole* dataset before the train/test split, duplicate rows could land in both train and test, and label-derived columns (e.g. NSL-KDD `level`) were not blocked. The recommender even ranked `level` among the top 10 features. The app reported accuracy and weighted F1 only, which hide weak minority classes: on NSL-KDD, random forest showed 99.8 % accuracy but 76.6 % macro-F1. **Since 5.0-rc1 (step 0.4g) the web trainer runs on the leakage-free ML core** described under "ML core" below. The same datasets and scenarios re-run on that core, before vs after, are in the **ML report**: [docs/report/FINDINGS.md](docs/report/FINDINGS.md).
 
 ### Known limitations (current version)
 - Web trainer scores on CIC-IDS2017 come from a stratified (random) split, because the file has no time column: flows of the same attack can be on both sides, so the scores may still be optimistic (the app says so). NSL-KDD uses its official test file.
@@ -27,7 +27,7 @@ This project is being reworked into **v5.0 ("correct & safe")**; see [docs/IMPRO
 - Scans are limited to 256 hosts and 65,536 host×port checks (`TOOLKIT_SCAN_MAX_HOSTS`, `TOOLKIT_SCAN_MAX_PROBES`), and each one asks you to confirm you are authorised (`--i-am-authorized` in scripts).
 - No model is shipped with the project: train and export one in the web trainer first. The CLI lists the exports in `instance/bundles` and opens only bundles exported on this install. Large models (for example Random Forest on the full CIC file, about 2 GB) take minutes to load and need several times their size in memory. A bundle made with a different scikit-learn, imbalanced-learn, XGBoost or LightGBM minor version is refused (retrain it); smaller version differences are shown as a warning.
 - Starting the web trainer from the launcher menu prints its address (`http://127.0.0.1:5000/`) but doesn't open a browser; stop it with Ctrl+C to get back to the menu.
-- Tested on Windows with Python 3.14 (416 automated tests, a scripted walk-through of every menu path, `scripts/menu_walkthrough.py`, and a browser session through the whole web trainer on real CIC-IDS2017 and NSL-KDD data, see `docs/release/`). The code is being made portable to Linux and macOS, but it is not tested on real Linux/macOS machines.
+- Tested on Windows with Python 3.14 (419 automated tests, a fresh install followed by a scripted walk-through of every menu path, `scripts/menu_walkthrough.py`, and a browser session through the whole web trainer on real CIC-IDS2017 and NSL-KDD data, see `docs/release/`). **Linux and macOS are not tested on real machines:** the OS-specific logic (ping options, paths, file encodings) is unit-tested only.
 - Only scan systems you are authorised to scan.
 
 ---
@@ -254,8 +254,9 @@ Project/
 ├── README.md                        # This file
 │
 ├── data/raw/                        # Local datasets (gitignored, see docs/datasets.md)
-├── docs/                            # Improvement plan, v5.0 checklist, datasets, baseline
+├── docs/                            # Improvement plan, v5.0 checklist, datasets, baseline, ML report
 ├── scripts/baseline_v4.py           # Reproduces the "before" baseline (docs/baseline/)
+├── scripts/ml_report.py             # Re-runs it on the v5 ML core (docs/report/)
 ├── tests/                           # pytest suite + small fixtures
 │
 └── tools/
