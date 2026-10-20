@@ -22,6 +22,12 @@ def fixtures_dir() -> Path:
     return FIXTURES_DIR
 
 
+@pytest.fixture(autouse=True)
+def _scratch_instance_dir(tmp_path_factory, monkeypatch):
+    """Runs, bundles and the signing key go to a temporary instance/ in every test."""
+    monkeypatch.setenv("TOOLKIT_INSTANCE_DIR", str(tmp_path_factory.mktemp("instance")))
+
+
 @pytest.fixture
 def fake_platform(monkeypatch):
     """Make the code under test believe it runs on another OS.

@@ -845,3 +845,44 @@ textarea:focus-visible {
 .workspace-bar .section-description {
   margin: 0;
 }
+
+/* Checkbox lists instead of Ctrl+Click multi-selects: they work on touch screens (U5, 0.4g) */
+.checkbox-list {
+  max-height: 240px;
+  overflow-y: auto;
+  border: 1px solid #cbd5e0;
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+}
+
+.checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.2rem 0;
+  font-weight: normal;
+  overflow-wrap: anywhere;
+}
+
+.checkbox-item input {
+  width: auto;
+  flex: none;
+}
+
+.list-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0.25rem 0 0.5rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  .checkbox-list {
+    border-color: #4a5568;
+  }
+}
+
+/* Long tokens (class names, run ids) wrap instead of widening the page on phones */
+.message {
+  overflow-wrap: anywhere;
+}

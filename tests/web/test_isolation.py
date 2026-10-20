@@ -2,7 +2,7 @@
 
 import pytest
 
-TARGET = " Label"
+TARGET = "Label"  # stripped by the v5 loader (B17)
 
 
 def _upload(test_client, path):

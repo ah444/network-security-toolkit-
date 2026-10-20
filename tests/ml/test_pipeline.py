@@ -324,3 +324,35 @@ def test_effective_workers_capped(frame, monkeypatch):
     assert all(size <= 2 for size in _ThreadProbe.sizes), _ThreadProbe.sizes
     for name in ("random_forest", "extra_trees", "knn", "xgboost", "lightgbm"):
         assert outcome.models[name].pipeline.named_steps["model"].get_params()["n_jobs"] == 2
+
+
+# --- prediction input (0.4g, B2) ----------------------------------------------------------
+
+def test_feature_schema_from_the_fitted_pipeline(frame):
+    outcome = train_models(frame, "Label", features=FEATURES,
+                           models=("decision_tree", "logistic_regression"), workers=1)
+    for fitted in outcome.models.values():
+        schema = {f.name: f for f in fitted.feature_schema()}
+        assert [f.name for f in fitted.feature_schema()] == FEATURES
+        assert (schema["a"].kind, schema["b"].kind) == ("numeric", "numeric")
+        assert schema["proto"].kind == "categorical"
+        assert schema["proto"].categories == ("tcp", "udp")
+        assert schema["a"].categories == ()
+
+
+def test_input_frame_converts_form_values(frame):
+    fitted = train_models(frame, "Label", features=FEATURES, models=("decision_tree",),
+                          workers=1).models["decision_tree"]
+    row = fitted.input_frame({"a": "1.5", "b": 2, "proto": " udp ", "extra": "ignored"})
+    assert list(row.columns) == FEATURES and len(row) == 1
+    assert row["a"].iloc[0] == 1.5 and row["b"].iloc[0] == 2.0
+    assert row["proto"].iloc[0] == "udp"
+    assert fitted.predict(row)[0] in CLASSES
+    unseen = fitted.input_frame({"a": "0", "b": "0", "proto": "icmp"})  # unseen category
+    assert fitted.predict(unseen)[0] in CLASSES
+    with pytest.raises(ValueError, match="'a'"):
+        fitted.input_frame({"a": "fast", "b": "0", "proto": "tcp"})
+    with pytest.raises(ValueError, match="'b'"):
+        fitted.input_frame({"a": "1", "proto": "tcp"})
+    with pytest.raises(ValueError, match="'b'"):
+        fitted.input_frame({"a": "1", "b": " ", "proto": "tcp"})

@@ -19,8 +19,9 @@ from __future__ import annotations
 
 import logging
 import time
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -60,6 +61,43 @@ class FittedModel:
     def predict(self, frame: pd.DataFrame) -> np.ndarray:
         codes = np.asarray(self.pipeline.predict(frame[list(self.features)]), dtype=int)
         return np.asarray(self.classes, dtype=object)[codes]
+
+    def feature_schema(self) -> tuple[FeatureInfo, ...]:
+        """Each input feature as the fitted pipeline sees it (for prediction forms)."""
+        kinds: dict[str, FeatureInfo] = {}
+        for part, transformer, columns in self.pipeline.named_steps["prepare"].transformers_:
+            if part == "numeric":
+                kinds.update((c, FeatureInfo(c, "numeric")) for c in columns)
+            elif part == "categorical":
+                for column, values in zip(columns, transformer.categories_, strict=True):
+                    known = tuple(str(v) for v in values if not pd.isna(v))
+                    kinds[column] = FeatureInfo(column, "categorical", known)
+        return tuple(kinds[name] for name in self.features)
+
+    def input_frame(self, values: Mapping[str, Any]) -> pd.DataFrame:
+        """One row from form values (text or numbers); raises ValueError naming the field.
+        Unknown categories are allowed: the encoder handles them (L7)."""
+        row: dict[str, list[Any]] = {}
+        for info in self.feature_schema():
+            value = values.get(info.name)
+            text = "" if value is None else str(value).strip()
+            if not text:
+                raise ValueError(f"Enter a value for {info.name!r}")
+            if info.kind == "numeric":
+                try:
+                    row[info.name] = [float(text)]
+                except ValueError:
+                    raise ValueError(f"{info.name!r} must be a number") from None
+            else:
+                row[info.name] = [text]
+        return pd.DataFrame(row, columns=list(self.features))
+
+
+@dataclass(frozen=True)
+class FeatureInfo:
+    name: str
+    kind: str  # "numeric" | "categorical"
+    categories: tuple[str, ...] = ()  # categorical: the values seen in training
 
 
 @dataclass(frozen=True)

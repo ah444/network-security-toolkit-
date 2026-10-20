@@ -2,6 +2,10 @@
 
 import pytest
 
+from toolkit import bundle_files
+
+TARGET = "Label"
+
 
 @pytest.mark.parametrize("bad", ["../../evil", "a/b", r"a\b", "", "   ", "x" * 81, "na:me", ".."])
 def test_bad_export_name_refused(app_module, bad):
@@ -14,14 +18,36 @@ def test_good_export_name_kept(app_module, good):
     assert app_module.safe_model_basename(good) == good
 
 
-def test_export_never_overwrites(app_module, tmp_path):
-    first = app_module.unique_export_path(tmp_path, "model", "random_forest")
-    first.write_bytes(b"1")
-    second = app_module.unique_export_path(tmp_path, "model", "random_forest")
-    second.write_bytes(b"2")
-    third = app_module.unique_export_path(tmp_path, "model", "random_forest")
-    assert first.name == "model_random_forest.pkl"
-    assert second.name == "model_random_forest-1.pkl"
-    assert third.name == "model_random_forest-2.pkl"
-    assert first.read_bytes() == b"1"
-    assert third.resolve().parent == tmp_path.resolve()
+@pytest.fixture
+def trained(client, upload, fixtures_dir):
+    columns = upload(fixtures_dir / "cic_ddos_sample.csv").get_json()["columns"]
+    response = client.post("/configure", json={
+        "input_features": [c for c in columns if c != TARGET], "target": TARGET,
+        "selected_models": ["decision_tree"], "balancing_method": "none"})
+    assert response.status_code == 200, response.get_json()
+
+
+def test_export_never_overwrites(client, trained):
+    first = client.post("/export_model", json={"model_name": "first"}).get_json()
+    path = bundle_files.bundles_dir() / first["file"]
+    content, modified = path.read_bytes(), path.stat().st_mtime_ns
+    second = client.post("/export_model", json={"model_name": "second"}).get_json()
+    assert second["file"] == first["file"] and second["sha256"] == first["sha256"]
+    assert path.read_bytes() == content and path.stat().st_mtime_ns == modified
+    assert [p.name for p in bundle_files.bundles_dir().iterdir()] == [first["file"]]
+    download = client.get("/download_bundle")
+    assert "second.bundle" in download.headers["Content-Disposition"]
+    assert download.data == content
+
+
+@pytest.mark.parametrize("bad", ["../../evil", "a/b", ""])
+def test_bad_export_name_refused_over_http(client, trained, bad):
+    response = client.post("/export_model", json={"model_name": bad})
+    assert response.status_code == 400
+    assert not bundle_files.bundles_dir().exists()
+
+
+def test_export_needs_a_trained_model(client):
+    response = client.post("/export_model", json={"model_name": "x"})
+    assert response.status_code == 400
+    assert "train" in response.get_json()["error"].lower()

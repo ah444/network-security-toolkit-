@@ -6,7 +6,8 @@ import pytest
 
 JSON_ROUTES = ["/preview_data", "/filter_target_values", "/get_target_values",
                "/analyze_class_distribution", "/apply_smote", "/recommend_features",
-               "/configure", "/get_confusion_matrix", "/predict", "/predict_loaded/"]
+               "/configure", "/get_confusion_matrix", "/predict", "/predict_loaded",
+               "/export_model"]
 
 
 def test_oversized_upload_413(app_module, client):
@@ -41,8 +42,8 @@ def test_preview_rows_clamped(client, upload, fixtures_dir):
 
 def test_recommend_k_clamped(client, upload, fixtures_dir):
     upload(fixtures_dir / "cic_ddos_sample.csv")
-    response = client.post("/recommend_features", json={"target": " Label", "k": 10**9})
+    response = client.post("/recommend_features", json={"target": "Label", "k": 10**9})
     assert response.status_code == 200
     assert len(response.get_json()["recommended_features"]) <= 14
-    bad = client.post("/recommend_features", json={"target": " Label", "k": "many"})
+    bad = client.post("/recommend_features", json={"target": "Label", "k": "many"})
     assert bad.status_code == 400

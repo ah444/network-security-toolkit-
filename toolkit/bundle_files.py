@@ -42,7 +42,7 @@ def signing_key(path: str | Path | None = None, *, create: bool = False) -> byte
     path = Path(path) if path is not None else key_path()
     if not path.is_file():
         if not create:
-            raise BundleError("NO_KEY", f"No signing key at {path}")
+            raise BundleError("NO_KEY", f"This install has no signing key ({path.name})")
         path.parent.mkdir(parents=True, exist_ok=True)
         try:
             with path.open("x", encoding="ascii", newline="\n") as handle:
@@ -59,7 +59,8 @@ def signing_key(path: str | Path | None = None, *, create: bool = False) -> byte
     except (UnicodeDecodeError, ValueError):
         key = b""
     if len(key) != KEY_BYTES:
-        raise BundleError("BAD_KEY", f"{path} is not a signing key ({KEY_BYTES * 2} hex digits)")
+        raise BundleError("BAD_KEY", f"{path.name} is not a signing key "
+                          f"({KEY_BYTES * 2} hex digits)")
     return key
 
 
@@ -81,7 +82,13 @@ def save_bundle(run: TrainingRun, directory: str | Path | None = None, *,
 def load_bundle(path: str | Path, *, key_file: str | Path | None = None,
                 pinned_sha256: str | None = None) -> Bundle:
     """Load a bundle saved on this install (or, with ``pinned_sha256``, a shipped one)."""
-    data = Path(path).read_bytes()
+    return open_bundle(Path(path).read_bytes(), key_file=key_file, pinned_sha256=pinned_sha256)
+
+
+def open_bundle(data: bytes, *, key_file: str | Path | None = None,
+                pinned_sha256: str | None = None) -> Bundle:
+    """``load_bundle`` for bytes already in memory (e.g. a web upload). Error messages
+    never contain paths, so they can be shown to the user."""
     if pinned_sha256 is not None:
         return unpack(data, pinned_sha256=pinned_sha256)
     try:

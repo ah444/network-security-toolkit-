@@ -14,18 +14,19 @@ A comprehensive network security tool combining **Network Reconnaissance** and *
 This project is being reworked into **v5.0 ("correct & safe")**; see [docs/IMPROVEMENT_PLAN.md](docs/IMPROVEMENT_PLAN.md) and the day-to-day [docs/V5.0_CHECKLIST.md](docs/V5.0_CHECKLIST.md). A measured baseline of the current version ([docs/baseline/FINDINGS.md](docs/baseline/FINDINGS.md)) showed that **earlier accuracy claims were not valid**:
 
 - **IDS CLI model (v4):** it uses `Attempted Category`, a feature derived from the attack label itself. Changing only that value flips the prediction (e.g. `-1` turns every sample into BENIGN), and none of the CLI's 4 built-in sample flows is classified as intended. **The previously stated ~97–98 % accuracy is withdrawn.** The CLI now prints a warning when this model is loaded. A replacement model trained without leakage is planned in v5.0.
-- **Web IDS trainer:** results it shows today are **optimistic**. "Apply SMOTE" and "Recommend Features" run on the *whole* dataset before the train/test split, duplicate rows can land in both train and test, and label-derived columns (e.g. NSL-KDD `level`) are not blocked. The recommender even ranked `level` among the top 10 features. The app reports accuracy and weighted F1 only, which hide weak minority classes: on NSL-KDD, random forest shows 99.8 % accuracy but 76.6 % macro-F1.
+- **Web IDS trainer (v4):** its results were **optimistic**. "Apply SMOTE" and "Recommend Features" ran on the *whole* dataset before the train/test split, duplicate rows could land in both train and test, and label-derived columns (e.g. NSL-KDD `level`) were not blocked. The recommender even ranked `level` among the top 10 features. The app reported accuracy and weighted F1 only, which hide weak minority classes: on NSL-KDD, random forest showed 99.8 % accuracy but 76.6 % macro-F1. **Since 5.0-rc1 (step 0.4g) the web trainer runs on the leakage-free ML core** described under "ML core" below.
 
 ### Known limitations (current version)
-- Results from the web trainer are still inflated by the leakage above. The leakage-free ML core (`toolkit/ids_core`, steps 0.4a–0.4d, see "ML core" below) is finished and tested, but the web trainer switches to it only in step 0.4g (5.0-rc1).
-- **Web trainer: exporting and loading model files is paused** until v5.0-rc1, because they were pickle files that can run code when opened. Training and predicting inside a session still work.
+- Web trainer scores on CIC-IDS2017 come from a stratified (random) split, because the file has no time column: flows of the same attack can be on both sides, so the scores may still be optimistic (the app says so). NSL-KDD uses its official test file.
+- Exported models are signed **`.bundle`** files that load only on the toolkit install that made them. The signing key is created in `instance/signing.key` on the first export: back up the `instance/` folder. If the key is lost, the bundles can't be loaded any more; retrain from the run's record in `instance/runs/`. Loading bundles from another computer comes in v5.1.
+- Training runs inside the request: the page waits without a progress bar or cancel button (background jobs come in v5.1). On the full CIC file this takes many minutes and about 6 GB of memory.
 - Web trainer data lives in memory, one workspace per browser session (tabs of the same browser share it). It is lost when the app restarts, removed after 240 minutes without use (`TOOLKIT_WORKSPACE_IDLE_MIN`), or with the **Clear workspace** button. Only one training runs at a time per workspace. If you serve the app over HTTPS, set `TOOLKIT_HTTPS=1` so the session cookie is marked `Secure`.
 - The port scanner sends service banners to a third-party AI service (OpenRouter/DeepSeek) when an API key is configured. Don't scan systems whose banners you may not share. Consent and redaction come in v5.0 step 0.6.
 - The CVE lookup uses a retired MITRE search page and may return nothing (replaced by the NVD API in v5.0). CVE and AI lookups for open ports run one at a time, so scans with many open ports are slow.
 - The port scanner logs an `ERROR` line when the optional `api_keys.txt` is missing; it still works, just without AbuseIPDB and AI lookups.
 - The CLI's v4 model files were saved with scikit-learn 1.6.1; this setup has 1.8.0, so loading them prints version warnings (shown on purpose, not hidden). Predictions also print a harmless "X does not have valid feature names" warning. Both go away with the v5 model.
 - Starting the web trainer from the launcher menu prints its address (`http://127.0.0.1:5000/`) but doesn't open a browser; stop it with Ctrl+C to get back to the menu.
-- Tested on Windows with Python 3.14 (295 automated tests, a scripted walk-through of every menu path, `scripts/menu_walkthrough.py`, and a replay of the web trainer's recorded click sequences, see `docs/release/`). The code is being made portable to Linux and macOS, but it is not tested on real Linux/macOS machines.
+- Tested on Windows with Python 3.14 (349 automated tests, a scripted walk-through of every menu path, `scripts/menu_walkthrough.py`, and a browser session through the whole web trainer on real CIC-IDS2017 and NSL-KDD data, see `docs/release/`). The code is being made portable to Linux and macOS, but it is not tested on real Linux/macOS machines.
 - Only scan systems you are authorised to scan.
 
 ---
@@ -73,7 +74,7 @@ This project is being reworked into **v5.0 ("correct & safe")**; see [docs/IMPRO
 - 🎯 **Target Value Filtering** - Remove unwanted classes
 - 📉 **Confusion Matrix** - Visual model evaluation
 - 🔀 **Train/Test Split Slider** - Customize data splits
-- 💾 **Export Models** - Save trained models as .pkl
+- 💾 **Export / Load Models** - signed `.bundle` files (all models of a run plus its training record)
 
 ---
 
@@ -179,7 +180,7 @@ After uploading a dataset, view:
 - Interactive table view
 
 ### 📈 Smart Data Analysis
-The system automatically analyzes your dataset:
+The system analyzes your dataset; the recommendation below uses the **training split only**:
 
 | Metric | Description |
 |--------|-------------|
@@ -223,15 +224,15 @@ Remove specific classes before training:
 
 ### 📉 Confusion Matrix
 Visual evaluation of model performance:
-- Select trained model (Random Forest, KNN, Logistic Regression)
-- Choose dataset (Test or Validation)
+- Select a trained model
+- Shown for the test split (models are compared by cross-validation on the training rows; there is no separate validation split any more)
 - View matrix with color-coded cells
 - See True Positives, False Positives, etc.
 
 ### 🔀 Train/Test Split Slider
 Customize data splits:
-- Slider range: 10% to 50% for (Validation + Test)
-- Example: 30% → Train: 70% | Val: 15% | Test: 15%
+- Slider range: 10% to 50% for the test split (default 20% → Train: 80% | Test: 20%)
+- Datasets with an official test file (NSL-KDD) use that file instead
 - Real-time label update
 
 ---
@@ -283,7 +284,7 @@ Project/
             │       └── main.js
             ├── uploads/             # Uploaded datasets
             ├── dataset/             # Sample datasets
-            └── models/              # Trained models (.pkl)
+            └── (exports: instance/bundles/, run records: instance/runs/)
 ```
 
 ---
@@ -315,23 +316,21 @@ Project/
 - **CLI model (v4):** 16 classes of the "improved" CIC-IDS2017 labelling (BENIGN, Botnet, DDoS, DoS GoldenEye/Hulk/Slowhttptest/Slowloris, FTP-Patator, Portscan, SSH-Patator, and several "… - Attempted" variants). See the warning under **Project status** at the top.
 - **Web trainer:** whatever classes the uploaded dataset contains. The original CIC-IDS2017 file has 15 (BENIGN, DoS Hulk, PortScan, DDoS, DoS GoldenEye, FTP-Patator, SSH-Patator, DoS slowloris, DoS Slowhttptest, Bot, three Web Attack types, Infiltration, Heartbleed); see [docs/datasets.md](docs/datasets.md).
 
-### Training Pipeline (current version)
-1. **Data Upload** - CSV/TXT with headers
+### Training Pipeline (web trainer, v5.0)
+1. **Data Upload** - CSV/TXT; the dataset (CIC-IDS2017, NSL-KDD or generic) is recognised and its label preselected. An NSL-KDD train file uploaded together with a file named "*test*" uses the official split
 2. **Preview** - View data statistics
-3. **Class Analysis** - Distribution & imbalance detection
+3. **Class Analysis** - distribution of the whole dataset; the balancing recommendation comes from the training split only
 4. **Filter Classes** - Remove unwanted targets (optional)
-5. **Feature Selection** - SelectKBest (k configurable)
-6. **Balancing** - 8 methods available
-7. **Split** - Train/Val/Test (customizable)
+5. **Feature Recommendation** - the leakage guard first, then scores on the training split only
+6. **Balancing** - 9 choices including "Recommended"; a preview shows the training split's class counts before and after; training applies the method inside each model's pipeline
+7. **Split** - exact duplicates removed, then the dataset's split (stratified, or the official test file)
 8. **Model Selection** - Choose from 11 algorithms
-9. **Training** - Selected models trained in parallel
-10. **Evaluation** - Accuracy, F1 Score, AUC, Confusion Matrix
-11. **Export** - Save models as .pkl
+9. **Training** - 3-fold cross-validation on the training rows, models trained one after another
+10. **Evaluation** - leaderboard with CV macro-F1 (mean ± std), test macro-F1, balanced accuracy and weakest-class recall; the test split is scored once; test confusion matrix
+11. **Export / Load** - signed `.bundle` (see Known limitations)
 
-> ⚠️ **Known flaw:** steps 5 and 6 (feature recommendation and the "Apply SMOTE" preview) run on the **whole** dataset *before* the split in step 7, so information from the test rows leaks into training. v5.0 reorders this so that **split comes first** and selection and balancing are fitted on training data only.
-
-### ML core (v5.0, library only for now)
-`toolkit/ids_core` is the new, leakage-free pipeline. It has no web or network code and is used from Python today; the web trainer and CLI switch to it in v5.0-rc1.
+### ML core (v5.0)
+`toolkit/ids_core` is the new, leakage-free pipeline. It has no web or network code; the web trainer uses it since 5.0-rc1 and the CLI switches to it in step 0.5.
 
 1. **Load** (`datasets.load_dataset`): encoding and separator sniffed, header spaces stripped, exact dtype downcast, SHA-256; the dataset family (CIC-IDS2017, NSL-KDD or generic) is recognised from the content, not the file name.
 2. **Split** (`split.split_dataset`): exact copies removed first, then the profile's split: `official` (NSL-KDD's own files, kept as published), `temporal` / `temporal_per_class` (validated time column), `group`, or `stratified` with an "optimistic" warning. Every fallback has a reason code.

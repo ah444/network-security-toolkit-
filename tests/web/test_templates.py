@@ -66,4 +66,4 @@ def test_dynamic_form_labels_are_linked(repo_root):
                           flags=re.S)
     assert len(builders) == 2
     for body in builders:
-        assert "label.htmlFor = feature.name" in body
+        assert "label.htmlFor = input.id" in body

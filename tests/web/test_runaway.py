@@ -4,7 +4,7 @@ import threading
 
 import pytest
 
-TARGET = " Label"
+TARGET = "Label"  # stripped by the v5 loader (B17)
 
 
 @pytest.fixture
@@ -21,15 +21,15 @@ def _train_body(columns):
 def held_training(app_module, monkeypatch):
     """Training requests from background threads stop inside training until released."""
     entered, release = threading.Event(), threading.Event()
-    real_split = app_module.train_test_split
+    real_train = app_module.train_run
 
-    def split(*args, **kwargs):
+    def held(*args, **kwargs):
         if threading.current_thread() is not threading.main_thread():
             entered.set()
             assert release.wait(30), "test never released the held training"
-        return real_split(*args, **kwargs)
+        return real_train(*args, **kwargs)
 
-    monkeypatch.setattr(app_module, "train_test_split", split)
+    monkeypatch.setattr(app_module, "train_run", held)
     return entered, release
 
 
@@ -71,11 +71,11 @@ def test_busy_flag_cleared_after_failure(app_module, client, columns, monkeypatc
     def broken(*args, **kwargs):
         raise RuntimeError("boom")
 
-    real_split = app_module.train_test_split
-    monkeypatch.setattr(app_module, "train_test_split", broken)
+    real_train = app_module.train_run
+    monkeypatch.setattr(app_module, "train_run", broken)
     with pytest.raises(RuntimeError):
         client.post("/configure", json=_train_body(columns))
-    monkeypatch.setattr(app_module, "train_test_split", real_split)
+    monkeypatch.setattr(app_module, "train_run", real_train)
     assert client.post("/configure", json=_train_body(columns)).status_code == 200
 
 

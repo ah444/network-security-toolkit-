@@ -47,3 +47,10 @@ def test_saved_name_is_sanitised(app_module):
     assert "/" not in name and "\\" not in name and ".." not in name
     assert name.endswith(".csv")
     assert name != app_module.safe_upload_name("../../we ird<name>.csv"), "names must be unique"
+
+
+def test_display_name_keeps_the_file_name_without_paths(client):
+    response = _post(client, CSV_A, "KDD Test+ v2.csv").get_json()
+    assert response["dataset"]["files"] == ["KDD Test+ v2.csv"]  # shown and recorded as chosen
+    for path in ("../../evil.csv", "C:/Users/me/evil.csv"):
+        assert _post(client, CSV_A, path).get_json()["dataset"]["files"] == ["evil.csv"]

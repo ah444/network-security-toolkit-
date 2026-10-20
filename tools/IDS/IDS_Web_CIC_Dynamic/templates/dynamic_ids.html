@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Dynamic IDS Model Trainer</title>
   <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/style2.css') }}">
-  
+
 </head>
 <body class="dynamic">
   <!-- Nav Bar -->
@@ -41,6 +41,7 @@
     <!-- Upload Dataset Section -->
     <div class="section" id="uploadDatasetSection">
       <h2>Upload Dataset</h2>
+      <p class="section-description">One CSV/TXT file, several parts of the same dataset, or an official train file plus its test file (a file name containing "test", e.g. NSL-KDD's KDDTest+.txt).</p>
       <form id="uploadForm" enctype="multipart/form-data">
         <div class="form-group">
           <label for="dataset" class="label">Select CSV or TXT File:</label>
@@ -69,12 +70,12 @@
     <!-- Load Model Section -->
     <div class="section" id="loadModelSection" style="display:none;">
       <h2>Load Exported Model</h2>
-      <p class="section-description">⏸️ Paused until v5.0-rc1: model files were pickles, which can run code when opened. They will return as signed bundles.</p>
+      <p class="section-description">Load a <strong>.bundle</strong> file exported by this toolkit on this computer. Bundles are signed with this install's key; any other file is refused before it is opened.</p>
       <form id="loadModelForm" enctype="multipart/form-data">
         <div class="form-group">
-          <label for="modelFile" class="label">Select Model File (.pkl):</label>
+          <label for="modelFile" class="label">Select Model File (.bundle):</label>
           <div class="file-input-wrapper">
-            <input type="file" id="modelFile" name="model_file" accept=".pkl" required>
+            <input type="file" id="modelFile" name="model_file" accept=".bundle" required>
             <div class="file-input-placeholder" id="modelFilePlaceholder">Choose file...</div>
           </div>
         </div>
@@ -92,28 +93,26 @@
       </div>
       <button id="analyzeClassBtn" class="btn">Analyze Class Distribution</button>
       <div id="classDistributionResult" class="message"></div>
-      
+
       <!-- Target Value Filter Section -->
       <div id="targetValueFilterSection" style="display:none; margin-top: 20px;">
         <h3>Filter Target Values</h3>
-        <p class="section-description">Remove unwanted classes/labels from your dataset. Select the values you want to <strong>remove</strong>.</p>
-        <div class="form-group">
-          <label for="targetValuesToRemove" class="label">Select Values to Remove (Ctrl+Click for multiple):</label>
-          <select id="targetValuesToRemove" name="targetValuesToRemove" multiple></select>
-        </div>
+        <p class="section-description">Remove unwanted classes/labels from your dataset. Tick the values you want to <strong>remove</strong>.</p>
+        <div id="targetValuesToRemove" class="checkbox-list" role="group" aria-label="Values to remove"></div>
         <div class="button-group">
           <button id="removeTargetValuesBtn" class="btn btn-danger">Remove Selected Values</button>
           <button id="skipTargetFilterBtn" class="btn btn-secondary">Skip (Keep All Values)</button>
         </div>
         <div id="targetFilterResult" class="message"></div>
       </div>
-      
+
       <div id="smoteOption" style="display:none;">
         <div class="form-group">
           <label for="balancingMethod" class="label">Select Balancing Method:</label>
           <select id="balancingMethod" name="balancingMethod">
             <option value="none">None (Use Original Data)</option>
-            <option value="class_weight">Class Weights (Recommended - Fast)</option>
+            <option value="recommended">Recommended (chosen from the training split)</option>
+            <option value="class_weight">Class Weights (Fast)</option>
             <option value="smote">SMOTE (Synthetic Minority Oversampling)</option>
             <option value="smote_enn">SMOTE-ENN (SMOTE + Edited Nearest Neighbors)</option>
             <option value="adasyn">ADASYN (Adaptive Synthetic Sampling)</option>
@@ -124,12 +123,15 @@
           </select>
           <p class="balancing-hint" id="balancingHint">Select a method to handle class imbalance in your dataset.</p>
         </div>
+        <button type="button" id="previewBalancingBtn" class="btn btn-sm">Preview on training split</button>
+        <div id="balancingPreviewResult" class="message"></div>
       </div>
     </div>
 
     <!-- Feature Recommendation Section -->
     <div class="section" id="recommendationSection" style="display:none;">
       <h2>Feature Recommendation</h2>
+      <p class="section-description">Scores are computed on the training split only, after the leakage guard has removed label copies and ID columns.</p>
       <div class="form-group">
         <label for="kValue" class="label">Enter k value for top features:</label>
         <input type="number" id="kValue" name="kValue" value="10" min="1" required>
@@ -147,44 +149,42 @@
       <h2>Select Features & Target</h2>
       <form id="configForm" enctype="multipart/form-data">
         <div class="form-group">
-          <label for="inputFeatures" class="label">Select Input Features (Ctrl+Click for multiple):</label>
-          <select id="inputFeatures" name="inputFeatures" multiple required></select>
+          <span class="label" id="inputFeaturesLabel">Select Input Features:</span>
+          <div class="list-actions">
+            <button type="button" class="btn btn-sm" data-list="inputFeatures" data-check="all">Select all</button>
+            <button type="button" class="btn btn-sm btn-secondary" data-list="inputFeatures" data-check="none">Clear</button>
+          </div>
+          <div id="inputFeatures" class="checkbox-list" role="group" aria-labelledby="inputFeaturesLabel"></div>
         </div>
         <div class="form-group">
           <label for="targetColumn" class="label">Select Target:</label>
           <select id="targetColumn" name="targetColumn" required></select>
         </div>
-        
+
         <!-- Model Selection Section -->
         <div class="form-group">
-          <label for="modelSelection" class="label">Select Models to Train (Ctrl+Click for multiple):</label>
-          <select id="modelSelection" name="modelSelection" multiple required>
-            <!-- Models will be loaded dynamically via JavaScript -->
-          </select>
+          <span class="label" id="modelSelectionLabel">Select Models to Train:</span>
+          <div id="modelSelection" class="checkbox-list" role="group" aria-labelledby="modelSelectionLabel"></div>
         </div>
-        
+
         <div class="form-group">
-          <label for="trainTestSlider" class="label">Train/Test Split Ratio:</label>
+          <label for="trainTestSlider" class="label">Test split size:</label>
           <div class="slider-container">
-            <input type="range" id="trainTestSlider" name="trainTestSlider" min="10" max="50" value="30" step="5">
-            <span id="splitLabel" class="slider-label">Train: 70% | Val: 15% | Test: 15%</span>
+            <input type="range" id="trainTestSlider" name="trainTestSlider" min="10" max="50" value="20" step="5">
+            <span id="splitLabel" class="slider-label">Train: 80% | Test: 20%</span>
           </div>
+          <p class="section-description">Models are compared by 3-fold cross-validation on the training rows; the test rows are scored once, at the end. Datasets with an official test file (NSL-KDD) use it instead.</p>
         </div>
         <button type="submit" class="btn">Train Model</button>
       </form>
       <div id="configResult" class="message"></div>
-      
+
       <!-- Confusion Matrix Section -->
       <div id="confusionMatrixSection" style="display:none; margin-top: 20px;">
-        <h3>Confusion Matrix</h3>
+        <h3>Confusion Matrix (test split)</h3>
         <div class="form-group">
           <label for="cmModelSelect" class="label">Select Model:</label>
           <select id="cmModelSelect" name="cmModelSelect"></select>
-          <label for="cmDatasetType" class="label" style="margin-left: 15px;">Dataset:</label>
-          <select id="cmDatasetType" name="cmDatasetType">
-            <option value="test">Test</option>
-            <option value="validation">Validation</option>
-          </select>
           <button id="showConfusionMatrixBtn" class="btn btn-sm" style="margin-left: 10px;">Show Matrix</button>
         </div>
         <div id="confusionMatrixDisplay" class="confusion-matrix-container"></div>
@@ -208,7 +208,7 @@
     <!-- Export Model Section -->
     <div class="section" id="exportSection" style="display:none;">
       <h2>Export Model</h2>
-      <p class="section-description">⏸️ Paused until v5.0-rc1 (exports will become signed bundles). Training and predicting in this session still work.</p>
+      <p class="section-description">Saves all trained models of this run as one signed bundle (with its training record) and lets you download it. Load it later with "Yes, I have a trained model".</p>
       <form id="exportForm" enctype="multipart/form-data">
         <div class="form-group">
           <label for="modelName" class="label">Model Base Name:</label>
@@ -223,6 +223,10 @@
     <div class="section" id="loadedFeaturesSection" style="display:none;">
       <h2>Make a Prediction (Loaded Model)</h2>
       <form id="predictLoadedForm" enctype="multipart/form-data">
+        <div class="form-group">
+          <label for="loadedAlgorithmSelect" class="label">Choose The Algorithm:</label>
+          <select id="loadedAlgorithmSelect" name="loadedAlgorithmSelect" required></select>
+        </div>
         <div id="loadedDynamicInputs"></div>
         <button type="submit" class="btn">Predict</button>
       </form>
