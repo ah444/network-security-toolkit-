@@ -50,6 +50,14 @@ if str(REPO_ROOT) not in sys.path:
 from toolkit.config import env_value, instance_dir, read_env_file, scan_limits  # noqa: E402
 from toolkit.logging_setup import add_secrets, setup_logging  # noqa: E402
 from toolkit.ports import IntelFinding, NullProgress  # noqa: E402
+from toolkit.recon.targets import (  # noqa: E402
+    check_limits,
+    is_ip_literal,
+    is_public_ip,
+    parse_port_range,
+    parse_target,
+)
+from toolkit.recon.text import clean_text, csv_cell, one_line, untrusted_text  # noqa: E402
 
 log = logging.getLogger(__name__)
 
@@ -76,85 +84,7 @@ def ai_model(environ=None, env_file=None):
                      ENV_PATH if env_file is None else env_file) or DEFAULT_AI_MODEL
 
 
-# --- Text that came from the network (S14) ----------------------------------------------------
-
-# CSI sequences, OSC sequences (ended by BEL or ESC + backslash) and 2-byte escapes.
-ANSI_ESCAPE = re.compile("\x1b(?:\\[[0-?]*[ -/]*[@-~]|\\][^\x07\x1b]*(?:\x07|\x1b\\\\)?|[@-Z\\\\-_])")
-CONTROL = re.compile("[\x00-\x08\x0b-\x1f\x7f-\x9f]")  # keeps \t and \n
-FORMULA_START = ("=", "+", "-", "@", "\t", "\r")
-
-
-def clean_text(text, limit=None):
-    """Printable text: terminal escape sequences and control characters removed."""
-    text = CONTROL.sub("", ANSI_ESCAPE.sub("", str(text)))
-    if limit and len(text) > limit:
-        text = text[:limit - 3] + "..."
-    return text
-
-
-def one_line(text, limit=None):
-    return clean_text(" ".join(str(text).split()), limit)
-
-
-def csv_cell(value):
-    """A spreadsheet-safe cell: text that starts like a formula gets a leading ' (S14)."""
-    if isinstance(value, str) and value.startswith(FORMULA_START):
-        return "'" + value
-    return value
-
-
-# --- Targets, ports and limits (B11, B13, S16) ------------------------------------------------
-
-def parse_target(text, max_hosts):
-    """The IP addresses to scan: one IPv4/IPv6 address, a network (CIDR) or a host name."""
-    text = text.strip()
-    if not text:
-        raise ValueError("No target given.")
-    if "/" in text:
-        try:
-            network = ipaddress.ip_network(text, strict=False)
-        except ValueError:
-            raise ValueError(f"{text!r} is not a valid network "
-                             "(example: 192.168.1.0/24).") from None
-        if network.num_addresses > max_hosts:
-            raise ValueError(f"{text} has {network.num_addresses:,} addresses; the limit is "
-                             f"{max_hosts:,} hosts (TOOLKIT_SCAN_MAX_HOSTS).")
-        return [str(ip) for ip in network.hosts()] or [str(network.network_address)]
-    literal = text[1:-1] if text.startswith("[") and text.endswith("]") else text
-    try:
-        return [str(ipaddress.ip_address(literal))]
-    except ValueError:
-        pass
-    try:
-        infos = socket.getaddrinfo(text, None, type=socket.SOCK_STREAM)
-    except (OSError, UnicodeError) as error:
-        raise ValueError(f"Could not resolve {text!r}: {error}") from None
-    return [infos[0][4][0]]
-
-
-def parse_port_range(start_text, end_text):
-    """``range`` of ports from the two answers; ValueError with a message otherwise."""
-    try:
-        start, end = int(start_text), int(end_text)
-    except ValueError:
-        raise ValueError("Ports must be whole numbers.") from None
-    if not (1 <= start <= 65535 and 1 <= end <= 65535):
-        raise ValueError("Ports must be between 1 and 65535.")
-    if start > end:
-        raise ValueError(f"The start port ({start}) is after the end port ({end}).")
-    return range(start, end + 1)
-
-
-def check_limits(host_count, probe_count, limits):
-    """A message when a scan is above the limits, else None."""
-    if host_count > limits.max_hosts:
-        return (f"{host_count:,} hosts is above the limit of {limits.max_hosts:,} "
-                "(TOOLKIT_SCAN_MAX_HOSTS).")
-    if probe_count > limits.max_probes:
-        return (f"{probe_count:,} host x port checks is above the limit of "
-                f"{limits.max_probes:,} (TOOLKIT_SCAN_MAX_PROBES). Scan fewer ports or hosts.")
-    return None
-
+# --- Authorization (S16) ----------------------------------------------------------------------
 
 AUTHORIZATION = ("\nOnly scan systems you own or have written permission to test. Scanning "
                  "other systems can be illegal.\nType 'yes' if you are authorised to scan "
@@ -446,15 +376,12 @@ NVD_INTERVAL = {False: 6.0, True: 0.6}
 ABUSEIPDB_URL = "https://api.abuseipdb.com/api/v2/check"
 OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
 DEFAULT_AI_MODEL = "deepseek/deepseek-chat:free"
-AI_MAX_CHARS = 2000
 INTEL_TIMEOUT = 15  # seconds per lookup: a slow service can't stop the scan
 
 PRODUCT_VERSION = re.compile(r"([A-Za-z][A-Za-z0-9\-]{1,30})[/_ ]v?(\d+(?:\.\d+)+)")
 REDIS_VERSION = re.compile(r"redis_version:(\d+(?:\.\d+)+)")
 NOT_PRODUCTS = {"http", "https", "ssh", "rtsp", "sip"}  # protocol names, not software
 CVE_ID = re.compile(r"^CVE-\d{4}-\d{4,}$")
-CVE_ANYWHERE = re.compile(r"CVE-\d{4}-\d+", re.IGNORECASE)
-HTML_TAG = re.compile(r"<[^<>]{0,200}>")
 METRIC_ORDER = ("cvssMetricV40", "cvssMetricV31", "cvssMetricV30", "cvssMetricV2")
 AI_PROMPT = (
     "In plain text (no Markdown, no HTML), in at most 8 short lines: what kinds of known "
@@ -514,14 +441,6 @@ def parse_nvd(data):
         found.append({"id": cve_id, "cvss": score, "cvss_version": version,
                       "severity": cvss_severity(score, version)})
     return sorted(found, key=lambda c: (-(c["cvss"] or 0), c["id"]))
-
-
-def untrusted_text(reply):
-    """An AI reply as inert plain text (S13): no escapes, control characters or HTML tags,
-    no CVE IDs (CVEs come only from NVD), length-capped."""
-    text = HTML_TAG.sub("", clean_text(reply if isinstance(reply, str) else ""))
-    text = CVE_ANYWHERE.sub("[CVE ID removed: see the NVD list]", text)
-    return clean_text(text, AI_MAX_CHARS).strip()
 
 
 def describe(error):
@@ -682,21 +601,6 @@ def print_abuse_report(data):
         if isinstance(value, list):
             value = ", ".join(map(str, value)) or "N/A"
         print(f"  {field}: {one_line(value, 200)}")
-
-
-def is_ip_literal(text):
-    try:
-        ipaddress.ip_address(text.strip().strip("[]"))
-    except ValueError:
-        return False
-    return True
-
-
-def is_public_ip(ip):
-    try:
-        return ipaddress.ip_address(ip).is_global
-    except ValueError:
-        return False
 
 
 # --- Output and export (B12, S14) -------------------------------------------------------------

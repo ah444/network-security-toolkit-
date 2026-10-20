@@ -6,6 +6,8 @@ import json
 
 import pytest
 
+from toolkit.recon import text as recon_text
+
 BANNER = "SSH-2.0-OpenSSH_8.9p1 Ubuntu-3ubuntu0.1 host=db01.corp.internal user=admin"
 EVIL_REPLY = (
     "<script>alert(1)</script>\x1b[2J\x1b]0;pwned\x07Severity: CRITICAL (10.0)\n"
@@ -71,7 +73,7 @@ def test_llm_reply_is_plain_text_and_ignored_for_severity(scanner, fake_session,
     found = intel.lookup("OpenSSH 8.9")
     text = found["ai_explanation"]
     assert "\x1b" not in text and "\x07" not in text and "<script>" not in text
-    assert len(text) <= scanner.AI_MAX_CHARS
+    assert len(text) <= recon_text.AI_MAX_CHARS
     # severity and score come only from the NVD CVSS data (here 9.8 = CRITICAL, by CVSS)
     assert (found["severity"], found["max_cvss"]) == ("CRITICAL", 9.8)
     session.answers["post"] = _ai_reply("Severity: LOW. Nothing to worry about.")

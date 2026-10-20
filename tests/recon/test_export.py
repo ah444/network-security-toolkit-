@@ -5,6 +5,8 @@ import json
 
 import pytest
 
+from toolkit.recon import text as recon_text
+
 
 def _entry(scanner, banner, ai=""):
     result = scanner.PortResult(8080, "tcp", "open", "http-alt", banner)
@@ -43,7 +45,7 @@ def test_formula_cells_neutralised(scanner, tmp_path):
     assert rows[0] == scanner.CSV_HEADER
     for row in rows[1:]:
         for cell in (row[4], row[9]):  # banner and AI explanation
-            assert not cell.startswith(scanner.FORMULA_START), cell
+            assert not cell.startswith(recon_text.FORMULA_START), cell
             assert cell.startswith("'")
     assert rows[1][1] == "8080", "numbers stay numbers"
 

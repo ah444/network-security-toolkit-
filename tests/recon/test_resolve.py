@@ -4,6 +4,8 @@ import socket
 
 import pytest
 
+from toolkit.recon import targets
+
 
 def _has_ipv6_loopback():
     try:
@@ -14,18 +16,18 @@ def _has_ipv6_loopback():
     return True
 
 
-def test_ipv6_target(scanner, monkeypatch):
-    assert scanner.parse_target("::1", 256) == ["::1"]
-    assert scanner.parse_target("[2001:DB8::1]", 256) == ["2001:db8::1"]
-    assert scanner.parse_target("2001:db8::/126", 256) == ["2001:db8::1", "2001:db8::2",
+def test_ipv6_target(monkeypatch):
+    assert targets.parse_target("::1", 256) == ["::1"]
+    assert targets.parse_target("[2001:DB8::1]", 256) == ["2001:db8::1"]
+    assert targets.parse_target("2001:db8::/126", 256) == ["2001:db8::1", "2001:db8::2",
                                                            "2001:db8::3"]
-    assert not scanner.is_public_ip("::1") and scanner.is_public_ip("2606:4700::1111")
+    assert not targets.is_public_ip("::1") and targets.is_public_ip("2606:4700::1111")
 
     def ipv6_only(host, port, *args, **kwargs):
         return [(socket.AF_INET6, socket.SOCK_STREAM, 6, "", ("2001:db8::5", 0, 0, 0))]
 
     monkeypatch.setattr(socket, "getaddrinfo", ipv6_only)
-    assert scanner.parse_target("ipv6-only.example", 256) == ["2001:db8::5"]
+    assert targets.parse_target("ipv6-only.example", 256) == ["2001:db8::5"]
 
 
 @pytest.mark.skipif(not _has_ipv6_loopback(), reason="no IPv6 loopback on this machine")

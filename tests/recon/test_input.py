@@ -4,15 +4,17 @@ import builtins
 
 import pytest
 
+from toolkit.recon import targets
+
 
 def test_empty_range_no_crash(scanner, monkeypatch, capsys):
-    assert list(scanner.parse_port_range("80", "80")) == [80]
-    assert list(scanner.parse_port_range(" 1", "3 ")) == [1, 2, 3]
+    assert list(targets.parse_port_range("80", "80")) == [80]
+    assert list(targets.parse_port_range(" 1", "3 ")) == [1, 2, 3]
     for start, end, words in (("100", "1", "after the end port"), ("0", "10", "between 1"),
                               ("1", "70000", "between 1"), ("a", "10", "whole numbers"),
                               ("", "", "whole numbers")):
         with pytest.raises(ValueError, match=words):
-            scanner.parse_port_range(start, end)
+            targets.parse_port_range(start, end)
     assert scanner.scan_ports("127.0.0.1", range(5, 5), ["tcp"]) == []
     scanner.ConsoleProgress().start(0)  # no division by zero (see also test_progress.py)
     remaining = iter(["127.0.0.1", "100", "1"])
@@ -21,12 +23,12 @@ def test_empty_range_no_crash(scanner, monkeypatch, capsys):
     assert "after the end port" in capsys.readouterr().out
 
 
-def test_bad_targets(scanner):
+def test_bad_targets():
     for text, words in (("", "No target"), ("10.0.0.0/33", "not a valid network"),
                         ("no-such-host.invalid", "Could not resolve")):
         with pytest.raises(ValueError, match=words):
-            scanner.parse_target(text, 256)
-    assert scanner.parse_target("10.0.0.7/32", 256) == ["10.0.0.7"]
+            targets.parse_target(text, 256)
+    assert targets.parse_target("10.0.0.7/32", 256) == ["10.0.0.7"]
 
 
 def test_protocol_asked_again(scanner, monkeypatch, capsys):

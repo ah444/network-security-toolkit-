@@ -7,6 +7,7 @@ import subprocess
 import pytest
 
 from toolkit.config import ScanConfig, scan_limits
+from toolkit.recon import targets
 
 
 def _answers(monkeypatch, answers):
@@ -55,15 +56,15 @@ def test_flag_skips_the_question(scanner, monkeypatch):
 def test_caps_enforced(scanner, monkeypatch, no_network, capsys):
     limits = ScanConfig()
     assert (limits.max_hosts, limits.max_probes) == (256, 65_536)
-    assert len(scanner.parse_target("192.168.1.0/24", limits.max_hosts)) == 254
+    assert len(targets.parse_target("192.168.1.0/24", limits.max_hosts)) == 254
     with pytest.raises(ValueError, match="TOOLKIT_SCAN_MAX_HOSTS"):
-        scanner.parse_target("10.0.0.0/16", limits.max_hosts)
+        targets.parse_target("10.0.0.0/16", limits.max_hosts)
     with pytest.raises(ValueError, match="TOOLKIT_SCAN_MAX_HOSTS"):
-        scanner.parse_target("2001:db8::/64", limits.max_hosts)  # never lists 2**64 hosts
-    assert scanner.check_limits(1, 65_535, limits) is None
-    assert "TOOLKIT_SCAN_MAX_PROBES" in scanner.check_limits(1, 2 * 65_535, limits)
-    assert "TOOLKIT_SCAN_MAX_PROBES" in scanner.check_limits(254, 254 * 1024, limits)
-    assert "TOOLKIT_SCAN_MAX_HOSTS" in scanner.check_limits(300, 300, limits)
+        targets.parse_target("2001:db8::/64", limits.max_hosts)  # never lists 2**64 hosts
+    assert targets.check_limits(1, 65_535, limits) is None
+    assert "TOOLKIT_SCAN_MAX_PROBES" in targets.check_limits(1, 2 * 65_535, limits)
+    assert "TOOLKIT_SCAN_MAX_PROBES" in targets.check_limits(254, 254 * 1024, limits)
+    assert "TOOLKIT_SCAN_MAX_HOSTS" in targets.check_limits(300, 300, limits)
     # refused before the authorization question and before any packet
     _answers(monkeypatch, ["192.168.1.0/24", "1", "1024", "tcp"])
     assert scanner.main([]) == 2
