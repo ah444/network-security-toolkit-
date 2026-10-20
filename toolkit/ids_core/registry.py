@@ -63,7 +63,7 @@ class ModelSpec:
     title: str
     description: str
     build: Callable[[BuildContext], Any]
-    scale: bool  # numeric features scaled (linear / distance models)
+    scale: bool  # numeric features: signed log + standard scaling (linear / distance models)
     encoding: str  # categorical features: "onehot" (linear / distance) | "ordinal" (trees)
     class_weight: str  # how "class_weight" is honoured: "param" | "sample_weight" | "none"
     default: bool = False

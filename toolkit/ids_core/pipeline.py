@@ -3,9 +3,12 @@
 One ``imblearn`` Pipeline per model, so every learned step sees training rows only and
 is saved together with the model:
 
-    prepare (inf -> missing, impute, scale numeric; encode categorical)
+    prepare (inf -> missing, impute, [signed log, standardise] numeric; encode categorical)
       -> select (optional) -> sample (optional, skipped at prediction) -> model
 
+Linear / distance models get ``sign(x) * log1p(|x|)`` then standard scaling: flow features
+are heavy-tailed (bytes/s up to 1e9), and after v4's RobustScaler logistic regression
+never converged on CIC (balanced accuracy 0.144 vs 0.691, see the 0.4c checklist).
 Encoding follows the model: one-hot for linear / distance models (no false ordering),
 ordinal for trees; unseen categories at prediction time never crash. Models are
 trained one after another, each with ``workers`` threads; native thread pools are
@@ -30,7 +33,7 @@ from sklearn.preprocessing import (
     LabelEncoder,
     OneHotEncoder,
     OrdinalEncoder,
-    RobustScaler,
+    StandardScaler,
 )
 from sklearn.utils.class_weight import compute_sample_weight
 from threadpoolctl import threadpool_limits
@@ -96,13 +99,20 @@ def _finite(values):
     return array
 
 
+def _signed_log(values):
+    """sign(x) * log1p(|x|): keeps the sign and order, squeezes heavy tails."""
+    array = np.asarray(values)
+    return np.sign(array) * np.log1p(np.abs(array))
+
+
 def _prepare(numeric: Sequence[str], categorical: Sequence[str], spec: registry.ModelSpec):
     parts = []
     if numeric:
         steps = [("finite", FunctionTransformer(_finite, feature_names_out="one-to-one")),
                  ("impute", SimpleImputer(strategy="median", keep_empty_features=True))]
         if spec.scale:
-            steps.append(("scale", RobustScaler()))
+            steps += [("log", FunctionTransformer(_signed_log, feature_names_out="one-to-one")),
+                      ("scale", StandardScaler())]
         parts.append(("numeric", SkPipeline(steps), list(numeric)))
     if categorical:
         if spec.encoding == "onehot":

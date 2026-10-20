@@ -137,6 +137,37 @@ def test_unseen_category_no_crash(frame):
         assert len(fitted.predict(test)) == 30
 
 
+SCALED = ("logistic_regression", "knn", "svm", "naive_bayes")
+
+
+@pytest.mark.parametrize("model", SCALED)
+def test_scaled_models_use_signed_log_then_standard_scaling(model):
+    """Heavy-tailed flow features (bytes/s up to 1e9) stayed huge after v4's RobustScaler,
+    and logistic regression never converged on CIC. Signed log + standard scaling bounds them."""
+    rng = np.random.default_rng(7)
+    rows = 400
+    label = rng.choice(["BENIGN", "DoS"], size=rows)
+    rate = np.where(label == "DoS", 1e9, 1e3) * rng.lognormal(0, 2, size=rows)
+    data = pd.DataFrame({"rate": rate, "delta": -rate, "proto": "tcp", "Label": label})
+    outcome = train_models(data, "Label", features=["rate", "delta", "proto"], models=(model,),
+                           workers=1)
+    prepare = outcome.models[model].pipeline.named_steps["prepare"]
+    numeric = prepare.named_transformers_["numeric"]
+    assert [name for name, _ in numeric.steps] == ["finite", "impute", "log", "scale"]
+    prepared = prepare.transform(data[["rate", "delta", "proto"]])
+    values = prepared[["numeric__rate", "numeric__delta"]].to_numpy()
+    assert np.abs(values).max() < 10, "a bounded scale, not millions"
+    assert np.allclose(values.mean(axis=0), 0, atol=1e-3)
+    assert (np.sign(values[:, 0]) == -np.sign(values[:, 1])).all(), "the sign is kept"
+
+
+@pytest.mark.parametrize("model", ["random_forest", "xgboost"])
+def test_tree_models_are_not_scaled(frame, model):
+    outcome = train_models(frame, "Label", features=FEATURES, models=(model,), workers=1)
+    numeric = outcome.models[model].pipeline.named_steps["prepare"].named_transformers_["numeric"]
+    assert [name for name, _ in numeric.steps] == ["finite", "impute"]
+
+
 @pytest.mark.parametrize("model", ["logistic_regression", "random_forest"])
 def test_prepared_features_are_float32(frame, model):
     """float64 copies of 2 M CIC rows don't fit in an 8 GB laptop's memory."""
