@@ -48,6 +48,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from toolkit.config import instance_dir, scan_limits  # noqa: E402
+from toolkit.logging_setup import add_secrets, setup_logging  # noqa: E402
 
 log = logging.getLogger(__name__)
 
@@ -847,6 +848,7 @@ def main(argv=None):
         print(error)
         return 2
     keys = load_api_keys()
+    add_secrets(*keys.values())  # keys from .env / api_keys.txt never reach the log
     start_time = time.time()
 
     target_text = input("Enter target IP (IPv4 or IPv6), network (e.g. 192.168.1.0/24) "
@@ -918,7 +920,6 @@ def utf8_output():
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.WARNING,
-                        format="%(asctime)s - %(levelname)s - %(message)s")
     utf8_output()
+    setup_logging("scanner")  # instance/logs/scanner.log; warnings also on the console
     sys.exit(main())

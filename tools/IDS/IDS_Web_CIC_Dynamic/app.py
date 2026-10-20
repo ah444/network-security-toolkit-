@@ -43,13 +43,14 @@ from toolkit.ids_core.preview import preview_balancing, recommend_features as sc
 from toolkit.ids_core.runs import DatasetRef, TrainSettings  # noqa: E402
 from toolkit.ids_core.runs import train as train_run  # noqa: E402
 from toolkit.ids_core.split import split_dataset  # noqa: E402
+from toolkit.logging_setup import setup_logging  # noqa: E402
 
 # ---------------------------
 # Logging setup
 # ---------------------------
+# Configured in run_server() (log file instance/logs/web.log), never on import.
 # Library warnings are deliberately NOT silenced (B19): they flag problems
 # such as a model saved with a different scikit-learn version.
-logging.basicConfig(level=logging.INFO)
 
 # ---------------------------
 # Flask app creation
@@ -851,6 +852,7 @@ def run_server():
       when other people can reach the machine: its debugger can run code.
     - TOOLKIT_PORT: port number (default 5000).
     """
+    setup_logging("web", console_level=logging.INFO)
     host = "127.0.0.1"
     port = int(os.environ.get("TOOLKIT_PORT", "5000"))
     print(f"IDS web app running at http://{host}:{port}/  (press Ctrl+C to stop)")

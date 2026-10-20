@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -73,6 +74,23 @@ def max_workers(environ: Mapping[str, str] | None = None) -> int:
     if workers < 1:
         raise ValueError(f"TOOLKIT_MAX_WORKERS must be a whole number >= 1, not {raw!r}")
     return min(workers, cores)
+
+
+LOG_LEVELS = ("DEBUG", "INFO", "WARNING", "ERROR")
+
+
+def log_level(environ: Mapping[str, str] | None = None) -> int:
+    """Level of the log files: ``TOOLKIT_LOG_LEVEL`` (DEBUG, INFO, WARNING, ERROR), else INFO.
+
+    Any other value is an error, so a typo can't silently turn logging off.
+    """
+    environ = os.environ if environ is None else environ
+    raw = environ.get("TOOLKIT_LOG_LEVEL", "").strip()
+    if not raw:
+        return logging.INFO
+    if raw.upper() not in LOG_LEVELS:
+        raise ValueError(f"TOOLKIT_LOG_LEVEL must be one of {', '.join(LOG_LEVELS)}, not {raw!r}")
+    return logging.getLevelName(raw.upper())
 
 
 @dataclass(frozen=True)

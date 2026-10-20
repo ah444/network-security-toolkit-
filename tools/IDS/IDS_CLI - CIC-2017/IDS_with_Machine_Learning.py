@@ -32,6 +32,7 @@ from toolkit import bundle_files  # noqa: E402
 from toolkit.ids_core.bundle import BundleError, BundleVersionWarning  # noqa: E402
 from toolkit.ids_core.datasets import DatasetError, load_dataset  # noqa: E402
 from toolkit.ids_core.registry import MODELS  # noqa: E402
+from toolkit.logging_setup import setup_logging  # noqa: E402
 
 LARGE_BUNDLE = 500 * 2**20  # bytes: say that loading takes a while
 # Normal-traffic labels of the supported datasets (real labels): CIC-IDS2017 "BENIGN",
@@ -405,4 +406,5 @@ def utf8_output():
 
 if __name__ == "__main__":
     utf8_output()
+    setup_logging("ids_cli")  # instance/logs/ids_cli.log; warnings also on the console
     sys.exit(main())
