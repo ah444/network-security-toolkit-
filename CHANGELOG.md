@@ -4,6 +4,63 @@ All notable changes to this project. Versions follow the roadmap in
 [docs/IMPROVEMENT_PLAN.md](docs/IMPROVEMENT_PLAN.md); day-to-day progress is in
 [docs/V5.0_CHECKLIST.md](docs/V5.0_CHECKLIST.md).
 
+## [5.0-rc1] — 2026-10-20
+
+Third checkpoint of v5.0: **the web trainer now runs on the leakage-free ML core**, and
+trained models can be exported and loaded again as signed bundles (steps 0.4e–0.4g).
+Web trainer results are no longer the optimistic v4 ones. The CLI still uses the v4 model
+until 5.0-rc2 (step 0.5). Project version: `5.0.0rc1`.
+
+**Test result:** 353 automated tests passed (`python -m pytest`), ruff clean, `pip-audit`
+clean (installed environment and `requirements.lock`). End-user check in the browser at
+phone width on real CIC-IDS2017 and NSL-KDD samples, from upload through export, a cleared
+workspace, loading the bundle and predicting, plus refused fake and tampered bundles
+([record](docs/release/5.0-rc1-web-trainer.md)).
+Windows 10 Enterprise LTSC 2021, Python 3.14.3, scikit-learn 1.8.0.
+
+### Added
+- **TrainingRun** (`runs.py`, `run_files.py`): `train(...)` returns one record of how a
+  model was made (dataset SHA-256, profile, split and reason codes, leakage decisions,
+  features, balancing, model parameters, the evaluation, library versions);
+  `rerun(...)` repeats it on the same data and `compare_metrics(...)` checks the result
+  (exact with one worker). Records go to `instance/runs/` and are never overwritten (D21).
+- **Signed bundles** (`bundle.py`, `bundle_files.py`): the fitted models of a run plus a
+  manifest embedding its TrainingRun, signed with HMAC-SHA256. Everything is checked
+  before anything is deserialized: format, signature (this install's key in
+  `instance/signing.key`) or a pinned SHA-256, and library versions (estimator libraries:
+  minor difference refused, patch warned; numpy/pandas: major refused) (D11, S1, S17, B18).
+- **Train-only previews** (`preview.py`): feature scores after the leakage guard and the
+  balancing preview, both on the training split.
+
+### Changed
+- **Web trainer on the v5 core** (L2, L3, L8, B2): the v5 loader reads uploads (dataset
+  recognised, label preselected, an NSL-KDD train file plus a `*test*` file uses the
+  official split); training calls `train(...)`; class analysis, feature recommendation and
+  "Apply SMOTE" (now *Preview on training split*) look at the training split only and
+  change nothing; results are a leaderboard of CV macro-F1 (mean ± std) with the test
+  split scored once, in place of the v4 validation split; prediction goes through the
+  saved pipeline. The v4 preprocessing code is deleted (`app.py` 1,857 → 866 lines).
+- **Export / Load model are back** (S1, S4): export saves a signed `.bundle` and its run
+  record under `instance/` and offers a download; load accepts only bundles signed by this
+  install. `/predict_loaded` lost its stray slash and the dead `loaded_model_config` JS is
+  gone (B3, B4).
+- Checkbox lists replace the Ctrl+Click multi-selects, so the trainer works on touch
+  screens (U5); split warnings are shown in plain language and long words wrap at phone
+  width; uploaded files keep their own names in messages and records.
+
+### Removed
+- `dask` and the packages only it needed (`pyarrow`, `fsspec`, `partd`, `locket`,
+  `toolz`, `PyYAML`): nothing uses them since the v5 loader replaced the v4 upload code. A
+  test now checks that every runtime requirement is imported somewhere.
+
+### Known limitations
+See **Known limitations** in the [README](README.md). New in this release:
+- Bundles load only on the install that made them; back up `instance/`. Cross-device
+  import comes in v5.1.
+- Training runs inside the request, with no progress bar or cancel button yet (v5.1).
+- `scripts/baseline_v4.py` replays the v4 click sequences; it only works on the v4 app
+  (any commit before `1cc1068`, step 0.4g), as recorded in `docs/baseline/`.
+
 ## [5.0-beta] — 2026-10-20
 
 Second checkpoint of v5.0: the **leakage-free ML core** (steps 0.4a–0.4d) is finished

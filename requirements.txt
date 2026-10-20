@@ -10,8 +10,6 @@ waitress==3.0.2
 # Data processing
 pandas==2.3.3
 numpy==2.3.5
-dask[dataframe]==2026.1.2
-pyarrow==23.0.1
 
 # Machine learning
 scikit-learn==1.8.0

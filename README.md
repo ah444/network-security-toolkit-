@@ -26,7 +26,7 @@ This project is being reworked into **v5.0 ("correct & safe")**; see [docs/IMPRO
 - The port scanner logs an `ERROR` line when the optional `api_keys.txt` is missing; it still works, just without AbuseIPDB and AI lookups.
 - The CLI's v4 model files were saved with scikit-learn 1.6.1; this setup has 1.8.0, so loading them prints version warnings (shown on purpose, not hidden). Predictions also print a harmless "X does not have valid feature names" warning. Both go away with the v5 model.
 - Starting the web trainer from the launcher menu prints its address (`http://127.0.0.1:5000/`) but doesn't open a browser; stop it with Ctrl+C to get back to the menu.
-- Tested on Windows with Python 3.14 (349 automated tests, a scripted walk-through of every menu path, `scripts/menu_walkthrough.py`, and a browser session through the whole web trainer on real CIC-IDS2017 and NSL-KDD data, see `docs/release/`). The code is being made portable to Linux and macOS, but it is not tested on real Linux/macOS machines.
+- Tested on Windows with Python 3.14 (353 automated tests, a scripted walk-through of every menu path, `scripts/menu_walkthrough.py`, and a browser session through the whole web trainer on real CIC-IDS2017 and NSL-KDD data, see `docs/release/`). The code is being made portable to Linux and macOS, but it is not tested on real Linux/macOS machines.
 - Only scan systems you are authorised to scan.
 
 ---
@@ -104,7 +104,7 @@ python -m pip install -r requirements.txt
 
 ### Dependencies
 Versions are **pinned** so results are reproducible and the bundled models load:
-- `requirements.txt`: runtime libraries (Flask, pandas, numpy, dask, scikit-learn, imbalanced-learn, XGBoost, LightGBM, requests)
+- `requirements.txt`: runtime libraries (Flask, waitress, pandas, numpy, scikit-learn, imbalanced-learn, XGBoost, LightGBM, requests)
 - `requirements-dev.txt`: adds the development tools (pytest, ruff, pip-audit)
 - `requirements.lock`: the complete environment, for an exact rebuild (`python -m pip install -r requirements.lock`)
 
