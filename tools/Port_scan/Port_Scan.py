@@ -23,13 +23,10 @@ Results are saved as UTF-8 in instance/scans/, never overwriting a file (B12, S1
 from __future__ import annotations
 
 import argparse
-import csv
-import json
 import logging
 import sys
 import threading
 import time
-from datetime import datetime, timezone
 from pathlib import Path
 
 
@@ -37,8 +34,9 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from toolkit.config import instance_dir, scan_limits  # noqa: E402
+from toolkit.config import scan_limits  # noqa: E402
 from toolkit.logging_setup import add_secrets, setup_logging  # noqa: E402
+from toolkit.recon.export import EXPORT_FORMATS, export_results, make_entry  # noqa: E402
 from toolkit.recon.intel import Intel  # noqa: E402
 from toolkit.recon.intel.keys import ai_model, load_api_keys  # noqa: E402
 from toolkit.recon.os_detect import guess_os, ping_host  # noqa: E402
@@ -51,7 +49,7 @@ from toolkit.recon.targets import (  # noqa: E402
     parse_port_range,
     parse_target,
 )
-from toolkit.recon.text import clean_text, csv_cell, one_line  # noqa: E402
+from toolkit.recon.text import one_line  # noqa: E402
 
 log = logging.getLogger(__name__)
 
@@ -131,85 +129,7 @@ def print_abuse_report(data):
         print(f"  {field}: {one_line(value, 200)}")
 
 
-# --- Output and export (B12, S14) -------------------------------------------------------------
-
-EXPORT_FORMATS = ("txt", "json", "csv")
-CSV_HEADER = ["Target", "Port", "Protocol", "Service", "Banner", "Software", "Severity (CVSS)",
-              "Max CVSS", "CVEs (NVD)", "AI explanation (may be wrong)", "Lookup errors"]
-
-
-def make_entry(target, result, software, intel):
-    """One open port for the report; every text from the network is cleaned here."""
-    return {
-        "target": target,
-        "port": result.port,
-        "protocol": result.protocol,
-        "service": one_line(result.service, 40),
-        "banner": clean_text(result.banner, 500),
-        "software": software or "",
-        "cves": intel["cves"],
-        "max_cvss": intel["max_cvss"],
-        "severity": intel["severity"],
-        "ai_explanation": intel["ai_explanation"],
-        "lookup_errors": intel["errors"],
-    }
-
-
-def _cve_list(entry):
-    return ", ".join(f"{c['id']} ({c['cvss'] if c['cvss'] is not None else '?'})"
-                     for c in entry["cves"])
-
-
-def _write_json(entries, handle):
-    json.dump(entries, handle, ensure_ascii=False, indent=2)
-
-
-def _write_csv(entries, handle):
-    writer = csv.writer(handle)
-    writer.writerow(CSV_HEADER)
-    for e in entries:
-        writer.writerow([csv_cell(v) for v in (
-            e["target"], e["port"], e["protocol"], e["service"], e["banner"], e["software"],
-            e["severity"], e["max_cvss"], _cve_list(e), e["ai_explanation"],
-            "; ".join(e["lookup_errors"]))])
-
-
-def _write_txt(entries, handle):
-    for e in entries:
-        handle.write(f"Target: {e['target']}\nPort: {e['port']}/{e['protocol']}\n"
-                     f"Service: {e['service']}\nBanner: {e['banner']}\n"
-                     f"Software: {e['software']}\nSeverity (CVSS): {e['severity']}\n"
-                     f"CVEs (NVD): {_cve_list(e) or 'none'}\n"
-                     f"AI explanation (may be wrong): {e['ai_explanation']}\n"
-                     f"Lookup errors: {'; '.join(e['lookup_errors']) or 'none'}\n"
-                     + "-" * 40 + "\n")
-
-
-WRITERS = {"json": _write_json, "csv": _write_csv, "txt": _write_txt}
-
-
-def scans_dir():
-    return instance_dir() / "scans"
-
-
-def export_results(entries, fmt, directory=None):
-    """Write the report as UTF-8 to a new file in instance/scans/ (never overwrites)."""
-    if fmt not in WRITERS:
-        raise ValueError(f"Unknown format {fmt!r}; use one of {', '.join(EXPORT_FORMATS)}.")
-    directory = Path(directory) if directory else scans_dir()
-    directory.mkdir(parents=True, exist_ok=True)
-    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    for number in range(1000):
-        path = directory / f"scan-{stamp}{f'-{number}' if number else ''}.{fmt}"
-        try:
-            handle = path.open("x", encoding="utf-8", newline="" if fmt == "csv" else None)
-        except FileExistsError:
-            continue
-        with handle:
-            WRITERS[fmt](entries, handle)
-        return path
-    raise FileExistsError(f"Too many reports named scan-{stamp} in {directory}")
-
+# --- Printing (S14) ----------------------------------------------------------------------------
 
 def print_table(results, title):
     print(f"\n{title}")
