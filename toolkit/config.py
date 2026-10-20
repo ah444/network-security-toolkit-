@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 from collections.abc import Mapping
 from dataclasses import dataclass
+from pathlib import Path
 
 
 @dataclass(frozen=True)
@@ -41,6 +42,17 @@ class SplitConfig:
     # Official split (published train + test files): False keeps both files as published,
     # so scores stay comparable; True ("strict") removes copies and test rows also in train.
     official_dedupe: bool = False
+
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+
+
+def instance_dir(environ: Mapping[str, str] | None = None) -> Path:
+    """Local, gitignored data of this install (runs, signing key): ``TOOLKIT_INSTANCE_DIR``,
+    else ``instance/`` in the project folder."""
+    environ = os.environ if environ is None else environ
+    value = environ.get("TOOLKIT_INSTANCE_DIR", "").strip()
+    return Path(value) if value else REPO_ROOT / "instance"
 
 
 def max_workers(environ: Mapping[str, str] | None = None) -> int:
@@ -82,3 +94,6 @@ class EvaluationConfig:
     # 3 folds of RF on 2 M CIC rows would take about half an hour on a laptop.
     cv_max_rows: int = 200_000
     random_state: int = 42
+    # Re-running a TrainingRun: metrics must match exactly with one worker; with more,
+    # thread scheduling in some libraries (e.g. LightGBM) may change the last digits.
+    parallel_metric_tolerance: float = 0.005
