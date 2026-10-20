@@ -23,6 +23,18 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 TRANSCRIPT = sys.argv[1] if len(sys.argv) > 1 else "menu-walkthrough.md"
 PORT = 5055
+
+# The CLI uses this install's exports (nothing is shipped): pick the smallest one with
+# real examples (3+ classes), so the walk-through never waits for a multi-GB model.
+sys.path.insert(0, str(ROOT))
+from toolkit.bundle_files import list_bundles  # noqa: E402
+
+EXPORTS = list_bundles()
+USABLE = [i for i, e in enumerate(EXPORTS) if len(e.manifest.get("examples", [])) >= 3]
+if not USABLE:
+    sys.exit("No usable export: train a model with 3+ classes in the web trainer and click "
+             "Export first.")
+EXPORT_CHOICE = str(min(USABLE, key=lambda i: EXPORTS[i].size) + 1)
 env = dict(os.environ, PYTHONUNBUFFERED="1", PYTHONIOENCODING="utf-8", TOOLKIT_PORT=str(PORT))
 proc = subprocess.Popen([sys.executable, "main.py"], cwd=ROOT, env=env, stdin=subprocess.PIPE,
                         stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
@@ -108,16 +120,20 @@ def _listening_pids(port):
 
 
 def cli_session(label, full):
-    answer("press Enter for random_forest): ", "", timeout=180)
+    answer("Choose an export (", EXPORT_CHOICE)
+    answer("(or press Enter for ", "", timeout=180)
     if full:
-        for option, extra in (("2", ["b"]), ("2", ["c"]), ("3", ["2"]), ("2", ["d"])):
+        # two real examples from the model's test split, switch model, one more example
+        for option, prompt, value in (("2", "Choose example (", "1"), ("2", "Choose example (", "2"),
+                                      ("3", "(or press Enter for ", "2"),
+                                      ("2", "Choose example (", "3")):
             answer("Select option: ", option)
-            prompt = "(a/b/c/d): " if option == "2" else "Enter number: "
-            answer(prompt, extra[0], timeout=180)
-        answer("Select option: ", "1")
-        for i in range(1, 9):
-            answer(f"  {i}. ", "0")
-    answer("Select option: ", "4")
+            answer(prompt, value, timeout=180)
+        answer("Select option: ", "1")  # manual input, prefilled from example 1
+        answer("Start from example (", "")
+        while expect("]: ", "PREDICTION RESULT") == 0:
+            send("")
+    answer("Select option: ", "5")
     expect("Goodbye!")
     checks.append(f"{label}: CLI IDS ran and exited normally")
 

@@ -259,3 +259,19 @@ def test_missing_key_clear_message(monkeypatch, tmp_path, run, no_deserialize):
     with pytest.raises(BundleError) as foreign:
         bundle_files.load_bundle(path)
     assert _code(foreign) == "BAD_SIGNATURE"
+
+
+# --- examples for the CLI (0.5, D5) ------------------------------------------------------
+
+def test_examples_are_real_test_split_rows(run, data):
+    examples = unpack(data, key=KEY).manifest["examples"]
+    test = run.split.test
+    assert {e["label"] for e in examples} == set(test["Label"].astype(str))  # one per class
+    features = list(run.evaluation.training.features)
+    for example in examples:
+        assert list(example["values"]) == features
+        matches = test[(test["Label"] == example["label"])
+                       & (test["a"] == example["values"]["a"])
+                       & (test["b"] == example["values"]["b"])]
+        assert len(matches) >= 1, "examples come from the test split, unchanged"
+    json.dumps(examples, allow_nan=False)

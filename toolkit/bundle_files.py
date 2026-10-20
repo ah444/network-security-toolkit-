@@ -4,7 +4,8 @@ The key is created once, on the first save, in ``instance/signing.key`` (gitigno
 ``TOOLKIT_INSTANCE_DIR`` moves ``instance/``). Loading never creates a key. If the key is
 lost, the bundles saved on this install can no longer be checked, so they are not loaded:
 back up ``instance/``, or retrain from the run's TrainingRun record (``instance/runs/``).
-Bundles live in ``instance/bundles/<run id>.bundle`` and are never overwritten.
+Bundles live in ``instance/bundles/<run id>.bundle`` and are never overwritten; the CLI
+lists and loads them from there (no model is shipped with the project).
 """
 
 from __future__ import annotations
@@ -18,7 +19,17 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from .config import instance_dir
-from .ids_core.bundle import KEY_BYTES, Bundle, BundleError, pack, peek_manifest, unpack
+from .ids_core.bundle import (
+    HEADER_BYTES,
+    KEY_BYTES,
+    Bundle,
+    BundleError,
+    manifest_length,
+    pack,
+    parse_manifest,
+    peek_manifest,
+    unpack,
+)
 from .ids_core.runs import TrainingRun
 
 
@@ -27,6 +38,13 @@ class SavedBundle:
     path: Path
     sha256: str
     run: TrainingRun  # the run with ``bundle_sha256`` set; the caller saves its record
+
+
+@dataclass(frozen=True)
+class BundleInfo:
+    path: Path
+    size: int  # bytes
+    manifest: dict  # read without checking the signature: for lists and messages only
 
 
 def key_path(environ=None) -> Path:
@@ -77,6 +95,30 @@ def save_bundle(run: TrainingRun, directory: str | Path | None = None, *,
         handle.write(data)
     sha256 = hashlib.sha256(data).hexdigest()
     return SavedBundle(path, sha256, dataclasses.replace(run, bundle_sha256=sha256))
+
+
+def read_manifest_header(path: str | Path) -> dict | None:
+    """A bundle file's manifest, reading only the start of the file (never its models, so
+    listing multi-GB bundles is instant). Unchecked: None if it isn't a bundle."""
+    try:
+        with Path(path).open("rb") as handle:
+            length = manifest_length(handle.read(HEADER_BYTES))
+            return None if length is None else parse_manifest(handle.read(length))
+    except OSError:
+        return None
+
+
+def list_bundles(directory: str | Path | None = None) -> list[BundleInfo]:
+    """The bundles in ``instance/bundles`` (this install's exports), newest first."""
+    directory = Path(directory) if directory is not None else bundles_dir()
+    found = []
+    for path in directory.glob("*.bundle") if directory.is_dir() else ():
+        manifest = read_manifest_header(path)
+        if manifest is not None:
+            stat = path.stat()
+            found.append((str(manifest.get("created_at", "")), stat.st_mtime,
+                          BundleInfo(path, stat.st_size, manifest)))
+    return [info for *_, info in sorted(found, key=lambda item: item[:2], reverse=True)]
 
 
 def load_bundle(path: str | Path, *, key_file: str | Path | None = None,

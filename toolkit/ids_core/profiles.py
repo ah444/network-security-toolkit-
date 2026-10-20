@@ -10,8 +10,8 @@ used as features (label-derived, IDs, time), and which split strategy fits
 (used from step 0.4b). Warnings are reason codes, not free text.
 
 Column names below are copied from real files only (the local CIC-IDS2017 and
-NSL-KDD copies, and the v4 model's ``config.json`` for the "improved" CIC
-version). Schemas that aren't available locally (UNSW-NB15, the full improved
+NSL-KDD copies, and the v4 model's feature list, kept in
+``docs/baseline/cli_v4.json``, for the "improved" CIC version). Schemas that aren't available locally (UNSW-NB15, the full improved
 CIC header) are not guessed; see ``docs/datasets.md``.
 """
 
@@ -113,8 +113,8 @@ CIC_ORIGINAL_COLUMNS = (
     "Label",
 )
 
-# Names known from the "improved" re-labelled version: the v4 model's config.json
-# (trained on it). Only a partial view of that header.
+# Names known from the "improved" re-labelled version: the v4 model's features (trained
+# on it; recorded in docs/baseline/cli_v4.json). Only a partial view of that header.
 CIC_IMPROVED_KNOWN_COLUMNS = (
     "Attempted Category", "Bwd Segment Size Avg", "Bwd Packet Length Mean",
     "Bwd Packet Length Std", "Bwd Packet Length Max", "Subflow Bwd Bytes", "Packet Length Std",

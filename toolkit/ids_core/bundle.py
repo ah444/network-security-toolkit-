@@ -28,6 +28,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 import joblib
+import numpy as np
 
 from .pipeline import FittedModel
 from .registry import MODELS
@@ -39,6 +40,7 @@ FORMAT_VERSION = 1
 KEY_BYTES = 32
 _TAG_BYTES = hashlib.sha256().digest_size
 _LENGTH_BYTES = 8
+HEADER_BYTES = len(MAGIC) + _LENGTH_BYTES  # what precedes the manifest
 
 # Version policy [B18], checked before deserializing:
 #  estimator libraries the models use: major/minor differ → refuse, patch → warn
@@ -126,12 +128,34 @@ def pack(run: TrainingRun, key: bytes) -> bytes:
         "versions": installed_versions(),
         "payload_sha256": hashlib.sha256(payload).hexdigest(),
         "payload_bytes": len(payload),
+        "examples": examples(run),
         "run": run.to_dict(),
     }
     body = json.dumps(manifest, ensure_ascii=False, allow_nan=False).encode("utf-8")
     unsigned = b"".join([MAGIC, len(body).to_bytes(_LENGTH_BYTES, "big"), body,
                          len(payload).to_bytes(_LENGTH_BYTES, "big"), payload])
     return unsigned + hmac.new(key, unsigned, hashlib.sha256).digest()
+
+
+def examples(run: TrainingRun) -> list[dict[str, Any]]:
+    """One real row per class from the run's **test split** (complete, finite values), for
+    trying a model out (the CLI's "test with a real example"). Never training rows."""
+    label = run.settings.label or (run.profile.label_column if run.profile else None)
+    test, features = run.split.test, list(run.evaluation.training.features)
+    if not label or label not in test.columns:
+        return []
+    values = test[features]
+    numeric = [c for c in features if values[c].dtype.kind in "iufb"]
+    usable = values.notna().all(axis=1)
+    if numeric:
+        usable &= np.isfinite(values[numeric].to_numpy(dtype=float)).all(axis=1)
+    labels = test[label].astype(str)
+    found = []
+    for cls in sorted(labels[usable].unique()):
+        row = values[usable & (labels == cls)].iloc[0]
+        found.append({"label": cls, "values": {c: (row[c].item() if hasattr(row[c], "item")
+                                                    else str(row[c])) for c in features}})
+    return found
 
 
 # --- unpack -----------------------------------------------------------------------------
@@ -180,6 +204,22 @@ def peek_manifest(data: bytes) -> dict[str, Any] | None:
     """The manifest **without** checking the signature, for messages only (never trust it)."""
     try:
         return _manifest(_layout(data)[0])
+    except BundleError:
+        return None
+
+
+def manifest_length(head: bytes) -> int | None:
+    """From a file's first HEADER_BYTES: how many manifest bytes follow (None: no bundle).
+    With ``parse_manifest`` this lists bundles without reading their models."""
+    if len(head) < HEADER_BYTES or not head.startswith(MAGIC):
+        return None
+    return int.from_bytes(head[len(MAGIC):HEADER_BYTES], "big")
+
+
+def parse_manifest(body: bytes) -> dict[str, Any] | None:
+    """The manifest JSON that follows the header, unchecked like ``peek_manifest``."""
+    try:
+        return _manifest(body)
     except BundleError:
         return None
 

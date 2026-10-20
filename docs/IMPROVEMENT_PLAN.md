@@ -398,7 +398,7 @@ The user can **override** a block or warning via an allowlist, and every overrid
 | Case | How it is trusted |
 |---|---|
 | Bundle made on this machine | HMAC-SHA256 with the per-install key in `instance/` (never in git) |
-| Model shipped with the project (CLI default) | Can't use a per-install key → **SHA-256 hash pinned** in the repo manifest, checked before loading |
+| Model shipped with the project (CLI default) | Can't use a per-install key → **SHA-256 hash pinned** in the repo manifest, checked before loading. *Not used since 0.5: no model is shipped (D12 revision); the library keeps the option* |
 | Anything else (unsigned, tampered, wrong hash, made on another device) | Rejected with a clear message; never loaded |
 
 **v5.0 policy (narrow):** only the two trusted sources above are loaded, nothing else. There is deliberately **no "trust this file" button**: confirming a hash only proves you picked that exact file, not that the pickle inside is safe.
@@ -429,7 +429,7 @@ Threat model note: this protects against files from **other people** (uploads, d
 | **numpy**: major (1.x ↔ 2.x) | **Refuse** (pickle layout changed: `numpy._core` vs `numpy.core`) |
 
 **v4 interim check (0.3):** the v4 pickles have no manifest and `config.json` has no version field. The versions were read from inside the pickles without running them (sklearn 1.6.1, numpy 2.x), so 0.3 writes them into a small pinned manifest next to the files (with their SHA-256). The CLI compares those against the installed versions before loading v4 and warns loudly (v4 is being replaced anyway). Removing the global `filterwarnings("ignore")` (B19) is a prerequisite: today it hides exactly the warning this policy relies on.
-The shipped default bundle is trained with the versions pinned in the lock file, so it always matches a correct install.
+No bundle is shipped (D12 revision, 0.5): every bundle is made on the install that loads it, so versions only differ after a library upgrade.
 
 **D12. CLI model** (v4 has the label leak `Attempted Category`).
 | Option | Pros | Cons |
@@ -444,6 +444,8 @@ The shipped default bundle is trained with the versions pinned in the lock file,
 4. Export the bundle and pin its hash as the CLI default.
 5. Delete the v4 `.pkl` files **and the v4 `config.json`** (it still lists `Attempted Category`, so stale metadata can't be read by mistake), and update `models/README.md` with the real metrics.
 6. Commit the default bundle's **TrainingRun JSON** next to it in the repo (`default.run.json`). `instance/runs/` is gitignored, and without this the shipped model's provenance would exist only on your machine.
+
+**Revised in 0.5 (your decision, 2026-10-20): no model is shipped; steps 4 and 6 are dropped.** A Random Forest trained on the full CIC file exports to about 2 GB, far over GitHub's 100 MB file limit, and a size cap would decide which models are allowed. The CLI lists the bundles exported on this install (newest first, reading only each manifest header) and loads the one you pick; `--list`, and `--csv` / `--json` / `--info` use the newest unless `--bundle` is given. Each bundle embeds its TrainingRun, so provenance travels with the model. Cost: a fresh install has no CLI model until one is trained and exported in the web trainer.
 
 **Dataset note:** the CSV in `uploads/` only covers BENIGN vs DDoS, so a model trained on it detects DDoS only. For the 16-class CLI model you need the improved CIC-IDS2017 files (Kaggle). The web trainer must handle large uploads (D16 chunked loading). Optional later: `toolkit train --from-run run.json` re-runs a saved TrainingRun headlessly through the **same** pipeline code, which keeps option B's benefit without a second code path.
 
@@ -676,7 +678,7 @@ Also: `pathlib`, UTF-8 everywhere, per-OS ping flags, no spaces in folder names,
 | `app.py` (1,724 lines) | `web/__init__.py`, `web/routes/{datasets,training,models,predict,pages}.py`, `web/jobs.py`, `web/workspace.py`, `web/security.py`, `services/*`, `ids_core/*` (incl. `recommend_balancing_method` → `ids_core/balancing.py`) |
 | `main.js` | `static/js/{api,dom,upload,explore,train,evaluate,predict,charts}.js` |
 | `style.css` + `style2.css` | `static/css/app.css` |
-| `models/*.pkl` (v4, leaky) | Deleted; replaced by a bundle trained in the web trainer, `ids_cli/models/default.bundle` + pinned SHA-256 |
+| `models/*.pkl` (v4, leaky) | Deleted; the CLI uses bundles exported from the web trainer on the same install (nothing shipped, D12 revision) |
 
 ---
 
@@ -707,9 +709,9 @@ The target folder layout (§2) is where we end up, not where we start. No mass f
 | 0.4e TrainingRun | Run record schema (`schema_version`, contains `EvaluationResult`), returned by `train(...)`; written to `instance/runs/` by the caller | D21 |
 | 0.4f Bundle **library** | Signed bundle + manifest embedding the TrainingRun; local-key / pinned-hash loader; version-mismatch policy. **Library + its own tests only: no web route uses it yet**, so the app keeps working exactly as in 0.4e | D11, S1, S17, B18 |
 | 0.4g Web integration | The web trainer and predict routes switch to 0.4a–f; `/apply_smote` becomes a train-only preview; recommender uses train data only; old preprocessing code deleted; **then** web "Load model" and export are re-enabled (signed bundles only). *(Ordering fix: re-enabling loading before the routes use the new pipeline would let a new bundle be served through old preprocessing code)* | L2, D9, B2, B3, B4 |
-| 0.5 New CLI model | CLI reads any bundle; train the default model in the web trainer, export, pin hash, delete v4 pickles | L1, D5, D12, B14 |
+| 0.5 New CLI model | CLI reads any bundle and lets you choose among this install's exports (no shipped model, D12 revision); delete v4 pickles | L1, D5, D12, B14 |
 | 0.5 **dependency** | **Gate:** 0.5 is not complete until the intended training dataset (improved CIC-IDS2017 for the multi-class model) is **acquired, SHA-256 hashed, profiled (0.4a), split-validated (0.4b) and documented** (source, licence, version, file list, hashes) in `docs/datasets.md`. Start acquiring it during 0.1 so it never blocks the end. **Decision at `5.0-beta` exit:** if CIC isn't downloaded, hashed and passing profile detection by then, commit to the **NSL-KDD fallback (D12)** with an honest note, so 0.5 can start during rc1; the CIC model moves to a later release | — |
-| 0.5b Dataset licensing | `docs/datasets.md` records, **per dataset** (CIC-IDS2017, NSL-KDD, UNSW-NB15, any Kaggle derivative): source URL, licence/terms of use, citation requirement, and whether redistributing the raw data **and derived models** is allowed. Datasets are never committed; shipped bundles follow these terms | D20 |
+| 0.5b Dataset licensing | `docs/datasets.md` records, **per dataset** (CIC-IDS2017, NSL-KDD, UNSW-NB15, any Kaggle derivative): source URL, licence/terms of use, citation requirement, and whether redistributing the raw data **and derived models** is allowed. Datasets are never committed; no derived model is shipped (0.5), and if that changes, it follows these terms | D20 |
 | 0.6 Scanner correctness | Socket handling, no double connect, TTL ranges, ping per OS, UDP open\|filtered, TLS banners, empty-range guards, UTF-8 sanitised export, NVD instead of MITRE, LLM consent + redaction, **LLM output treated as untrusted (severity from CVSS only)**, env-based keys, **authorization confirmation + host/port caps**. **R3 disposition:** intel lookups stay one-at-a-time in v5.0 (parallel lookups are v5.1 step 1.4). Every lookup gets a timeout so a scan always finishes; listed under Known limitations | R1, R2, B6–B13, S12–S16 |
 | 0.7 Visible quick fixes | CSS white-on-white + unclosed dark-mode block (with **before/after screenshots** of every section), system font stack instead of `Inter`, viewport meta, **contrast ≥ 4.5:1, `lang`, `<label for>`, visible focus outlines**; `main.py` "n" exit bug + recursion | U1, U2, U3 (font), U4, B15, R8 |
 | 0.8 Minimal isolation | Workspace ID per browser session replaces `data_store` / `model_config` / `loaded_model_config` globals (unconditional; full TTL workspace stays in v5.1) + **"Clear workspace" button (`DELETE /workspace`)** + one-training-at-a-time `409` per workspace (tested with a blocking hook, D8) + **session cookie hygiene** (`HttpOnly`, `SameSite=Strict`, `Secure` via `TOOLKIT_HTTPS`, D23). *(Ordering fix: the cookie only exists once workspaces exist, so cookie hygiene moved here from 0.3)* | S7 (minimal), S10 (cookies), R4 (partial), D8, D23 |

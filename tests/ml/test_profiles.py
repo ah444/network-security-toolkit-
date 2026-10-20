@@ -49,10 +49,10 @@ def test_cic_variants_detected(fixtures_dir, tmp_path, repo_root):
     assert (subset.profile.name, subset.variant) == ("cic_ids2017", "original_subset")
 
     # "Improved" version: header built only from real names, the 8 features of the v4
-    # model (trained on it). No header is reconstructed from memory (fixtures README).
-    config = json.loads((repo_root / "tools/IDS/IDS_CLI - CIC-2017/models/config.json")
-                        .read_text(encoding="utf-8"))
-    header = config["features"] + ["Label"]
+    # model (trained on it, recorded by the baseline). No header is reconstructed from
+    # memory (fixtures README).
+    v4 = json.loads((repo_root / "docs/baseline/cli_v4.json").read_text(encoding="utf-8"))
+    header = v4["features"] + ["Label"]
     path = tmp_path / "improved.csv"
     path.write_text(",".join(header) + "\n" + ",".join(["0"] * 8 + ["BENIGN"]) + "\n",
                     encoding="utf-8")

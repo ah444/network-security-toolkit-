@@ -356,3 +356,14 @@ def test_input_frame_converts_form_values(frame):
         fitted.input_frame({"a": "1", "proto": "tcp"})
     with pytest.raises(ValueError, match="'b'"):
         fitted.input_frame({"a": "1", "b": " ", "proto": "tcp"})
+
+
+def test_predict_proba_in_class_order(frame):
+    outcome = train_models(frame, "Label", features=FEATURES, models=("decision_tree", "svm"),
+                           workers=1)
+    tree = outcome.models["decision_tree"]
+    proba = tree.predict_proba(frame.head(5))
+    assert proba.shape == (5, len(tree.classes))
+    assert np.allclose(proba.sum(axis=1), 1.0)
+    assert list(np.asarray(tree.classes)[proba.argmax(axis=1)]) == list(tree.predict(frame.head(5)))
+    assert outcome.models["svm"].predict_proba(frame.head(5)) is None  # LinearSVC has none

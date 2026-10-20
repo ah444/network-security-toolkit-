@@ -50,7 +50,7 @@ Profiled on 2026-10-19 with a read-only streaming pass over each full file.
 - **Profile:** CIC "original" variant. Strip header spaces, drop `Fwd Header Length.1` as a duplicate, normalise `Web Attack � …` → `Web Attack - …`, and treat `inf` and empty cells explicitly.
 - **Split strategy:** there is no time column, so `temporal_per_class` is impossible. Grouping by capture file is also impossible, because the 8 days were combined into one file with no file or day column. Per plan D9 this means **dedupe → stratified split, with a visible warning** that scores may be optimistic. The warning is written into the TrainingRun and the model card.
 - **CLI model (0.5):** a CIC model trained on this file has **15 classes**, not the 16 of the old v4 model. The v4 classes (`… - Attempted`) come from the *improved* version, which is not available. The leaky `Attempted Category` feature doesn't exist in this file at all.
-- **Dataset decision (beta exit, 2026-10-20): this file is the training dataset for the default CLI model (0.5).** See "Dataset decision" below.
+- **Dataset decision (beta exit, 2026-10-20): this file is the training dataset for the CLI model (0.5).** See "Dataset decision" below (revised in 0.5: no model is shipped).
 
 ---
 
@@ -92,7 +92,7 @@ Profiled on 2026-10-19 with a read-only streaming pass over each full file.
 
 The loader's SHA-256, row counts, empty-cell and `inf` counts match the tables above. On `CIC-2017.csv` it also confirmed that `Fwd Header Length.1` is identical to `Fwd Header Length` in all 2,830,743 rows, so it is dropped, and it rewrote the 2,180 `Web Attack �` labels as `Web Attack -`.
 
-**Not covered yet (no local file):** UNSW-NB15 and the full header of the "improved" CIC-IDS2017 version. Their schemas aren't reconstructed from memory. Until a real file is available, a UNSW CSV loads with the generic profile (`UNKNOWN_SCHEMA`), and the improved CIC version is recognised only from the 8 feature names in the v4 `config.json`.
+**Not covered yet (no local file):** UNSW-NB15 and the full header of the "improved" CIC-IDS2017 version. Their schemas aren't reconstructed from memory. Until a real file is available, a UNSW CSV loads with the generic profile (`UNKNOWN_SCHEMA`), and the improved CIC version is recognised only from the 8 feature names of the v4 model (its `config.json` was deleted with the v4 pickles in step 0.5; the names are kept in `docs/baseline/cli_v4.json`).
 
 ---
 
@@ -114,6 +114,8 @@ The loader's SHA-256, row counts, empty-cell and `inf` counts match the tables a
 ## Dataset decision (5.0-beta exit, 2026-10-20)
 
 **Decision (user): the default CLI model of step 0.5 is trained on `CIC-2017.csv`, the original CIC-IDS2017 "MachineLearningCSV" variant** (SHA-256 in section 1). The NSL-KDD fallback (plan D12) is not used.
+
+**Revised in step 0.5 (user decision, 2026-10-20): no model is shipped.** A full-file Random Forest export is about 2 GB, far over GitHub's 100 MB limit, and a size cap would limit which models can be used. The CLI now lists the models exported on this install and the user picks one; `CIC-2017.csv` stays the recommended training file.
 
 Why:
 - It is available locally, hashed, profile-detected (`cic_ids2017` / `original`) and split-validated (0.4b), so step 0.5 isn't blocked.

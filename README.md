@@ -13,7 +13,7 @@ A comprehensive network security tool combining **Network Reconnaissance** and *
 
 This project is being reworked into **v5.0 ("correct & safe")**; see [docs/IMPROVEMENT_PLAN.md](docs/IMPROVEMENT_PLAN.md) and the day-to-day [docs/V5.0_CHECKLIST.md](docs/V5.0_CHECKLIST.md). A measured baseline of the current version ([docs/baseline/FINDINGS.md](docs/baseline/FINDINGS.md)) showed that **earlier accuracy claims were not valid**:
 
-- **IDS CLI model (v4):** it uses `Attempted Category`, a feature derived from the attack label itself. Changing only that value flips the prediction (e.g. `-1` turns every sample into BENIGN), and none of the CLI's 4 built-in sample flows is classified as intended. **The previously stated ~97–98 % accuracy is withdrawn.** The CLI now prints a warning when this model is loaded. A replacement model trained without leakage is planned in v5.0.
+- **IDS CLI model (v4):** it uses `Attempted Category`, a feature derived from the attack label itself. Changing only that value flips the prediction (e.g. `-1` turns every sample into BENIGN), and none of the CLI's 4 built-in sample flows is classified as intended. **The previously stated ~97–98 % accuracy is withdrawn.** Its files were deleted in v5.0 step 0.5: the CLI now uses the models you train and export in the fixed web trainer, and shows each one's real metrics from its training record (see the CLI's [model card](<tools/IDS/IDS_CLI - CIC-2017/models/README.md>)).
 - **Web IDS trainer (v4):** its results were **optimistic**. "Apply SMOTE" and "Recommend Features" ran on the *whole* dataset before the train/test split, duplicate rows could land in both train and test, and label-derived columns (e.g. NSL-KDD `level`) were not blocked. The recommender even ranked `level` among the top 10 features. The app reported accuracy and weighted F1 only, which hide weak minority classes: on NSL-KDD, random forest showed 99.8 % accuracy but 76.6 % macro-F1. **Since 5.0-rc1 (step 0.4g) the web trainer runs on the leakage-free ML core** described under "ML core" below.
 
 ### Known limitations (current version)
@@ -24,9 +24,9 @@ This project is being reworked into **v5.0 ("correct & safe")**; see [docs/IMPRO
 - The port scanner sends service banners to a third-party AI service (OpenRouter/DeepSeek) when an API key is configured. Don't scan systems whose banners you may not share. Consent and redaction come in v5.0 step 0.6.
 - The CVE lookup uses a retired MITRE search page and may return nothing (replaced by the NVD API in v5.0). CVE and AI lookups for open ports run one at a time, so scans with many open ports are slow.
 - The port scanner logs an `ERROR` line when the optional `api_keys.txt` is missing; it still works, just without AbuseIPDB and AI lookups.
-- The CLI's v4 model files were saved with scikit-learn 1.6.1; this setup has 1.8.0, so loading them prints version warnings (shown on purpose, not hidden). Predictions also print a harmless "X does not have valid feature names" warning. Both go away with the v5 model.
+- No model is shipped with the project: train and export one in the web trainer first. The CLI lists the exports in `instance/bundles` and opens only bundles exported on this install. Large models (for example Random Forest on the full CIC file, about 2 GB) take minutes to load and need several times their size in memory. A bundle made with a different scikit-learn, imbalanced-learn, XGBoost or LightGBM minor version is refused (retrain it); smaller version differences are shown as a warning.
 - Starting the web trainer from the launcher menu prints its address (`http://127.0.0.1:5000/`) but doesn't open a browser; stop it with Ctrl+C to get back to the menu.
-- Tested on Windows with Python 3.14 (353 automated tests, a scripted walk-through of every menu path, `scripts/menu_walkthrough.py`, and a browser session through the whole web trainer on real CIC-IDS2017 and NSL-KDD data, see `docs/release/`). The code is being made portable to Linux and macOS, but it is not tested on real Linux/macOS machines.
+- Tested on Windows with Python 3.14 (362 automated tests, a scripted walk-through of every menu path, `scripts/menu_walkthrough.py`, and a browser session through the whole web trainer on real CIC-IDS2017 and NSL-KDD data, see `docs/release/`). The code is being made portable to Linux and macOS, but it is not tested on real Linux/macOS machines.
 - Only scan systems you are authorised to scan.
 
 ---
@@ -58,10 +58,10 @@ This project is being reworked into **v5.0 ("correct & safe")**; see [docs/IMPRO
 - 📁 Export results to JSON/CSV/TXT
 
 ### 2. Intrusion Detection System (CLI)
-- 🧠 Machine Learning-based detection
-- 📊 Random Forest & XGBoost models (v4, 16 classes of the "improved" CIC-IDS2017 labelling)
-- ⌨️ Manual feature input or built-in sample flows
-- ⚠️ **No valid accuracy figure:** the v4 model relies on the label-derived `Attempted Category` feature (see **Project status** at the top). It will be replaced in v5.0.
+- 🧠 Predicts with any model bundle exported by the web trainer (features, classes and best model come from the bundle)
+- 📊 Uses the models you export from the web trainer: it lists them (newest first) and you pick one; each shows its real metrics from its training record
+- ⌨️ Manual input (prefilled from a real example), real test-split examples, model switching
+- 📄 `--csv` batch prediction (writes `<file>.predictions.csv`, never overwritten), `--json` input, `--info` model card
 
 ### 3. Intrusion Detection System (Web) ⭐ NEW FEATURES
 - 🌐 Web-based UI with Flask
@@ -150,15 +150,15 @@ Features:
 
 ### IDS CLI
 ```bash
-# Run directly
+# Interactive: lists your exports from the web trainer, you pick one
 python "tools/IDS/IDS_CLI - CIC-2017/IDS_with_Machine_Learning.py"
+# Label every row of a CSV file (with the newest export)
+python "tools/IDS/IDS_CLI - CIC-2017/IDS_with_Machine_Learning.py" --csv flows.csv
+# A specific export
+python "tools/IDS/IDS_CLI - CIC-2017/IDS_with_Machine_Learning.py" --bundle "instance/bundles/<run id>.bundle"
 ```
 
-Features:
-- Load pre-trained models
-- Manual feature input
-- Sample data testing
-- Model switching
+Train and export a model in the web trainer first; `--list` shows your exports and `--info` the chosen model's card.
 
 ### IDS Web Interface
 ```bash
@@ -264,12 +264,7 @@ Project/
         ├── IDS_CLI - CIC-2017/      # CLI-based IDS
         │   ├── IDS_with_Machine_Learning.py
         │   └── models/
-        │       ├── config.json      # Model configuration
-        │       ├── scaler.pkl       # RobustScaler
-        │       ├── label_encoder.pkl
-        │       ├── random_forest.pkl
-        │       ├── xgboost.pkl
-        │       └── README.md
+        │       └── README.md        # Where its models come from (your exports)
         │
         └── IDS_Web_CIC_Dynamic/     # Web-based IDS
             ├── app.py               # Flask application
@@ -313,7 +308,7 @@ Project/
 > **Note:** XGBoost and LightGBM are included in `requirements.txt`.
 
 ### Attack Classes
-- **CLI model (v4):** 16 classes of the "improved" CIC-IDS2017 labelling (BENIGN, Botnet, DDoS, DoS GoldenEye/Hulk/Slowhttptest/Slowloris, FTP-Patator, Portscan, SSH-Patator, and several "… - Attempted" variants). See the warning under **Project status** at the top.
+- **CLI:** the classes of the export you choose (whatever the web trainer was trained on).
 - **Web trainer:** whatever classes the uploaded dataset contains. The original CIC-IDS2017 file has 15 (BENIGN, DoS Hulk, PortScan, DDoS, DoS GoldenEye, FTP-Patator, SSH-Patator, DoS slowloris, DoS Slowhttptest, Bot, three Web Attack types, Infiltration, Heartbleed); see [docs/datasets.md](docs/datasets.md).
 
 ### Training Pipeline (web trainer, v5.0)
@@ -330,7 +325,7 @@ Project/
 11. **Export / Load** - signed `.bundle` (see Known limitations)
 
 ### ML core (v5.0)
-`toolkit/ids_core` is the new, leakage-free pipeline. It has no web or network code; the web trainer uses it since 5.0-rc1 and the CLI switches to it in step 0.5.
+`toolkit/ids_core` is the new, leakage-free pipeline. It has no web or network code; the web trainer uses it since 5.0-rc1 and the CLI since step 0.5.
 
 1. **Load** (`datasets.load_dataset`): encoding and separator sniffed, header spaces stripped, exact dtype downcast, SHA-256; the dataset family (CIC-IDS2017, NSL-KDD or generic) is recognised from the content, not the file name.
 2. **Split** (`split.split_dataset`): exact copies removed first, then the profile's split: `official` (NSL-KDD's own files, kept as published), `temporal` / `temporal_per_class` (validated time column), `group`, or `stratified` with an "optimistic" warning. Every fallback has a reason code.

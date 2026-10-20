@@ -62,6 +62,12 @@ class FittedModel:
         codes = np.asarray(self.pipeline.predict(frame[list(self.features)]), dtype=int)
         return np.asarray(self.classes, dtype=object)[codes]
 
+    def predict_proba(self, frame: pd.DataFrame) -> np.ndarray | None:
+        """Class probabilities, columns in ``classes`` order; None if the model has none."""
+        if not hasattr(self.pipeline, "predict_proba"):
+            return None
+        return np.asarray(self.pipeline.predict_proba(frame[list(self.features)]))
+
     def feature_schema(self) -> tuple[FeatureInfo, ...]:
         """Each input feature as the fitted pipeline sees it (for prediction forms)."""
         kinds: dict[str, FeatureInfo] = {}
