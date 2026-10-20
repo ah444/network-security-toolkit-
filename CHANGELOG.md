@@ -4,6 +4,68 @@ All notable changes to this project. Versions follow the roadmap in
 [docs/IMPROVEMENT_PLAN.md](docs/IMPROVEMENT_PLAN.md); day-to-day progress is in
 [docs/V5.0_CHECKLIST.md](docs/V5.0_CHECKLIST.md).
 
+## [5.0-rc2] — 2026-10-20
+
+Fourth checkpoint of v5.0: **the CLI predicts with the models you train and export in the
+web trainer** (no model is shipped any more), dataset licences are recorded, and the
+**port scanner is fixed for correctness and privacy** (steps 0.5, 0.5b, 0.6). Project
+version: `5.0.0rc2`.
+
+**Test result:** 416 automated tests passed (`python -m pytest`), ruff clean, `pip-audit`
+clean (installed environment and `requirements.lock`). Real-data check: CLI and web gave
+the same prediction for every compared row of the official NSL-KDD test file and a 5 %
+sample of CIC-IDS2017, for all 7 models of two real exports; real scans of `127.0.0.1`
+and `::1` with local services and real NVD lookups; launcher walk-through of every menu
+path ([record](docs/release/5.0-rc2-cli-and-scanner.md)).
+Windows 10 Enterprise LTSC 2021, Python 3.14.3, scikit-learn 1.8.0.
+
+### Added
+- **CLI on exported models** (D5, D12 revised, B14): the CLI lists the bundles exported on
+  this install (`instance/bundles`, newest first, reading only each manifest header) and
+  you pick one; `--bundle`, `--list`, `--info`, `--csv` (labels every row; the result file
+  is never overwritten) and `--json`. Features, classes, the best model and the model card
+  come from the bundle and its TrainingRun; real test-split examples are embedded in each
+  bundle. The status line says *Normal traffic* for `BENIGN`/`normal`, and examples of
+  classes the model never learned are marked.
+- **Scanner:** authorization question before every scan (`--i-am-authorized` for
+  scripts) and limits of 256 hosts / 65,536 host×port checks (`TOOLKIT_SCAN_MAX_HOSTS`,
+  `TOOLKIT_SCAN_MAX_PROBES`) (S16); IPv6 targets (B13); CVEs with CVSS scores from the NVD
+  CVE API 2.0 (B10); keys from environment variables or `.env`, with `api_keys.txt` as a
+  fallback, plus an optional `NVD_API_KEY` (S15).
+- **Dataset licences** in `docs/datasets.md`: terms, required citations and
+  redistribution rules for CIC-IDS2017, NSL-KDD and UNSW-NB15, checked on the official
+  pages; the committed fixtures carry their citations (0.5b).
+
+### Changed
+- **Scanner privacy** (S12, S13): the AI explanation runs only after you agree, receives
+  only the detected product and version (e.g. `OpenSSH 8.9`), never the raw banner, and
+  its reply is plain text marked "may be wrong" that can't add a CVE or change a severity
+  (severity comes from CVSS only).
+- **Scanner correctness:** one connection per port, always closed, with the banner read
+  over it (R1, R2); OS guess from TTL ranges (B6); ping flags and timeouts per OS (B7);
+  silent UDP ports are `open|filtered` (B8; the v4 DNS probe was invalid and never ran);
+  TLS banners from self-signed services (B9); port and target validation (B11); each
+  lookup has a 15 s timeout and failures are listed (R3).
+- **Scanner output** (B12, S14): reports are UTF-8 files in `instance/scans/` that never
+  overwrite each other; terminal escape codes are stripped from banners and replies; CSV
+  cells that start like a formula are written as text.
+
+### Removed
+- The v4 CLI model files (`models/*.pkl`, `config.json`, `manifest.json`): the model used
+  the label-derived `Attempted Category` feature (L1, B21). The planned pinned default
+  model was dropped: a full-file Random Forest export is about 2 GB, far over GitHub's
+  100 MB file limit.
+- The MITRE CVE page scraper (retired service).
+
+### Known limitations
+See **Known limitations** in the [README](README.md). New in this release:
+- A fresh install has no CLI model until one is trained and exported in the web trainer.
+  Large exports (about 2 GB for Random Forest on the full CIC file) take minutes to load
+  and need several times their size in memory.
+- CVE lists come from an NVD keyword search on the software name and version, so they can
+  include CVEs that don't affect the exact build, or miss some. Without an NVD key, NVD
+  allows about one request every 6 seconds.
+
 ## [5.0-rc1] — 2026-10-20
 
 Third checkpoint of v5.0: **the web trainer now runs on the leakage-free ML core**, and
