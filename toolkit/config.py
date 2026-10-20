@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+from collections.abc import Mapping
 from dataclasses import dataclass
 
 
@@ -39,3 +41,33 @@ class SplitConfig:
     # Official split (published train + test files): False keeps both files as published,
     # so scores stay comparable; True ("strict") removes copies and test rows also in train.
     official_dedupe: bool = False
+
+
+def max_workers(environ: Mapping[str, str] | None = None) -> int:
+    """CPU workers for training and CV: ``TOOLKIT_MAX_WORKERS``, else all cores but one (D8).
+
+    Never more than the machine has; a value that isn't a positive whole number is an error,
+    so a typo can't silently use every core.
+    """
+    environ = os.environ if environ is None else environ
+    cores = os.cpu_count() or 1
+    raw = environ.get("TOOLKIT_MAX_WORKERS", "").strip()
+    if not raw:
+        return max(1, cores - 1)
+    try:
+        workers = int(raw)
+    except ValueError:
+        workers = 0
+    if workers < 1:
+        raise ValueError(f"TOOLKIT_MAX_WORKERS must be a whole number >= 1, not {raw!r}")
+    return min(workers, cores)
+
+
+@dataclass(frozen=True)
+class PipelineConfig:
+    """Training pipeline settings (plan D9, D8, step 0.4c)."""
+
+    random_state: int = 42  # every estimator and sampler, including nested ones (B20)
+    smote_max_neighbors: int = 5  # lowered for small classes (smallest train class - 1)
+    # Linear SVM is skipped above this many **training** rows (B5; v4 used the whole file).
+    svm_max_train_rows: int = 100_000
