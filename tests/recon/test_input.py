@@ -5,6 +5,7 @@ import builtins
 import pytest
 
 from toolkit.recon import targets
+from toolkit.recon import scanner as recon_scanner
 
 
 def test_empty_range_no_crash(scanner, monkeypatch, capsys):
@@ -15,7 +16,7 @@ def test_empty_range_no_crash(scanner, monkeypatch, capsys):
                               ("", "", "whole numbers")):
         with pytest.raises(ValueError, match=words):
             targets.parse_port_range(start, end)
-    assert scanner.scan_ports("127.0.0.1", range(5, 5), ["tcp"]) == []
+    assert recon_scanner.scan_ports("127.0.0.1", range(5, 5), ["tcp"]) == []
     scanner.ConsoleProgress().start(0)  # no division by zero (see also test_progress.py)
     remaining = iter(["127.0.0.1", "100", "1"])
     monkeypatch.setattr(builtins, "input", lambda prompt="": next(remaining))

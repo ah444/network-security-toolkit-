@@ -8,6 +8,7 @@ import pytest
 
 from toolkit.recon import text as recon_text
 from toolkit.recon import probes
+from toolkit.recon import scanner as recon_scanner
 
 BANNER = "SSH-2.0-OpenSSH_8.9p1 Ubuntu-3ubuntu0.1 host=db01.corp.internal user=admin"
 EVIL_REPLY = (
@@ -82,8 +83,8 @@ def test_llm_reply_is_plain_text_and_ignored_for_severity(scanner, fake_session,
     assert intel_low.lookup("OpenSSH 8.9")["severity"] == "CRITICAL"
     # nothing in the reply is acted on: the only requests are the NVD and AI lookups
     assert {call[1] for call in session.calls} == {scanner.NVD_URL, scanner.OPENROUTER_API_URL}
-    entry = scanner.make_entry("10.0.0.5", scanner.PortResult(22, "tcp", "open", "ssh", BANNER),
-                               "OpenSSH 8.9", found)
+    port = recon_scanner.PortResult(22, "tcp", "open", "ssh", BANNER)
+    entry = scanner.make_entry("10.0.0.5", port, "OpenSSH 8.9", found)
     scanner.print_entry(entry)
     out = capsys.readouterr().out
     assert "AI explanation (may be wrong):" in out and "\x1b" not in out
@@ -96,8 +97,8 @@ def test_fake_cve_in_llm_reply_never_in_report(scanner, fake_session, nvd_openss
     found = scanner.Intel({"openrouter": "k"}, use_ai=True, session=session).lookup(
         "OpenSSH 8.9")
     assert [c["id"] for c in found["cves"]] == ["CVE-2023-28531", "CVE-2021-36368"]
-    entry = scanner.make_entry("10.0.0.5", scanner.PortResult(22, "tcp", "open", "ssh", BANNER),
-                               "OpenSSH 8.9", found)
+    port = recon_scanner.PortResult(22, "tcp", "open", "ssh", BANNER)
+    entry = scanner.make_entry("10.0.0.5", port, "OpenSSH 8.9", found)
     for fmt in scanner.EXPORT_FORMATS:
         path = scanner.export_results([entry], fmt, directory=tmp_path)
         assert "CVE-9999-00000" not in path.read_text(encoding="utf-8")

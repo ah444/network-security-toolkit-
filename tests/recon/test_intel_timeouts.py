@@ -4,6 +4,8 @@ import builtins
 
 import requests
 
+from toolkit.recon import scanner as recon_scanner
+
 
 def test_scan_finishes_when_intel_times_out(scanner, fake_session, monkeypatch, capsys,
                                             no_nvd_wait):
@@ -14,8 +16,8 @@ def test_scan_finishes_when_intel_times_out(scanner, fake_session, monkeypatch, 
     real_intel = scanner.Intel
     monkeypatch.setattr(scanner, "Intel",
                         lambda keys, use_ai=False: real_intel(keys, use_ai, session=session))
-    open_ports = [scanner.PortResult(22, "tcp", "open", "ssh", "SSH-2.0-OpenSSH_8.9p1"),
-                  scanner.PortResult(80, "tcp", "open", "http", "Apache/2.4.49 (Unix)")]
+    open_ports = [recon_scanner.PortResult(22, "tcp", "open", "ssh", "SSH-2.0-OpenSSH_8.9p1"),
+                  recon_scanner.PortResult(80, "tcp", "open", "http", "Apache/2.4.49 (Unix)")]
     monkeypatch.setattr(scanner, "scan_ports", lambda *args, **kwargs: open_ports)
     monkeypatch.setattr(scanner, "ping_host", lambda host, timeout=1: (True, 52))
     # public target, authorised, AI yes, verbose no, AbuseIPDB yes, export no

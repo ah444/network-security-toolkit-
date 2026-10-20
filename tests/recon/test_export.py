@@ -7,10 +7,11 @@ import pytest
 
 from toolkit.recon import text as recon_text
 from toolkit.recon import probes
+from toolkit.recon import scanner as recon_scanner
 
 
 def _entry(scanner, banner, ai=""):
-    result = scanner.PortResult(8080, "tcp", "open", "http-alt", banner)
+    result = recon_scanner.PortResult(8080, "tcp", "open", "http-alt", banner)
     intel = {"cves": [{"id": "CVE-2021-41773", "cvss": 9.8, "cvss_version": "3.1",
                        "severity": "CRITICAL"}],
              "max_cvss": 9.8, "severity": "CRITICAL", "ai_explanation": ai, "errors": []}
@@ -52,7 +53,7 @@ def test_formula_cells_neutralised(scanner, tmp_path):
 
 
 def test_terminal_output_is_cleaned(scanner, capsys):
-    scanner.print_table([scanner.PortResult(22, "tcp", "open", "ssh",
+    scanner.print_table([recon_scanner.PortResult(22, "tcp", "open", "ssh",
                                             "SSH-2.0\x1b[8mhidden\x1b[0m\r\n")], "OPEN PORTS")
     scanner.print_entry(_entry(scanner, "\x1b]52;c;ZXZpbA==\x07Apache/2.4.49"))
     out = capsys.readouterr().out

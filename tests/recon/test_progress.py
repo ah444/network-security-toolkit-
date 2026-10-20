@@ -3,6 +3,7 @@
 import threading
 
 from toolkit.ports import NullProgress, ProgressSink
+from toolkit.recon import scanner as recon_scanner
 
 
 class RecordingProgress:
@@ -29,10 +30,11 @@ def test_sinks_fulfil_the_port(scanner):
     assert isinstance(RecordingProgress(), ProgressSink)
 
 
-def test_scan_reports_every_check(scanner, tcp_server, free_port):
+def test_scan_reports_every_check(tcp_server, free_port):
     open_port = tcp_server(b"SSH-2.0-OpenSSH_8.9p1\r\n")
     progress = RecordingProgress()
-    results = scanner.scan_ports("127.0.0.1", [open_port, free_port], ["tcp", "udp"], progress)
+    results = recon_scanner.scan_ports("127.0.0.1", [open_port, free_port], ["tcp", "udp"],
+                                       progress)
 
     assert len(results) == 4
     assert progress.events[0] == ("start", 4) and progress.events[-1] == ("finish",)
@@ -57,4 +59,4 @@ def test_zero_tasks_no_division_by_zero(scanner, capsys):
     progress.start(0)
     progress.finish()
     assert capsys.readouterr().out == ""
-    assert scanner.scan_ports("127.0.0.1", [], ["tcp"], progress) == []
+    assert recon_scanner.scan_ports("127.0.0.1", [], ["tcp"], progress) == []
