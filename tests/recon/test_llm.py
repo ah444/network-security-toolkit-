@@ -6,12 +6,11 @@ import json
 
 import pytest
 
-from toolkit.recon import text as recon_text
-from toolkit.recon import probes
-from toolkit.recon import scanner as recon_scanner
+from toolkit.recon import export, probes
 from toolkit.recon import intel as recon_intel
+from toolkit.recon import scanner as recon_scanner
+from toolkit.recon import text as recon_text
 from toolkit.recon.intel import llm, nvd
-from toolkit.recon import export
 
 BANNER = "SSH-2.0-OpenSSH_8.9p1 Ubuntu-3ubuntu0.1 host=db01.corp.internal user=admin"
 EVIL_REPLY = (

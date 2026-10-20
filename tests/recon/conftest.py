@@ -7,8 +7,8 @@ import threading
 
 import pytest
 
-from toolkit.recon.intel import keys as intel_keys
 from toolkit.recon.intel import nvd
+from toolkit.recon.intel import keys as intel_keys
 
 SCANNER_FILE = "tools/Port_scan/Port_Scan.py"
 

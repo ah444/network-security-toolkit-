@@ -18,17 +18,18 @@ API keys (all optional): environment variables OPENROUTER_API_KEY, ABUSEIPDB_API
 NVD_API_KEY (and OPENROUTER_MODEL), or the same lines in a .env file in the project
 folder, or api_keys.txt next to this script (see api_keys.example.txt) (S15).
 Results are saved as UTF-8 in instance/scans/, never overwriting a file (B12, S14).
+
+The scanning logic is in ``toolkit.recon`` (targets, ping and OS guess, probes registry,
+scanner, online lookups, export); this script only talks to the user (v5.1 step 1.1d).
 """
 
 from __future__ import annotations
 
 import argparse
-import logging
 import sys
 import threading
 import time
 from pathlib import Path
-
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
@@ -50,8 +51,6 @@ from toolkit.recon.targets import (  # noqa: E402
     parse_target,
 )
 from toolkit.recon.text import one_line  # noqa: E402
-
-log = logging.getLogger(__name__)
 
 # --- Authorization (S16) ----------------------------------------------------------------------
 
@@ -114,6 +113,8 @@ class ConsoleProgress:
         sys.stdout.flush()
 
 
+# --- Printing (S14) ----------------------------------------------------------------------------
+
 ABUSE_FIELDS = (
     "ipAddress", "isPublic", "countryCode", "domain", "hostnames", "abuseConfidenceScore",
     "totalReports", "numDistinctUsers", "isTor", "isWhitelisted", "usageType", "isp",
@@ -128,8 +129,6 @@ def print_abuse_report(data):
             value = ", ".join(map(str, value)) or "N/A"
         print(f"  {field}: {one_line(value, 200)}")
 
-
-# --- Printing (S14) ----------------------------------------------------------------------------
 
 def print_table(results, title):
     print(f"\n{title}")

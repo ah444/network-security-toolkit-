@@ -250,6 +250,7 @@ Project/
 ├── requirements.lock                # Exact environment
 ├── pyproject.toml                   # pytest / ruff configuration
 ├── .gitignore                       # Git ignore rules
+├── .env.example                     # Optional API keys template (copy to .env)
 ├── .githooks/pre-commit             # Lint + tests before every commit
 ├── README.md                        # This file
 │
@@ -259,9 +260,18 @@ Project/
 ├── scripts/ml_report.py             # Re-runs it on the v5 ML core (docs/report/)
 ├── tests/                           # pytest suite + small fixtures
 │
+├── toolkit/                         # Shared package (no printing, no prompts)
+│   ├── config.py                    # Settings, paths, .env reader
+│   ├── logging_setup.py             # Log files in instance/logs, secrets redacted
+│   ├── ports.py                     # ModelStore, IntelProvider, ProgressSink
+│   ├── bundle_files.py, run_files.py  # Signed model bundles, training records
+│   ├── ids_core/                    # Leakage-free ML core (see "ML core" below)
+│   └── recon/                       # Scanner logic: targets, os_detect, probes registry,
+│       └── intel/                   #   scanner, export; intel: NVD, OpenRouter, AbuseIPDB
+│
 └── tools/
     ├── Port_scan/                   # Network Reconnaissance
-    │   ├── Port_Scan.py             # Port scanner
+    │   ├── Port_Scan.py             # Port scanner (questions and printing; logic in toolkit/recon)
     │   └── api_keys.example.txt     # API keys template
     │
     └── IDS/

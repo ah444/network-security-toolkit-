@@ -75,7 +75,8 @@ def boundary_violations(root: Path) -> list[str]:
 
 
 def test_package_boundaries_hold(repo_root):
-    assert (repo_root / "toolkit" / "ids_core").is_dir(), "toolkit/ids_core is missing"
+    for area in INDEPENDENT:  # the rules must really see both packages
+        assert (repo_root / "toolkit" / area).is_dir(), f"toolkit/{area} is missing"
     assert boundary_violations(repo_root) == []
 
 

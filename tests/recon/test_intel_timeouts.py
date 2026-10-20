@@ -4,8 +4,8 @@ import builtins
 
 import requests
 
-from toolkit.recon import scanner as recon_scanner
 from toolkit.recon import intel as recon_intel
+from toolkit.recon import scanner as recon_scanner
 from toolkit.recon.intel import lookup
 
 

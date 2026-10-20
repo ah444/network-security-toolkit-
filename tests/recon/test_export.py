@@ -5,10 +5,9 @@ import json
 
 import pytest
 
-from toolkit.recon import text as recon_text
-from toolkit.recon import probes
+from toolkit.recon import export, probes
 from toolkit.recon import scanner as recon_scanner
-from toolkit.recon import export
+from toolkit.recon import text as recon_text
 
 
 def _entry(banner, ai=""):
