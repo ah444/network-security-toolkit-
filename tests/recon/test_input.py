@@ -14,7 +14,7 @@ def test_empty_range_no_crash(scanner, monkeypatch, capsys):
         with pytest.raises(ValueError, match=words):
             scanner.parse_port_range(start, end)
     assert scanner.scan_ports("127.0.0.1", range(5, 5), ["tcp"]) == []
-    scanner.verbose_progress(0, scanner.ProgressCounter())  # no division by zero
+    scanner.ConsoleProgress().start(0)  # no division by zero (see also test_progress.py)
     remaining = iter(["127.0.0.1", "100", "1"])
     monkeypatch.setattr(builtins, "input", lambda prompt="": next(remaining))
     assert scanner.main([]) == 2

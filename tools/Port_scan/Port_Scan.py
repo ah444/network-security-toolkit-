@@ -49,7 +49,7 @@ if str(REPO_ROOT) not in sys.path:
 
 from toolkit.config import env_value, instance_dir, read_env_file, scan_limits  # noqa: E402
 from toolkit.logging_setup import add_secrets, setup_logging  # noqa: E402
-from toolkit.ports import IntelFinding  # noqa: E402
+from toolkit.ports import IntelFinding, NullProgress  # noqa: E402
 
 log = logging.getLogger(__name__)
 
@@ -364,64 +364,76 @@ def scan_udp_port(host, port, timeout=SCAN_TIMEOUT):
     return PortResult(port, "udp", "open", service_name(port, "udp"), _text(data))
 
 
-class ProgressCounter:
-    """Thread-safe counter of finished port checks."""
+class ConsoleProgress:
+    """ProgressSink for verbose mode: prints the progress line every ``interval`` seconds
+    from its own thread (a slow port can't freeze it), then the final 100 % line."""
 
-    def __init__(self):
-        self._count = 0
+    def __init__(self, interval=2):
+        self.interval = interval
+        self._total = 0
+        self._done = 0
         self._lock = threading.Lock()
+        self._stop = threading.Event()
+        self._thread = None
 
-    def increment(self):
+    def start(self, total):
+        self._total, self._done = total, 0
+        self._stop.clear()
+        if total > 0:  # nothing to show (and no division by zero) for 0 tasks
+            self._write()
+            self._thread = threading.Thread(target=self._repeat, daemon=True)
+            self._thread.start()
+
+    def advance(self, done=1):
         with self._lock:
-            self._count += 1
+            self._done += done
 
-    def get(self):
+    def finish(self):
+        if self._thread is None:
+            return
+        self._stop.set()
+        self._thread.join()
+        self._thread = None
+        self._write()
+        print("\nProgress: 100.00% complete")
+
+    def _repeat(self):
+        while not self._stop.wait(self.interval):
+            self._write()
+
+    def _write(self):
         with self._lock:
-            return self._count
-
-
-def verbose_progress(total_tasks, counter, interval=2):
-    """Print the progress until every task is done (nothing to do for 0 tasks)."""
-    if total_tasks <= 0:
-        return
-    while True:
-        count = counter.get()
-        sys.stdout.write(f"\rProgress: {count / total_tasks * 100:.2f}% complete | "
-                         f"{total_tasks - count} tasks remaining")
+            done = self._done
+        sys.stdout.write(f"\rProgress: {done / self._total * 100:.2f}% complete | "
+                         f"{self._total - done} tasks remaining")
         sys.stdout.flush()
-        if count >= total_tasks:
-            break
-        time.sleep(interval)
-    print("\nProgress: 100.00% complete")
 
 
-def scan_ports(host, ports, protocols, verbose=False):
-    """Every port of ``host`` for each protocol, sorted by port."""
+def scan_ports(host, ports, protocols, progress=None):
+    """Every port of ``host`` for each protocol, sorted by port; each finished check is
+    reported to ``progress`` (a ProgressSink, default none)."""
+    progress = progress or NullProgress()
     scanners = {"tcp": scan_tcp_port, "udp": scan_udp_port}
     tasks = [(scanners[protocol], port) for port in ports for protocol in protocols]
     if not tasks:
         return []
-    counter = ProgressCounter()
-    progress = None
-    if verbose:
-        progress = threading.Thread(target=verbose_progress, args=(len(tasks), counter),
-                                    daemon=True)
-        progress.start()
 
     def run(scan, port):
         try:
             return scan(host, port)
         finally:
-            counter.increment()
+            progress.advance()
 
     results = []
     workers = min(100, len(tasks), (os.cpu_count() or 1) * 4)
-    with ThreadPoolExecutor(max_workers=workers) as executor:
-        futures = [executor.submit(run, scan, port) for scan, port in tasks]
-        for future in as_completed(futures):
-            results.append(future.result())
-    if progress is not None:
-        progress.join()
+    progress.start(len(tasks))
+    try:
+        with ThreadPoolExecutor(max_workers=workers) as executor:
+            futures = [executor.submit(run, scan, port) for scan, port in tasks]
+            for future in as_completed(futures):
+                results.append(future.result())
+    finally:
+        progress.finish()
     return sorted(results, key=lambda r: (r.port, r.protocol))
 
 
@@ -843,7 +855,7 @@ def scan_target(target, ports, protocols, intel, verbose):
     else:
         print("OS guess: not possible (no TTL in the ping reply)")
 
-    results = scan_ports(target, ports, protocols, verbose)
+    results = scan_ports(target, ports, protocols, ConsoleProgress() if verbose else None)
     open_ports = [r for r in results if r.state == "open"]
     silent_udp = [r.port for r in results if r.state == "open|filtered"]
     if silent_udp:

@@ -64,3 +64,29 @@ class IntelProvider(Protocol):
 
     def lookup(self, subject: str) -> IntelFinding:
         """Raises on any failure (network, timeout, bad reply); the caller records it."""
+
+
+@runtime_checkable
+class ProgressSink(Protocol):
+    """Where a long task reports how far it is: ``start(total)``, then ``advance()`` per
+    finished unit (also from worker threads, so implementations must be thread-safe),
+    then ``finish()`` once, also after an error."""
+
+    def start(self, total: int) -> None: ...
+
+    def advance(self, done: int = 1) -> None: ...
+
+    def finish(self) -> None: ...
+
+
+class NullProgress:
+    """A ProgressSink that reports nothing (the default)."""
+
+    def start(self, total: int) -> None:
+        pass
+
+    def advance(self, done: int = 1) -> None:
+        pass
+
+    def finish(self) -> None:
+        pass
