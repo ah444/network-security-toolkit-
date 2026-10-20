@@ -31,3 +31,20 @@ def test_key_files_stay_out_of_git(repo_root):
     for name in (".env", "tools/Port_scan/api_keys.txt"):
         result = subprocess.run(["git", "check-ignore", "-q", name], cwd=repo_root, check=False)
         assert result.returncode == 0, f"{name} must be gitignored"
+    template = subprocess.run(["git", "check-ignore", "-q", ".env.example"], cwd=repo_root,
+                              check=False)
+    assert template.returncode == 1, ".env.example (no secrets) must be committed"
+    assert (repo_root / ".env.example").is_file()
+
+
+def test_ai_model_from_env_file(scanner, tmp_path, monkeypatch):
+    """OPENROUTER_MODEL works from .env, as the help text says (found in step 1.1b)."""
+    env_file = tmp_path / ".env"
+    env_file.write_text("OPENROUTER_MODEL=vendor/model-from-dotenv\n", encoding="utf-8")
+    assert scanner.ai_model({}, env_file) == "vendor/model-from-dotenv"
+    assert scanner.ai_model({"OPENROUTER_MODEL": "vendor/env"}, env_file) == "vendor/env"
+    assert scanner.ai_model({}, tmp_path / "none.env") == scanner.DEFAULT_AI_MODEL
+
+    monkeypatch.setattr(scanner, "ENV_PATH", env_file)
+    intel = scanner.Intel({"openrouter": "test-key"}, use_ai=True)
+    assert intel.model == "vendor/model-from-dotenv"

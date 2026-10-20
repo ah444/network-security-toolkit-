@@ -1,6 +1,6 @@
 # API Keys Configuration File (all keys are optional)
-# Preferred: set environment variables, or put the same lines in a .env file in the
-# project folder:
+# Preferred: set environment variables, or copy .env.example to .env in the project
+# folder and fill in:
 #   OPENROUTER_API_KEY=...   ABUSEIPDB_API_KEY=...   NVD_API_KEY=...
 #   OPENROUTER_MODEL=...     (optional; default deepseek/deepseek-chat:free)
 # Fallback: copy this file to 'api_keys.txt' and fill in your keys.

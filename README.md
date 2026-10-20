@@ -370,7 +370,7 @@ The scanner works without any key. CVE lookups use the NVD API, which works with
    - Request a key: https://nvd.nist.gov/developers/request-an-api-key
 
 ### Configuration
-Set environment variables (`OPENROUTER_API_KEY`, `ABUSEIPDB_API_KEY`, `NVD_API_KEY`, optionally `OPENROUTER_MODEL`), or put the same `NAME=value` lines in a `.env` file in the project folder. The older key file still works as a fallback:
+Set environment variables (`OPENROUTER_API_KEY`, `ABUSEIPDB_API_KEY`, `NVD_API_KEY`, optionally `OPENROUTER_MODEL`), or put the same `NAME=value` lines in a `.env` file in the project folder: copy `.env.example` to `.env` and fill in what you use. An environment variable wins over `.env`. The older key file still works as a fallback:
 
 ```bash
 # Copy the example file
@@ -388,6 +388,9 @@ nvd=your_nvd_api_key_here
 ```
 
 ⚠️ **Never commit `api_keys.txt` or `.env` to Git!** (Both are in .gitignore)
+
+### Log files
+Each tool writes a log file in `instance/logs/` (`web.log`, `scanner.log`, `ids_cli.log`), UTF-8, rotated at 1 MB with 3 old files kept. Set `TOOLKIT_LOG_LEVEL` (`DEBUG`, `INFO`, `WARNING`, `ERROR`; default `INFO`) as an environment variable to change how much is written. API keys and `Authorization` / `Bearer` values are replaced by `[REDACTED]`, and dataset values are never logged. Library warnings (for example a scikit-learn version mismatch) appear on the console and in the log.
 
 ---
 

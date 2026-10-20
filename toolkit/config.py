@@ -4,9 +4,12 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
+
+log = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -54,6 +57,49 @@ def instance_dir(environ: Mapping[str, str] | None = None) -> Path:
     environ = os.environ if environ is None else environ
     value = environ.get("TOOLKIT_INSTANCE_DIR", "").strip()
     return Path(value) if value else REPO_ROOT / "instance"
+
+
+ENV_FILE = REPO_ROOT / ".env"
+PLACEHOLDER = re.compile(r"^your_.*_here$", re.IGNORECASE)  # left from an example file
+
+
+def read_env_file(path: str | Path) -> dict[str, str]:
+    """``NAME=value`` lines of a ``.env``-style file; {} when it doesn't exist.
+
+    Blank lines, ``#`` comments, lines without ``=``, empty values and placeholders
+    (``your_..._here``) are skipped; ``export`` and surrounding quotes are removed.
+    """
+    values: dict[str, str] = {}
+    try:
+        text = Path(path).read_text(encoding="utf-8")
+    except FileNotFoundError:
+        return values
+    except (OSError, UnicodeDecodeError) as error:
+        log.warning("Can't read %s: %s", path, error)
+        return values
+    for line in text.splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        name, value = line.split("=", 1)
+        name = name.strip().removeprefix("export ").strip()
+        value = value.strip().strip("\"'")
+        if value and not PLACEHOLDER.match(value):
+            values[name] = value
+    return values
+
+
+def env_value(name: str, environ: Mapping[str, str] | None = None,
+              env_file: str | Path | None = None) -> str:
+    """A secret or user setting: the environment variable, else the line in ``.env``
+    (project folder), else ''. Placeholders count as unset. Only the API keys and
+    ``OPENROUTER_MODEL`` are read this way; ``TOOLKIT_*`` settings come from the
+    environment only."""
+    environ = os.environ if environ is None else environ
+    value = environ.get(name, "").strip()
+    if value and not PLACEHOLDER.match(value):
+        return value
+    return read_env_file(ENV_FILE if env_file is None else env_file).get(name, "")
 
 
 def max_workers(environ: Mapping[str, str] | None = None) -> int:

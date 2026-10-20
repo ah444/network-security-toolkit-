@@ -47,7 +47,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from toolkit.config import instance_dir, scan_limits  # noqa: E402
+from toolkit.config import env_value, instance_dir, read_env_file, scan_limits  # noqa: E402
 from toolkit.logging_setup import add_secrets, setup_logging  # noqa: E402
 
 log = logging.getLogger(__name__)
@@ -62,43 +62,17 @@ KEY_VARIABLES = {
     "abuseipdb": "ABUSEIPDB_API_KEY",
     "nvd": "NVD_API_KEY",
 }
-PLACEHOLDER = re.compile(r"^your_.*_here$", re.IGNORECASE)  # left from the example file
-
-
-def read_key_file(path):
-    """``name=value`` lines of a key file or .env file; {} when the file doesn't exist."""
-    keys = {}
-    try:
-        text = Path(path).read_text(encoding="utf-8")
-    except FileNotFoundError:
-        return keys
-    except (OSError, UnicodeDecodeError) as error:
-        log.warning("Can't read %s: %s", path, error)
-        return keys
-    for line in text.splitlines():
-        line = line.strip()
-        if not line or line.startswith("#") or "=" not in line:
-            continue
-        name, value = line.split("=", 1)
-        name = name.strip().removeprefix("export ").strip()
-        value = value.strip().strip("\"'")
-        if value and not PLACEHOLDER.match(value):
-            keys[name] = value
-    return keys
-
-
 def load_api_keys(environ=None, key_file=API_KEYS_PATH, env_file=ENV_PATH):
     """Each key from the environment, else .env, else api_keys.txt; '' when missing."""
-    environ = os.environ if environ is None else environ
-    dotenv = read_key_file(env_file)
-    legacy = read_key_file(key_file)
-    keys = {}
-    for name, variable in KEY_VARIABLES.items():
-        value = environ.get(variable, "").strip()
-        if PLACEHOLDER.match(value):
-            value = ""
-        keys[name] = value or dotenv.get(variable, "") or legacy.get(name, "")
-    return keys
+    legacy = read_env_file(key_file)  # same "name=value" format, short names
+    return {name: env_value(variable, environ, env_file) or legacy.get(name, "")
+            for name, variable in KEY_VARIABLES.items()}
+
+
+def ai_model(environ=None, env_file=None):
+    """OpenRouter model: OPENROUTER_MODEL from the environment or .env, else the default."""
+    return env_value("OPENROUTER_MODEL", environ,
+                     ENV_PATH if env_file is None else env_file) or DEFAULT_AI_MODEL
 
 
 # --- Text that came from the network (S14) ----------------------------------------------------
@@ -559,7 +533,7 @@ class Intel:
         self.use_ai = bool(use_ai and keys.get("openrouter"))
         self.session = session or requests.Session()
         self.timeout = timeout
-        self.model = os.environ.get("OPENROUTER_MODEL", "").strip() or DEFAULT_AI_MODEL
+        self.model = ai_model()
         self._cves = {}
         self._next_nvd = 0.0
 
@@ -877,7 +851,7 @@ def main(argv=None):
     verbose = ask_yes_no("Enable verbose mode? (Y/N): ")
     use_ai = False
     if keys["openrouter"]:
-        model = os.environ.get("OPENROUTER_MODEL", "").strip() or DEFAULT_AI_MODEL
+        model = ai_model()
         use_ai = ask_yes_no(
             f"Send the detected software names (e.g. 'OpenSSH 8.9', never the raw banner) "
             f"to OpenRouter ({model}) for an AI explanation? (Y/N): ")

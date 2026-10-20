@@ -4,6 +4,7 @@
 api_keys.txt
 *.env
 .env.*
+!.env.example
 secrets.txt
 credentials.txt
 
