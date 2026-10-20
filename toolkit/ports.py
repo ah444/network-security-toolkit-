@@ -13,8 +13,10 @@ Ports are structural (``typing.Protocol``): an adapter only needs the right meth
 
 from __future__ import annotations
 
+from collections.abc import Mapping
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 if TYPE_CHECKING:  # types only: the ports themselves import no layer
     from .bundle_files import BundleInfo, SavedBundle
@@ -37,3 +39,28 @@ class ModelStore(Protocol):
 
     def open(self, data: bytes) -> Bundle:
         """``load`` for bytes already in memory (e.g. an upload)."""
+
+
+@dataclass(frozen=True)
+class IntelFinding:
+    """What one provider found; each kind of provider fills its own field."""
+
+    cves: tuple[Mapping[str, Any], ...] = ()  # kind "cves": {"id", "cvss", "cvss_version", "severity"}
+    text: str = ""  # kind "explanation": plain text, already made safe to show
+    data: Mapping[str, Any] = field(default_factory=dict)  # kind "ip_reputation": raw facts
+
+
+@runtime_checkable
+class IntelProvider(Protocol):
+    """An online, offline or fake source of facts.
+
+    ``kind`` says what it answers: ``"cves"`` and ``"explanation"`` are asked about a
+    detected product and version (e.g. ``OpenSSH 8.9``, never a raw banner),
+    ``"ip_reputation"`` about an IP address. ``name`` labels its failures in reports.
+    """
+
+    name: str
+    kind: str
+
+    def lookup(self, subject: str) -> IntelFinding:
+        """Raises on any failure (network, timeout, bad reply); the caller records it."""

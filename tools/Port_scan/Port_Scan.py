@@ -49,6 +49,7 @@ if str(REPO_ROOT) not in sys.path:
 
 from toolkit.config import env_value, instance_dir, read_env_file, scan_limits  # noqa: E402
 from toolkit.logging_setup import add_secrets, setup_logging  # noqa: E402
+from toolkit.ports import IntelFinding  # noqa: E402
 
 log = logging.getLogger(__name__)
 
@@ -524,76 +525,136 @@ def describe(error):
 LOOKUP_ERRORS = (requests.RequestException, ValueError, KeyError, IndexError, TypeError)
 
 
+class NvdProvider:
+    """CVEs from the NVD CVE API 2.0 keyword search (IntelProvider, kind "cves"); keeps
+    NVD's request spacing and caches each product's answer."""
+
+    name = "NVD"
+    kind = "cves"
+
+    def __init__(self, session, key="", timeout=INTEL_TIMEOUT):
+        self.session = session
+        self.key = key
+        self.timeout = timeout
+        self._cache = {}
+        self._next = 0.0
+
+    def lookup(self, subject):
+        if subject not in self._cache:
+            wait = self._next - time.monotonic()
+            if wait > 0:
+                time.sleep(wait)
+            try:
+                response = self.session.get(
+                    NVD_URL, params={"keywordSearch": subject, "resultsPerPage": NVD_RESULTS},
+                    headers={"apiKey": self.key} if self.key else {}, timeout=self.timeout)
+            finally:
+                self._next = time.monotonic() + NVD_INTERVAL[bool(self.key)]
+            response.raise_for_status()
+            self._cache[subject] = IntelFinding(cves=tuple(parse_nvd(response.json())))
+        return self._cache[subject]
+
+
+class OpenRouterProvider:
+    """AI explanation of a product (IntelProvider, kind "explanation"); the reply is
+    untrusted and returned as inert plain text (S13)."""
+
+    name = "AI"
+    kind = "explanation"
+
+    def __init__(self, session, key, model, timeout=INTEL_TIMEOUT):
+        self.session = session
+        self.key = key
+        self.model = model
+        self.timeout = timeout
+
+    def lookup(self, subject):
+        response = self.session.post(
+            OPENROUTER_API_URL,
+            headers={"Authorization": f"Bearer {self.key}"},
+            json={"model": self.model, "temperature": 0.2, "max_tokens": 600,
+                  "messages": [{"role": "user",
+                                "content": AI_PROMPT.format(software=subject)}]},
+            timeout=self.timeout)
+        response.raise_for_status()
+        return IntelFinding(text=untrusted_text(response.json()["choices"][0]["message"]["content"]))
+
+
+class AbuseIpdbProvider:
+    """Reputation of a public IP address (IntelProvider, kind "ip_reputation")."""
+
+    name = "AbuseIPDB"
+    kind = "ip_reputation"
+
+    def __init__(self, session, key, timeout=INTEL_TIMEOUT, max_age=90):
+        self.session = session
+        self.key = key
+        self.timeout = timeout
+        self.max_age = max_age
+
+    def lookup(self, subject):
+        response = self.session.get(
+            ABUSEIPDB_URL, params={"ipAddress": subject, "maxAgeInDays": str(self.max_age)},
+            headers={"Accept": "application/json", "Key": self.key}, timeout=self.timeout)
+        response.raise_for_status()
+        return IntelFinding(data=response.json().get("data", {}))
+
+
 class Intel:
     """Online lookups for open ports, one at a time, each with a timeout (R3). A failed
-    lookup is recorded and the scan goes on."""
+    lookup is recorded and the scan goes on.
 
-    def __init__(self, keys, use_ai=False, session=None, timeout=INTEL_TIMEOUT):
+    The sources are IntelProviders: by default NVD, plus OpenRouter after consent and
+    AbuseIPDB when there is a key; ``providers`` replaces them (offline sources, tests).
+    """
+
+    def __init__(self, keys, use_ai=False, session=None, timeout=INTEL_TIMEOUT, providers=None):
         self.keys = keys
         self.use_ai = bool(use_ai and keys.get("openrouter"))
         self.session = session or requests.Session()
         self.timeout = timeout
         self.model = ai_model()
-        self._cves = {}
-        self._next_nvd = 0.0
+        if providers is None:
+            providers = [NvdProvider(self.session, keys.get("nvd", ""), timeout)]
+            if self.use_ai:
+                providers.append(OpenRouterProvider(self.session, keys["openrouter"],
+                                                    self.model, timeout))
+            if keys.get("abuseipdb"):
+                providers.append(AbuseIpdbProvider(self.session, keys["abuseipdb"], timeout))
+        self.providers = list(providers)
 
-    def cves(self, software):
-        if software not in self._cves:
-            wait = self._next_nvd - time.monotonic()
-            if wait > 0:
-                time.sleep(wait)
-            key = self.keys.get("nvd", "")
+    def _ask(self, kind, subject, errors):
+        """Findings of every provider of ``kind``; failures go to ``errors``."""
+        found = []
+        for provider in (p for p in self.providers if p.kind == kind):
             try:
-                response = self.session.get(
-                    NVD_URL, params={"keywordSearch": software, "resultsPerPage": NVD_RESULTS},
-                    headers={"apiKey": key} if key else {}, timeout=self.timeout)
-            finally:
-                self._next_nvd = time.monotonic() + NVD_INTERVAL[bool(key)]
-            response.raise_for_status()
-            self._cves[software] = parse_nvd(response.json())
-        return self._cves[software]
-
-    def explain(self, software):
-        response = self.session.post(
-            OPENROUTER_API_URL,
-            headers={"Authorization": f"Bearer {self.keys['openrouter']}"},
-            json={"model": self.model, "temperature": 0.2, "max_tokens": 600,
-                  "messages": [{"role": "user",
-                                "content": AI_PROMPT.format(software=software)}]},
-            timeout=self.timeout)
-        response.raise_for_status()
-        return untrusted_text(response.json()["choices"][0]["message"]["content"])
+                found.append(provider.lookup(subject))
+            except LOOKUP_ERRORS as error:
+                errors.append(f"{provider.name}: {describe(error)}")
+        return found
 
     def lookup(self, software):
-        """CVEs (NVD), worst CVSS severity and the optional AI text for one product."""
+        """CVEs, worst CVSS severity and the optional AI text for one product."""
         result = {"cves": [], "max_cvss": None, "severity": "UNKNOWN",
                   "ai_explanation": "", "errors": []}
-        try:
-            result["cves"] = self.cves(software)
-        except LOOKUP_ERRORS as error:
-            result["errors"].append(f"NVD: {describe(error)}")
-        else:
+        answers = self._ask("cves", software, result["errors"])
+        if answers:
+            cves = [cve for answer in answers for cve in answer.cves]
+            result["cves"] = sorted(cves, key=lambda c: (-(c["cvss"] or 0), c["id"]))
             worst = result["cves"][0] if result["cves"] else None
             result["max_cvss"] = worst["cvss"] if worst else None
             result["severity"] = worst["severity"] if worst else "NO KNOWN CVE"
-        if self.use_ai:
-            try:
-                result["ai_explanation"] = self.explain(software)
-            except LOOKUP_ERRORS as error:
-                result["errors"].append(f"AI: {describe(error)}")
+        texts = self._ask("explanation", software, result["errors"])
+        result["ai_explanation"] = "\n\n".join(t.text for t in texts if t.text)
         return result
 
-    def abuse_report(self, ip, max_age=90):
-        """(AbuseIPDB data, error message)."""
-        try:
-            response = self.session.get(
-                ABUSEIPDB_URL, params={"ipAddress": ip, "maxAgeInDays": str(max_age)},
-                headers={"Accept": "application/json", "Key": self.keys["abuseipdb"]},
-                timeout=self.timeout)
-            response.raise_for_status()
-            return response.json().get("data", {}), None
-        except LOOKUP_ERRORS as error:
-            return None, f"AbuseIPDB: {describe(error)}"
+    def abuse_report(self, ip):
+        """(reputation data, error message)."""
+        errors = []
+        if not any(p.kind == "ip_reputation" for p in self.providers):
+            return None, "AbuseIPDB: no API key"
+        found = self._ask("ip_reputation", ip, errors)
+        return (dict(found[0].data), None) if found else (None, errors[0])
 
 
 ABUSE_FIELDS = (
