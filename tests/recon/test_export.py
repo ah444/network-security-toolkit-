@@ -53,8 +53,8 @@ def test_formula_cells_neutralised(scanner, tmp_path):
 
 
 def test_terminal_output_is_cleaned(scanner, capsys):
-    scanner.print_table([recon_scanner.PortResult(22, "tcp", "open", "ssh",
-                                            "SSH-2.0\x1b[8mhidden\x1b[0m\r\n")], "OPEN PORTS")
+    port = recon_scanner.PortResult(22, "tcp", "open", "ssh", "SSH-2.0\x1b[8mhidden\x1b[0m\r\n")
+    scanner.print_table([port], "OPEN PORTS")
     scanner.print_entry(_entry(scanner, "\x1b]52;c;ZXZpbA==\x07Apache/2.4.49"))
     out = capsys.readouterr().out
     assert "\x1b" not in out and "\x07" not in out

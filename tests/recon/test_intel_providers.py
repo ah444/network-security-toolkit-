@@ -3,6 +3,8 @@
 import requests
 
 from toolkit.ports import IntelFinding, IntelProvider
+from toolkit.recon import intel as recon_intel
+from toolkit.recon.intel import abuseipdb, llm, nvd
 
 
 class OfflineCves:
@@ -27,31 +29,31 @@ class NoNetwork:
     post = get
 
 
-def test_built_in_providers_fulfil_the_port(scanner):
+def test_built_in_providers_fulfil_the_port():
     session = NoNetwork()
-    providers = (scanner.NvdProvider(session), scanner.OpenRouterProvider(session, "k", "m"),
-                 scanner.AbuseIpdbProvider(session, "k"))
+    providers = (nvd.NvdProvider(session), llm.OpenRouterProvider(session, "k", "m"),
+                 abuseipdb.AbuseIpdbProvider(session, "k"))
     assert all(isinstance(provider, IntelProvider) for provider in providers)
     assert [(p.name, p.kind) for p in providers] == \
         [("NVD", "cves"), ("AI", "explanation"), ("AbuseIPDB", "ip_reputation")]
 
 
-def test_intel_builds_providers_from_keys_and_consent(scanner):
+def test_intel_builds_providers_from_keys_and_consent():
     def names(intel):
         return [provider.name for provider in intel.providers]
 
     session = NoNetwork()
-    assert names(scanner.Intel({}, session=session)) == ["NVD"]
-    assert names(scanner.Intel({"openrouter": "k"}, session=session)) == ["NVD"]  # no consent
-    assert names(scanner.Intel({"openrouter": "k", "abuseipdb": "k"}, use_ai=True,
-                               session=session)) == ["NVD", "AI", "AbuseIPDB"]
+    assert names(recon_intel.Intel({}, session=session)) == ["NVD"]
+    assert names(recon_intel.Intel({"openrouter": "k"}, session=session)) == ["NVD"]  # no consent
+    assert names(recon_intel.Intel({"openrouter": "k", "abuseipdb": "k"}, use_ai=True,
+                                   session=session)) == ["NVD", "AI", "AbuseIPDB"]
 
 
-def test_offline_provider_swapped_in(scanner):
+def test_offline_provider_swapped_in():
     offline = OfflineCves({"Apache 2.4.49": [
         {"id": "CVE-2021-41773", "cvss": 7.5, "cvss_version": "3.1", "severity": "HIGH"},
         {"id": "CVE-2021-42013", "cvss": 9.8, "cvss_version": "3.1", "severity": "CRITICAL"}]})
-    intel = scanner.Intel({}, session=NoNetwork(), providers=[offline])
+    intel = recon_intel.Intel({}, session=NoNetwork(), providers=[offline])
 
     found = intel.lookup("Apache 2.4.49")
     assert [c["id"] for c in found["cves"]] == ["CVE-2021-42013", "CVE-2021-41773"]  # worst first
@@ -61,7 +63,7 @@ def test_offline_provider_swapped_in(scanner):
     assert offline.asked == ["Apache 2.4.49", "nginx 1.25"]
 
 
-def test_failed_provider_is_named_and_scan_goes_on(scanner):
+def test_failed_provider_is_named_and_scan_goes_on():
     class Broken:
         name = "Mirror"
         kind = "cves"
@@ -69,11 +71,11 @@ def test_failed_provider_is_named_and_scan_goes_on(scanner):
         def lookup(self, subject):
             raise requests.ConnectionError("down")
 
-    found = scanner.Intel({}, session=NoNetwork(), providers=[Broken()]).lookup("x 1.0")
+    found = recon_intel.Intel({}, session=NoNetwork(), providers=[Broken()]).lookup("x 1.0")
     assert found["errors"] == ["Mirror: no connection"] and found["severity"] == "UNKNOWN"
 
 
-def test_ip_reputation_through_the_port(scanner):
+def test_ip_reputation_through_the_port():
     class Reputation:
         name = "AbuseIPDB"
         kind = "ip_reputation"
@@ -81,8 +83,8 @@ def test_ip_reputation_through_the_port(scanner):
         def lookup(self, subject):
             return IntelFinding(data={"ipAddress": subject, "abuseConfidenceScore": 0})
 
-    intel = scanner.Intel({}, session=NoNetwork(), providers=[Reputation()])
+    intel = recon_intel.Intel({}, session=NoNetwork(), providers=[Reputation()])
     assert intel.abuse_report("8.8.8.8") == ({"ipAddress": "8.8.8.8",
                                               "abuseConfidenceScore": 0}, None)
-    assert scanner.Intel({}, session=NoNetwork()).abuse_report("8.8.8.8") == \
+    assert recon_intel.Intel({}, session=NoNetwork()).abuse_report("8.8.8.8") == \
         (None, "AbuseIPDB: no API key")

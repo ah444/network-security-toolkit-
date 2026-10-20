@@ -7,6 +7,9 @@ import threading
 
 import pytest
 
+from toolkit.recon.intel import keys as intel_keys
+from toolkit.recon.intel import nvd
+
 SCANNER_FILE = "tools/Port_scan/Port_Scan.py"
 
 
@@ -24,11 +27,11 @@ def scanner(request):
 @pytest.fixture(autouse=True)
 def _no_real_keys(scanner, monkeypatch, tmp_path):
     """The user's own API keys (environment, .env, api_keys.txt) are never used in tests."""
-    for variable in (*scanner.KEY_VARIABLES.values(), "OPENROUTER_MODEL"):
+    for variable in (*intel_keys.KEY_VARIABLES.values(), "OPENROUTER_MODEL"):
         monkeypatch.delenv(variable, raising=False)
-    monkeypatch.setattr(scanner, "API_KEYS_PATH", tmp_path / "no_api_keys.txt")
-    monkeypatch.setattr(scanner, "ENV_PATH", tmp_path / "no.env")
-    monkeypatch.setattr(scanner.load_api_keys, "__defaults__",
+    monkeypatch.setattr(intel_keys, "API_KEYS_PATH", tmp_path / "no_api_keys.txt")
+    monkeypatch.setattr(intel_keys, "ENV_PATH", tmp_path / "no.env")
+    monkeypatch.setattr(intel_keys.load_api_keys, "__defaults__",
                         (None, tmp_path / "no_api_keys.txt", tmp_path / "no.env"))
 
 
@@ -130,4 +133,4 @@ def fake_response():
 
 @pytest.fixture
 def no_nvd_wait(scanner, monkeypatch):
-    monkeypatch.setattr(scanner, "NVD_INTERVAL", {False: 0.0, True: 0.0})
+    monkeypatch.setattr(nvd, "NVD_INTERVAL", {False: 0.0, True: 0.0})

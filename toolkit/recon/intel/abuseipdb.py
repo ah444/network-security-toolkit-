@@ -1,0 +1,26 @@
+"""Reputation of a public IP address from AbuseIPDB (asked only after consent)."""
+
+from ...ports import IntelFinding
+from .lookup import INTEL_TIMEOUT
+
+ABUSEIPDB_URL = "https://api.abuseipdb.com/api/v2/check"
+
+
+class AbuseIpdbProvider:
+    """Reputation of a public IP address (IntelProvider, kind "ip_reputation")."""
+
+    name = "AbuseIPDB"
+    kind = "ip_reputation"
+
+    def __init__(self, session, key, timeout=INTEL_TIMEOUT, max_age=90):
+        self.session = session
+        self.key = key
+        self.timeout = timeout
+        self.max_age = max_age
+
+    def lookup(self, subject):
+        response = self.session.get(
+            ABUSEIPDB_URL, params={"ipAddress": subject, "maxAgeInDays": str(self.max_age)},
+            headers={"Accept": "application/json", "Key": self.key}, timeout=self.timeout)
+        response.raise_for_status()
+        return IntelFinding(data=response.json().get("data", {}))

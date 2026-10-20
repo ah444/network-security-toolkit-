@@ -4,6 +4,7 @@ import ssl
 from pathlib import Path
 
 from toolkit.recon import probes
+from toolkit.recon import intel as recon_intel
 
 
 def test_banner_context_unverified_only_for_banners(scanner, repo_root):
@@ -20,4 +21,4 @@ def test_banner_context_unverified_only_for_banners(scanner, repo_root):
     start = source.index("def banner_tls_context")
     assert "CERT_NONE" in source[start:source.index("\ndef ", start + 1)]
     # web lookups go through requests, which verifies certificates
-    assert scanner.Intel({}).session.verify is True
+    assert recon_intel.Intel({}).session.verify is True

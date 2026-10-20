@@ -5,6 +5,8 @@ import builtins
 import requests
 
 from toolkit.recon import scanner as recon_scanner
+from toolkit.recon import intel as recon_intel
+from toolkit.recon.intel import lookup
 
 
 def test_scan_finishes_when_intel_times_out(scanner, fake_session, monkeypatch, capsys,
@@ -13,7 +15,7 @@ def test_scan_finishes_when_intel_times_out(scanner, fake_session, monkeypatch, 
         monkeypatch.setenv(variable, value)
     session = fake_session(get=requests.Timeout("read timed out"),
                            post=requests.Timeout("read timed out"))
-    real_intel = scanner.Intel
+    real_intel = recon_intel.Intel
     monkeypatch.setattr(scanner, "Intel",
                         lambda keys, use_ai=False: real_intel(keys, use_ai, session=session))
     open_ports = [recon_scanner.PortResult(22, "tcp", "open", "ssh", "SSH-2.0-OpenSSH_8.9p1"),
@@ -29,13 +31,13 @@ def test_scan_finishes_when_intel_times_out(scanner, fake_session, monkeypatch, 
     assert "Total open ports found: 2" in out
     assert "Failed lookups: 4" in out and "22/tcp NVD: timed out" in out
     assert "80/tcp AI: timed out" in out
-    assert all(call[2]["timeout"] == scanner.INTEL_TIMEOUT for call in session.calls)
+    assert all(call[2]["timeout"] == lookup.INTEL_TIMEOUT for call in session.calls)
 
 
-def test_lookup_errors_are_named(scanner, fake_session, fake_response, no_nvd_wait):
+def test_lookup_errors_are_named(fake_session, fake_response, no_nvd_wait):
     cases = ((requests.ConnectionError("down"), "NVD: no connection"),
              (fake_response({}, status=403), "NVD: HTTP 403"),
              (fake_response(ValueError("not JSON")), "NVD: ValueError"))
     for answer, message in cases:
-        found = scanner.Intel({}, session=fake_session(get=answer)).lookup("nginx 1.25")
+        found = recon_intel.Intel({}, session=fake_session(get=answer)).lookup("nginx 1.25")
         assert found["errors"] == [message] and found["severity"] == "UNKNOWN"
