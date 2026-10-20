@@ -28,12 +28,14 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from toolkit import bundle_files  # noqa: E402
+from toolkit.bundle_files import BundleStore  # noqa: E402
 from toolkit.ids_core.bundle import BundleError, BundleVersionWarning  # noqa: E402
 from toolkit.ids_core.datasets import DatasetError, load_dataset  # noqa: E402
 from toolkit.ids_core.registry import MODELS  # noqa: E402
 from toolkit.logging_setup import setup_logging  # noqa: E402
+from toolkit.ports import ModelStore  # noqa: E402
 
+MODEL_STORE: ModelStore = BundleStore()  # this install's exports (instance/bundles)
 LARGE_BUNDLE = 500 * 2**20  # bytes: say that loading takes a while
 # Normal-traffic labels of the supported datasets (real labels): CIC-IDS2017 "BENIGN",
 # NSL-KDD "normal"
@@ -74,7 +76,7 @@ def load_model(bundle_path=None):
 
     Raises BundleError (with a message for the user) for anything else."""
     if bundle_path is None:
-        exports = bundle_files.list_bundles()
+        exports = MODEL_STORE.list_bundles()
         if not exports:
             raise BundleError("NO_EXPORT", NO_EXPORT)
         bundle_path = exports[0].path
@@ -84,12 +86,12 @@ def load_model(bundle_path=None):
               "take minutes and need several times that size in memory...", file=sys.stderr)
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", BundleVersionWarning)  # shown in the model card
-        return bundle_files.load_bundle(path)
+        return MODEL_STORE.load(path)
 
 
 def choose_export():
     """The export the user picks (newest first; Enter = the newest)."""
-    exports = bundle_files.list_bundles()
+    exports = MODEL_STORE.list_bundles()
     if not exports:
         raise BundleError("NO_EXPORT", NO_EXPORT)
     print("\n📂 Models exported from the web trainer (newest first):")
@@ -101,7 +103,7 @@ def choose_export():
 
 
 def list_exports():
-    exports = bundle_files.list_bundles()
+    exports = MODEL_STORE.list_bundles()
     if not exports:
         print(NO_EXPORT)
     for i, info in enumerate(exports, 1):

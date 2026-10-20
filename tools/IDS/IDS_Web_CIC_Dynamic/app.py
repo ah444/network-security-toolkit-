@@ -33,7 +33,8 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from toolkit import bundle_files, run_files  # noqa: E402
+from toolkit import run_files  # noqa: E402
+from toolkit.bundle_files import BundleStore  # noqa: E402
 from toolkit.config import SplitConfig  # noqa: E402
 from toolkit.ids_core import registry  # noqa: E402
 from toolkit.ids_core.balancing import recommend_balancing  # noqa: E402
@@ -44,6 +45,7 @@ from toolkit.ids_core.runs import DatasetRef, TrainSettings  # noqa: E402
 from toolkit.ids_core.runs import train as train_run  # noqa: E402
 from toolkit.ids_core.split import split_dataset  # noqa: E402
 from toolkit.logging_setup import setup_logging  # noqa: E402
+from toolkit.ports import ModelStore  # noqa: E402
 
 # ---------------------------
 # Logging setup
@@ -61,6 +63,9 @@ app = Flask(__name__, template_folder='templates', static_folder='static')
 # change with the TOOLKIT_MAX_UPLOAD_MB environment variable.
 MAX_UPLOAD_MB = int(os.environ.get("TOOLKIT_MAX_UPLOAD_MB", "2048"))
 app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_MB * 1024 * 1024
+
+# Exports and loads go through the ModelStore port: signed bundles in instance/bundles.
+MODEL_STORE: ModelStore = BundleStore()
 
 
 class BadRequestBody(Exception):
@@ -766,7 +771,7 @@ def export_model():
         return _error("Train a model first, then export it.")
     if ws.export is None:
         try:
-            saved = bundle_files.save_bundle(ws.run)
+            saved = MODEL_STORE.save(ws.run)
             run_files.write_run(saved.run)
         except BundleError as error:
             return _bundle_refused(error)
@@ -808,7 +813,7 @@ def load_model_endpoint():
     try:
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", BundleVersionWarning)  # listed in the reply instead
-            bundle = bundle_files.open_bundle(data)
+            bundle = MODEL_STORE.open(data)
     except BundleError as error:
         return _bundle_refused(error)
     ws.loaded = bundle

@@ -127,6 +127,31 @@ def load_bundle(path: str | Path, *, key_file: str | Path | None = None,
     return open_bundle(Path(path).read_bytes(), key_file=key_file, pinned_sha256=pinned_sha256)
 
 
+class BundleStore:
+    """``toolkit.ports.ModelStore`` over this install's bundle files.
+
+    ``directory`` and ``key_file`` default to ``instance/bundles`` and
+    ``instance/signing.key``, resolved at each call (so ``TOOLKIT_INSTANCE_DIR`` applies).
+    """
+
+    def __init__(self, directory: str | Path | None = None, *,
+                 key_file: str | Path | None = None):
+        self.directory = directory
+        self.key_file = key_file
+
+    def save(self, run: TrainingRun) -> SavedBundle:
+        return save_bundle(run, self.directory, key_file=self.key_file)
+
+    def list_bundles(self) -> list[BundleInfo]:
+        return list_bundles(self.directory)
+
+    def load(self, path: str | Path) -> Bundle:
+        return load_bundle(path, key_file=self.key_file)
+
+    def open(self, data: bytes) -> Bundle:
+        return open_bundle(data, key_file=self.key_file)
+
+
 def open_bundle(data: bytes, *, key_file: str | Path | None = None,
                 pinned_sha256: str | None = None) -> Bundle:
     """``load_bundle`` for bytes already in memory (e.g. a web upload). Error messages
