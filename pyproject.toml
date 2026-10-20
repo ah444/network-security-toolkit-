@@ -1,7 +1,7 @@
 # Tool configuration only (packaging comes in v5.1, see docs/IMPROVEMENT_PLAN.md D18).
 [project]
 name = "network-security-toolkit"
-version = "5.0.0"
+version = "5.0.1"
 description = "Network reconnaissance + ML intrusion detection toolkit"
 requires-python = ">=3.11"
 

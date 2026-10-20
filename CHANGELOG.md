@@ -4,6 +4,22 @@ All notable changes to this project. Versions follow the roadmap in
 [docs/IMPROVEMENT_PLAN.md](docs/IMPROVEMENT_PLAN.md); day-to-day progress is in
 [docs/V5.0_CHECKLIST.md](docs/V5.0_CHECKLIST.md).
 
+## [5.0.1] — 2026-10-21
+
+Security patch: dependency update only, no code change. Project version: `5.0.1`.
+
+**Test result:** 419 automated tests passed (`python -m pytest`), ruff clean, `pip-audit`
+clean (installed environment and `requirements.lock`), `pip check` clean; a real HTTPS
+request to the NVD API with the new CA bundle succeeded.
+
+### Security
+- `certifi` 2026.10.18 → **2026.10.19** in `requirements.lock` (PYSEC-2026-4320 /
+  GHSA-6q48-6c7w-9gw2: revoked eMudhra intermediates under the `emSign ECC Root CA - G3`
+  root). `requests` uses this CA bundle for the scanner's NVD, OpenRouter and AbuseIPDB
+  calls. The advisory was published after 5.0-rc2, and the 5.0 gate did not re-run
+  `pip-audit`; it is run again for this patch.
+- Update an existing install with `python -m pip install -r requirements.lock`.
+
 ## [5.0] — 2026-10-21
 
 Release of v5.0 "correct & safe": the checks of the plan's §8 pass, the ML report
