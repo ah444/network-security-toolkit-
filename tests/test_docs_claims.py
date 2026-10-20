@@ -27,3 +27,21 @@ def test_models_readme_withdraws_accuracy(repo_root):
     assert "withdrawn" in text
     assert "| Test Accuracy | ~98% |" not in text
     assert "label-derived" in text
+
+
+def test_dataset_licences_recorded(repo_root):
+    """Step 0.5b: each dataset's terms and citation, checked on its official page."""
+    text = _read(repo_root, "docs/datasets.md")
+    licences = text[text.index("## Licences and citations"):]
+    assert "To confirm" not in licences and "still to complete" not in licences
+    for page, citation in (
+        ("https://www.unb.ca/cic/datasets/ids-2017.html", "Sharafaldin"),
+        ("https://www.unb.ca/cic/datasets/nsl.html", "Tavallaee"),
+        ("https://research.unsw.edu.au/projects/unsw-nb15-dataset", "Moustafa"),
+    ):
+        assert page in licences and citation in licences
+    assert "academic research" in licences and "Derived models" in licences
+    # committed real-data fixtures are redistributed, so they carry the citations
+    fixtures = _read(repo_root, "tests/fixtures/README.md")
+    assert "Sharafaldin" in fixtures and "Tavallaee" in fixtures
+    assert "UNSW" not in fixtures, "UNSW-NB15 rows may not be redistributed"

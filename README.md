@@ -474,7 +474,7 @@ For datasets >500K rows:
 
 ## 📄 License
 
-Intended licence: **MIT**. The `LICENSE` file has not been added yet (planned in v5.1, see [docs/IMPROVEMENT_PLAN.md](docs/IMPROVEMENT_PLAN.md) D20). Datasets keep their own terms; see [docs/datasets.md](docs/datasets.md).
+Intended licence: **MIT**. The `LICENSE` file has not been added yet (planned in v5.1, see [docs/IMPROVEMENT_PLAN.md](docs/IMPROVEMENT_PLAN.md) D20). Datasets keep their own terms and must be cited when used; see "Licences and citations" in [docs/datasets.md](docs/datasets.md). UNSW-NB15 is free for academic research only.
 
 ---
 

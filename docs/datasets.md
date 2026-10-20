@@ -129,11 +129,50 @@ Accepted caveats, written into the TrainingRun and the model card:
 
 Revisit: if the improved CIC-IDS2017 (with timestamps) is downloaded, its header is added to the CIC profile from the real file, and the model can be retrained with a `temporal_per_class` split in a later release.
 
-## Licences and citations (0.5b, still to complete)
+## Licences and citations (0.5b)
 
-| Dataset | Official page | Citation | Licence / redistribution |
-|---|---|---|---|
-| CIC-IDS2017 | https://www.unb.ca/cic/datasets/ids-2017.html | I. Sharafaldin, A. H. Lashkari, A. A. Ghorbani, "Toward Generating a New Intrusion Detection Dataset and Intrusion Traffic Characterization", ICISSP 2018 | **To confirm** from the official page before shipping a model trained on it |
-| NSL-KDD | https://www.unb.ca/cic/datasets/nsl.html | M. Tavallaee, E. Bagheri, W. Lu, A. A. Ghorbani, "A Detailed Analysis of the KDD CUP 99 Data Set", IEEE CISDA 2009 | **To confirm** from the official page |
+Checked on 2026-10-20 on each dataset's official page. Words in quotation marks are the page's own. None of the pages names a standard licence (such as a Creative Commons one); the terms below are all they state. The project's own code licence (README) does not cover any dataset.
 
-Raw datasets are never committed or redistributed by this project.
+### CIC-IDS2017 (files 1 and 2)
+
+| | |
+|---|---|
+| Official page | https://www.unb.ca/cic/datasets/ids-2017.html |
+| Terms | The dataset page says the datasets are "publicly available for researchers". The FAQ on the CIC datasets index (https://www.unb.ca/cic/datasets/index.html) applies to all CIC datasets: "you may redistribute, republish, and mirror our datasets in any form", and "any use or redistribution of the data must include a citation to the dataset and the research paper listed" |
+| Citation (required) | I. Sharafaldin, A. H. Lashkari, A. A. Ghorbani, "Toward Generating a New Intrusion Detection Dataset and Intrusion Traffic Characterization", 4th International Conference on Information Systems Security and Privacy (ICISSP), Portugal, January 2018 |
+| Raw data | Redistribution allowed, with the citation |
+| Derived models | Not mentioned on either page. Treated like redistributed data: allowed, with the citation |
+| Filtered DDoS subset (file 2) | A column subset of CIC-IDS2017, so the same terms and citation apply. It came with the project and its exact origin is unknown (section 2) |
+
+### NSL-KDD (file 3)
+
+| | |
+|---|---|
+| Official page | https://www.unb.ca/cic/datasets/nsl.html (the page now says the dataset "is no longer available" there; the local copy was already in the project) |
+| Terms | "You may redistribute, republish, and mirror the ISCX NSL-KDD dataset in any form." "However, any use or redistribution of the data must include a citation to the NSL-KDD dataset and the paper referenced below." |
+| Citation (required) | The NSL-KDD dataset, and M. Tavallaee, E. Bagheri, W. Lu, A. A. Ghorbani, "A Detailed Analysis of the KDD CUP 99 Data Set", Second IEEE Symposium on Computational Intelligence for Security and Defense Applications (CISDA), 2009 |
+| Raw data | Redistribution allowed, with the citation |
+| Derived models | Not mentioned. Treated like redistributed data: allowed, with the citation |
+
+### UNSW-NB15 (no local file)
+
+| | |
+|---|---|
+| Official page | https://research.unsw.edu.au/projects/unsw-nb15-dataset |
+| Terms | "Free use of the UNSW-NB15 dataset for academic research purposes is hereby granted in perpetuity." "Use for commercial purposes should be agreed by the authors." The authors "have asserted their rights under the Copyright" |
+| Citation (required) | The page asks users to cite five papers: (1) N. Moustafa, J. Slay, "UNSW-NB15: a comprehensive data set for network intrusion detection systems (UNSW-NB15 network data set)", MilCIS, IEEE, 2015. (2) N. Moustafa, J. Slay, "The evaluation of Network Anomaly Detection Systems: Statistical analysis of the UNSW-NB15 dataset and the comparison with the KDD99 dataset", Information Security Journal: A Global Perspective, 2016. (3) N. Moustafa et al., "Novel geometric area analysis technique for anomaly detection using trapezoidal area estimation on large-scale networks", IEEE Transactions on Big Data, 2017. (4) N. Moustafa et al., "Big data analytics for intrusion detection system: statistical decision-making using finite dirichlet mixture models", Data Analytics and Decision Support for Cybersecurity, Springer, 2017, pp. 127-156. (5) M. Sarhan, S. Layeghy, N. Moustafa, M. Portmann, "NetFlow Datasets for Machine Learning-Based Network Intrusion Detection Systems", BDTA 2020 / WiCON 2020, Springer, p. 117. The page lists papers 3 and 4 with "et al." only |
+| Raw data | The page grants use, not redistribution: **do not redistribute** without the authors' agreement |
+| Derived models | Academic research use only; anything commercial needs the authors' agreement |
+| In this project | No file, no fixture, no model. Only the profile's detection rule exists, and its header waits for a real download (section "Profile detection") |
+
+### Kaggle and other mirrors
+
+A mirror (for example on Kaggle) may show its own licence label, but it can't grant more than the original authors did. Any copy of these datasets follows the original terms above, and a TrainingRun records the file's SHA-256, not the mirror.
+
+### What this project redistributes
+
+| What | Status |
+|---|---|
+| Raw dataset files | Never committed (`data/raw/` is gitignored) |
+| Test fixtures | Small real samples of CIC-IDS2017 (2 files) and NSL-KDD (2 files) are committed in `tests/fixtures/`. Both datasets allow redistribution with a citation, so `tests/fixtures/README.md` carries both citations. No UNSW-NB15 rows are committed |
+| Models | None shipped (0.5). Exports stay in `instance/bundles` on the install that made them. If a model is ever shipped, it carries its dataset's citation, and a UNSW-NB15 model is for academic use only |

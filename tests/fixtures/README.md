@@ -17,6 +17,13 @@ The real-data samples are cut from the local datasets in `data/raw/`, which are 
 | `label_leak.csv` | Synthetic (seed 42), 300 rows, 3 classes | Leakage-guard tests (D9): label copy / encoded / prefixed (block), strong continuous feature (warn), `row_id` (ID-like), `Idle Mean` (must **not** trip the `id` pattern) |
 | `xss_header.csv` | Synthetic | XSS tests (S5): HTML/JS payloads in the header and cells |
 
+## Citations
+
+The real-data samples are redistributed under the datasets' own terms, which require these citations (details in `docs/datasets.md`, "Licences and citations"):
+
+- **CIC-IDS2017:** I. Sharafaldin, A. H. Lashkari, A. A. Ghorbani, "Toward Generating a New Intrusion Detection Dataset and Intrusion Traffic Characterization", ICISSP 2018. https://www.unb.ca/cic/datasets/ids-2017.html
+- **NSL-KDD:** the NSL-KDD dataset, and M. Tavallaee, E. Bagheri, W. Lu, A. A. Ghorbani, "A Detailed Analysis of the KDD CUP 99 Data Set", IEEE CISDA 2009. https://www.unb.ca/cic/datasets/nsl.html
+
 ## CIC-IDS2017 variants covered
 
 | Variant | Fixture | Status |
