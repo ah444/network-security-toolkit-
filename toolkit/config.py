@@ -71,3 +71,14 @@ class PipelineConfig:
     smote_max_neighbors: int = 5  # lowered for small classes (smallest train class - 1)
     # Linear SVM is skipped above this many **training** rows (B5; v4 used the whole file).
     svm_max_train_rows: int = 100_000
+
+
+@dataclass(frozen=True)
+class EvaluationConfig:
+    """Cross-validation and model selection (plan D9, D10, step 0.4d)."""
+
+    cv_folds: int = 3
+    # CV runs on a stratified sample of the training split above this size (recorded);
+    # 3 folds of RF on 2 M CIC rows would take about half an hour on a laptop.
+    cv_max_rows: int = 200_000
+    random_state: int = 42

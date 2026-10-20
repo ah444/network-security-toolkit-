@@ -33,6 +33,7 @@ from sklearn.model_selection import StratifiedKFold, cross_val_score
 from sklearn.tree import DecisionTreeClassifier
 
 from ..config import LeakageConfig
+from .sampling import stratified_positions
 
 # Whole-word patterns (token sequences), checked after splitting the name into words.
 NAME_PATTERNS = (
@@ -118,22 +119,6 @@ def _as_number(column: pd.Series) -> np.ndarray:
     return values.reshape(-1, 1)
 
 
-def _class_quotas(counts: pd.Series, total: int, minimum: int) -> dict[str, int]:
-    """Rows per class for a sample of ``total`` rows: proportional (largest remainder),
-    but never fewer than ``minimum`` (or the whole class if it is smaller)."""
-    floor = {c: min(n, minimum) for c, n in counts.items()}
-    spare = total - sum(floor.values())
-    if spare <= 0:  # so many classes that the minimums alone fill the sample
-        return floor
-    extra = {c: (n - floor[c]) * spare / (counts.sum() - sum(floor.values()))
-             for c, n in counts.items()}
-    quotas = {c: floor[c] + int(extra[c]) for c in counts.index}
-    left = total - sum(quotas.values())
-    for c in sorted(counts.index, key=lambda c: (-(extra[c] - int(extra[c])), str(c)))[:left]:
-        quotas[c] += 1
-    return quotas
-
-
 def _sample(frame: pd.DataFrame, label: str, config: LeakageConfig):
     """Drop rows without a label and classes too rare for CV; stratified sample if large.
 
@@ -148,11 +133,8 @@ def _sample(frame: pd.DataFrame, label: str, config: LeakageConfig):
         keep = ~labels.isin(rare)
         frame, labels, counts = frame[keep], labels[keep], counts.drop(list(rare))
     if len(frame) > config.sample_rows:
-        quotas = _class_quotas(counts, config.sample_rows, config.cv_folds)
-        rng = np.random.default_rng(config.random_state)
-        picked = [rng.choice(np.flatnonzero(labels.to_numpy() == c), size=n, replace=False)
-                  for c, n in sorted(quotas.items())]
-        frame = frame.iloc[np.sort(np.concatenate(picked))]
+        frame = frame.iloc[stratified_positions(labels.to_numpy(), config.sample_rows,
+                                                config.cv_folds, config.random_state)]
     return frame, rare
 
 
