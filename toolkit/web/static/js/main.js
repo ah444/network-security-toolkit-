@@ -12,6 +12,14 @@ function escapeHtml(value) {
     .replace(/'/g, "&#39;");
 }
 
+// Every POST/DELETE carries the session's CSRF token from the page's meta tag (S10);
+// without it the server answers 403 CSRF_TOKEN.
+function sendWithToken(url, options) {
+  const meta = document.querySelector('meta[name="csrf-token"]');
+  const headers = Object.assign({}, options.headers, { "X-CSRF-Token": meta ? meta.content : "" });
+  return fetch(url, Object.assign({}, options, { headers: headers }));
+}
+
 // Number for display: fixed decimals, or "n/a" when missing
 function fmt(value, digits) {
   return value === null || value === undefined || isNaN(value) ? "n/a" : Number(value).toFixed(digits);
@@ -281,7 +289,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
       resultDiv.innerHTML = "Removing selected values...";
 
-      fetch("/api/v1/dataset/filter", {
+      sendWithToken("/api/v1/dataset/filter", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -332,7 +340,7 @@ document.addEventListener("DOMContentLoaded", function() {
       const target = currentTargetColumn || document.getElementById("targetForDist").value;
       const target_features = checkedValues(document.getElementById("inputFeatures")).filter(f => f !== target);
       resultDiv.innerHTML = "Running the balancing method on the training split...";
-      fetch("/api/v1/dataset/balancing-preview", {
+      sendWithToken("/api/v1/dataset/balancing-preview", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ target: target, balancing: balancingMethodSelect.value,
@@ -508,7 +516,7 @@ document.addEventListener("DOMContentLoaded", function() {
       Array.from(files).forEach(file => {
         formData.append("dataset", file);
       });
-      fetch("/api/v1/dataset", {
+      sendWithToken("/api/v1/dataset", {
         method: "POST",
         body: formData
       })
@@ -580,7 +588,7 @@ document.addEventListener("DOMContentLoaded", function() {
       loadResult.innerHTML = "Checking and loading the bundle...";
       const formData = new FormData();
       formData.append("file", modelFileInput.files[0]);
-      fetch("/api/v1/bundle", {
+      sendWithToken("/api/v1/bundle", {
         method: "POST",
         body: formData
       })
@@ -629,7 +637,7 @@ document.addEventListener("DOMContentLoaded", function() {
         return;
       }
       recommendationResult.innerHTML = "Scoring features on the training split...";
-      fetch("/api/v1/dataset/feature-scores", {
+      sendWithToken("/api/v1/dataset/feature-scores", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ target: targetForRec, k: parseInt(kValue), test_size: testSize() })
@@ -881,13 +889,13 @@ document.addEventListener("DOMContentLoaded", function() {
           return;
         }
         cancelButton.disabled = true;
-        fetch(jobUrl, { method: "DELETE" })
+        sendWithToken(jobUrl, { method: "DELETE" })
         .then(response => response.json())
         .then(job => { if (job.state) { showJob(job); } })
         .catch(() => {});
       };
 
-      fetch("/api/v1/jobs/training", {
+      sendWithToken("/api/v1/jobs/training", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -924,7 +932,7 @@ document.addEventListener("DOMContentLoaded", function() {
         return;
       }
       const clearWorkspaceResult = document.getElementById("clearWorkspaceResult");
-      fetch("/api/v1/workspace", { method: "DELETE" })
+      sendWithToken("/api/v1/workspace", { method: "DELETE" })
       .then(async response => {
         if (!response.ok) {  // e.g. 409 while a training runs: show the server's message
           const result = await response.json().catch(() => null);
@@ -944,7 +952,7 @@ document.addEventListener("DOMContentLoaded", function() {
       const exportResult = document.getElementById("exportResult");
       exportResult.textContent = "Saving the signed bundle...";
       const modelName = document.getElementById("modelName").value;
-      fetch("/api/v1/run/export", {
+      sendWithToken("/api/v1/run/export", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: modelName })
@@ -1061,7 +1069,7 @@ document.addEventListener("DOMContentLoaded", function() {
       e.preventDefault();
       const predictionResult = document.getElementById("predictionResult");
       predictionResult.textContent = "Predicting...";
-      fetch("/api/v1/run/predict", {
+      sendWithToken("/api/v1/run/predict", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ values: formValues("dynamicInputs"),
@@ -1086,7 +1094,7 @@ document.addEventListener("DOMContentLoaded", function() {
       e.preventDefault();
       const loadedPredictionResult = document.getElementById("loadedPredictionResult");
       loadedPredictionResult.textContent = "Predicting...";
-      fetch("/api/v1/bundle/predict", {
+      sendWithToken("/api/v1/bundle/predict", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ values: formValues("loadedDynamicInputs"),

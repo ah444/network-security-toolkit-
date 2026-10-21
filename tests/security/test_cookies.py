@@ -1,4 +1,5 @@
-"""Step 0.8: the session cookie only carries the workspace ID, with safe flags (S10, D23)."""
+"""Step 0.8: the session cookie only carries the workspace ID (and, since step 1.2e, the
+CSRF token), with safe flags (S10, D23)."""
 
 
 def _set_cookie_after_upload(test_client, fixtures_dir):
@@ -18,7 +19,7 @@ def test_session_cookie_flags(client, fixtures_dir, monkeypatch):
     assert "SameSite=Strict" in cookie
     assert "Secure" not in cookie, "plain http://127.0.0.1 would drop a Secure cookie"
     with client.session_transaction() as session:
-        assert set(session) == {"ws"}, "the cookie must hold the workspace ID only"
+        assert set(session) == {"ws", "csrf"}, "only the workspace ID and the CSRF token"
 
 
 def test_secure_flag_with_toolkit_https(make_app, fixtures_dir, monkeypatch):

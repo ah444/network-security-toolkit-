@@ -1,16 +1,18 @@
-"""Security headers and the cross-site check on every request (S5, S10), and safe names
-for uploaded and exported files (S2-S4)."""
+"""Security headers, the CSRF token and the cross-site check on every request (S5, S10),
+and safe names for uploaded and exported files (S2-S4)."""
 
 from __future__ import annotations
 
+import hmac
 import re
+import secrets
 from pathlib import PureWindowsPath
 from uuid import uuid4
 
-from flask import Flask, Response, request
+from flask import Flask, Response, request, session
 from werkzeug.utils import secure_filename
 
-from .api import CROSS_SITE, error_response
+from .api import CROSS_SITE, CSRF_TOKEN, error_response
 
 CONTENT_SECURITY_POLICY = "; ".join([
     "default-src 'self'",
@@ -48,19 +50,42 @@ def _security_headers(response: Response) -> Response:
     return response
 
 
-def _block_cross_site_requests() -> tuple[Response, int] | None:
-    """Interim CSRF protection (S10) until the v5.1 token: reject state-changing
-    requests whose Origin header names another site."""
-    if request.method in ("POST", "PUT", "PATCH", "DELETE"):
-        origin = request.headers.get("Origin")
-        if origin is not None and origin.rstrip("/") != request.host_url.rstrip("/"):
-            return error_response("Cross-site request blocked.", 403, CROSS_SITE)
+CSRF_HEADER = "X-CSRF-Token"
+STATE_CHANGING_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
+
+
+def csrf_token() -> str:
+    """The session's CSRF token (S10), made on first use and kept for the whole session,
+    so tabs of the same browser share it. Pages put it in <meta name="csrf-token">."""
+    token = session.get("csrf")
+    if not isinstance(token, str):
+        token = secrets.token_urlsafe(32)
+        session["csrf"] = token
+    return token
+
+
+def _check_state_changing_request() -> tuple[Response, int] | None:
+    """CSRF protection (S10) for POST/PUT/PATCH/DELETE: the Origin header, if sent, must be
+    this site, and the X-CSRF-Token header must be the session's token. JSON-only bodies
+    and the SameSite=Strict cookie are further layers."""
+    if request.method not in STATE_CHANGING_METHODS:
+        return None
+    origin = request.headers.get("Origin")
+    if origin is not None and origin.rstrip("/") != request.host_url.rstrip("/"):
+        return error_response("Cross-site request blocked.", 403, CROSS_SITE)
+    expected = session.get("csrf")
+    sent = request.headers.get(CSRF_HEADER, "")
+    # A server restart changes the signing key, so the old page's token stops matching.
+    if not isinstance(expected, str) or not hmac.compare_digest(sent.encode(), expected.encode()):
+        return error_response("Missing or expired security token. Reload the page.", 403,
+                              CSRF_TOKEN)
     return None
 
 
 def register_security(app: Flask) -> None:
     app.after_request(_security_headers)
-    app.before_request(_block_cross_site_requests)
+    app.before_request(_check_state_changing_request)
+    app.jinja_env.globals["csrf_token"] = csrf_token
 
 
 _EXPORT_NAME = re.compile(r"[A-Za-z0-9_-]{1,80}")

@@ -19,6 +19,8 @@ computer (`127.0.0.1`).
   sessions' workspaces are dropped, least recently used first, but never one that is
   training; if that isn't enough, the request is refused. Workspaces unused for
   `TOOLKIT_WORKSPACE_IDLE_MIN` minutes (default 240) are dropped, checked every 5 minutes.
+- **Security token:** every `POST`/`DELETE` must send the session's token in an
+  `X-CSRF-Token` header, otherwise it is refused (`CSRF_TOKEN`, 403). See below.
 - **Cross-site requests:** a `POST`/`DELETE` whose `Origin` header names another site is
   refused (`CROSS_SITE`, 403).
 - **Caching:** every API answer (the bundle download too) and the trainer page are sent
@@ -49,6 +51,19 @@ computer (`127.0.0.1`).
 | POST | `/api/v1/bundle` | multipart `file`: a `.bundle` exported by this install | the loaded models and their scores |
 | POST | `/api/v1/bundle/predict` | `values`, `model` | prediction with the loaded bundle |
 | DELETE | `/api/v1/workspace` | none | the session's dataset and models are forgotten |
+
+## Security token
+
+Each browser session has one random token, kept in the signed session cookie and shown
+in the trainer page as `<meta name="csrf-token" content="...">`. The page sends it with
+every `POST` and `DELETE`; another site can't read it, so it can't make the browser change
+anything here (CSRF). The token stays the same for the whole session (tabs of one browser
+share it, clearing the workspace keeps it). After a server restart the old page's token
+no longer matches: the answer is `CSRF_TOKEN` with "Reload the page".
+
+A script on this computer works the same way: keep the cookies, `GET /dynamic_ids`, read
+the token from the meta tag, and send it in the `X-CSRF-Token` header. `GET` routes need
+no token.
 
 ## Training jobs
 
@@ -94,6 +109,7 @@ Every error answer has the same shape; `details` is present only when there is m
 | `NO_MODEL_LOADED` | 400 | no bundle loaded yet in this session |
 | `NOT_A_BUNDLE`, `BAD_SIGNATURE`, `EMPTY`, ... | 400 | a bundle was refused before anything in it was loaded |
 | `CROSS_SITE` | 403 | the request came from another site |
+| `CSRF_TOKEN` | 403 | the `X-CSRF-Token` header is missing or isn't this session's token (reload the page) |
 | `NOT_FOUND` | 404 | no such API route |
 | `METHOD_NOT_ALLOWED` | 405 | the route exists, the method doesn't |
 | `BUSY` | 409 | a training run is in progress in this workspace: a second training, an upload, a class filter or clearing the workspace has to wait for it |

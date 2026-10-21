@@ -30,6 +30,7 @@ TRAINING_FAILED = "TRAINING_FAILED"
 CANCELLED = "CANCELLED"  # a job cancelled by the user (in the job, not an HTTP answer)
 TIME_LIMIT = "TIME_LIMIT"  # a job stopped by TOOLKIT_JOB_MAX_MIN
 CROSS_SITE = "CROSS_SITE"  # 403
+CSRF_TOKEN = "CSRF_TOKEN"  # 403: the X-CSRF-Token header is missing or not this session's
 NOT_FOUND = "NOT_FOUND"  # 404
 METHOD_NOT_ALLOWED = "METHOD_NOT_ALLOWED"  # 405
 INTERNAL = "INTERNAL"  # 500: anything unexpected; details only in the server log

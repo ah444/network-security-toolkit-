@@ -41,5 +41,12 @@ def test_wrong_method_is_json_405(client):
 
 def test_page_uses_only_api_routes(repo_root):
     js = (repo_root / "toolkit/web/static/js/main.js").read_text(encoding="utf-8")
-    urls = re.findall(r'fetch\("(/[^"?]*)', js)
+    urls = re.findall(r'(?:fetch|sendWithToken)\("(/[^"?]*)', js)
     assert len(urls) == 13 and all(url.startswith("/api/v1/") for url in urls), urls
+
+
+def test_page_sends_every_state_change_with_the_token(repo_root):
+    """Step 1.2e: a POST/DELETE through plain fetch() would be refused (403 CSRF_TOKEN)."""
+    js = (repo_root / "toolkit/web/static/js/main.js").read_text(encoding="utf-8")
+    assert re.findall(r"fetch\([^)]*method:", js) == []
+    assert len(re.findall(r'sendWithToken\([^)]*method: "(?:POST|DELETE)"', js)) == 11

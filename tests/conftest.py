@@ -1,6 +1,7 @@
 """Shared pytest fixtures for the whole test suite."""
 
 import platform
+import re
 import sys
 from pathlib import Path
 
@@ -47,16 +48,51 @@ def fake_platform(monkeypatch):
 
 # ---- Web IDS app fixtures (toolkit.web, v5.1 step 1.2a) ----
 
+STATE_CHANGING = {"POST", "PUT", "PATCH", "DELETE"}
+
+
+def _token_client_class():
+    from flask.testing import FlaskClient
+    from werkzeug.datastructures import Headers
+
+    class TokenClient(FlaskClient):
+        """Sends the session's CSRF token on POST/PUT/PATCH/DELETE like the page does
+        (step 1.2e): the token is read from the real page's <meta name="csrf-token"> the
+        first time the session needs one. A test that passes its own X-CSRF-Token header
+        keeps it; ``send_token = False`` sends none."""
+
+        send_token = True
+
+        def csrf_token(self):
+            with self.session_transaction() as session:
+                token = session.get("csrf")
+            if token is None:
+                page = super().open("/dynamic_ids").get_data(as_text=True)
+                token = re.search(r'<meta name="csrf-token" content="([^"]+)">', page).group(1)
+            return token
+
+        def open(self, *args, **kwargs):
+            if self.send_token and kwargs.get("method", "GET").upper() in STATE_CHANGING:
+                headers = Headers(kwargs.get("headers"))
+                if "X-CSRF-Token" not in headers:
+                    headers["X-CSRF-Token"] = self.csrf_token()
+                kwargs["headers"] = headers
+            return super().open(*args, **kwargs)
+
+    return TokenClient
+
 
 @pytest.fixture
 def make_app():
     """Build a fresh web app (call it after setting env variables): its own workspaces,
-    model store and upload folder, so state never leaks between apps or tests."""
+    model store and upload folder, so state never leaks between apps or tests. Its test
+    clients send the CSRF token (see ``_token_client_class``)."""
     from toolkit.web import create_app
 
     def _make(config=None):
         app = create_app(config)
         app.config["TESTING"] = True
+        app.test_client_class = _token_client_class()
         return app
 
     return _make
