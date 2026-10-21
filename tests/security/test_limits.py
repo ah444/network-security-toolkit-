@@ -10,8 +10,8 @@ JSON_ROUTES = ["/preview_data", "/filter_target_values", "/get_target_values",
                "/export_model"]
 
 
-def test_oversized_upload_413(app_module, client):
-    app_module.app.config["MAX_CONTENT_LENGTH"] = 100
+def test_oversized_upload_413(web_app, client):
+    web_app.config["MAX_CONTENT_LENGTH"] = 100
     payload = b"a,b,Label\n" + b"1,2,X\n" * 100
     response = client.post("/upload", data={"dataset": (io.BytesIO(payload), "big.csv")},
                            content_type="multipart/form-data")
@@ -19,8 +19,8 @@ def test_oversized_upload_413(app_module, client):
     assert "too large" in response.get_json()["error"].lower()
 
 
-def test_upload_limit_is_configured_by_default(app_module):
-    assert app_module.app.config["MAX_CONTENT_LENGTH"] >= 1024 * 1024 * 1024  # big datasets ok
+def test_upload_limit_is_configured_by_default(web_app):
+    assert web_app.config["MAX_CONTENT_LENGTH"] >= 1024 * 1024 * 1024  # big datasets ok
 
 
 @pytest.mark.parametrize("route", JSON_ROUTES)

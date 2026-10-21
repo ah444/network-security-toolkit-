@@ -5,8 +5,8 @@ from html.parser import HTMLParser
 
 import pytest
 
-TEMPLATES = "tools/IDS/IDS_Web_CIC_Dynamic/templates"
-MAIN_JS = "tools/IDS/IDS_Web_CIC_Dynamic/static/js/main.js"
+TEMPLATES = "toolkit/web/templates"
+MAIN_JS = "toolkit/web/static/js/main.js"
 
 
 class _FormScanner(HTMLParser):

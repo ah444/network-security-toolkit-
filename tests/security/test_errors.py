@@ -3,7 +3,7 @@
 import ast
 import io
 
-APP = "tools/IDS/IDS_Web_CIC_Dynamic/app.py"
+WEB = "toolkit/web"
 
 
 def _leaks(tree):
@@ -22,8 +22,10 @@ def _leaks(tree):
 
 
 def test_no_exception_text_in_json_responses(repo_root):
-    tree = ast.parse((repo_root / APP).read_text(encoding="utf-8"))
-    assert _leaks(tree) == []
+    modules = sorted((repo_root / WEB).glob("*.py"))
+    assert len(modules) > 5, "the web package moved?"
+    for path in modules:
+        assert _leaks(ast.parse(path.read_text(encoding="utf-8"))) == [], path.name
 
 
 def test_scanner_detects_a_leak():

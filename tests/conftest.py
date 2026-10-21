@@ -1,6 +1,5 @@
 """Shared pytest fixtures for the whole test suite."""
 
-import importlib.util
 import platform
 import sys
 from pathlib import Path
@@ -46,44 +45,38 @@ def fake_platform(monkeypatch):
     return _set
 
 
-# ---- Web IDS app fixtures (tools/IDS/IDS_Web_CIC_Dynamic/app.py) ----
-
-WEB_APP_FILE = "tools/IDS/IDS_Web_CIC_Dynamic/app.py"
+# ---- Web IDS app fixtures (toolkit.web, v5.1 step 1.2a) ----
 
 
 @pytest.fixture
-def load_app_module(request):
-    """Import a fresh copy of the app module (call it after setting env variables)."""
-    path = request.config.rootpath / WEB_APP_FILE
+def make_app():
+    """Build a fresh web app (call it after setting env variables): its own workspaces,
+    model store and upload folder, so state never leaks between apps or tests."""
+    from toolkit.web import create_app
 
-    def _load():
-        spec = importlib.util.spec_from_file_location("ids_web_app_under_test", path)
-        module = importlib.util.module_from_spec(spec)
-        sys.modules["ids_web_app_under_test"] = module
-        spec.loader.exec_module(module)
-        module.app.config["TESTING"] = True
-        return module
+    def _make(config=None):
+        app = create_app(config)
+        app.config["TESTING"] = True
+        return app
 
-    yield _load
-    for leftover in (path.parent / "uploads").glob("*"):
-        if leftover.name != ".gitkeep":
-            leftover.unlink()
+    return _make
 
 
 @pytest.fixture
-def app_module(request, load_app_module):
-    """A freshly imported app module, so global state never leaks between tests."""
-    path = request.config.rootpath / WEB_APP_FILE
-    yield load_app_module()
-    for leftover in (path.parent / "uploads").glob("*"):
-        if leftover.name != ".gitkeep":
-            leftover.unlink()
+def web_app(make_app):
+    return make_app()
 
 
 @pytest.fixture
-def client(app_module):
-    with app_module.app.test_client() as test_client:
+def client(web_app):
+    with web_app.test_client() as test_client:
         yield test_client
+
+
+@pytest.fixture
+def workspaces(web_app):
+    """The app's WorkspaceStore: ``len()``, ``values()``, ``idle_seconds``."""
+    return web_app.extensions["toolkit"].workspaces
 
 
 @pytest.fixture

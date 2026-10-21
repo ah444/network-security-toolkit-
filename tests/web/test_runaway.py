@@ -4,6 +4,8 @@ import threading
 
 import pytest
 
+from toolkit.web import training
+
 TARGET = "Label"  # stripped by the v5 loader (B17)
 
 
@@ -18,10 +20,10 @@ def _train_body(columns):
 
 
 @pytest.fixture
-def held_training(app_module, monkeypatch):
+def held_training(monkeypatch):
     """Training requests from background threads stop inside training until released."""
     entered, release = threading.Event(), threading.Event()
-    real_train = app_module.train_run
+    real_train = training.train_run
 
     def held(*args, **kwargs):
         if threading.current_thread() is not threading.main_thread():
@@ -29,18 +31,18 @@ def held_training(app_module, monkeypatch):
             assert release.wait(30), "test never released the held training"
         return real_train(*args, **kwargs)
 
-    monkeypatch.setattr(app_module, "train_run", held)
+    monkeypatch.setattr(training, "train_run", held)
     return entered, release
 
 
-def _start(app_module, test_client, body):
+def _start(web_app, test_client, body):
     """POST /configure from a background thread, in the same session as test_client.
 
     The thread gets its own client (a client used in a `with` block can't be shared
     across threads) carrying a copy of the session cookie.
     """
-    background = app_module.app.test_client()
-    name = app_module.app.config["SESSION_COOKIE_NAME"]
+    background = web_app.test_client()
+    name = web_app.config["SESSION_COOKIE_NAME"]
     cookie = test_client.get_cookie(name)
     if cookie is not None:
         background.set_cookie(name, cookie.value)
@@ -51,9 +53,9 @@ def _start(app_module, test_client, body):
     return thread, result
 
 
-def test_second_training_returns_409(app_module, client, columns, held_training):
+def test_second_training_returns_409(web_app, client, columns, held_training):
     entered, release = held_training
-    thread, first = _start(app_module, client, _train_body(columns))
+    thread, first = _start(web_app, client, _train_body(columns))
     try:
         assert entered.wait(30), "first training never started"
         second = client.post("/configure", json=_train_body(columns))
@@ -67,24 +69,24 @@ def test_second_training_returns_409(app_module, client, columns, held_training)
         "busy flag must be cleared after training"
 
 
-def test_busy_flag_cleared_after_failure(app_module, client, columns, monkeypatch):
+def test_busy_flag_cleared_after_failure(client, columns, monkeypatch):
     def broken(*args, **kwargs):
         raise RuntimeError("boom")
 
-    real_train = app_module.train_run
-    monkeypatch.setattr(app_module, "train_run", broken)
+    real_train = training.train_run
+    monkeypatch.setattr(training, "train_run", broken)
     with pytest.raises(RuntimeError):
         client.post("/configure", json=_train_body(columns))
-    monkeypatch.setattr(app_module, "train_run", real_train)
+    monkeypatch.setattr(training, "train_run", real_train)
     assert client.post("/configure", json=_train_body(columns)).status_code == 200
 
 
-def test_other_workspace_not_blocked(app_module, client, columns, held_training, fixtures_dir):
+def test_other_workspace_not_blocked(web_app, client, columns, held_training, fixtures_dir):
     entered, release = held_training
-    thread, _ = _start(app_module, client, _train_body(columns))
+    thread, _ = _start(web_app, client, _train_body(columns))
     try:
         assert entered.wait(30)
-        other = app_module.app.test_client()
+        other = web_app.test_client()
         path = fixtures_dir / "cic_ddos_sample.csv"
         with path.open("rb") as handle:
             other.post("/upload", data={"dataset": (handle, path.name)},

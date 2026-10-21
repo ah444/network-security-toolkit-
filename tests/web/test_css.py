@@ -4,7 +4,7 @@ import re
 
 import pytest
 
-CSS_DIR = "tools/IDS/IDS_Web_CIC_Dynamic/static/css"
+CSS_DIR = "toolkit/web/static/css"
 FILES = ["style.css", "style2.css"]
 
 

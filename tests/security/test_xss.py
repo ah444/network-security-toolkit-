@@ -17,7 +17,7 @@ import re
 
 import pytest
 
-MAIN_JS = "tools/IDS/IDS_Web_CIC_Dynamic/static/js/main.js"
+MAIN_JS = "toolkit/web/static/js/main.js"
 SAFE_SINK = re.compile(r"\.(textContent|text)\s*=")
 HTML_LINE = re.compile(r"\.innerHTML\s*\+?=|['\"]\s*<|<[a-zA-Z/][^'\"]*['\"]")
 HTML_BUILDERS = {"accHTML", "distHTML", "recHTML", "configHTML", "html", "tableHTML"}

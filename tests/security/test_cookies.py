@@ -21,15 +21,14 @@ def test_session_cookie_flags(client, fixtures_dir, monkeypatch):
         assert set(session) == {"ws"}, "the cookie must hold the workspace ID only"
 
 
-def test_secure_flag_with_toolkit_https(load_app_module, fixtures_dir, monkeypatch):
+def test_secure_flag_with_toolkit_https(make_app, fixtures_dir, monkeypatch):
     monkeypatch.setenv("TOOLKIT_HTTPS", "1")
-    module = load_app_module()
-    with module.app.test_client() as test_client:
+    with make_app().test_client() as test_client:
         cookie = _set_cookie_after_upload(test_client, fixtures_dir)
     assert "Secure" in cookie
 
 
-def test_secret_key_not_hard_coded(load_app_module, monkeypatch):
+def test_secret_key_not_hard_coded(make_app, monkeypatch):
     monkeypatch.delenv("TOOLKIT_SECRET_KEY", raising=False)
-    first, second = load_app_module().app.secret_key, load_app_module().app.secret_key
+    first, second = make_app().secret_key, make_app().secret_key
     assert first and second and first != second

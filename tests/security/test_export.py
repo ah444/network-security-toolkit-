@@ -3,19 +3,20 @@
 import pytest
 
 from toolkit import bundle_files
+from toolkit.web.security import safe_model_basename
 
 TARGET = "Label"
 
 
 @pytest.mark.parametrize("bad", ["../../evil", "a/b", r"a\b", "", "   ", "x" * 81, "na:me", ".."])
-def test_bad_export_name_refused(app_module, bad):
+def test_bad_export_name_refused(bad):
     with pytest.raises(ValueError):
-        app_module.safe_model_basename(bad)
+        safe_model_basename(bad)
 
 
 @pytest.mark.parametrize("good", ["my_model", "IDS-v5", "run42"])
-def test_good_export_name_kept(app_module, good):
-    assert app_module.safe_model_basename(good) == good
+def test_good_export_name_kept(good):
+    assert safe_model_basename(good) == good
 
 
 @pytest.fixture

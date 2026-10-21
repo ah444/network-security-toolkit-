@@ -171,6 +171,38 @@ class ScanConfig:
     max_probes: int = 65_536  # host x port checks; TCP and UDP count separately
 
 
+@dataclass(frozen=True)
+class WebConfig:
+    """Web trainer settings (plan S6, S9, D7, D23; one place since v5.1 step 1.2a)."""
+
+    max_upload_mb: int = 2048  # large enough for the full CIC-IDS2017 file (~1 GB), S9
+    workspace_idle_minutes: int = 240  # unused workspaces are dropped (not while training)
+    port: int = 5000
+    https: bool = False  # Secure session cookie: only behind HTTPS (D23)
+    debug: bool = False  # Flask's debug server: development only, its debugger can run code
+    secret_key: str = ""  # session signing key; '' = random per start
+
+
+def _int_setting(environ: Mapping[str, str], variable: str, default: int) -> int:
+    raw = environ.get(variable, "").strip()
+    return int(raw) if raw else default
+
+
+def web_config(environ: Mapping[str, str] | None = None) -> WebConfig:
+    """``TOOLKIT_MAX_UPLOAD_MB``, ``TOOLKIT_WORKSPACE_IDLE_MIN``, ``TOOLKIT_PORT``,
+    ``TOOLKIT_HTTPS=1``, ``TOOLKIT_DEBUG=1`` and ``TOOLKIT_SECRET_KEY``, else the defaults."""
+    environ = os.environ if environ is None else environ
+    return WebConfig(
+        max_upload_mb=_int_setting(environ, "TOOLKIT_MAX_UPLOAD_MB", WebConfig.max_upload_mb),
+        workspace_idle_minutes=_int_setting(environ, "TOOLKIT_WORKSPACE_IDLE_MIN",
+                                            WebConfig.workspace_idle_minutes),
+        port=_int_setting(environ, "TOOLKIT_PORT", WebConfig.port),
+        https=environ.get("TOOLKIT_HTTPS") == "1",
+        debug=environ.get("TOOLKIT_DEBUG") == "1",
+        secret_key=environ.get("TOOLKIT_SECRET_KEY", ""),
+    )
+
+
 def scan_limits(environ: Mapping[str, str] | None = None) -> ScanConfig:
     """``TOOLKIT_SCAN_MAX_HOSTS`` / ``TOOLKIT_SCAN_MAX_PROBES``, else the defaults.
 

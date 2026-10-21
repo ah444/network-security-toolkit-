@@ -13,6 +13,7 @@ import pytest
 from toolkit import bundle_files
 from toolkit.ids_core.bundle import pack
 from toolkit.ids_core.datasets import load_dataset
+from toolkit.web import datasets, training
 
 CIC = "cic_ddos_sample.csv"
 TARGET = "Label"  # the v5 loader strips the header's leading space (B17)
@@ -52,15 +53,15 @@ def test_upload_uses_v5_loader(cic):
     assert cic["dataset"]["rows"] == 200 and cic["dataset"]["test_file"] is None
 
 
-def test_end_to_end_training_uses_pipeline(app_module, client, cic, monkeypatch):
+def test_end_to_end_training_uses_pipeline(client, cic, monkeypatch):
     calls = []
-    real_train = app_module.train_run
+    real_train = training.train_run
 
     def spy(frame, **kwargs):
         calls.append((len(frame), kwargs))
         return real_train(frame, **kwargs)
 
-    monkeypatch.setattr(app_module, "train_run", spy)
+    monkeypatch.setattr(training, "train_run", spy)
     response = _train(client, cic["columns"], models=("decision_tree", "logistic_regression"),
                       balancing="recommended")
     assert response.status_code == 200, response.get_json()
@@ -84,13 +85,14 @@ def test_end_to_end_training_uses_pipeline(app_module, client, cic, monkeypatch)
     assert "validation" not in json.dumps(result).lower(), "no v4 validation split any more"
 
 
-def test_old_preprocessing_code_deleted(app_module, repo_root):
-    for name in ("train_test_split", "RobustScaler", "LabelEncoder", "SMOTE", "SelectKBest",
-                 "recommend_balancing_method", "dd", "MODEL_FILES_PAUSED", "unique_export_path"):
-        assert not hasattr(app_module, name), f"old code still in app.py: {name}"
-    source = (repo_root / "tools/IDS/IDS_Web_CIC_Dynamic/app.py").read_text(encoding="utf-8")
-    for leftover in ("df_balanced", "smote_applied", "label_encoders", "pickle"):
-        assert leftover not in source, leftover
+def test_old_preprocessing_code_deleted(repo_root):
+    for path in sorted((repo_root / "toolkit" / "web").glob("*.py")):
+        source = path.read_text(encoding="utf-8")
+        for name in ("train_test_split", "RobustScaler", "LabelEncoder", "SMOTE(", "SelectKBest",
+                     "recommend_balancing_method", "import dask", "MODEL_FILES_PAUSED",
+                     "unique_export_path", "df_balanced", "smote_applied", "label_encoders",
+                     "pickle"):
+            assert name not in source, f"old code still in {path.name}: {name}"
 
 
 def test_training_errors_are_clear(client, cic):
@@ -133,15 +135,15 @@ def test_nslkdd_official_pair_uses_official_split(client, fixtures_dir):
 
 # --- train-only analysis ---------------------------------------------------------------------
 
-def test_class_analysis_recommendation_from_train_split(app_module, client, cic, monkeypatch):
+def test_class_analysis_recommendation_from_train_split(client, cic, monkeypatch):
     seen = []
-    real = app_module.recommend_balancing
+    real = datasets.recommend_balancing
 
     def spy(labels, num_features):
         seen.append(len(labels))
         return real(labels, num_features)
 
-    monkeypatch.setattr(app_module, "recommend_balancing", spy)
+    monkeypatch.setattr(datasets, "recommend_balancing", spy)
     result = client.post("/analyze_class_distribution",
                          json={"target": TARGET, "test_size": 0.3}).get_json()
     assert sum(result["class_counts"].values()) == result["total_samples"] == 200
@@ -236,7 +238,7 @@ def test_export_writes_bundle_and_run_record(client, cic):
     assert str(bundle_files.instance_dir()) not in json.dumps(exported), "no server paths"
 
 
-def test_web_load_accepts_signed_rejects_other(app_module, client, cic, monkeypatch):
+def test_web_load_accepts_signed_rejects_other(workspaces, client, cic, monkeypatch):
     assert _train(client, cic["columns"]).status_code == 200
     _export(client)
     good = client.get("/download_bundle").data
@@ -250,7 +252,7 @@ def test_web_load_accepts_signed_rejects_other(app_module, client, cic, monkeypa
     monkeypatch.setattr(joblib, "load", forbidden)
     tampered = bytearray(good)
     tampered[len(tampered) // 2] ^= 1
-    foreign = pack(_session_run(app_module), bytes(range(32)))
+    foreign = pack(_session_run(workspaces), bytes(range(32)))
     cases = {"pickle": (pickle.dumps({"model": "anything"}), "NOT_A_BUNDLE"),
              "tampered": (bytes(tampered), "BAD_SIGNATURE"),
              "foreign": (foreign, "BAD_SIGNATURE"),
@@ -263,9 +265,9 @@ def test_web_load_accepts_signed_rejects_other(app_module, client, cic, monkeypa
     assert _load(client, good).status_code == 200
 
 
-def _session_run(app_module):
+def _session_run(workspaces):
     """The run trained in the (only) workspace of this test."""
-    (workspace,) = app_module._workspaces.values()
+    (workspace,) = workspaces.values()
     return workspace.run
 
 
@@ -283,7 +285,7 @@ def test_predict_loaded_route(client, cic, fixtures_dir):
 
 
 def test_js_has_no_dead_loaded_model_config(repo_root):
-    js = (repo_root / "tools/IDS/IDS_Web_CIC_Dynamic/static/js/main.js").read_text(
+    js = (repo_root / "toolkit/web/static/js/main.js").read_text(
         encoding="utf-8")
     assert "loaded_model_config" not in js
     assert '"/predict_loaded"' in js and '"/predict_loaded/"' not in js

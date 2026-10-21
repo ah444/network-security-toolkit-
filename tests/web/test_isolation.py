@@ -1,8 +1,14 @@
 """Step 0.8: one workspace per browser session instead of three shared globals (S7, R4)."""
 
+import importlib
+
 import pytest
 
+import toolkit.web as web
+
 TARGET = "Label"  # stripped by the v5 loader (B17)
+WEB_MODULES = ("api", "bundles", "datasets", "pages", "security", "state", "training",
+               "workspace")
 
 
 def _upload(test_client, path):
@@ -20,14 +26,22 @@ def _train(test_client, columns):
 
 
 @pytest.fixture
-def two_clients(app_module):
+def two_clients(web_app):
     # Plain clients: two nested `with` clients clash over Flask's preserved contexts.
-    return app_module.app.test_client(), app_module.app.test_client()
+    return web_app.test_client(), web_app.test_client()
 
 
-def test_no_shared_globals_left(app_module):
-    for name in ("data_store", "model_config", "loaded_model_config"):
-        assert not hasattr(app_module, name), f"module-level '{name}' is shared by every user"
+def test_no_shared_globals_left():
+    for module in (web, *(importlib.import_module(f"toolkit.web.{name}") for name in WEB_MODULES)):
+        for name in ("data_store", "model_config", "loaded_model_config", "_workspaces"):
+            assert not hasattr(module, name), f"module-level '{name}' is shared by every user"
+
+
+def test_two_apps_share_nothing(make_app, fixtures_dir):
+    first, second = make_app(), make_app()
+    _upload(first.test_client(), fixtures_dir / "cic_ddos_sample.csv")
+    assert len(first.extensions["toolkit"].workspaces) == 1
+    assert len(second.extensions["toolkit"].workspaces) == 0
 
 
 def test_two_sessions_isolated(two_clients, fixtures_dir):
@@ -47,13 +61,13 @@ def test_two_sessions_isolated(two_clients, fixtures_dir):
     assert TARGET in alice_preview["columns"], "Bob's upload replaced Alice's dataset"
 
 
-def test_clear_workspace_frees_and_reusable(app_module, client, fixtures_dir):
+def test_clear_workspace_frees_and_reusable(workspaces, client, fixtures_dir):
     _upload(client, fixtures_dir / "cic_ddos_sample.csv")
-    assert len(app_module._workspaces) == 1
+    assert len(workspaces) == 1
 
     cleared = client.delete("/workspace")
     assert cleared.status_code == 200
-    assert len(app_module._workspaces) == 0, "the workspace's data must be released"
+    assert len(workspaces) == 0, "the workspace's data must be released"
     assert client.post("/preview_data", json={"num_rows": 5}).status_code == 400
 
     again = _upload(client, fixtures_dir / "cic_ddos_sample.csv")
@@ -66,15 +80,15 @@ def test_clear_workspace_blocked_cross_site(client):
     assert response.status_code == 403
 
 
-def test_idle_workspaces_are_dropped(app_module, two_clients, fixtures_dir, monkeypatch):
+def test_idle_workspaces_are_dropped(workspaces, two_clients, fixtures_dir, monkeypatch):
     alice, bob = two_clients
     _upload(alice, fixtures_dir / "cic_ddos_sample.csv")
-    monkeypatch.setattr(app_module, "WORKSPACE_IDLE_SECONDS", -1)
+    monkeypatch.setattr(workspaces, "idle_seconds", -1)
     bob.post("/preview_data", json={"num_rows": 5})
-    assert len(app_module._workspaces) == 1, "Alice's idle workspace should have been dropped"
+    assert len(workspaces) == 1, "Alice's idle workspace should have been dropped"
 
 
-def test_home_page_creates_no_workspace(app_module, client):
+def test_home_page_creates_no_workspace(workspaces, client):
     assert client.get("/").status_code == 200
     assert client.get("/dynamic_ids").status_code == 200
-    assert len(app_module._workspaces) == 0
+    assert len(workspaces) == 0

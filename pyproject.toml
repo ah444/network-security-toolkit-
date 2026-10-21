@@ -27,7 +27,6 @@ preview = true
 # that fixes it (ratchet: the list only ever shrinks).
 [tool.ruff.lint.per-file-ignores]
 "tools/IDS/IDS_CLI - CIC-2017/IDS_with_Machine_Learning.py" = ["F401", "B904", "E722"]
-"tools/IDS/IDS_Web_CIC_Dynamic/app.py" = ["F401", "F541", "B905", "F841"]
 "tests/**" = ["S101"]
 
 # Strict typing for the new toolkit modules (v5.1 step 1.1e); a module joins the list once

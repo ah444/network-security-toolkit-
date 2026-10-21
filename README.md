@@ -261,14 +261,17 @@ Project/
 ├── scripts/ml_report.py             # Re-runs it on the v5 ML core (docs/report/)
 ├── tests/                           # pytest suite + small fixtures
 │
-├── toolkit/                         # Shared package (no printing, no prompts)
+├── toolkit/                         # Shared package (no printing or prompts outside web/)
 │   ├── config.py                    # Settings, paths, .env reader
 │   ├── logging_setup.py             # Log files in instance/logs, secrets redacted
 │   ├── ports.py                     # ModelStore, IntelProvider, ProgressSink
 │   ├── bundle_files.py, run_files.py  # Signed model bundles, training records
 │   ├── ids_core/                    # Leakage-free ML core (see "ML core" below)
-│   └── recon/                       # Scanner logic: targets, os_detect, probes registry,
-│       └── intel/                   #   scanner, export; intel: NVD, OpenRouter, AbuseIPDB
+│   ├── recon/                       # Scanner logic: targets, os_detect, probes registry,
+│   │   └── intel/                   #   scanner, export; intel: NVD, OpenRouter, AbuseIPDB
+│   └── web/                         # Web trainer: create_app(), blueprints, workspaces
+│       ├── templates/               # home.html, dynamic_ids.html
+│       └── static/                  # css/style.css, css/style2.css, js/main.js
 │
 └── tools/
     ├── Port_scan/                   # Network Reconnaissance
@@ -282,19 +285,8 @@ Project/
         │       └── README.md        # Where its models come from (your exports)
         │
         └── IDS_Web_CIC_Dynamic/     # Web-based IDS
-            ├── app.py               # Flask application
-            ├── templates/           # HTML templates
-            │   ├── home.html
-            │   └── dynamic_ids.html
-            ├── static/
-            │   ├── css/
-            │   │   ├── style.css
-            │   │   └── style2.css
-            │   └── js/
-            │       └── main.js
-            ├── uploads/             # Uploaded datasets
-            ├── dataset/             # Sample datasets
-            └── (exports: instance/bundles/, run records: instance/runs/)
+            └── app.py               # Starts toolkit.web (uploads: instance/uploads/, read
+                                     #   and deleted; exports: instance/bundles/; runs: instance/runs/)
 ```
 
 ---
