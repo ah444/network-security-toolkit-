@@ -9,7 +9,9 @@ from __future__ import annotations
 
 import hashlib
 import logging
+import time
 from dataclasses import asdict
+from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -45,9 +47,26 @@ from .schemas import (
 )
 from .security import display_name, safe_upload_name
 from .state import state
-from .workspace import UploadedData, Workspace, with_workspace
+from .workspace import UploadedData, Workspace, dataset_bytes, with_workspace
 
 bp = Blueprint("datasets", __name__, url_prefix="/api/v1")
+
+
+def remove_stale_uploads(directory: Path, max_age: float = 3600) -> int:
+    """Delete files a crash left in the upload folder (S11). Only files older than
+    ``max_age`` seconds: another server sharing instance/ may be reading a new one."""
+    now, removed = time.time(), 0
+    for path in directory.iterdir():
+        try:
+            if path.is_file() and now - path.stat().st_mtime > max_age:
+                path.unlink()
+                removed += 1
+        except OSError:
+            logging.warning("Could not remove a leftover upload", exc_info=True)
+    if removed:
+        logging.info("Removed %d leftover upload(s) older than %d minutes", removed,
+                     max_age // 60)
+    return removed
 
 
 def label_values(frame: pd.DataFrame, target: str) -> pd.Series:
@@ -95,11 +114,12 @@ def _combine(loaded: list[tuple[str, LoadedDataset]]) -> UploadedData:
                                           len(frame.columns)))
 
 
-def _dataset_summary(data: UploadedData) -> dict[str, Any]:
+def _dataset_summary(data: UploadedData, size: int) -> dict[str, Any]:
     profile = data.profile
     return {
         "files": data.files,
         "rows": len(data.frame),
+        "memory_mb": round(size / 2**20, 1),
         "test_file": data.test_source.name if data.test_source else None,
         "test_rows": len(data.test_frame) if data.test_frame is not None else None,
         "profile": {
@@ -149,13 +169,16 @@ def upload(ws: Workspace) -> Answer:
         return error_response("The files can't be combined: they must be parts of the same dataset "
                               "with identical columns (or an official train file plus a file "
                               "named '*test*').")
+    size = dataset_bytes(data)
+    state().workspaces.reserve_data(ws, size)  # may drop other idle workspaces, or refuse
     ws.data, ws.split = data, None
     message = f"Successfully processed {len(files)} file(s). Total rows: {len(data.frame)}."
     if data.test_source and data.test_frame is not None:
         message += (f" {data.test_source.name} is used as the official test file "
                     f"({len(data.test_frame)} rows).")
+    message += f" Memory used: {size / 2**20:,.1f} MB."
     return jsonify({"columns": [str(c) for c in data.frame.columns], "message": message,
-                    "dataset": _dataset_summary(data)})
+                    "dataset": _dataset_summary(data, size)})
 
 
 def require_data(ws: Workspace) -> UploadedData:
@@ -215,6 +238,7 @@ def filter_classes(ws: Workspace) -> Answer:
         test_keep = ~data.test_frame[target].astype(str).isin(to_remove)
         data.test_frame = data.test_frame[test_keep].reset_index(drop=True)
     ws.split = None
+    ws.data_bytes = dataset_bytes(data)  # smaller now: no room to reserve
     removed = before - len(data.frame)
     logging.info("Removed %d target values (%d rows)", len(to_remove), removed)
     return jsonify({

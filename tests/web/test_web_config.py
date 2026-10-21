@@ -13,10 +13,12 @@ def test_defaults_without_environment():
 
 def test_values_from_environment():
     config = web_config({"TOOLKIT_MAX_UPLOAD_MB": "64", "TOOLKIT_WORKSPACE_IDLE_MIN": "5",
+                         "TOOLKIT_MAX_WORKSPACES": "2", "TOOLKIT_MAX_DATA_MB": "512",
                          "TOOLKIT_PORT": "5055", "TOOLKIT_HTTPS": "1", "TOOLKIT_DEBUG": "1",
                          "TOOLKIT_SECRET_KEY": "k" * 32})
-    assert config == WebConfig(max_upload_mb=64, workspace_idle_minutes=5, port=5055,
-                               https=True, debug=True, secret_key="k" * 32)
+    assert config == WebConfig(max_upload_mb=64, workspace_idle_minutes=5, max_workspaces=2,
+                               max_data_mb=512, port=5055, https=True, debug=True,
+                               secret_key="k" * 32)
 
 
 def test_only_1_switches_https_and_debug_on():
@@ -30,6 +32,9 @@ def test_bad_number_is_an_error():
 
 
 def test_app_uses_the_config(make_app):
-    app = make_app(WebConfig(max_upload_mb=1, workspace_idle_minutes=7))
+    app = make_app(WebConfig(max_upload_mb=1, workspace_idle_minutes=7, max_workspaces=3,
+                             max_data_mb=10))
     assert app.config["MAX_CONTENT_LENGTH"] == 1024 * 1024
-    assert app.extensions["toolkit"].workspaces.idle_seconds == 7 * 60
+    store = app.extensions["toolkit"].workspaces
+    assert store.idle_seconds == 7 * 60
+    assert (store.max_workspaces, store.max_data_bytes) == (3, 10 * 2**20)

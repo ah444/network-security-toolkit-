@@ -23,9 +23,10 @@ from ..config import WebConfig, instance_dir, web_config
 from ..logging_setup import setup_logging
 from . import bundles, datasets, pages, training, workspace
 from .api import register_error_handlers
+from .datasets import remove_stale_uploads
 from .security import register_security
 from .state import WebState
-from .workspace import WorkspaceStore
+from .workspace import WorkspaceStore, start_idle_sweep
 
 BLUEPRINTS = (pages.bp, datasets.bp, training.bp, bundles.bp, workspace.bp)
 
@@ -46,9 +47,12 @@ def create_app(config: WebConfig | None = None) -> Flask:
     )
     upload_dir = instance_dir() / "uploads"
     upload_dir.mkdir(parents=True, exist_ok=True)
+    remove_stale_uploads(upload_dir)  # left by a crash (S11)
     app.extensions["toolkit"] = WebState(
         config=config,
-        workspaces=WorkspaceStore(config.workspace_idle_minutes * 60),
+        workspaces=WorkspaceStore(config.workspace_idle_minutes * 60,
+                                  max_workspaces=config.max_workspaces,
+                                  max_data_bytes=config.max_data_mb * 2**20),
         model_store=BundleStore(),
         upload_dir=upload_dir,
     )
@@ -70,6 +74,7 @@ def run_server(config: WebConfig | None = None) -> None:
     setup_logging("web", console_level=logging.INFO)
     config = config or web_config()
     app = create_app(config)
+    start_idle_sweep(app.extensions["toolkit"].workspaces)  # frees memory without requests
     host = "127.0.0.1"
     port = config.port
     print(f"IDS web app running at http://{host}:{port}/  (press Ctrl+C to stop)")

@@ -13,6 +13,12 @@ computer (`127.0.0.1`).
 - **Limits:** lists hold at most 10,000 items, texts at most 1,000 characters; `rows`,
   `k` and `test_size` are moved into their range instead of being refused. Uploads are
   limited by `TOOLKIT_MAX_UPLOAD_MB` (default 2,048 MB).
+- **Memory:** at most `TOOLKIT_MAX_WORKSPACES` workspaces (default 4) and
+  `TOOLKIT_MAX_DATA_MB` of loaded datasets in all of them together (default 4,096 MB;
+  trained models are not counted). When a new workspace or dataset doesn't fit, other
+  sessions' workspaces are dropped, least recently used first, but never one that is
+  training; if that isn't enough, the request is refused. Workspaces unused for
+  `TOOLKIT_WORKSPACE_IDLE_MIN` minutes (default 240) are dropped, checked every 5 minutes.
 - **Cross-site requests:** a `POST`/`DELETE` whose `Origin` header names another site is
   refused (`CROSS_SITE`, 403).
 
@@ -20,7 +26,7 @@ computer (`127.0.0.1`).
 
 | Method | Route | Request | Answer |
 |---|---|---|---|
-| POST | `/api/v1/dataset` | multipart `dataset`: one or more `.csv`/`.txt` files | columns, detected profile, message |
+| POST | `/api/v1/dataset` | multipart `dataset`: one or more `.csv`/`.txt` files | columns, detected profile, memory used, message |
 | GET | `/api/v1/dataset/preview` | `rows` (1-100, default 10) | first rows, column stats |
 | GET | `/api/v1/dataset/classes` | `target` | class values with counts |
 | GET | `/api/v1/dataset/distribution` | `target`, `test_size` (0.1-0.5, default 0.2) | class counts, balancing recommendation (training split) |
@@ -60,6 +66,8 @@ Every error answer has the same shape; `details` is present only when there is m
 | `METHOD_NOT_ALLOWED` | 405 | the route exists, the method doesn't |
 | `BUSY` | 409 | a training run is in progress in this workspace: a second training, an upload, a class filter or clearing the workspace has to wait for it |
 | `TOO_LARGE` | 413 | the upload is above `TOOLKIT_MAX_UPLOAD_MB` |
+| `DATA_LIMIT` | 413 | the dataset doesn't fit in `TOOLKIT_MAX_DATA_MB` next to the workspaces that are training |
+| `BUSY` | 503 | a new workspace would go over `TOOLKIT_MAX_WORKSPACES` and all others are training |
 | `INTERNAL` | 500 | an unexpected error; the details are only in `instance/logs/web.log` |
 
 Messages are written for the user and never contain exception text, tracebacks or server

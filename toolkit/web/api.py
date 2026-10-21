@@ -24,6 +24,7 @@ NOT_TRAINED = "NOT_TRAINED"
 NO_MODEL_LOADED = "NO_MODEL_LOADED"
 BUSY = "BUSY"  # 409: a training run is already in progress in this workspace
 TOO_LARGE = "TOO_LARGE"  # 413
+DATA_LIMIT = "DATA_LIMIT"  # 413: the datasets in memory would go over TOOLKIT_MAX_DATA_MB
 UNREADABLE_FILE = "UNREADABLE_FILE"
 TRAINING_FAILED = "TRAINING_FAILED"
 CROSS_SITE = "CROSS_SITE"  # 403

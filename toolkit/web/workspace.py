@@ -24,7 +24,7 @@ from ..ids_core.bundle import Bundle
 from ..ids_core.profiles import ProfileMatch
 from ..ids_core.runs import DatasetRef, TrainingRun
 from ..ids_core.split import SplitResult
-from .api import BUSY, Answer, ApiError
+from .api import BUSY, DATA_LIMIT, Answer, ApiError
 from .state import state
 
 bp = Blueprint("workspace", __name__, url_prefix="/api/v1")
@@ -70,6 +70,7 @@ class Workspace:
         self.lock = threading.RLock()
         self.training = threading.Lock()  # held while a training runs (one at a time)
         self.last_used = time.monotonic()
+        self.data_bytes = 0  # memory of the loaded dataset (counted by the store's cap)
         self._leases = 0
         self._lease_lock = threading.Lock()
 
@@ -96,12 +97,31 @@ class Workspace:
                            "finish, then try again.", BUSY, 409)
 
 
-class WorkspaceStore:
-    """The workspaces of one app by ID. Workspaces unused for ``idle_seconds`` are dropped
-    to free memory; a leased workspace is never dropped."""
+def dataset_bytes(data: UploadedData) -> int:
+    """Memory used by a loaded dataset: its frame, the official test file and the per-row
+    file names (pandas ``memory_usage(deep=True)``, so text columns count fully)."""
+    total = int(data.frame.memory_usage(deep=True).sum())
+    if data.test_frame is not None:
+        total += int(data.test_frame.memory_usage(deep=True).sum())
+    if data.sources is not None:
+        total += int(data.sources.memory_usage(deep=True))
+    return total
 
-    def __init__(self, idle_seconds: float) -> None:
+
+class WorkspaceStore:
+    """The workspaces of one app by ID, with memory caps (R4).
+
+    Workspaces unused for ``idle_seconds`` are dropped. A new workspace above
+    ``max_workspaces``, or a dataset that would take the datasets of all workspaces above
+    ``max_data_bytes``, first drops other sessions' workspaces, least recently used first.
+    A leased workspace (a training still needs it) is never dropped.
+    """
+
+    def __init__(self, idle_seconds: float, max_workspaces: int = 4,
+                 max_data_bytes: int = 4096 * 2**20) -> None:
         self.idle_seconds = idle_seconds
+        self.max_workspaces = max_workspaces
+        self.max_data_bytes = max_data_bytes
         self._workspaces: dict[str, Workspace] = {}
         self._lock = threading.Lock()
 
@@ -111,11 +131,47 @@ class WorkspaceStore:
     def values(self) -> list[Workspace]:
         return list(self._workspaces.values())
 
-    def _drop_idle(self, now: float) -> None:
+    def _drop_idle(self, now: float) -> int:
+        dropped = 0
         for ws_id, ws in list(self._workspaces.items()):
             if now - ws.last_used > self.idle_seconds and not ws.leased:
                 del self._workspaces[ws_id]
-                logging.info("Dropped idle workspace")
+                dropped += 1
+                logging.info("Dropped a workspace (idle for over %d minutes)",
+                             self.idle_seconds // 60)
+        return dropped
+
+    def drop_idle(self) -> int:
+        """Drop the idle workspaces now (the background sweep); how many were dropped."""
+        with self._lock:
+            return self._drop_idle(time.monotonic())
+
+    def _drop_least_recent(self, keep: Workspace | None, reason: str) -> bool:
+        """Drop the least recently used unleased workspace other than ``keep``."""
+        candidates = [(ws.last_used, ws_id) for ws_id, ws in self._workspaces.items()
+                      if ws is not keep and not ws.leased]
+        if not candidates:
+            return False
+        _, ws_id = min(candidates)
+        del self._workspaces[ws_id]
+        logging.info("Dropped the least recently used workspace (%s)", reason)
+        return True
+
+    def reserve_data(self, ws: Workspace, size: int) -> None:
+        """Make room for a dataset of ``size`` bytes in ``ws`` (its old one is replaced), or
+        refuse it (413 DATA_LIMIT). On success ``ws.data_bytes`` is ``size``."""
+        limit_mb = self.max_data_bytes // 2**20
+        message = (f"The dataset needs {size / 2**20:,.0f} MB of memory; all open workspaces "
+                   f"together may use {limit_mb:,} MB (TOOLKIT_MAX_DATA_MB).")
+        with self._lock:
+            if size > self.max_data_bytes:
+                raise ApiError(message, DATA_LIMIT, 413)
+            while sum(o.data_bytes for o in self._workspaces.values() if o is not ws) + size \
+                    > self.max_data_bytes:
+                if not self._drop_least_recent(ws, "data limit"):
+                    raise ApiError(message + " The other workspaces are busy training.",
+                                   DATA_LIMIT, 413)
+            ws.data_bytes = size
 
     def get(self) -> Workspace | None:
         """The calling browser session's workspace, if it has one."""
@@ -134,6 +190,13 @@ class WorkspaceStore:
             self._drop_idle(now)
             ws = self._workspaces.get(session.get("ws", ""))
             if ws is None:
+                while len(self._workspaces) >= self.max_workspaces:
+                    if not self._drop_least_recent(None, "workspace limit"):
+                        raise ApiError(
+                            f"{len(self._workspaces)} browser sessions already have a workspace "
+                            f"that is training (limit: {self.max_workspaces}, "
+                            "TOOLKIT_MAX_WORKSPACES). Try again when one has finished.",
+                            BUSY, 503)
                 ws_id = secrets.token_urlsafe(16)
                 ws = self._workspaces[ws_id] = Workspace()
                 session["ws"] = ws_id
@@ -181,3 +244,19 @@ def clear_workspace(ws: Workspace) -> Answer:
     """Forget this session's dataset and models; the next upload starts a new workspace."""
     state().workspaces.clear()
     return jsonify({"message": "Workspace cleared."})
+
+
+def start_idle_sweep(store: WorkspaceStore, interval: float = 300) -> threading.Event:
+    """Drop idle workspaces every ``interval`` seconds in a background thread, so memory is
+    freed even when no request comes; set the returned event to stop it."""
+    stop = threading.Event()
+
+    def sweep() -> None:
+        while not stop.wait(interval):
+            try:
+                store.drop_idle()
+            except Exception:  # the sweep must never die silently
+                logging.exception("Idle workspace sweep failed")
+
+    threading.Thread(target=sweep, name="workspace-sweep", daemon=True).start()
+    return stop
