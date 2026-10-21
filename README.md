@@ -107,7 +107,7 @@ python -m pip install -r requirements.txt
 ### Dependencies
 Versions are **pinned** so results are reproducible and the bundled models load:
 - `requirements.txt`: runtime libraries (Flask, waitress, pandas, numpy, scikit-learn, imbalanced-learn, XGBoost, LightGBM, requests)
-- `requirements-dev.txt`: adds the development tools (pytest, ruff, pip-audit)
+- `requirements-dev.txt`: adds the development tools (pytest, ruff, mypy, pip-audit)
 - `requirements.lock`: the complete environment, for an exact rebuild (`python -m pip install -r requirements.lock`)
 
 ### Datasets
@@ -118,8 +118,9 @@ Datasets are **not** part of the repository. Put them in `data/raw/`; see [docs/
 python -m pip install -r requirements-dev.txt
 python -m pytest              # run the test suite
 python -m ruff check .        # lint
+python -m mypy                # strict type check of the typed toolkit modules
 python -m pip_audit -r requirements.lock   # check dependencies for known vulnerabilities
-git config core.hooksPath .githooks         # once per clone: run lint + tests before every commit
+git config core.hooksPath .githooks         # once per clone: lint, types + tests before every commit
 ```
 
 ---
@@ -246,12 +247,12 @@ Customize data splits:
 Project/
 ├── main.py                          # Main entry point
 ├── requirements.txt                 # Pinned runtime dependencies
-├── requirements-dev.txt             # + pytest, ruff, pip-audit
+├── requirements-dev.txt             # + pytest, ruff, mypy, pip-audit
 ├── requirements.lock                # Exact environment
-├── pyproject.toml                   # pytest / ruff configuration
+├── pyproject.toml                   # pytest / ruff / mypy configuration
 ├── .gitignore                       # Git ignore rules
 ├── .env.example                     # Optional API keys template (copy to .env)
-├── .githooks/pre-commit             # Lint + tests before every commit
+├── .githooks/pre-commit             # Lint, types + tests before every commit
 ├── README.md                        # This file
 │
 ├── data/raw/                        # Local datasets (gitignored, see docs/datasets.md)
@@ -492,7 +493,7 @@ For datasets >500K rows:
 
 1. Create a branch (`git checkout -b fix/short-name`)
 2. Write a test for the correct behaviour first, then make the fix
-3. Make sure `python -m pytest` and `python -m ruff check .` pass (the pre-commit hook runs both)
+3. Make sure `python -m pytest`, `python -m ruff check .` and `python -m mypy` pass (the pre-commit hook runs all three)
 4. Commit with a clear message
 
 ---

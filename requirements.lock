@@ -1,5 +1,6 @@
 # Exact environment generated from .venv (Windows, Python 3.14.3) with: python -m pip freeze
 # Recreate:  python -m pip install -r requirements.lock
+ast_serialize==0.12.1
 blinker==1.9.0
 boolean.py==5.0
 CacheControl==0.14.4
@@ -18,16 +19,20 @@ iniconfig==2.3.1
 itsdangerous==2.2.0
 Jinja2==3.1.6
 joblib==1.6.0
+librt==0.16.0
 license-expression==30.4.4
 lightgbm==4.6.0
 markdown-it-py==4.2.0
 MarkupSafe==3.0.4
 mdurl==0.1.2
 msgpack==1.2.3
+mypy==2.4.0
+mypy_extensions==1.1.0
 numpy==2.3.5
 packageurl-python==0.17.6
 packaging==26.3
 pandas==2.3.3
+pathspec==1.1.1
 pip-requirements-parser==32.0.1
 pip_api==0.0.35
 pip_audit==2.10.1
@@ -50,6 +55,8 @@ sortedcontainers==2.4.0
 threadpoolctl==3.7.0
 tomli==2.5.0
 tomli_w==1.2.0
+types-requests==2.33.0.20261006
+typing_extensions==4.16.0
 tzdata==2026.5
 urllib3==2.8.0
 waitress==3.0.2

@@ -29,3 +29,15 @@ preview = true
 "tools/IDS/IDS_CLI - CIC-2017/IDS_with_Machine_Learning.py" = ["F401", "B904", "E722"]
 "tools/IDS/IDS_Web_CIC_Dynamic/app.py" = ["F401", "F541", "B905", "F841"]
 "tests/**" = ["S101"]
+
+# Strict typing for the new toolkit modules (v5.1 step 1.1e); a module joins the list once
+# it is typed (all of ids_core in step 1.5). Run:  python -m mypy
+[tool.mypy]
+python_version = "3.11"
+strict = true
+files = ["toolkit/recon", "toolkit/ports.py", "toolkit/logging_setup.py", "toolkit/config.py"]
+
+# Imported for types only and not typed yet: read for their types, their errors not reported.
+[[tool.mypy.overrides]]
+module = ["toolkit.ids_core.*", "toolkit.bundle_files"]
+follow_imports = "silent"
