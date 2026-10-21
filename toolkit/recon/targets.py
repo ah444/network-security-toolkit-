@@ -3,8 +3,10 @@
 import ipaddress
 import socket
 
+from ..config import ScanConfig
 
-def parse_target(text, max_hosts):
+
+def parse_target(text: str, max_hosts: int) -> list[str]:
     """The IP addresses to scan: one IPv4/IPv6 address, a network (CIDR) or a host name."""
     text = text.strip()
     if not text:
@@ -28,10 +30,10 @@ def parse_target(text, max_hosts):
         infos = socket.getaddrinfo(text, None, type=socket.SOCK_STREAM)
     except (OSError, UnicodeError) as error:
         raise ValueError(f"Could not resolve {text!r}: {error}") from None
-    return [infos[0][4][0]]
+    return [str(infos[0][4][0])]
 
 
-def parse_port_range(start_text, end_text):
+def parse_port_range(start_text: str, end_text: str) -> range:
     """``range`` of ports from the two answers; ValueError with a message otherwise."""
     try:
         start, end = int(start_text), int(end_text)
@@ -44,7 +46,7 @@ def parse_port_range(start_text, end_text):
     return range(start, end + 1)
 
 
-def check_limits(host_count, probe_count, limits):
+def check_limits(host_count: int, probe_count: int, limits: ScanConfig) -> str | None:
     """A message when a scan is above the limits, else None."""
     if host_count > limits.max_hosts:
         return (f"{host_count:,} hosts is above the limit of {limits.max_hosts:,} "
@@ -55,7 +57,7 @@ def check_limits(host_count, probe_count, limits):
     return None
 
 
-def is_ip_literal(text):
+def is_ip_literal(text: str) -> bool:
     try:
         ipaddress.ip_address(text.strip().strip("[]"))
     except ValueError:
@@ -63,7 +65,7 @@ def is_ip_literal(text):
     return True
 
 
-def is_public_ip(ip):
+def is_public_ip(ip: str) -> bool:
     try:
         return ipaddress.ip_address(ip).is_global
     except ValueError:

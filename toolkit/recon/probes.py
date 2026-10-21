@@ -10,7 +10,9 @@ banners only, without certificate checks (B9).
 """
 
 import re
+import socket
 import ssl
+from collections.abc import Callable
 from dataclasses import dataclass
 
 from .text import clean_text
@@ -29,7 +31,7 @@ class Probe:
 
 DEFAULT_PROBE = Probe()
 DEFAULT_UDP_PAYLOAD = b"\r\n"
-PROBES = {
+PROBES: dict[int, Probe] = {
     21: Probe("greeting"),  # FTP: greeting services speak first
     22: Probe("greeting"),  # SSH
     25: Probe("greeting"),  # SMTP
@@ -68,16 +70,16 @@ PROBES = {
 MYSQL_GREETING = re.compile(rb"^.{4}\x0a([0-9][\w.\-]*)\x00", re.DOTALL)
 
 
-def probe_for(port):
+def probe_for(port: int) -> Probe:
     return PROBES.get(port, DEFAULT_PROBE)
 
 
-def udp_payload(port):
+def udp_payload(port: int) -> bytes:
     """What to send to a UDP port to get an answer."""
     return probe_for(port).udp_payload or DEFAULT_UDP_PAYLOAD
 
 
-def banner_tls_context():
+def banner_tls_context() -> ssl.SSLContext:
     """TLS for reading a banner only: no certificate check, so a service with a self-signed
     certificate still shows its banner (B9). The web lookups (NVD, AbuseIPDB, OpenRouter)
     never use it: they keep full certificate verification."""
@@ -87,14 +89,14 @@ def banner_tls_context():
     return context
 
 
-def _receive_once(sock, limit=1024):
+def _receive_once(sock: socket.socket, limit: int = 1024) -> bytes:
     try:
         return sock.recv(limit)
     except TimeoutError:
         return b""
 
 
-def _receive_all(sock, limit=8192):
+def _receive_all(sock: socket.socket, limit: int = 8192) -> bytes:
     data = b""
     try:
         while len(data) < limit:
@@ -107,19 +109,23 @@ def _receive_all(sock, limit=8192):
     return data
 
 
-def banner_text(data):
+def banner_text(data: bytes) -> str:
     return data.decode("utf-8", errors="replace").strip()
 
 
-def _host_header(host):
+def _host_header(host: str) -> str:
     return f"[{host}]" if ":" in host else host
 
 
-def _read_detect(sock, host, probe):
+# A reader gets the open connection, the host and the port's probe; it returns the banner.
+Reader = Callable[[socket.socket, str, Probe], str]
+
+
+def _read_detect(sock: socket.socket, host: str, probe: Probe) -> str:
     return f"{probe.label} service detected"
 
 
-def _read_http(sock, host, probe):
+def _read_http(sock: socket.socket, host: str, probe: Probe) -> str:
     sock.sendall(f"HEAD / HTTP/1.0\r\nHost: {_host_header(host)}\r\n\r\n".encode())
     reply = banner_text(_receive_all(sock))
     for line in reply.splitlines():
@@ -128,23 +134,23 @@ def _read_http(sock, host, probe):
     return "HTTP service (no Server header)" if reply.startswith("HTTP/") else reply
 
 
-def _read_mysql(sock, host, probe):
+def _read_mysql(sock: socket.socket, host: str, probe: Probe) -> str:
     data = _receive_once(sock)
     match = MYSQL_GREETING.match(data)
     return f"MySQL {match.group(1).decode()}" if match else banner_text(data)
 
 
-def _read_request(sock, host, probe):
+def _read_request(sock: socket.socket, host: str, probe: Probe) -> str:
     sock.sendall(probe.send)
     return banner_text(_receive_once(sock))
 
 
-def _read_greeting(sock, host, probe):
+def _read_greeting(sock: socket.socket, host: str, probe: Probe) -> str:
     """The service speaks first: read what it says."""
     return banner_text(_receive_once(sock))
 
 
-def _read_nudge(sock, host, probe):
+def _read_nudge(sock: socket.socket, host: str, probe: Probe) -> str:
     """Read what the service says; if it stays silent, give it a line to answer."""
     data = _receive_once(sock)
     if not data:
@@ -153,11 +159,12 @@ def _read_nudge(sock, host, probe):
     return banner_text(data)
 
 
-READERS = {"detect": _read_detect, "http": _read_http, "mysql": _read_mysql,
-           "request": _read_request, "greeting": _read_greeting, "nudge": _read_nudge}
+READERS: dict[str, Reader] = {
+    "detect": _read_detect, "http": _read_http, "mysql": _read_mysql,
+    "request": _read_request, "greeting": _read_greeting, "nudge": _read_nudge}
 
 
-def read_banner(sock, host, port):
+def read_banner(sock: socket.socket, host: str, port: int) -> str:
     """The banner of an open port, read over the scan's own connection (R2)."""
     probe = probe_for(port)
     read = READERS[probe.read]
@@ -174,7 +181,7 @@ REDIS_VERSION = re.compile(r"redis_version:(\d+(?:\.\d+)+)")
 NOT_PRODUCTS = {"http", "https", "ssh", "rtsp", "sip"}  # protocol names, not software
 
 
-def product_version(banner):
+def product_version(banner: str) -> str | None:
     """"product version" from a banner (e.g. "OpenSSH 8.9"), or None. This short,
     allow-listed text is the only part of a banner that ever leaves the computer (S12)."""
     text = clean_text(banner)

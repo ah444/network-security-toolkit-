@@ -16,7 +16,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Any, Protocol, TypedDict, runtime_checkable
 
 if TYPE_CHECKING:  # types only: the ports themselves import no layer
     from .bundle_files import BundleInfo, SavedBundle
@@ -41,11 +41,20 @@ class ModelStore(Protocol):
         """``load`` for bytes already in memory (e.g. an upload)."""
 
 
+class CveEntry(TypedDict):
+    """One CVE as every "cves" provider reports it; ``severity`` comes from the score."""
+
+    id: str
+    cvss: float | None
+    cvss_version: str
+    severity: str
+
+
 @dataclass(frozen=True)
 class IntelFinding:
     """What one provider found; each kind of provider fills its own field."""
 
-    cves: tuple[Mapping[str, Any], ...] = ()  # kind "cves": {"id", "cvss", "cvss_version", "severity"}
+    cves: tuple[CveEntry, ...] = ()  # kind "cves"
     text: str = ""  # kind "explanation": plain text, already made safe to show
     data: Mapping[str, Any] = field(default_factory=dict)  # kind "ip_reputation": raw facts
 

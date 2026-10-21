@@ -136,7 +136,7 @@ def log_level(environ: Mapping[str, str] | None = None) -> int:
         return logging.INFO
     if raw.upper() not in LOG_LEVELS:
         raise ValueError(f"TOOLKIT_LOG_LEVEL must be one of {', '.join(LOG_LEVELS)}, not {raw!r}")
-    return logging.getLevelName(raw.upper())
+    return logging.getLevelNamesMapping()[raw.upper()]
 
 
 @dataclass(frozen=True)

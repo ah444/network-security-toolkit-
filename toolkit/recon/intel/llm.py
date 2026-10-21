@@ -2,6 +2,8 @@
 the product and version only, and the reply is treated as untrusted plain text.
 """
 
+import requests
+
 from ...ports import IntelFinding
 from ..text import untrusted_text
 from .lookup import INTEL_TIMEOUT
@@ -23,13 +25,14 @@ class OpenRouterProvider:
     name = "AI"
     kind = "explanation"
 
-    def __init__(self, session, key, model, timeout=INTEL_TIMEOUT):
+    def __init__(self, session: requests.Session, key: str, model: str,
+                 timeout: float = INTEL_TIMEOUT) -> None:
         self.session = session
         self.key = key
         self.model = model
         self.timeout = timeout
 
-    def lookup(self, subject):
+    def lookup(self, subject: str) -> IntelFinding:
         response = self.session.post(
             OPENROUTER_API_URL,
             headers={"Authorization": f"Bearer {self.key}"},

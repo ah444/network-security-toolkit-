@@ -5,10 +5,15 @@ the network is cleaned, and CSV cells that look like formulas are written as tex
 
 import csv
 import json
+from collections.abc import Callable, Sequence
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import TextIO, TypedDict
 
 from ..config import instance_dir
+from ..ports import CveEntry
+from .intel import LookupResult
+from .scanner import PortResult
 from .text import clean_text, csv_cell, one_line
 
 EXPORT_FORMATS = ("txt", "json", "csv")
@@ -16,7 +21,24 @@ CSV_HEADER = ["Target", "Port", "Protocol", "Service", "Banner", "Software", "Se
               "Max CVSS", "CVEs (NVD)", "AI explanation (may be wrong)", "Lookup errors"]
 
 
-def make_entry(target, result, software, intel):
+class ReportEntry(TypedDict):
+    """One open port in a report (the keys of the JSON export)."""
+
+    target: str
+    port: int
+    protocol: str
+    service: str
+    banner: str
+    software: str
+    cves: list[CveEntry]
+    max_cvss: float | None
+    severity: str
+    ai_explanation: str
+    lookup_errors: list[str]
+
+
+def make_entry(target: str, result: PortResult, software: str | None,
+               intel: LookupResult) -> ReportEntry:
     """One open port for the report; every text from the network is cleaned here."""
     return {
         "target": target,
@@ -33,16 +55,16 @@ def make_entry(target, result, software, intel):
     }
 
 
-def _cve_list(entry):
+def _cve_list(entry: ReportEntry) -> str:
     return ", ".join(f"{c['id']} ({c['cvss'] if c['cvss'] is not None else '?'})"
                      for c in entry["cves"])
 
 
-def _write_json(entries, handle):
+def _write_json(entries: Sequence[ReportEntry], handle: TextIO) -> None:
     json.dump(entries, handle, ensure_ascii=False, indent=2)
 
 
-def _write_csv(entries, handle):
+def _write_csv(entries: Sequence[ReportEntry], handle: TextIO) -> None:
     writer = csv.writer(handle)
     writer.writerow(CSV_HEADER)
     for e in entries:
@@ -52,7 +74,7 @@ def _write_csv(entries, handle):
             "; ".join(e["lookup_errors"]))])
 
 
-def _write_txt(entries, handle):
+def _write_txt(entries: Sequence[ReportEntry], handle: TextIO) -> None:
     for e in entries:
         handle.write(f"Target: {e['target']}\nPort: {e['port']}/{e['protocol']}\n"
                      f"Service: {e['service']}\nBanner: {e['banner']}\n"
@@ -63,14 +85,16 @@ def _write_txt(entries, handle):
                      + "-" * 40 + "\n")
 
 
-WRITERS = {"json": _write_json, "csv": _write_csv, "txt": _write_txt}
+WRITERS: dict[str, Callable[[Sequence[ReportEntry], TextIO], None]] = {
+    "json": _write_json, "csv": _write_csv, "txt": _write_txt}
 
 
-def scans_dir():
+def scans_dir() -> Path:
     return instance_dir() / "scans"
 
 
-def export_results(entries, fmt, directory=None):
+def export_results(entries: Sequence[ReportEntry], fmt: str,
+                   directory: str | Path | None = None) -> Path:
     """Write the report as UTF-8 to a new file in instance/scans/ (never overwrites)."""
     if fmt not in WRITERS:
         raise ValueError(f"Unknown format {fmt!r}; use one of {', '.join(EXPORT_FORMATS)}.")

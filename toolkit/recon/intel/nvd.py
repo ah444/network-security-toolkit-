@@ -4,8 +4,12 @@ the CVSS score, never taken from the AI (S13).
 
 import re
 import time
+from collections.abc import Mapping
+from typing import Any
 
-from ...ports import IntelFinding
+import requests
+
+from ...ports import CveEntry, IntelFinding
 from .lookup import INTEL_TIMEOUT
 
 NVD_URL = "https://services.nvd.nist.gov/rest/json/cves/2.0"
@@ -16,7 +20,7 @@ CVE_ID = re.compile(r"^CVE-\d{4}-\d{4,}$")
 METRIC_ORDER = ("cvssMetricV40", "cvssMetricV31", "cvssMetricV30", "cvssMetricV2")
 
 
-def cvss_severity(score, version=""):
+def cvss_severity(score: float | None, version: str = "") -> str:
     """Severity from the CVSS score, computed here (S13: never taken from the AI)."""
     if score is None:
         return "UNKNOWN"
@@ -28,7 +32,7 @@ def cvss_severity(score, version=""):
             else "CRITICAL")
 
 
-def _cvss(metrics):
+def _cvss(metrics: Mapping[str, Any]) -> tuple[float | None, str]:
     """(base score, CVSS version) of the newest CVSS version present, primary source first."""
     for name in METRIC_ORDER:
         entries = [m for m in metrics.get(name, []) if isinstance(m.get("cvssData"), dict)]
@@ -40,9 +44,9 @@ def _cvss(metrics):
     return None, ""
 
 
-def parse_nvd(data):
+def parse_nvd(data: Mapping[str, Any]) -> list[CveEntry]:
     """CVEs of an NVD CVE API 2.0 reply with CVSS score and severity, worst first."""
-    found = []
+    found: list[CveEntry] = []
     for item in data.get("vulnerabilities", []):
         cve = item.get("cve", {})
         cve_id = cve.get("id")
@@ -61,21 +65,24 @@ class NvdProvider:
     name = "NVD"
     kind = "cves"
 
-    def __init__(self, session, key="", timeout=INTEL_TIMEOUT):
+    def __init__(self, session: requests.Session, key: str = "",
+                 timeout: float = INTEL_TIMEOUT) -> None:
         self.session = session
         self.key = key
         self.timeout = timeout
-        self._cache = {}
+        self._cache: dict[str, IntelFinding] = {}
         self._next = 0.0
 
-    def lookup(self, subject):
+    def lookup(self, subject: str) -> IntelFinding:
         if subject not in self._cache:
             wait = self._next - time.monotonic()
             if wait > 0:
                 time.sleep(wait)
+            params: dict[str, str | int] = {"keywordSearch": subject,
+                                            "resultsPerPage": NVD_RESULTS}
             try:
                 response = self.session.get(
-                    NVD_URL, params={"keywordSearch": subject, "resultsPerPage": NVD_RESULTS},
+                    NVD_URL, params=params,
                     headers={"apiKey": self.key} if self.key else {}, timeout=self.timeout)
             finally:
                 self._next = time.monotonic() + NVD_INTERVAL[bool(self.key)]

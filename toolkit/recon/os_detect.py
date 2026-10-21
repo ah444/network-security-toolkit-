@@ -19,7 +19,7 @@ INITIAL_TTLS = (
 )
 
 
-def ping_command(host, timeout=1):
+def ping_command(host: str, timeout: float = 1) -> list[str]:
     """One echo request with this OS's flags, waiting at most ``timeout`` seconds."""
     system = platform.system().lower()
     ipv6 = ipaddress.ip_address(host).version == 6
@@ -33,13 +33,13 @@ def ping_command(host, timeout=1):
     return ["ping", "-6" if ipv6 else "-4", "-c", "1", "-W", str(seconds), host]
 
 
-def parse_ttl(output):
+def parse_ttl(output: bytes) -> int | None:
     """The TTL (or IPv6 hop limit) in ping output, or None."""
     match = TTL_PATTERN.search(output)
     return int(match.group(1)) if match else None
 
 
-def ping_host(host, timeout=1):
+def ping_host(host: str, timeout: float = 1) -> tuple[bool, int | None]:
     """(alive, ttl) from one ping; ttl is None when the reply didn't show one."""
     try:
         done = subprocess.run(ping_command(host, timeout), capture_output=True,
@@ -51,7 +51,7 @@ def ping_host(host, timeout=1):
     return alive, parse_ttl(output)
 
 
-def guess_os(ttl):
+def guess_os(ttl: int | None) -> tuple[str, int] | None:
     """(OS family, hops away) from a reply's TTL, or None. A guess only: TTLs can be set."""
     if ttl is None or not 1 <= ttl <= 255:
         return None

@@ -8,15 +8,18 @@ a ``ProgressSink`` (none by default).
 import logging
 import os
 import socket
+from collections.abc import Callable, Iterable, Sequence
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 
-from ..ports import NullProgress
+from ..ports import NullProgress, ProgressSink
 from .probes import banner_text, read_banner, udp_payload
 
 log = logging.getLogger(__name__)
 
 SCAN_TIMEOUT = 1  # seconds per port
+
+
 @dataclass
 class PortResult:
     port: int
@@ -26,14 +29,14 @@ class PortResult:
     banner: str = ""
 
 
-def service_name(port, protocol="tcp"):
+def service_name(port: int, protocol: str = "tcp") -> str:
     try:
         return socket.getservbyport(port, protocol)
     except OSError:
         return ""
 
 
-def scan_tcp_port(host, port, timeout=SCAN_TIMEOUT):
+def scan_tcp_port(host: str, port: int, timeout: float = SCAN_TIMEOUT) -> PortResult:
     """One connection per port, always closed, also when reading the banner fails (R1)."""
     try:
         sock = socket.create_connection((host, port), timeout=timeout)
@@ -48,7 +51,7 @@ def scan_tcp_port(host, port, timeout=SCAN_TIMEOUT):
     return PortResult(port, "tcp", "open", service_name(port), banner)
 
 
-def scan_udp_port(host, port, timeout=SCAN_TIMEOUT):
+def scan_udp_port(host: str, port: int, timeout: float = SCAN_TIMEOUT) -> PortResult:
     """A reply means open; no reply is "open|filtered", not "closed" (B8), because many UDP
     services stay silent. "closed" only when the host reports the port unreachable."""
     family, _, _, _, address = socket.getaddrinfo(host, port, type=socket.SOCK_DGRAM)[0]
@@ -68,29 +71,33 @@ def scan_udp_port(host, port, timeout=SCAN_TIMEOUT):
     return PortResult(port, "udp", "open", service_name(port, "udp"), banner_text(data))
 
 
-def scan_ports(host, ports, protocols, progress=None):
+Scan = Callable[[str, int], PortResult]
+
+
+def scan_ports(host: str, ports: Iterable[int], protocols: Sequence[str],
+               progress: ProgressSink | None = None) -> list[PortResult]:
     """Every port of ``host`` for each protocol, sorted by port; each finished check is
     reported to ``progress`` (a ProgressSink, default none)."""
-    progress = progress or NullProgress()
-    scanners = {"tcp": scan_tcp_port, "udp": scan_udp_port}
+    sink = progress or NullProgress()
+    scanners: dict[str, Scan] = {"tcp": scan_tcp_port, "udp": scan_udp_port}
     tasks = [(scanners[protocol], port) for port in ports for protocol in protocols]
     if not tasks:
         return []
 
-    def run(scan, port):
+    def run(scan: Scan, port: int) -> PortResult:
         try:
             return scan(host, port)
         finally:
-            progress.advance()
+            sink.advance()
 
-    results = []
+    results: list[PortResult] = []
     workers = min(100, len(tasks), (os.cpu_count() or 1) * 4)
-    progress.start(len(tasks))
+    sink.start(len(tasks))
     try:
         with ThreadPoolExecutor(max_workers=workers) as executor:
             futures = [executor.submit(run, scan, port) for scan, port in tasks]
             for future in as_completed(futures):
                 results.append(future.result())
     finally:
-        progress.finish()
+        sink.finish()
     return sorted(results, key=lambda r: (r.port, r.protocol))

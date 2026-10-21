@@ -7,7 +7,7 @@ import requests
 INTEL_TIMEOUT = 15  # seconds per lookup: a slow service can't stop the scan
 
 
-def describe(error):
+def describe(error: BaseException) -> str:
     if isinstance(error, requests.Timeout):
         return "timed out"
     if isinstance(error, requests.HTTPError) and error.response is not None:

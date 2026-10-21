@@ -1,5 +1,7 @@
 """Reputation of a public IP address from AbuseIPDB (asked only after consent)."""
 
+import requests
+
 from ...ports import IntelFinding
 from .lookup import INTEL_TIMEOUT
 
@@ -12,13 +14,14 @@ class AbuseIpdbProvider:
     name = "AbuseIPDB"
     kind = "ip_reputation"
 
-    def __init__(self, session, key, timeout=INTEL_TIMEOUT, max_age=90):
+    def __init__(self, session: requests.Session, key: str, timeout: float = INTEL_TIMEOUT,
+                 max_age: int = 90) -> None:
         self.session = session
         self.key = key
         self.timeout = timeout
         self.max_age = max_age
 
-    def lookup(self, subject):
+    def lookup(self, subject: str) -> IntelFinding:
         response = self.session.get(
             ABUSEIPDB_URL, params={"ipAddress": subject, "maxAgeInDays": str(self.max_age)},
             headers={"Accept": "application/json", "Key": self.key}, timeout=self.timeout)
