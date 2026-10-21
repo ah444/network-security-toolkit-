@@ -5,8 +5,9 @@ from html.parser import HTMLParser
 
 import pytest
 
+from web_js import js_sources
+
 TEMPLATES = "toolkit/web/templates"
-MAIN_JS = "toolkit/web/static/js/main.js"
 
 
 class _FormScanner(HTMLParser):
@@ -59,11 +60,12 @@ def test_home_page_does_not_load_trainer_script(repo_root):
     assert "main.js" not in html
 
 
-def test_dynamic_form_labels_are_linked(repo_root):
-    """Labels created by JS for the prediction form must point at their input."""
-    js = (repo_root / MAIN_JS).read_text(encoding="utf-8")
-    builders = re.findall(r"function build\w*PredictionForm\(featuresInfo\) \{.*?\n    \}", js,
-                          flags=re.S)
-    assert len(builders) == 2
-    for body in builders:
-        assert "label.htmlFor = input.id" in body
+def test_dynamic_form_labels_are_linked():
+    """Labels created by JS for the prediction forms must point at their input (one builder
+    for both forms since step 1.3a, with a different id prefix for each)."""
+    predict = js_sources()["predict.js"]
+    builder = re.search(r"function buildPredictionForm\(.*?\n\}", predict, flags=re.S).group(0)
+    assert 'el("label", { htmlFor: input.id }' in builder
+    assert "input.id = idPrefix + index" in builder
+    prefixes = re.findall(r'buildPredictionForm\("\w+", "([\w-]+)"', predict)
+    assert sorted(prefixes) == ["loaded-feature-", "session-feature-"]

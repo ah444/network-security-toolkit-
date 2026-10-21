@@ -15,6 +15,7 @@ from toolkit.ids_core.bundle import pack
 from toolkit.ids_core.datasets import load_dataset
 from toolkit.web import datasets, training
 from web_jobs import train_and_wait
+from web_js import all_js
 
 CIC = "cic_ddos_sample.csv"
 TARGET = "Label"  # the v5 loader strips the header's leading space (B17)
@@ -285,9 +286,8 @@ def test_predict_loaded_route(client, cic, fixtures_dir):
     assert response.get_json()["prediction"] in {"BENIGN", "DDoS"}
 
 
-def test_js_has_no_dead_loaded_model_config(repo_root):
-    js = (repo_root / "toolkit/web/static/js/main.js").read_text(
-        encoding="utf-8")
+def test_js_has_no_dead_loaded_model_config():
+    js = all_js(code_only=False)
     assert "loaded_model_config" not in js
     assert '"/api/v1/bundle/predict"' in js and '"/api/v1/bundle/predict/"' not in js
 

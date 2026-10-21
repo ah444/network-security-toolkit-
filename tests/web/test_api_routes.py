@@ -4,6 +4,8 @@ import re
 
 import pytest
 
+from web_js import all_js, js_sources
+
 OLD_ROUTES = ["/upload", "/preview_data", "/filter_target_values", "/get_target_values",
               "/analyze_class_distribution", "/apply_smote", "/recommend_features",
               "/get_available_models", "/configure", "/get_confusion_matrix", "/predict",
@@ -39,14 +41,19 @@ def test_wrong_method_is_json_405(client):
     assert response.get_json()["error"]["code"] == "METHOD_NOT_ALLOWED"
 
 
-def test_page_uses_only_api_routes(repo_root):
-    js = (repo_root / "toolkit/web/static/js/main.js").read_text(encoding="utf-8")
-    urls = re.findall(r'(?:fetch|sendWithToken)\("(/[^"?]*)', js)
+def test_page_uses_only_api_routes():
+    # the two predict routes are passed to predictWith(url, ...), which calls send(url, ...)
+    urls = re.findall(r'(?:getJSON|send|predictWith)\("(/[^"?]*)', all_js())
     assert len(urls) == 13 and all(url.startswith("/api/v1/") for url in urls), urls
 
 
-def test_page_sends_every_state_change_with_the_token(repo_root):
-    """Step 1.2e: a POST/DELETE through plain fetch() would be refused (403 CSRF_TOKEN)."""
-    js = (repo_root / "toolkit/web/static/js/main.js").read_text(encoding="utf-8")
-    assert re.findall(r"fetch\([^)]*method:", js) == []
-    assert len(re.findall(r'sendWithToken\([^)]*method: "(?:POST|DELETE)"', js)) == 11
+def test_page_sends_every_state_change_with_the_token():
+    """Step 1.2e: a POST/DELETE without the token is refused (403 CSRF_TOKEN). Since step
+    1.3a every request goes through api.js, and send() always adds the token."""
+    code = all_js()
+    # 11 POST/DELETE routes in 10 send() calls: both predict routes share predictWith's
+    sends = re.findall(r'\bsend\([^,]+,\s*"([A-Z]+)"', code)
+    assert len(sends) == 10 and set(sends) == {"POST", "DELETE"}, sends
+    api = js_sources()["api.js"]
+    assert api.count("fetch(") == 2  # getJSON and send
+    assert '"X-CSRF-Token": csrfToken()' in api

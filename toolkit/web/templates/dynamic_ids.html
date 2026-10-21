@@ -57,7 +57,7 @@
     </div>
 
     <!-- Data Preview Section -->
-    <div class="section" id="dataPreviewSection" style="display:none;">
+    <div class="section" id="dataPreviewSection" hidden>
       <h2>Data Preview</h2>
       <div class="form-group">
         <label for="previewRows" class="label">Rows to preview:</label>
@@ -69,7 +69,7 @@
     </div>
 
     <!-- Load Model Section -->
-    <div class="section" id="loadModelSection" style="display:none;">
+    <div class="section" id="loadModelSection" hidden>
       <h2>Load Exported Model</h2>
       <p class="section-description">Load a <strong>.bundle</strong> file exported by this toolkit on this computer. Bundles are signed with this install's key; any other file is refused before it is opened.</p>
       <form id="loadModelForm" enctype="multipart/form-data">
@@ -86,7 +86,7 @@
     </div>
 
     <!-- Class Imbalance Analysis Section -->
-    <div class="section" id="classImbalanceSection" style="display:none;">
+    <div class="section" id="classImbalanceSection" hidden>
       <h2>Class Distribution Analysis</h2>
       <div class="form-group">
         <label for="targetForDist" class="label">Select Target for Class Distribution:</label>
@@ -96,7 +96,7 @@
       <div id="classDistributionResult" class="message"></div>
 
       <!-- Target Value Filter Section -->
-      <div id="targetValueFilterSection" style="display:none; margin-top: 20px;">
+      <div id="targetValueFilterSection" style="margin-top: 20px;" hidden>
         <h3>Filter Target Values</h3>
         <p class="section-description">Remove unwanted classes/labels from your dataset. Tick the values you want to <strong>remove</strong>.</p>
         <div id="targetValuesToRemove" class="checkbox-list" role="group" aria-label="Values to remove"></div>
@@ -107,7 +107,7 @@
         <div id="targetFilterResult" class="message"></div>
       </div>
 
-      <div id="smoteOption" style="display:none;">
+      <div id="smoteOption" hidden>
         <div class="form-group">
           <label for="balancingMethod" class="label">Select Balancing Method:</label>
           <select id="balancingMethod" name="balancingMethod">
@@ -130,7 +130,7 @@
     </div>
 
     <!-- Feature Recommendation Section -->
-    <div class="section" id="recommendationSection" style="display:none;">
+    <div class="section" id="recommendationSection" hidden>
       <h2>Feature Recommendation</h2>
       <p class="section-description">Scores are computed on the training split only, after the leakage guard has removed label copies and ID columns.</p>
       <div class="form-group">
@@ -146,7 +146,7 @@
     </div>
 
     <!-- Configuration Section -->
-    <div class="section" id="configSection" style="display:none;">
+    <div class="section" id="configSection" hidden>
       <h2>Select Features & Target</h2>
       <form id="configForm" enctype="multipart/form-data">
         <div class="form-group">
@@ -177,7 +177,7 @@
           <p class="section-description">Models are compared by 3-fold cross-validation on the training rows; the test rows are scored once, at the end. Datasets with an official test file (NSL-KDD) use it instead.</p>
         </div>
         <button type="submit" class="btn">Train Model</button>
-        <div id="trainingProgress" class="training-progress" style="display: none;" aria-live="polite">
+        <div id="trainingProgress" class="training-progress" hidden aria-live="polite">
           <progress id="trainingProgressBar" max="100" value="0" aria-label="Training progress"></progress>
           <span id="trainingProgressText"></span>
           <button type="button" id="cancelTrainingBtn" class="btn" disabled>Cancel training</button>
@@ -186,7 +186,7 @@
       <div id="configResult" class="message"></div>
 
       <!-- Confusion Matrix Section -->
-      <div id="confusionMatrixSection" style="display:none; margin-top: 20px;">
+      <div id="confusionMatrixSection" style="margin-top: 20px;" hidden>
         <h3>Confusion Matrix (test split)</h3>
         <div class="form-group">
           <label for="cmModelSelect" class="label">Select Model:</label>
@@ -198,7 +198,7 @@
     </div>
 
     <!-- Prediction Section (Session Model) -->
-    <div class="section" id="predictionSection" style="display:none;">
+    <div class="section" id="predictionSection" hidden>
       <h2>Make a Prediction (Current Session Model)</h2>
       <form id="predictionForm" enctype="multipart/form-data">
         <div class="form-group">
@@ -212,7 +212,7 @@
     </div>
 
     <!-- Export Model Section -->
-    <div class="section" id="exportSection" style="display:none;">
+    <div class="section" id="exportSection" hidden>
       <h2>Export Model</h2>
       <p class="section-description">Saves all trained models of this run as one signed bundle (with its training record) and lets you download it. Load it later with "Yes, I have a trained model".</p>
       <form id="exportForm" enctype="multipart/form-data">
@@ -226,7 +226,7 @@
     </div>
 
     <!-- Prediction Section (Loaded Model) -->
-    <div class="section" id="loadedFeaturesSection" style="display:none;">
+    <div class="section" id="loadedFeaturesSection" hidden>
       <h2>Make a Prediction (Loaded Model)</h2>
       <form id="predictLoadedForm" enctype="multipart/form-data">
         <div class="form-group">
@@ -239,6 +239,6 @@
       <div id="loadedPredictionResult" class="message"></div>
     </div>
   </div>
-  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+  <script type="module" src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>
 </html>

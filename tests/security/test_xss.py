@@ -1,109 +1,62 @@
-r"""S5: dataset text (CSV headers, cells, class names, errors, predictions) must never
-be inserted into the page as HTML.
+"""S5: dataset text (CSV headers, cells, class names, errors, predictions) must never be
+inserted into the page as HTML.
 
-Static rules for the v5.0 in-place fix of static/js/main.js (the module rewrite with
-a DOM helper is v5.1):
-1. Every ``${...}`` in a template literal that builds HTML goes through ``escapeHtml(...)``.
-   Exempt: lines that assign to a safe text sink (``.textContent =`` / ``.text =``).
-2. On lines that build HTML (``.innerHTML =``/``+=`` or an HTML string literal), every
-   piece joined with ``+`` is a string literal, an ``escapeHtml(...)`` call, a template
-   literal (checked by rule 1) or a known HTML-builder variable that is itself built
-   under these rules.
-3. No other raw-HTML sinks (insertAdjacentHTML, outerHTML, document.write).
-The browser check with tests/fixtures/xss_header.csv is done by hand (checklist 0.3).
+Since v5.1 step 1.3a the page's ES modules build every element with dom.js (``el()``,
+``setContent()``), which only ever sets text, so the rule is simple: no raw-HTML sink in
+any module, and no HTML written as a string. The browser check with
+tests/fixtures/xss_header.csv is part of each step's real check.
 """
 
 import re
 
 import pytest
 
-MAIN_JS = "toolkit/web/static/js/main.js"
-SAFE_SINK = re.compile(r"\.(textContent|text)\s*=")
-HTML_LINE = re.compile(r"\.innerHTML\s*\+?=|['\"]\s*<|<[a-zA-Z/][^'\"]*['\"]")
-HTML_BUILDERS = {"accHTML", "distHTML", "recHTML", "configHTML", "html", "tableHTML"}
+from web_js import JS_DIR, js_sources
+
+SINKS = ["innerHTML", "outerHTML", "insertAdjacentHTML", "document.write", "DOMParser",
+         "createContextualFragment", "srcdoc", "eval(", "new Function"]
 
 
-@pytest.fixture(scope="module")
-def js_lines(request):
-    path = request.config.rootpath / MAIN_JS
-    return path.read_text(encoding="utf-8").splitlines()
+@pytest.mark.parametrize("sink", SINKS)
+def test_no_raw_html_sinks(sink):
+    offenders = [name for name, code in js_sources().items() if sink in code]
+    assert offenders == [], f"{sink} used in {offenders}"
 
 
-def _split_top_level_plus(expr: str) -> list[str]:
-    parts, depth, quote, current = [], 0, None, ""
-    for ch in expr:
-        if quote:
-            current += ch
-            if ch == quote:
-                quote = None
-            continue
-        if ch in "'\"`":
-            quote = ch
-        elif ch in "([":
-            depth += 1
-        elif ch in ")]":
-            depth -= 1
-        elif ch == "+" and depth == 0:
-            parts.append(current.strip())
-            current = ""
-            continue
-        current += ch
-    parts.append(current.strip())
-    return [p for p in parts if p]
+def test_no_html_written_as_strings():
+    """A string that starts a tag ('<td', "<p>", `<div ...`) would be HTML built by hand."""
+    tag_string = re.compile(r"""["'`]\s*<\s*/?[a-zA-Z]""")
+    offenders = [f"{name}: {line.strip()[:80]}" for name, code in js_sources().items()
+                 for line in code.splitlines() if tag_string.search(line)]
+    assert offenders == []
 
 
-def _operand_ok(operand: str) -> bool:
-    operand = operand.rstrip(";").strip()
-    return (
-        bool(re.fullmatch(r"'[^']*'|\"[^\"]*\"|`[^`]*`", operand))
-        or operand.startswith("escapeHtml(")
-        or operand in HTML_BUILDERS
-    )
+def test_no_inline_styles_or_handlers_from_js():
+    """The CSP blocks inline styles and handlers, so they could only break the page."""
+    for name, code in js_sources().items():
+        assert ".style." not in code and ".style =" not in code, name
+        assert not re.search(r"""setAttribute\(\s*["'](style|on\w+)""", code), name
+        assert not re.search(r"\.on[a-z]+\s*=", code), name  # element.onclick = ...
 
 
-def test_escape_helper_exists(js_lines):
-    source = "\n".join(js_lines)
-    assert "function escapeHtml(" in source
-    for char in ("&amp;", "&lt;", "&gt;", "&quot;", "&#39;"):
-        assert char in source
+def test_el_refuses_style_and_handlers():
+    dom = (JS_DIR / "dom.js").read_text(encoding="utf-8")
+    refused = re.search(r"const REFUSED = /(.+)/i;", dom).group(1)
+    for prop in ("onclick", "onerror", "style", "innerHTML", "outerHTML", "srcdoc"):
+        assert re.match(refused, prop, re.I), prop
+    for prop in ("class", "title", "value", "htmlFor", "colspan"):
+        assert not re.match(refused, prop, re.I), prop
 
 
-def test_template_interpolations_are_escaped(js_lines):
-    offenders = []
-    for number, line in enumerate(js_lines, 1):
-        if SAFE_SINK.search(line):
-            continue
-        for match in re.finditer(r"\$\{", line):
-            if not line.startswith("escapeHtml(", match.end()):
-                offenders.append(f"{number}: {line.strip()[:100]}")
-                break
-    assert offenders == [], "unescaped ${...} in HTML:\n" + "\n".join(offenders)
+def test_csv_header_rendered_as_text():
+    """The preview table's header cells come from the CSV's column names (named in the 5.0
+    section 8 audit): they go through dom.js table(), which makes each one a text child."""
+    sources = js_sources()
+    assert 'table("preview-table", columns,' in sources["data.js"]
+    assert 'el("thead", {}, el("tr", {}, headers.map(text => el("th", {}, text))))' in sources["dom.js"]
 
 
-def test_concatenated_html_is_escaped(js_lines):
-    offenders = []
-    for number, line in enumerate(js_lines, 1):
-        if SAFE_SINK.search(line) or not HTML_LINE.search(line):
-            continue
-        # ${...} interpolations are covered by rule 1; drop them before splitting on '+'.
-        line = re.sub(r"\$\{[^{}]*\}", "X", line)
-        if "+" not in line.replace("+=", ""):
-            continue
-        rhs = re.split(r"\+?=(?!=)", line, maxsplit=1)[-1] if "=" in line else line
-        for operand in _split_top_level_plus(rhs):
-            if not _operand_ok(operand):
-                offenders.append(f"{number}: {operand[:60]!r} in {line.strip()[:80]}")
-    assert offenders == [], "unescaped value joined into HTML:\n" + "\n".join(offenders)
-
-
-def test_no_other_raw_html_sinks(js_lines):
-    source = "\n".join(js_lines)
-    for sink in ("insertAdjacentHTML", "outerHTML", "document.write"):
-        assert sink not in source
-
-
-def test_csv_header_rendered_as_text(js_lines):
-    """The preview table builds header cells from column names: they must be escaped."""
-    header_lines = [line for line in js_lines if "<th>" in line and "${" in line]
-    assert header_lines, "preview header code not found"
-    assert all("${escapeHtml(" in line for line in header_lines)
+def test_text_is_set_with_text_content():
+    dom = js_sources()["dom.js"]
+    assert "node.textContent = value" in dom  # the "text" prop
+    assert "node.append(child instanceof Node ? child : String(child))" in dom  # text nodes

@@ -891,3 +891,29 @@ textarea:focus-visible {
 .training-progress { margin-top: 12px; }
 .training-progress progress { width: 100%; height: 18px; }
 .training-progress span { display: block; margin: 6px 0; }
+
+/* Hidden parts of the page: the hidden attribute (v5.1 step 1.3a). The one !important that
+   stays: without it, rules like .section { display: block } would show hidden parts. */
+[hidden] {
+  display: none !important;
+}
+
+/* Status lines from dom.js message() (step 1.3a; before: inline colours) */
+.status-error { color: #dc3545; }
+.status-warning { color: #ffc107; }
+.status-success { color: #28a745; }
+.status-info { color: #17a2b8; }
+
+/* Confusion matrix: dark text on 5 shading steps of the row share, capped at 50% so the
+   text stays >= 4.5:1 (step 1.3a; before: an inline colour per cell) */
+.confusion-matrix td.cm-cell { color: black; }
+.cm-correct-1 { background-color: rgba(0, 128, 0, 0.1); }
+.cm-correct-2 { background-color: rgba(0, 128, 0, 0.2); }
+.cm-correct-3 { background-color: rgba(0, 128, 0, 0.3); }
+.cm-correct-4 { background-color: rgba(0, 128, 0, 0.4); }
+.cm-correct-5 { background-color: rgba(0, 128, 0, 0.5); }
+.cm-wrong-1 { background-color: rgba(255, 0, 0, 0.1); }
+.cm-wrong-2 { background-color: rgba(255, 0, 0, 0.2); }
+.cm-wrong-3 { background-color: rgba(255, 0, 0, 0.3); }
+.cm-wrong-4 { background-color: rgba(255, 0, 0, 0.4); }
+.cm-wrong-5 { background-color: rgba(255, 0, 0, 0.5); }

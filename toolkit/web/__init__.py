@@ -14,6 +14,7 @@ scikit-learn version.
 from __future__ import annotations
 
 import logging
+import mimetypes
 import secrets
 
 from flask import Flask
@@ -36,6 +37,9 @@ def create_app(config: WebConfig | None = None) -> Flask:
     """The web trainer with its own workspaces; settings from ``config`` (default: the
     ``TOOLKIT_*`` environment variables, see ``toolkit.config.web_config``)."""
     config = config or web_config()
+    # The page's scripts are ES modules, which browsers run only when served as JavaScript;
+    # some Windows installs map ".js" to text/plain in the registry, which mimetypes reads.
+    mimetypes.add_type("text/javascript", ".js")
     app = Flask(__name__)
     # Upload size limit (S9). Large enough for the full CIC-IDS2017 file (~1 GB).
     app.config["MAX_CONTENT_LENGTH"] = config.max_upload_mb * 1024 * 1024
