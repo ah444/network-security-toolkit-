@@ -18,7 +18,7 @@ from .schemas import ExportRequest, PredictRequest, load
 from .security import safe_model_basename
 from .state import state
 from .training import features_info
-from .workspace import ExportedBundle, current_workspace
+from .workspace import ExportedBundle, Workspace, with_workspace
 
 bp = Blueprint("bundles", __name__, url_prefix="/api/v1")
 
@@ -47,8 +47,8 @@ def _predict(models: Mapping[str, FittedModel], default: str | None,
 
 
 @bp.route("/run/predict", methods=["POST"])
-def predict() -> Answer:
-    ws = current_workspace()
+@with_workspace()
+def predict(ws: Workspace) -> Answer:
     req = load(PredictRequest, json_body())
     if ws.run is None:
         return error_response("Models not trained yet. Train a model first.", code=NOT_TRAINED)
@@ -56,8 +56,8 @@ def predict() -> Answer:
 
 
 @bp.route("/bundle/predict", methods=["POST"])
-def predict_loaded() -> Answer:
-    ws = current_workspace()
+@with_workspace()
+def predict_loaded(ws: Workspace) -> Answer:
     req = load(PredictRequest, json_body())
     if ws.loaded is None:
         return error_response("No model loaded. Load a bundle exported by this toolkit first.",
@@ -71,10 +71,10 @@ def _bundle_refused(error: BundleError) -> Answer:
 
 
 @bp.route("/run/export", methods=["POST"])
-def export() -> Answer:
+@with_workspace()
+def export(ws: Workspace) -> Answer:
     """Save the session's run as a signed bundle in instance/bundles/ (never overwritten)
     and its TrainingRun in instance/runs/; the browser downloads it from /api/v1/run/bundle."""
-    ws = current_workspace()
     req = load(ExportRequest, json_body())
     try:
         name = safe_model_basename(req.name)
@@ -106,8 +106,8 @@ def export() -> Answer:
 
 
 @bp.route("/run/bundle", methods=["GET"])
-def download() -> Answer:
-    ws = current_workspace()
+@with_workspace()
+def download(ws: Workspace) -> Answer:
     if ws.export is None:
         return error_response("Export the model first.", 404, NOT_TRAINED)
     return send_file(ws.export.saved.path, as_attachment=True,
@@ -116,10 +116,10 @@ def download() -> Answer:
 
 
 @bp.route("/bundle", methods=["POST"])
-def load_bundle() -> Answer:
+@with_workspace(create=True)
+def load_bundle(ws: Workspace) -> Answer:
     """Load a bundle exported by this install. Every check (format, signature, versions)
     runs before anything in the file is deserialized (S1); only signed bundles load."""
-    ws = current_workspace()
     file = request.files.get("file")
     if file is None or not file.filename:
         return error_response("Choose a .bundle file exported by this toolkit.")

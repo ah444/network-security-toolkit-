@@ -857,9 +857,10 @@ document.addEventListener("DOMContentLoaded", function() {
       }
       const clearWorkspaceResult = document.getElementById("clearWorkspaceResult");
       fetch("/api/v1/workspace", { method: "DELETE" })
-      .then(response => {
-        if (!response.ok) {
-          throw new Error("HTTP " + response.status);
+      .then(async response => {
+        if (!response.ok) {  // e.g. 409 while a training runs: show the server's message
+          const result = await response.json().catch(() => null);
+          throw new Error(result && result.error ? result.error.message : "HTTP " + response.status);
         }
         window.location.reload();
       })

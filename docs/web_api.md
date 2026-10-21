@@ -2,7 +2,10 @@
 
 The web trainer's page (`/dynamic_ids`) talks to the server only through these routes.
 They work on the calling browser session's **workspace** (its dataset, trained run and
-loaded bundle); the session cookie holds only the workspace ID. Everything runs on this
+loaded bundle); the session cookie holds only the workspace ID. A workspace is created
+only by an upload or a bundle load; other routes answer `NO_DATASET`, `NOT_TRAINED`, ...
+without creating one. The requests of one session take turns; during a training the
+session can still read and predict, but not change its dataset. Everything runs on this
 computer (`127.0.0.1`).
 
 - **Requests:** `POST` bodies are JSON objects (`Content-Type: application/json`), except
@@ -55,7 +58,7 @@ Every error answer has the same shape; `details` is present only when there is m
 | `CROSS_SITE` | 403 | the request came from another site |
 | `NOT_FOUND` | 404 | no such API route |
 | `METHOD_NOT_ALLOWED` | 405 | the route exists, the method doesn't |
-| `BUSY` | 409 | a training run is already in progress in this workspace |
+| `BUSY` | 409 | a training run is in progress in this workspace: a second training, an upload, a class filter or clearing the workspace has to wait for it |
 | `TOO_LARGE` | 413 | the upload is above `TOOLKIT_MAX_UPLOAD_MB` |
 | `INTERNAL` | 500 | an unexpected error; the details are only in `instance/logs/web.log` |
 

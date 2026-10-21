@@ -83,9 +83,11 @@ def test_clear_workspace_blocked_cross_site(client):
 def test_idle_workspaces_are_dropped(workspaces, two_clients, fixtures_dir, monkeypatch):
     alice, bob = two_clients
     _upload(alice, fixtures_dir / "cic_ddos_sample.csv")
+    (alice_ws,) = workspaces.values()
     monkeypatch.setattr(workspaces, "idle_seconds", -1)
-    bob.get("/api/v1/dataset/preview", query_string={"rows": 5})
+    _upload(bob, fixtures_dir / "cic_ddos_sample.csv")
     assert len(workspaces) == 1, "Alice's idle workspace should have been dropped"
+    assert workspaces.values()[0] is not alice_ws
 
 
 def test_home_page_creates_no_workspace(workspaces, client):

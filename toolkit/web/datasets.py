@@ -45,7 +45,7 @@ from .schemas import (
 )
 from .security import display_name, safe_upload_name
 from .state import state
-from .workspace import UploadedData, Workspace, current_workspace
+from .workspace import UploadedData, Workspace, with_workspace
 
 bp = Blueprint("datasets", __name__, url_prefix="/api/v1")
 
@@ -114,8 +114,8 @@ def _dataset_summary(data: UploadedData) -> dict[str, Any]:
 
 
 @bp.route("/dataset", methods=["POST"])
-def upload() -> Answer:
-    ws = current_workspace()
+@with_workspace(create=True, changes_dataset=True)
+def upload(ws: Workspace) -> Answer:
     if "dataset" not in request.files:
         return error_response("No files uploaded.")
     files = [f for f in request.files.getlist("dataset") if f.filename]
@@ -171,9 +171,9 @@ def _require_target(data: UploadedData, target: str) -> str:
 
 
 @bp.route("/dataset/preview", methods=["GET"])
-def preview() -> Answer:
+@with_workspace()
+def preview(ws: Workspace) -> Answer:
     """Return a preview of the uploaded dataset (first N rows)."""
-    ws = current_workspace()
     req = load(PreviewRequest, query())  # rows clamped to 1-100 (S9)
     df = require_data(ws).frame
     return jsonify({
@@ -189,9 +189,9 @@ def preview() -> Answer:
 
 
 @bp.route("/dataset/filter", methods=["POST"])
-def filter_classes() -> Answer:
+@with_workspace(changes_dataset=True)
+def filter_classes(ws: Workspace) -> Answer:
     """Remove the rows of the selected classes (from the test file too)."""
-    ws = current_workspace()
     req = load(FilterRequest, json_body())
     data = require_data(ws)
     target = _require_target(data, req.target)
@@ -232,9 +232,9 @@ def filter_classes() -> Answer:
 
 
 @bp.route("/dataset/classes", methods=["GET"])
-def classes() -> Answer:
+@with_workspace()
+def classes(ws: Workspace) -> Answer:
     """Values of the target column with their counts."""
-    ws = current_workspace()
     req = load(ClassesRequest, query())
     data = require_data(ws)
     target = _require_target(data, req.target)
@@ -272,9 +272,9 @@ def _candidate_features(data: UploadedData, target: str,
 
 
 @bp.route("/dataset/distribution", methods=["GET"])
-def distribution() -> Answer:
+@with_workspace()
+def distribution(ws: Workspace) -> Answer:
     """Class counts of the dataset; the balancing recommendation uses the training split."""
-    ws = current_workspace()
     req = load(DistributionRequest, query())
     data = require_data(ws)
     target = _require_target(data, req.target)
@@ -304,13 +304,13 @@ def distribution() -> Answer:
 
 
 @bp.route("/dataset/balancing-preview", methods=["POST"])
-def balancing_preview() -> Answer:
+@with_workspace()
+def balancing_preview(ws: Workspace) -> Answer:
     """Preview a balancing method on the **training split** (nothing is stored or changed).
 
     Training applies the method inside each pipeline, to training rows only; this shows
     the class counts it would produce.
     """
-    ws = current_workspace()
     req = load(BalancingPreviewRequest, json_body())
     data = require_data(ws)
     target = _require_target(data, req.target)
@@ -341,9 +341,9 @@ def balancing_preview() -> Answer:
 
 
 @bp.route("/dataset/feature-scores", methods=["POST"])
-def feature_scores() -> Answer:
+@with_workspace()
+def feature_scores(ws: Workspace) -> Answer:
     """Feature scores on the training split, after the leakage guard."""
-    ws = current_workspace()
     req = load(FeatureScoresRequest, json_body())  # k clamped to 1-10,000 (S9)
     data = require_data(ws)
     target = _require_target(data, req.target)

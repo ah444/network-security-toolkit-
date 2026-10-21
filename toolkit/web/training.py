@@ -27,7 +27,7 @@ from .api import (
 )
 from .datasets import label_values, require_data
 from .schemas import ConfusionRequest, TrainRequest, load
-from .workspace import UploadedData, Workspace, current_workspace
+from .workspace import UploadedData, Workspace, with_workspace, workspace
 
 bp = Blueprint("training", __name__, url_prefix="/api/v1")
 
@@ -45,13 +45,20 @@ def models() -> Answer:
 
 @bp.route("/run", methods=["POST"])
 def train() -> Answer:
-    """Train the chosen models on the session dataset (synchronous until step 1.2d)."""
-    ws = current_workspace()
-    if not ws.training.acquire(blocking=False):
-        return error_response("A training run is already in progress in this workspace. "
-                              "Wait for it to finish.", 409, BUSY)
+    """Train the chosen models on the session dataset (synchronous until step 1.2d).
+
+    One training at a time per workspace (``training`` lock, else 409 BUSY). The workspace
+    lock is held only to read the dataset and to store the run, so the session can still
+    preview and predict meanwhile; a lease keeps the workspace from being dropped (D22).
+    """
+    req = load(TrainRequest, json_body())
+    with workspace() as ws:
+        if not ws.training.acquire(blocking=False):
+            return error_response("A training run is already in progress in this workspace. "
+                                  "Wait for it to finish.", 409, BUSY)
     try:
-        return _train(ws)
+        with ws.lease():
+            return _train(ws, req)
     finally:
         ws.training.release()
 
@@ -95,11 +102,12 @@ def _blocked(leakage_record: Mapping[str, Any]) -> list[dict[str, Any]]:
     return [{"column": c, "reason": reasons.get(c, "BLOCKED")} for c in leakage_record["blocked"]]
 
 
-def _train(ws: Workspace) -> Answer:
-    req = load(TrainRequest, json_body())
-    data = require_data(ws)
-    settings = _training_settings(data, req)
-    ws.split = None  # free the preview split: training makes its own
+def _train(ws: Workspace, req: TrainRequest) -> Answer:
+    with ws.lock:
+        data = require_data(ws)
+        settings = _training_settings(data, req)
+        ws.split = None  # free the preview split: training makes its own
+    # Outside the lock: dataset changes are refused (409) while the training lock is held.
     try:
         run = train_run(data.frame, profile=data.profile, settings=settings,
                         test_frame=data.test_frame, source=data.source,
@@ -115,7 +123,8 @@ def _train(ws: Workspace) -> Answer:
         return error_response("No model could be trained. Details are in the server log.",
                               code=TRAINING_FAILED,
                               failures=[asdict(f) for f in evaluation.failures])
-    ws.run, ws.export = run, None
+    with ws.lock:
+        ws.run, ws.export = run, None
 
     record = run.to_dict()
     result = record["evaluation"]
@@ -148,9 +157,9 @@ def _train(ws: Workspace) -> Answer:
 
 
 @bp.route("/run/confusion", methods=["GET"])
-def confusion() -> Answer:
+@with_workspace()
+def confusion(ws: Workspace) -> Answer:
     """Test-split confusion matrix of one trained model."""
-    ws = current_workspace()
     req = load(ConfusionRequest, query())
     if ws.run is None:
         return error_response("No models trained yet.", code=NOT_TRAINED)
