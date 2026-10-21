@@ -23,6 +23,15 @@ CONTENT_SECURITY_POLICY = "; ".join([
     "frame-ancestors 'none'",
 ])
 
+# Browser features the app never uses, switched off for this site and anything it embeds.
+PERMISSIONS_POLICY = ", ".join(f"{feature}=()" for feature in (
+    "accelerometer", "camera", "geolocation", "gyroscope", "magnetometer", "microphone",
+    "payment", "usb",
+))
+
+# Pages kept out of the browser cache: the trainer page carries the session's CSRF token.
+NO_STORE_ENDPOINTS = frozenset({"pages.dynamic_ids_page"})
+
 
 def _security_headers(response: Response) -> Response:
     """Security headers on every response (S5, S10)."""
@@ -30,6 +39,12 @@ def _security_headers(response: Response) -> Response:
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "no-referrer"
+    response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
+    response.headers["Cross-Origin-Resource-Policy"] = "same-origin"
+    response.headers["Permissions-Policy"] = PERMISSIONS_POLICY
+    # API answers hold dataset values, results and models: never cached, on disk or shared.
+    if request.path.startswith("/api/") or request.endpoint in NO_STORE_ENDPOINTS:
+        response.headers["Cache-Control"] = "no-store"
     return response
 
 

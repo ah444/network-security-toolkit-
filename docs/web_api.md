@@ -21,6 +21,11 @@ computer (`127.0.0.1`).
   `TOOLKIT_WORKSPACE_IDLE_MIN` minutes (default 240) are dropped, checked every 5 minutes.
 - **Cross-site requests:** a `POST`/`DELETE` whose `Origin` header names another site is
   refused (`CROSS_SITE`, 403).
+- **Caching:** every API answer (the bundle download too) and the trainer page are sent
+  with `Cache-Control: no-store`, so datasets, results and models never land in a cache.
+  Every response also carries `Cross-Origin-Opener-Policy` and
+  `Cross-Origin-Resource-Policy: same-origin` and a `Permissions-Policy` that turns off
+  camera, microphone, location, payment, USB and motion sensors.
 
 ## Routes
 

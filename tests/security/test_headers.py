@@ -11,6 +11,34 @@ def test_security_headers_present(client, url):
     assert headers["X-Frame-Options"] == "DENY"
     assert headers["Referrer-Policy"] == "no-referrer"
     assert "Content-Security-Policy" in headers
+    assert headers["Cross-Origin-Opener-Policy"] == "same-origin"
+    assert headers["Cross-Origin-Resource-Policy"] == "same-origin"
+    assert "camera=()" in headers["Permissions-Policy"]
+
+
+def test_permissions_policy_turns_off_unused_features(client):
+    policy = client.get("/").headers["Permissions-Policy"]
+    features = dict(part.strip().split("=", 1) for part in policy.split(","))
+    for feature in ("camera", "microphone", "geolocation", "payment", "usb"):
+        assert features[feature] == "()", feature
+
+
+@pytest.mark.parametrize("url", ["/api/v1/models", "/api/v1/dataset/preview",
+                                 "/api/v1/no-such-route", "/dynamic_ids"])
+def test_api_answers_and_trainer_page_are_not_stored(client, url):
+    assert client.get(url).headers["Cache-Control"] == "no-store"
+
+
+def test_error_and_upload_answers_are_not_stored(client):
+    response = client.post("/api/v1/dataset/filter", data="not json",
+                           content_type="text/plain")
+    assert response.status_code == 400
+    assert response.headers["Cache-Control"] == "no-store"
+
+
+@pytest.mark.parametrize("url", ["/", "/static/js/main.js"])
+def test_home_page_and_static_files_stay_cacheable(client, url):
+    assert "no-store" not in client.get(url).headers.get("Cache-Control", "")
 
 
 def test_csp_present_and_scripts_strict(client):

@@ -40,6 +40,7 @@ def test_export_never_overwrites(client, trained):
     download = client.get("/api/v1/run/bundle")
     assert "second.bundle" in download.headers["Content-Disposition"]
     assert download.data == content
+    assert download.headers["Cache-Control"] == "no-store"  # a model never lands in a cache
 
 
 @pytest.mark.parametrize("bad", ["../../evil", "a/b", ""])
