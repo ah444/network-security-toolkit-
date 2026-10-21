@@ -33,6 +33,7 @@ from sklearn.metrics import (
 from sklearn.model_selection import StratifiedKFold
 
 from ..config import EvaluationConfig, PipelineConfig, max_workers
+from ..ports import NullProgress, ProgressSink
 from . import balancing, pipeline, registry
 from .sampling import stratified_positions
 
@@ -185,7 +186,7 @@ def select_model(summaries: Mapping[str, CVSummary]) -> tuple[str, ...]:
     return tuple(sorted(summaries, key=lambda name: (-summaries[name].macro_f1_mean, name)))
 
 
-def _cross_validate(frame, label, features, names, train_options, config, notes):
+def _cross_validate(frame, label, features, names, train_options, config, notes, progress):
     labels = frame[label].astype(str).to_numpy()
     counts = pd.Series(labels).value_counts()
     if (counts < config.cv_folds).any():
@@ -197,12 +198,15 @@ def _cross_validate(frame, label, features, names, train_options, config, notes)
         splits = list(folds.split(np.zeros(len(labels)), labels))
     fold_scores: dict[str, list[Scores]] = {name: [] for name in names}
     failed: dict[str, pipeline.ModelFailure] = {}
-    for fit_rows, check_rows in splits:
+    for fold, (fit_rows, check_rows) in enumerate(splits):
         remaining = [n for n in names if n not in failed]
-        if not remaining:
+        if not remaining:  # every model failed: count the folds left as done
+            progress.advance(len(names) * (len(splits) - fold))
             break
+        if len(remaining) < len(names):
+            progress.advance(len(names) - len(remaining))  # models that failed earlier
         outcome = pipeline.train_models(frame.iloc[fit_rows], label, features=features,
-                                        models=remaining, **train_options)
+                                        models=remaining, progress=progress, **train_options)
         failed.update({f.name: f for f in outcome.failures})
         held_out = frame.iloc[check_rows]
         truth = labels[check_rows]
@@ -245,12 +249,16 @@ def evaluate(
     config: EvaluationConfig | None = None,
     pipeline_config: PipelineConfig | None = None,
     workers: int | None = None,
+    progress: ProgressSink | None = None,
 ) -> EvaluationResult:
     """Cross-validate, fit, select and test; see the module docstring.
 
     ``balancer="recommended"`` asks ``balancing.recommend_balancing`` (training labels only).
+    ``progress`` gets one step per model per CV fold and per model for the final fit
+    (``models x (folds + 1)``), also for models that failed or were skipped.
     """
     config = config or EvaluationConfig()
+    progress = progress or NullProgress()
     pipeline_config = pipeline_config or PipelineConfig()
     workers = workers or max_workers()
     features = tuple(features if features is not None else (c for c in train.columns if c != label))
@@ -271,10 +279,14 @@ def evaluate(
         positions = stratified_positions(train[label].astype(str).to_numpy(), config.cv_max_rows,
                                          config.cv_folds, config.random_state)
         cv_frame = train.iloc[positions]
-    summaries, cv_failed = _cross_validate(cv_frame, label, features, names, options, config, notes)
+    summaries, cv_failed = _cross_validate(cv_frame, label, features, names, options, config, notes,
+                                           progress)
 
-    final = pipeline.train_models(train, label, features=features,
-                                  models=[n for n in names if n in summaries], **options)
+    final_names = [n for n in names if n in summaries]
+    if len(final_names) < len(names):
+        progress.advance(len(names) - len(final_names))  # no final fit for these
+    final = pipeline.train_models(train, label, features=features, models=final_names,
+                                  progress=progress, **options)
     failures = {**cv_failed, **{f.name: f for f in final.failures}}
     ranked = [n for n in select_model(summaries) if n in final.models]
     selected = ranked[0] if ranked else None

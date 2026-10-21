@@ -40,6 +40,7 @@ from sklearn.utils.class_weight import compute_sample_weight
 from threadpoolctl import threadpool_limits
 
 from ..config import PipelineConfig, max_workers
+from ..ports import NullProgress, ProgressSink
 from . import registry
 
 log = logging.getLogger(__name__)
@@ -200,12 +201,19 @@ def train_models(
     k_features: int | None = None,
     config: PipelineConfig | None = None,
     workers: int | None = None,
+    progress: ProgressSink | None = None,
 ) -> TrainingOutcome:
-    """Fit one pipeline per model on the **training split**; see the module docstring."""
+    """Fit one pipeline per model on the **training split**; see the module docstring.
+
+    ``progress.advance()`` is called once per model (fitted, failed or skipped), outside
+    the per-model error handling: an exception it raises (a cancelled job) stops the
+    training and is never recorded as a model failure."""
     config = config or PipelineConfig()
+    progress = progress or NullProgress()
     workers = workers or max_workers()
     features = tuple(features if features is not None else (c for c in train.columns if c != label))
-    names = tuple(models) if models else registry.default_models()
+    # None means the default models; an empty list means none (every model failed in CV).
+    names = tuple(models) if models is not None else registry.default_models()
     _check_names(train, label, features, names, balancer, selector, k_features)
 
     data = train[train[label].notna()]
@@ -238,10 +246,12 @@ def train_models(
         spec = registry.MODELS[name]
         if not registry.is_available(spec):
             skipped.append((name, "MODEL_NOT_INSTALLED"))
+            progress.advance()
             continue
         limit = getattr(config, spec.max_train_rows) if spec.max_train_rows else None
         if limit is not None and len(data) > limit:
             skipped.append((name, f"{name.upper()}_TRAIN_TOO_LARGE"))
+            progress.advance()
             continue
         model_notes: list[str] = []
         fit_params = {}
@@ -264,10 +274,12 @@ def train_models(
         except Exception as error:  # one model failing must not stop the others (B1)
             log.exception("Training %s failed", name)
             failures.append(ModelFailure(name, f"{type(error).__name__}: {error}"))
+            progress.advance()
             continue
         log.info("Trained %s in %.1f s", name, seconds)
         fitted[name] = FittedModel(name, pipeline, features, classes, spec.encoding, spec.scale,
                                    seconds, tuple(model_notes))
+        progress.advance()
 
     return TrainingOutcome(
         models=fitted,

@@ -25,6 +25,8 @@ import numpy as np
 import pandas as pd
 
 from ..config import EvaluationConfig, LeakageConfig, PipelineConfig, SplitConfig, max_workers
+from ..ports import NullProgress, ProgressSink
+from . import registry
 from .datasets import LoadedDataset
 from .evaluation import EvaluationResult, evaluate
 from .leakage import LeakageReport, check_leakage
@@ -249,26 +251,52 @@ def train(
     source: DatasetRef | None = None,
     test_source: DatasetRef | None = None,
     sources: Sequence[str] | pd.Series | None = None,
+    progress: ProgressSink | None = None,
 ) -> TrainingRun:
-    """Split, guard, train and evaluate; returns the run (nothing is written)."""
+    """Split, guard, train and evaluate; returns the run (nothing is written).
+
+    ``progress`` (v5.1 step 1.2d) gets ``start(total_steps(...))``: one step for the split,
+    one for the leakage guard, then one per model per CV fold and per final fit; then
+    ``finish()``, also after an error. An exception raised by ``advance()`` (a cancelled
+    job) stops the training; nothing is returned or written."""
     settings = settings or TrainSettings()
     label = settings.label or (profile.label_column if profile else None)
     if not label:
         raise ValueError("No label column: set TrainSettings.label or pass a profile that has one")
     settings = dataclasses.replace(settings, workers=settings.workers or max_workers())
     now = datetime.now(timezone.utc)
+    progress = progress or NullProgress()
+    progress.start(total_steps(settings))
+    try:
+        return _train(frame, label, settings, now, profile, test_frame, source, test_source,
+                      sources, progress)
+    finally:
+        progress.finish()
 
+
+def total_steps(settings: TrainSettings) -> int:
+    """Progress steps of ``train``: split + leakage guard + models x (CV folds + final fit)."""
+    models = settings.models or registry.default_models()
+    return 2 + len(models) * (settings.evaluation.cv_folds + 1)
+
+
+def _train(frame: pd.DataFrame, label: str, settings: TrainSettings, now: datetime,
+           profile: ProfileMatch | None, test_frame: pd.DataFrame | None,
+           source: DatasetRef | None, test_source: DatasetRef | None,
+           sources: Sequence[str] | pd.Series | None, progress: ProgressSink) -> TrainingRun:
     split = split_dataset(frame, label, profile=profile, strategy=settings.strategy,
                           time_column=settings.time_column, group_column=settings.group_column,
                           test_frame=test_frame, sources=sources, config=settings.split)
+    progress.advance()
     guard = check_leakage(split.train, label, features=settings.features,
                           profile_blocked=profile.blocked_columns if profile else (),
                           allow=settings.allow, config=settings.leakage)
+    progress.advance()
     evaluation = evaluate(split.train, split.test, label, features=guard.features,
                           models=settings.models, balancer=settings.balancer,
                           selector=settings.selector, k_features=settings.k_features,
                           config=settings.evaluation, pipeline_config=settings.pipeline,
-                          workers=settings.workers)
+                          workers=settings.workers, progress=progress)
     return TrainingRun(
         run_id=f"{now:%Y%m%dT%H%M%SZ}-{secrets.token_hex(4)}",
         created_at=now.strftime("%Y-%m-%dT%H:%M:%SZ"),
