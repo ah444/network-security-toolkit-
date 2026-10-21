@@ -23,16 +23,17 @@ from .api import (
     ApiError,
     error_response,
     json_body,
+    query,
 )
 from .datasets import label_values, require_data
 from .schemas import ConfusionRequest, TrainRequest, load
 from .workspace import UploadedData, Workspace, current_workspace
 
-bp = Blueprint("training", __name__)
+bp = Blueprint("training", __name__, url_prefix="/api/v1")
 
 
-@bp.route("/get_available_models", methods=["GET"])
-def get_available_models() -> Answer:
+@bp.route("/models", methods=["GET"])
+def models() -> Answer:
     """Models that can be trained here (optional libraries installed)."""
     return jsonify({"models": [
         {"id": name, "name": registry.MODELS[name].title,
@@ -42,14 +43,15 @@ def get_available_models() -> Answer:
     ]})
 
 
-@bp.route("/configure", methods=["POST"])
-def configure() -> Answer:
+@bp.route("/run", methods=["POST"])
+def train() -> Answer:
+    """Train the chosen models on the session dataset (synchronous until step 1.2d)."""
     ws = current_workspace()
     if not ws.training.acquire(blocking=False):
         return error_response("A training run is already in progress in this workspace. "
                               "Wait for it to finish.", 409, BUSY)
     try:
-        return _configure_training(ws)
+        return _train(ws)
     finally:
         ws.training.release()
 
@@ -57,9 +59,9 @@ def configure() -> Answer:
 def _training_settings(data: UploadedData, req: TrainRequest) -> TrainSettings:
     """TrainSettings from the request, checked here so errors read well (S8)."""
     target = req.target
-    features = req.input_features
-    models = req.selected_models or list(registry.default_models())
-    balancer = req.balancing_method or "none"
+    features = req.features
+    models = req.models or list(registry.default_models())
+    balancer = req.balancing or "none"
     if not target or target not in data.frame.columns:
         raise ApiError("Choose the target column.", UNKNOWN_COLUMN)
     if not features:
@@ -93,7 +95,7 @@ def _blocked(leakage_record: Mapping[str, Any]) -> list[dict[str, Any]]:
     return [{"column": c, "reason": reasons.get(c, "BLOCKED")} for c in leakage_record["blocked"]]
 
 
-def _configure_training(ws: Workspace) -> Answer:
+def _train(ws: Workspace) -> Answer:
     req = load(TrainRequest, json_body())
     data = require_data(ws)
     settings = _training_settings(data, req)
@@ -145,14 +147,14 @@ def _configure_training(ws: Workspace) -> Answer:
     })
 
 
-@bp.route("/get_confusion_matrix", methods=["POST"])
-def get_confusion_matrix() -> Answer:
+@bp.route("/run/confusion", methods=["GET"])
+def confusion() -> Answer:
     """Test-split confusion matrix of one trained model."""
     ws = current_workspace()
-    req = load(ConfusionRequest, json_body())
+    req = load(ConfusionRequest, query())
     if ws.run is None:
         return error_response("No models trained yet.", code=NOT_TRAINED)
-    name = req.model_name or ws.run.evaluation.selected
+    name = req.model or ws.run.evaluation.selected
     for model in ws.run.evaluation.models:
         if model.name == name:
             return jsonify({"confusion_matrix": [list(r) for r in model.test.confusion],

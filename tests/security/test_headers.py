@@ -3,7 +3,7 @@
 import pytest
 
 
-@pytest.mark.parametrize("url", ["/", "/dynamic_ids", "/get_available_models",
+@pytest.mark.parametrize("url", ["/", "/dynamic_ids", "/api/v1/models",
                                  "/static/js/main.js"])
 def test_security_headers_present(client, url):
     headers = client.get(url).headers

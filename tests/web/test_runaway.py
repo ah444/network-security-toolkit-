@@ -15,8 +15,8 @@ def columns(upload, fixtures_dir):
 
 
 def _train_body(columns):
-    return {"input_features": [c for c in columns if c != TARGET], "target": TARGET,
-            "balancing_method": "none", "test_size": 0.3, "selected_models": ["decision_tree"]}
+    return {"features": [c for c in columns if c != TARGET], "target": TARGET,
+            "balancing": "none", "test_size": 0.3, "models": ["decision_tree"]}
 
 
 @pytest.fixture
@@ -48,7 +48,7 @@ def _start(web_app, test_client, body):
         background.set_cookie(name, cookie.value)
     result = {}
     thread = threading.Thread(
-        target=lambda: result.setdefault("response", background.post("/configure", json=body)))
+        target=lambda: result.setdefault("response", background.post("/api/v1/run", json=body)))
     thread.start()
     return thread, result
 
@@ -58,7 +58,7 @@ def test_second_training_returns_409(web_app, client, columns, held_training):
     thread, first = _start(web_app, client, _train_body(columns))
     try:
         assert entered.wait(30), "first training never started"
-        second = client.post("/configure", json=_train_body(columns))
+        second = client.post("/api/v1/run", json=_train_body(columns))
         assert second.status_code == 409
         assert second.get_json()["error"]["code"] == "BUSY"
         assert "already" in second.get_json()["error"]["message"].lower()
@@ -66,7 +66,7 @@ def test_second_training_returns_409(web_app, client, columns, held_training):
         release.set()
         thread.join(60)
     assert first["response"].status_code == 200
-    assert client.post("/configure", json=_train_body(columns)).status_code == 200, \
+    assert client.post("/api/v1/run", json=_train_body(columns)).status_code == 200, \
         "busy flag must be cleared after training"
 
 
@@ -76,12 +76,12 @@ def test_busy_flag_cleared_after_failure(client, columns, monkeypatch):
 
     real_train = training.train_run
     monkeypatch.setattr(training, "train_run", broken)
-    failed = client.post("/configure", json=_train_body(columns))
+    failed = client.post("/api/v1/run", json=_train_body(columns))
     assert failed.status_code == 500  # an unexpected error: answered, never shown (S8)
     assert failed.get_json()["error"]["code"] == "INTERNAL"
     assert "boom" not in failed.get_data(as_text=True)
     monkeypatch.setattr(training, "train_run", real_train)
-    assert client.post("/configure", json=_train_body(columns)).status_code == 200
+    assert client.post("/api/v1/run", json=_train_body(columns)).status_code == 200
 
 
 def test_other_workspace_not_blocked(web_app, client, columns, held_training, fixtures_dir):
@@ -92,9 +92,9 @@ def test_other_workspace_not_blocked(web_app, client, columns, held_training, fi
         other = web_app.test_client()
         path = fixtures_dir / "cic_ddos_sample.csv"
         with path.open("rb") as handle:
-            other.post("/upload", data={"dataset": (handle, path.name)},
+            other.post("/api/v1/dataset", data={"dataset": (handle, path.name)},
                        content_type="multipart/form-data")
-        assert other.post("/configure", json=_train_body(columns)).status_code == 200
+        assert other.post("/api/v1/run", json=_train_body(columns)).status_code == 200
     finally:
         release.set()
         thread.join(60)

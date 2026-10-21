@@ -32,6 +32,7 @@ from .api import (
     ApiError,
     error_response,
     json_body,
+    query,
 )
 from .schemas import (
     BalancingPreviewRequest,
@@ -46,7 +47,7 @@ from .security import display_name, safe_upload_name
 from .state import state
 from .workspace import UploadedData, Workspace, current_workspace
 
-bp = Blueprint("datasets", __name__)
+bp = Blueprint("datasets", __name__, url_prefix="/api/v1")
 
 
 def label_values(frame: pd.DataFrame, target: str) -> pd.Series:
@@ -112,7 +113,7 @@ def _dataset_summary(data: UploadedData) -> dict[str, Any]:
     }
 
 
-@bp.route("/upload", methods=["POST"])
+@bp.route("/dataset", methods=["POST"])
 def upload() -> Answer:
     ws = current_workspace()
     if "dataset" not in request.files:
@@ -169,14 +170,14 @@ def _require_target(data: UploadedData, target: str) -> str:
     return target
 
 
-@bp.route("/preview_data", methods=["POST"])
-def preview_data() -> Answer:
+@bp.route("/dataset/preview", methods=["GET"])
+def preview() -> Answer:
     """Return a preview of the uploaded dataset (first N rows)."""
     ws = current_workspace()
-    req = load(PreviewRequest, json_body())  # num_rows clamped to 1-100 (S9)
+    req = load(PreviewRequest, query())  # rows clamped to 1-100 (S9)
     df = require_data(ws).frame
     return jsonify({
-        "preview": _json_records(df.head(req.num_rows)),
+        "preview": _json_records(df.head(req.rows)),
         "columns": [str(c) for c in df.columns],
         "stats": {
             "total_rows": len(df),
@@ -187,14 +188,14 @@ def preview_data() -> Answer:
     })
 
 
-@bp.route("/filter_target_values", methods=["POST"])
-def filter_target_values() -> Answer:
+@bp.route("/dataset/filter", methods=["POST"])
+def filter_classes() -> Answer:
     """Remove the rows of the selected classes (from the test file too)."""
     ws = current_workspace()
     req = load(FilterRequest, json_body())
     data = require_data(ws)
-    target = _require_target(data, req.target_column)
-    to_remove = req.values_to_remove
+    target = _require_target(data, req.target)
+    to_remove = req.remove
     if not to_remove:
         return error_response("No values selected for removal.")
     current = set(label_values(data.frame, target))
@@ -230,13 +231,13 @@ def filter_target_values() -> Answer:
     })
 
 
-@bp.route("/get_target_values", methods=["POST"])
-def get_target_values() -> Answer:
+@bp.route("/dataset/classes", methods=["GET"])
+def classes() -> Answer:
     """Values of the target column with their counts."""
     ws = current_workspace()
-    req = load(ClassesRequest, json_body())
+    req = load(ClassesRequest, query())
     data = require_data(ws)
-    target = _require_target(data, req.target_column)
+    target = _require_target(data, req.target)
     counts = {k: int(v) for k, v in label_values(data.frame, target).value_counts().items()}
     return jsonify({"values": list(counts), "value_counts": counts, "count": len(counts)})
 
@@ -270,11 +271,11 @@ def _candidate_features(data: UploadedData, target: str,
     return [c for c in data.frame.columns if c != target and c not in blocked]
 
 
-@bp.route("/analyze_class_distribution", methods=["POST"])
-def analyze_class_distribution() -> Answer:
+@bp.route("/dataset/distribution", methods=["GET"])
+def distribution() -> Answer:
     """Class counts of the dataset; the balancing recommendation uses the training split."""
     ws = current_workspace()
-    req = load(DistributionRequest, json_body())
+    req = load(DistributionRequest, query())
     data = require_data(ws)
     target = _require_target(data, req.target)
     counts = label_values(data.frame, target).value_counts()
@@ -302,8 +303,8 @@ def analyze_class_distribution() -> Answer:
     })
 
 
-@bp.route("/apply_smote", methods=["POST"])
-def apply_smote_endpoint() -> Answer:
+@bp.route("/dataset/balancing-preview", methods=["POST"])
+def balancing_preview() -> Answer:
     """Preview a balancing method on the **training split** (nothing is stored or changed).
 
     Training applies the method inside each pipeline, to training rows only; this shows
@@ -313,10 +314,10 @@ def apply_smote_endpoint() -> Answer:
     req = load(BalancingPreviewRequest, json_body())
     data = require_data(ws)
     target = _require_target(data, req.target)
-    method = req.balancing_method or "smote"
+    method = req.balancing or "smote"
     if method != "recommended" and method not in registry.BALANCERS:
         return error_response(f"Unknown balancing method: {method}")
-    features = _candidate_features(data, target, req.input_features)
+    features = _candidate_features(data, target, req.features)
     try:
         split = _training_split(ws, target, req.test_size)
         preview = preview_balancing(split.train, target, method, features=features)
@@ -339,8 +340,8 @@ def apply_smote_endpoint() -> Answer:
     })
 
 
-@bp.route("/recommend_features", methods=["POST"])
-def recommend_features() -> Answer:
+@bp.route("/dataset/feature-scores", methods=["POST"])
+def feature_scores() -> Answer:
     """Feature scores on the training split, after the leakage guard."""
     ws = current_workspace()
     req = load(FeatureScoresRequest, json_body())  # k clamped to 1-10,000 (S9)

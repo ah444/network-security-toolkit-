@@ -38,20 +38,22 @@ def test_pages_keep_html_404(client):
 
 
 def test_cross_site_has_a_code(client):
-    response = client.post("/preview_data", json={"num_rows": 5},
+    response = client.post("/api/v1/dataset/filter", json={"target": "x", "remove": ["y"]},
                            headers={"Origin": "http://evil.example"})
     assert response.status_code == 403 and _error(response)["code"] == "CROSS_SITE"
 
 
 def test_errors_of_each_kind(client):
-    assert _error(client.post("/preview_data", json={}))["code"] == "NO_DATASET"
-    assert _error(client.post("/preview_data", data="x", content_type="text/plain"))["code"] == \
-        "BAD_REQUEST"
-    upload = client.post("/upload", data={"dataset": (io.BytesIO(b"a,Label\n1,X\n2,Y\n"), "d.csv")},
+    assert _error(client.get("/api/v1/dataset/preview", query_string={}))["code"] == "NO_DATASET"
+    assert _error(client.post("/api/v1/dataset/filter", data="x",
+                              content_type="text/plain"))["code"] == "BAD_REQUEST"
+    upload = client.post("/api/v1/dataset",
+                         data={"dataset": (io.BytesIO(b"a,Label\n1,X\n2,Y\n"), "d.csv")},
                          content_type="multipart/form-data")
     assert upload.status_code == 200
-    assert _error(client.post("/get_target_values", json={"target_column": "nope"}))["code"] == \
-        "UNKNOWN_COLUMN"
-    assert _error(client.post("/predict", json={"values": {"a": 1}}))["code"] == "NOT_TRAINED"
-    assert _error(client.post("/predict_loaded", json={"values": {"a": 1}}))["code"] == \
+    classes = client.get("/api/v1/dataset/classes", query_string={"target": "nope"})
+    assert _error(classes)["code"] == "UNKNOWN_COLUMN"
+    predict = client.post("/api/v1/run/predict", json={"values": {"a": 1}})
+    assert _error(predict)["code"] == "NOT_TRAINED"
+    assert _error(client.post("/api/v1/bundle/predict", json={"values": {"a": 1}}))["code"] == \
         "NO_MODEL_LOADED"

@@ -85,7 +85,7 @@ def upload(client):
 
     def _upload(path, name=None):
         with path.open("rb") as handle:
-            response = client.post("/upload", data={"dataset": (handle, name or path.name)},
+            response = client.post("/api/v1/dataset", data={"dataset": (handle, name or path.name)},
                                    content_type="multipart/form-data")
         return response
 

@@ -50,16 +50,16 @@ def test_wrong_types_name_the_field():
 def test_numbers_are_clamped_not_refused():
     assert load(Needs, {"name": "x", "count": 10**9}).count == 10
     assert load(Needs, {"name": "x", "count": -5}).count == 1
-    assert load(PreviewRequest, {"num_rows": 0}).num_rows == 1
+    assert load(PreviewRequest, {"rows": 0}).rows == 1
     assert load(TrainRequest, {"test_size": 0.9}).test_size == 0.5
 
 
 def test_lists_hold_text_and_are_capped():
-    assert load(TrainRequest, {"input_features": ["a", 2, 3.5]}).input_features == ["a", "2", "3.5"]
-    assert "must be a list" in _refused(TrainRequest, {"input_features": "a"})
-    assert "only hold text or numbers" in _refused(TrainRequest, {"input_features": [["a"]]})
-    assert "too many items" in _refused(TrainRequest, {"input_features": ["a"] * (MAX_ITEMS + 1)})
-    assert "too long" in _refused(TrainRequest, {"input_features": ["a" * (MAX_TEXT + 1)]})
+    assert load(TrainRequest, {"features": ["a", 2, 3.5]}).features == ["a", "2", "3.5"]
+    assert "must be a list" in _refused(TrainRequest, {"features": "a"})
+    assert "only hold text or numbers" in _refused(TrainRequest, {"features": [["a"]]})
+    assert "too many items" in _refused(TrainRequest, {"features": ["a"] * (MAX_ITEMS + 1)})
+    assert "too long" in _refused(TrainRequest, {"features": ["a" * (MAX_TEXT + 1)]})
 
 
 def test_texts_are_capped():
@@ -77,4 +77,4 @@ def test_prediction_values():
 
 
 def test_none_means_missing():
-    assert load(TrainRequest, {"target": None, "input_features": None}) == TrainRequest()
+    assert load(TrainRequest, {"target": None, "features": None}) == TrainRequest()

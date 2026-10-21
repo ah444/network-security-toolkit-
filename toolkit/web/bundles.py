@@ -20,16 +20,16 @@ from .state import state
 from .training import features_info
 from .workspace import ExportedBundle, current_workspace
 
-bp = Blueprint("bundles", __name__)
+bp = Blueprint("bundles", __name__, url_prefix="/api/v1")
 
 
 def _predict(models: Mapping[str, FittedModel], default: str | None,
              req: PredictRequest) -> Answer:
-    """Predict one row with ``models[algorithm]`` through its saved pipeline (B2)."""
+    """Predict one row with ``models[model]`` through its saved pipeline (B2)."""
     values = req.values
     if not values:
         return error_response("No input values provided.")
-    algorithm = req.algorithm or default or ""
+    algorithm = req.model or default or ""
     if algorithm not in models:
         return error_response(f"Invalid algorithm selection. Available models: {', '.join(models)}")
     fitted = models[algorithm]
@@ -46,8 +46,8 @@ def _predict(models: Mapping[str, FittedModel], default: str | None,
     return jsonify({"prediction": str(prediction), "model": algorithm})
 
 
-@bp.route("/predict", methods=["POST"])
-def predict_endpoint() -> Answer:
+@bp.route("/run/predict", methods=["POST"])
+def predict() -> Answer:
     ws = current_workspace()
     req = load(PredictRequest, json_body())
     if ws.run is None:
@@ -55,8 +55,8 @@ def predict_endpoint() -> Answer:
     return _predict(ws.run.evaluation.training.models, ws.run.evaluation.selected, req)
 
 
-@bp.route("/predict_loaded", methods=["POST"])
-def predict_loaded_endpoint() -> Answer:
+@bp.route("/bundle/predict", methods=["POST"])
+def predict_loaded() -> Answer:
     ws = current_workspace()
     req = load(PredictRequest, json_body())
     if ws.loaded is None:
@@ -70,14 +70,14 @@ def _bundle_refused(error: BundleError) -> Answer:
     return error_response(str(error), code=error.code)
 
 
-@bp.route("/export_model", methods=["POST"])
-def export_model() -> Answer:
+@bp.route("/run/export", methods=["POST"])
+def export() -> Answer:
     """Save the session's run as a signed bundle in instance/bundles/ (never overwritten)
-    and its TrainingRun in instance/runs/; the browser downloads it from /download_bundle."""
+    and its TrainingRun in instance/runs/; the browser downloads it from /api/v1/run/bundle."""
     ws = current_workspace()
     req = load(ExportRequest, json_body())
     try:
-        name = safe_model_basename(req.model_name)
+        name = safe_model_basename(req.name)
     except ValueError:
         return error_response("Model name may only use letters, digits, '_' and '-' (max 80).")
     if ws.run is None:
@@ -100,13 +100,13 @@ def export_model() -> Answer:
         "file": saved.path.name,
         "run_id": saved.run.run_id,
         "sha256": saved.sha256,
-        "download_url": "/download_bundle",
+        "download_url": "/api/v1/run/bundle",
         "download_name": f"{name}.bundle",
     })
 
 
-@bp.route("/download_bundle", methods=["GET"])
-def download_bundle() -> Answer:
+@bp.route("/run/bundle", methods=["GET"])
+def download() -> Answer:
     ws = current_workspace()
     if ws.export is None:
         return error_response("Export the model first.", 404, NOT_TRAINED)
@@ -115,12 +115,12 @@ def download_bundle() -> Answer:
                      mimetype="application/octet-stream")
 
 
-@bp.route("/load_model", methods=["POST"])
-def load_model_endpoint() -> Answer:
+@bp.route("/bundle", methods=["POST"])
+def load_bundle() -> Answer:
     """Load a bundle exported by this install. Every check (format, signature, versions)
     runs before anything in the file is deserialized (S1); only signed bundles load."""
     ws = current_workspace()
-    file = request.files.get("model_file")
+    file = request.files.get("file")
     if file is None or not file.filename:
         return error_response("Choose a .bundle file exported by this toolkit.")
     data = file.read()

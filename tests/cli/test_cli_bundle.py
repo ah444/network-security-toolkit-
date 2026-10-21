@@ -29,11 +29,11 @@ TARGET = "Label"
 def exported(client, upload, fixtures_dir):
     """A bundle trained and exported through the real web routes (this install's key)."""
     columns = upload(fixtures_dir / CIC).get_json()["columns"]
-    trained = client.post("/configure", json={
-        "input_features": [c for c in columns if c != TARGET], "target": TARGET,
-        "balancing_method": "none", "selected_models": ["decision_tree", "logistic_regression"]})
+    trained = client.post("/api/v1/run", json={
+        "features": [c for c in columns if c != TARGET], "target": TARGET,
+        "balancing": "none", "models": ["decision_tree", "logistic_regression"]})
     assert trained.status_code == 200, trained.get_json()
-    export = client.post("/export_model", json={"model_name": "web"}).get_json()
+    export = client.post("/api/v1/run/export", json={"name": "web"}).get_json()
     return bundle_files.bundles_dir() / export["file"]
 
 
@@ -61,7 +61,7 @@ def test_cli_and_web_same_prediction(cli_module, client, exported, frame):
         cli = cli_module.predict_rows(bundle, rows, model=model)
         for (_, row), predicted in zip(rows.iterrows(), cli["prediction"], strict=True):
             values = {c: str(v) for c, v in row.items() if c != TARGET}
-            web = client.post("/predict", json={"values": values, "algorithm": model})
+            web = client.post("/api/v1/run/predict", json={"values": values, "model": model})
             assert web.get_json()["prediction"] == predicted, model
 
 
@@ -159,11 +159,11 @@ def test_interactive_examples_manual_and_exit(cli_module, exported, monkeypatch,
 def two_exports(client, exported):
     """``exported`` plus a newer export of a second run (decision tree only)."""
     columns = list(cli_frame_columns(exported))
-    trained = client.post("/configure", json={
-        "input_features": columns, "target": TARGET, "balancing_method": "none",
-        "selected_models": ["decision_tree"]})
+    trained = client.post("/api/v1/run", json={
+        "features": columns, "target": TARGET, "balancing": "none",
+        "models": ["decision_tree"]})
     assert trained.status_code == 200, trained.get_json()
-    newer = client.post("/export_model", json={"model_name": "newer"}).get_json()
+    newer = client.post("/api/v1/run/export", json={"name": "newer"}).get_json()
     return exported, bundle_files.bundles_dir() / newer["file"]
 
 

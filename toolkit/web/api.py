@@ -67,6 +67,11 @@ def json_body() -> dict[str, Any]:
     return data
 
 
+def query() -> dict[str, str]:
+    """The query string of a GET request, one value per name."""
+    return request.args.to_dict()
+
+
 def _api_error(error: ApiError) -> tuple[Response, int]:
     return error_response(error.message, error.status, error.code, **error.details)
 

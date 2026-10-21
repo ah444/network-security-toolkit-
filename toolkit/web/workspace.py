@@ -23,7 +23,7 @@ from ..ids_core.runs import DatasetRef, TrainingRun
 from ..ids_core.split import SplitResult
 from .state import state
 
-bp = Blueprint("workspace", __name__)
+bp = Blueprint("workspace", __name__, url_prefix="/api/v1")
 
 
 @dataclass

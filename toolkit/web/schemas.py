@@ -115,18 +115,18 @@ DEFAULT_TEST_SIZE = SplitConfig().test_size
 
 @dataclasses.dataclass(frozen=True)
 class PreviewRequest:
-    num_rows: int = dataclasses.field(default=10, metadata=clamp(1, 100))
+    rows: int = dataclasses.field(default=10, metadata=clamp(1, 100))
 
 
 @dataclasses.dataclass(frozen=True)
 class ClassesRequest:
-    target_column: str = ""
+    target: str = ""
 
 
 @dataclasses.dataclass(frozen=True)
 class FilterRequest:
-    target_column: str = ""
-    values_to_remove: list[str] = dataclasses.field(default_factory=list)
+    target: str = ""
+    remove: list[str] = dataclasses.field(default_factory=list)
 
 
 @dataclasses.dataclass(frozen=True)
@@ -138,8 +138,8 @@ class DistributionRequest:
 @dataclasses.dataclass(frozen=True)
 class BalancingPreviewRequest:
     target: str = ""
-    balancing_method: str = ""
-    input_features: list[str] | None = None
+    balancing: str = ""
+    features: list[str] | None = None
     test_size: float = dataclasses.field(default=DEFAULT_TEST_SIZE, metadata=TEST_SIZE)
 
 
@@ -153,23 +153,23 @@ class FeatureScoresRequest:
 @dataclasses.dataclass(frozen=True)
 class TrainRequest:
     target: str = ""
-    input_features: list[str] | None = None
-    selected_models: list[str] | None = None
-    balancing_method: str = ""
+    features: list[str] | None = None
+    models: list[str] | None = None
+    balancing: str = ""
     test_size: float = dataclasses.field(default=DEFAULT_TEST_SIZE, metadata=TEST_SIZE)
 
 
 @dataclasses.dataclass(frozen=True)
 class ConfusionRequest:
-    model_name: str = ""
+    model: str = ""
 
 
 @dataclasses.dataclass(frozen=True)
 class PredictRequest:
     values: dict[str, str | int | float | None] | None = None
-    algorithm: str = ""
+    model: str = ""
 
 
 @dataclasses.dataclass(frozen=True)
 class ExportRequest:
-    model_name: str = ""
+    name: str = ""

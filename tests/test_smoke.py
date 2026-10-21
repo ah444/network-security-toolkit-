@@ -11,7 +11,7 @@ def test_web_pages_render(client, url):
 
 
 def test_available_models_endpoint(client):
-    response = client.get("/get_available_models")
+    response = client.get("/api/v1/models")
     assert response.status_code == 200
     ids = {model["id"] for model in response.get_json()["models"]}
     assert {"random_forest", "logistic_regression"} <= ids

@@ -105,7 +105,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
   /********** DYNAMIC IDS FUNCTIONALITY **********/
   if (document.getElementById("uploadForm")) {
-    // Model titles from /get_available_models (id -> title)
+    // Model titles from /api/v1/models (id -> title)
     var modelTitles = {};
     function modelTitle(id) {
       return modelTitles[id] || id;
@@ -141,11 +141,7 @@ document.addEventListener("DOMContentLoaded", function() {
       dataStats.innerHTML = "Loading preview...";
       dataPreviewTable.innerHTML = "";
 
-      fetch("/preview_data", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ num_rows: parseInt(numRows) })
-      })
+      fetch("/api/v1/dataset/preview?" + new URLSearchParams({ rows: parseInt(numRows) }))
       .then(response => response.json())
       .then(result => {
         if (result.preview) {
@@ -242,7 +238,7 @@ document.addEventListener("DOMContentLoaded", function() {
     function loadAvailableModels() {
       const list = document.getElementById("modelSelection");
       list.innerHTML = "";
-      fetch("/get_available_models")
+      fetch("/api/v1/models")
         .then(response => response.json())
         .then(result => {
           if (result.models) {
@@ -285,12 +281,12 @@ document.addEventListener("DOMContentLoaded", function() {
 
       resultDiv.innerHTML = "Removing selected values...";
 
-      fetch("/filter_target_values", {
+      fetch("/api/v1/dataset/filter", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          target_column: currentTargetColumn,
-          values_to_remove: selectedValues
+          target: currentTargetColumn,
+          remove: selectedValues
         })
       })
       .then(response => response.json())
@@ -330,17 +326,17 @@ document.addEventListener("DOMContentLoaded", function() {
       balancingHint.innerHTML = BALANCING_HINTS[this.value] || "Select a method to handle class imbalance.";
     });
 
-    // Balancing preview on the training split (/apply_smote changes nothing)
+    // Balancing preview on the training split (/api/v1/dataset/balancing-preview changes nothing)
     document.getElementById("previewBalancingBtn").addEventListener("click", function() {
       const resultDiv = document.getElementById("balancingPreviewResult");
       const target = currentTargetColumn || document.getElementById("targetForDist").value;
       const target_features = checkedValues(document.getElementById("inputFeatures")).filter(f => f !== target);
       resultDiv.innerHTML = "Running the balancing method on the training split...";
-      fetch("/apply_smote", {
+      fetch("/api/v1/dataset/balancing-preview", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ target: target, balancing_method: balancingMethodSelect.value,
-                               test_size: testSize(), input_features: target_features })
+        body: JSON.stringify({ target: target, balancing: balancingMethodSelect.value,
+                               test_size: testSize(), features: target_features })
       })
       .then(response => response.json())
       .then(result => {
@@ -512,7 +508,7 @@ document.addEventListener("DOMContentLoaded", function() {
       Array.from(files).forEach(file => {
         formData.append("dataset", file);
       });
-      fetch("/upload", {
+      fetch("/api/v1/dataset", {
         method: "POST",
         body: formData
       })
@@ -583,8 +579,8 @@ document.addEventListener("DOMContentLoaded", function() {
       }
       loadResult.innerHTML = "Checking and loading the bundle...";
       const formData = new FormData();
-      formData.append("model_file", modelFileInput.files[0]);
-      fetch("/load_model", {
+      formData.append("file", modelFileInput.files[0]);
+      fetch("/api/v1/bundle", {
         method: "POST",
         body: formData
       })
@@ -633,7 +629,7 @@ document.addEventListener("DOMContentLoaded", function() {
         return;
       }
       recommendationResult.innerHTML = "Scoring features on the training split...";
-      fetch("/recommend_features", {
+      fetch("/api/v1/dataset/feature-scores", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ target: targetForRec, k: parseInt(kValue), test_size: testSize() })
@@ -676,11 +672,8 @@ document.addEventListener("DOMContentLoaded", function() {
       }
       currentTargetColumn = targetForDist;
       classDistributionResult.innerHTML = "Analyzing class distribution...";
-      fetch("/analyze_class_distribution", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ target: targetForDist, test_size: testSize() })
-      })
+      fetch("/api/v1/dataset/distribution?" +
+            new URLSearchParams({ target: targetForDist, test_size: testSize() }))
       .then(response => response.json())
       .then(result => {
         if (result.class_counts) {
@@ -802,15 +795,15 @@ document.addEventListener("DOMContentLoaded", function() {
       // One training at a time (the server also answers 409 to a second request)
       const trainButton = configForm.querySelector('button[type="submit"]');
       trainButton.disabled = true;
-      fetch("/configure", {
+      fetch("/api/v1/run", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          input_features: selectedInputs,
+          features: selectedInputs,
           target: selectedTarget,
-          balancing_method: balancingMethodSelect.value,
+          balancing: balancingMethodSelect.value,
           test_size: testSize(),
-          selected_models: selectedModels
+          models: selectedModels
         })
       })
       .then(response => response.json())
@@ -863,7 +856,7 @@ document.addEventListener("DOMContentLoaded", function() {
         return;
       }
       const clearWorkspaceResult = document.getElementById("clearWorkspaceResult");
-      fetch("/workspace", { method: "DELETE" })
+      fetch("/api/v1/workspace", { method: "DELETE" })
       .then(response => {
         if (!response.ok) {
           throw new Error("HTTP " + response.status);
@@ -882,10 +875,10 @@ document.addEventListener("DOMContentLoaded", function() {
       const exportResult = document.getElementById("exportResult");
       exportResult.textContent = "Saving the signed bundle...";
       const modelName = document.getElementById("modelName").value;
-      fetch("/export_model", {
+      fetch("/api/v1/run/export", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ model_name: modelName })
+        body: JSON.stringify({ name: modelName })
       })
       .then(response => response.json())
       .then(result => {
@@ -999,11 +992,11 @@ document.addEventListener("DOMContentLoaded", function() {
       e.preventDefault();
       const predictionResult = document.getElementById("predictionResult");
       predictionResult.textContent = "Predicting...";
-      fetch("/predict", {
+      fetch("/api/v1/run/predict", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ values: formValues("dynamicInputs"),
-                               algorithm: document.getElementById("algorithmSelect").value })
+                               model: document.getElementById("algorithmSelect").value })
       })
       .then(response => response.json())
       .then(result => {
@@ -1024,11 +1017,11 @@ document.addEventListener("DOMContentLoaded", function() {
       e.preventDefault();
       const loadedPredictionResult = document.getElementById("loadedPredictionResult");
       loadedPredictionResult.textContent = "Predicting...";
-      fetch("/predict_loaded", {
+      fetch("/api/v1/bundle/predict", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ values: formValues("loadedDynamicInputs"),
-                               algorithm: document.getElementById("loadedAlgorithmSelect").value })
+                               model: document.getElementById("loadedAlgorithmSelect").value })
       })
       .then(response => response.json())
       .then(result => {

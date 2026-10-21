@@ -4,7 +4,7 @@
 def _set_cookie_after_upload(test_client, fixtures_dir):
     path = fixtures_dir / "cic_ddos_sample.csv"
     with path.open("rb") as handle:
-        response = test_client.post("/upload", data={"dataset": (handle, path.name)},
+        response = test_client.post("/api/v1/dataset", data={"dataset": (handle, path.name)},
                                     content_type="multipart/form-data")
     assert response.status_code == 200
     cookies = response.headers.getlist("Set-Cookie")

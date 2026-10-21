@@ -35,7 +35,7 @@ def test_scanner_detects_a_leak():
 
 def test_no_paths_or_tracebacks_in_errors(client):
     garbage = b"\x00\xff\xfe" * 2000
-    response = client.post("/upload", data={"dataset": (io.BytesIO(garbage), "broken.csv")},
+    response = client.post("/api/v1/dataset", data={"dataset": (io.BytesIO(garbage), "broken.csv")},
                            content_type="multipart/form-data")
     assert response.status_code in (400, 500)
     error = response.get_json()["error"]

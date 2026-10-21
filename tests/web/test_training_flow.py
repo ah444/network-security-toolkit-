@@ -31,9 +31,9 @@ def _features(columns):
 
 
 def _train(client, columns, models=("decision_tree",), balancing="none", test_size=0.3):
-    return client.post("/configure", json={
-        "input_features": _features(columns), "target": TARGET, "balancing_method": balancing,
-        "test_size": test_size, "selected_models": list(models)})
+    return client.post("/api/v1/run", json={
+        "features": _features(columns), "target": TARGET, "balancing": balancing,
+        "test_size": test_size, "models": list(models)})
 
 
 def _rows(fixtures_dir, count=6):
@@ -96,17 +96,17 @@ def test_old_preprocessing_code_deleted(repo_root):
 
 
 def test_training_errors_are_clear(client, cic):
-    unknown = client.post("/configure", json={
-        "input_features": _features(cic["columns"]), "target": TARGET,
-        "selected_models": ["quantum_forest"]})
+    unknown = client.post("/api/v1/run", json={
+        "features": _features(cic["columns"]), "target": TARGET,
+        "models": ["quantum_forest"]})
     assert unknown.status_code == 400 and "quantum_forest" in unknown.get_json()["error"]["message"]
-    label_as_feature = client.post("/configure", json={
-        "input_features": cic["columns"], "target": TARGET, "selected_models": ["decision_tree"]})
+    label_as_feature = client.post("/api/v1/run", json={
+        "features": cic["columns"], "target": TARGET, "models": ["decision_tree"]})
     assert label_as_feature.status_code == 400
 
 
 def test_training_without_dataset(client):
-    response = client.post("/configure", json={"input_features": ["a"], "target": TARGET})
+    response = client.post("/api/v1/run", json={"features": ["a"], "target": TARGET})
     assert response.status_code == 400 and response.get_json()["error"]["code"] == "NO_DATASET"
 
 
@@ -114,7 +114,7 @@ def test_nslkdd_official_pair_uses_official_split(client, fixtures_dir):
     train_path = fixtures_dir / "nslkdd_train_sample.txt"
     test_path = fixtures_dir / "nslkdd_test_sample_noheader.txt"
     with train_path.open("rb") as train_file, test_path.open("rb") as test_file:
-        uploaded = client.post("/upload", data={"dataset": [(train_file, train_path.name),
+        uploaded = client.post("/api/v1/dataset", data={"dataset": [(train_file, train_path.name),
                                                             (test_file, test_path.name)]},
                                content_type="multipart/form-data")
     assert uploaded.status_code == 200, uploaded.get_json()
@@ -122,9 +122,9 @@ def test_nslkdd_official_pair_uses_official_split(client, fixtures_dir):
     assert dataset["test_file"] == test_path.name and dataset["test_rows"] == 100
     assert dataset["profile"]["split_strategy"] == "official"
     columns = uploaded.get_json()["columns"]
-    response = client.post("/configure", json={
-        "input_features": [c for c in columns if c != "attack"], "target": "attack",
-        "selected_models": ["decision_tree"], "balancing_method": "none"})
+    response = client.post("/api/v1/run", json={
+        "features": [c for c in columns if c != "attack"], "target": "attack",
+        "models": ["decision_tree"], "balancing": "none"})
     assert response.status_code == 200, response.get_json()
     result = response.get_json()
     assert (result["split"]["strategy"], result["split"]["official_mode"]) == (
@@ -144,8 +144,8 @@ def test_class_analysis_recommendation_from_train_split(client, cic, monkeypatch
         return real(labels, num_features)
 
     monkeypatch.setattr(datasets, "recommend_balancing", spy)
-    result = client.post("/analyze_class_distribution",
-                         json={"target": TARGET, "test_size": 0.3}).get_json()
+    result = client.get("/api/v1/dataset/distribution",
+                         query_string={"target": TARGET, "test_size": 0.3}).get_json()
     assert sum(result["class_counts"].values()) == result["total_samples"] == 200
     assert seen == [result["split"]["train_rows"]] and seen[0] < 200
     assert result["recommendation"]["train_rows"] == seen[0]
@@ -153,22 +153,22 @@ def test_class_analysis_recommendation_from_train_split(client, cic, monkeypatch
 
 
 def test_apply_smote_is_train_only_preview(client, cic):
-    before = client.post("/preview_data", json={"num_rows": 5}).get_json()["stats"]
-    response = client.post("/apply_smote", json={
-        "target": TARGET, "balancing_method": "smote", "test_size": 0.3,
-        "input_features": _features(cic["columns"])})
+    before = client.get("/api/v1/dataset/preview", query_string={"rows": 5}).get_json()["stats"]
+    response = client.post("/api/v1/dataset/balancing-preview", json={
+        "target": TARGET, "balancing": "smote", "test_size": 0.3,
+        "features": _features(cic["columns"])})
     assert response.status_code == 200, response.get_json()
     preview = response.get_json()
     assert sum(preview["before"].values()) == preview["train_rows"] == preview["rows"] < 200
     assert len(set(preview["after"].values())) == 1  # SMOTE grows every class to the majority
-    after = client.post("/preview_data", json={"num_rows": 5}).get_json()["stats"]
+    after = client.get("/api/v1/dataset/preview", query_string={"rows": 5}).get_json()["stats"]
     assert after == before, "the preview must not change the dataset"
     assert client.post("/reset_smote", json={}).status_code == 404
 
 
 def test_recommend_features_train_only_and_guarded(client, upload, fixtures_dir):
     upload(fixtures_dir / "label_leak.csv")
-    result = client.post("/recommend_features",
+    result = client.post("/api/v1/dataset/feature-scores",
                          json={"target": "Label", "k": 3, "test_size": 0.3}).get_json()
     blocked = {b["column"] for b in result["blocked"]}
     assert {"row_id", "xyz_col", "enc_col", "pre_col"} <= blocked
@@ -183,25 +183,25 @@ def test_recommend_features_train_only_and_guarded(client, upload, fixtures_dir)
 def test_session_predict_uses_saved_pipeline(client, cic, fixtures_dir):
     assert _train(client, cic["columns"]).status_code == 200
     for values, _ in _rows(fixtures_dir):
-        result = client.post("/predict", json={"values": values, "algorithm": "decision_tree"})
+        result = client.post("/api/v1/run/predict", json={"values": values, "model": "decision_tree"})
         assert result.status_code == 200, result.get_json()
         assert result.get_json()["prediction"] in {"BENIGN", "DDoS"}
     values = dict(_rows(fixtures_dir, 1)[0][0])
     values[_features(cic["columns"])[0]] = "fast"
-    bad = client.post("/predict", json={"values": values, "algorithm": "decision_tree"})
+    bad = client.post("/api/v1/run/predict", json={"values": values, "model": "decision_tree"})
     assert bad.status_code == 400 and "must be a number" in bad.get_json()["error"]["message"]
-    unknown = client.post("/predict", json={"values": values, "algorithm": "svm"})
+    unknown = client.post("/api/v1/run/predict", json={"values": values, "model": "svm"})
     assert unknown.status_code == 400
 
 
 def _export(client, name="web_model"):
-    response = client.post("/export_model", json={"model_name": name})
+    response = client.post("/api/v1/run/export", json={"name": name})
     assert response.status_code == 200, response.get_json()
     return response.get_json()
 
 
 def _load(client, data, name="web_model.bundle"):
-    return client.post("/load_model", data={"model_file": (io.BytesIO(data), name)},
+    return client.post("/api/v1/bundle", data={"file": (io.BytesIO(data), name)},
                        content_type="multipart/form-data")
 
 
@@ -209,7 +209,7 @@ def test_loaded_bundle_predicts_same_as_session_model(client, cic, fixtures_dir)
     trained = _train(client, cic["columns"], models=("decision_tree", "logistic_regression"))
     assert trained.status_code == 200
     exported = _export(client)
-    download = client.get("/download_bundle")
+    download = client.get("/api/v1/run/bundle")
     assert download.status_code == 200
     assert "web_model.bundle" in download.headers["Content-Disposition"]
     loaded = _load(client, download.data)
@@ -220,9 +220,9 @@ def test_loaded_bundle_predicts_same_as_session_model(client, cic, fixtures_dir)
     assert [f["name"] for f in info["features_info"]] == _features(cic["columns"])
     for algorithm in ("decision_tree", "logistic_regression"):
         for values, _ in _rows(fixtures_dir):
-            session = client.post("/predict", json={"values": values, "algorithm": algorithm})
-            from_file = client.post("/predict_loaded",
-                                    json={"values": values, "algorithm": algorithm})
+            session = client.post("/api/v1/run/predict", json={"values": values, "model": algorithm})
+            from_file = client.post("/api/v1/bundle/predict",
+                                    json={"values": values, "model": algorithm})
             assert from_file.status_code == 200, from_file.get_json()
             assert from_file.get_json()["prediction"] == session.get_json()["prediction"]
 
@@ -241,7 +241,7 @@ def test_export_writes_bundle_and_run_record(client, cic):
 def test_web_load_accepts_signed_rejects_other(workspaces, client, cic, monkeypatch):
     assert _train(client, cic["columns"]).status_code == 200
     _export(client)
-    good = client.get("/download_bundle").data
+    good = client.get("/api/v1/run/bundle").data
 
     def forbidden(*args, **kwargs):
         raise AssertionError("an untrusted file was deserialized")
@@ -273,13 +273,13 @@ def _session_run(workspaces):
 
 def test_predict_loaded_route(client, cic, fixtures_dir):
     values = _rows(fixtures_dir, 1)[0][0]
-    empty = client.post("/predict_loaded", json={"values": values})
+    empty = client.post("/api/v1/bundle/predict", json={"values": values})
     assert empty.status_code == 400 and empty.get_json()["error"]["code"] == "NO_MODEL_LOADED"
-    assert client.post("/predict_loaded/", json={"values": values}).status_code == 404
+    assert client.post("/api/v1/bundle/predict/", json={"values": values}).status_code == 404
     assert _train(client, cic["columns"]).status_code == 200
     _export(client)
-    assert _load(client, client.get("/download_bundle").data).status_code == 200
-    response = client.post("/predict_loaded", json={"values": values})  # default: selected
+    assert _load(client, client.get("/api/v1/run/bundle").data).status_code == 200
+    response = client.post("/api/v1/bundle/predict", json={"values": values})  # default: selected
     assert response.status_code == 200
     assert response.get_json()["prediction"] in {"BENIGN", "DDoS"}
 
@@ -288,8 +288,8 @@ def test_js_has_no_dead_loaded_model_config(repo_root):
     js = (repo_root / "toolkit/web/static/js/main.js").read_text(
         encoding="utf-8")
     assert "loaded_model_config" not in js
-    assert '"/predict_loaded"' in js and '"/predict_loaded/"' not in js
+    assert '"/api/v1/bundle/predict"' in js and '"/api/v1/bundle/predict/"' not in js
 
 
 def test_download_needs_an_export(client):
-    assert client.get("/download_bundle").status_code == 404
+    assert client.get("/api/v1/run/bundle").status_code == 404

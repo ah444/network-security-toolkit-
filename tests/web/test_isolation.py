@@ -13,15 +13,15 @@ WEB_MODULES = ("api", "bundles", "datasets", "pages", "security", "state", "trai
 
 def _upload(test_client, path):
     with path.open("rb") as handle:
-        return test_client.post("/upload", data={"dataset": (handle, path.name)},
+        return test_client.post("/api/v1/dataset", data={"dataset": (handle, path.name)},
                                 content_type="multipart/form-data")
 
 
 def _train(test_client, columns):
     features = [c for c in columns if c != TARGET]
-    return test_client.post("/configure", json={
-        "input_features": features, "target": TARGET, "balancing_method": "none",
-        "test_size": 0.3, "selected_models": ["decision_tree"],
+    return test_client.post("/api/v1/run", json={
+        "features": features, "target": TARGET, "balancing": "none",
+        "test_size": 0.3, "models": ["decision_tree"],
     })
 
 
@@ -47,17 +47,17 @@ def test_two_apps_share_nothing(make_app, fixtures_dir):
 def test_two_sessions_isolated(two_clients, fixtures_dir):
     alice, bob = two_clients
     columns = _upload(alice, fixtures_dir / "cic_ddos_sample.csv").get_json()["columns"]
-    assert alice.post("/preview_data", json={"num_rows": 5}).status_code == 200
-    assert bob.post("/preview_data", json={"num_rows": 5}).status_code == 400, \
+    assert alice.get("/api/v1/dataset/preview", query_string={"rows": 5}).status_code == 200
+    assert bob.get("/api/v1/dataset/preview", query_string={"rows": 5}).status_code == 400, \
         "Bob sees Alice's dataset"
 
     assert _train(alice, columns).status_code == 200
     values = {c: "0" for c in columns if c != TARGET}
-    bob_predict = bob.post("/predict", json={"values": values, "algorithm": "decision_tree"})
+    bob_predict = bob.post("/api/v1/run/predict", json={"values": values, "model": "decision_tree"})
     assert bob_predict.status_code == 400, "Bob can use Alice's trained model"
 
     _upload(bob, fixtures_dir / "label_leak.csv")
-    alice_preview = alice.post("/preview_data", json={"num_rows": 5}).get_json()
+    alice_preview = alice.get("/api/v1/dataset/preview", query_string={"rows": 5}).get_json()
     assert TARGET in alice_preview["columns"], "Bob's upload replaced Alice's dataset"
 
 
@@ -65,18 +65,18 @@ def test_clear_workspace_frees_and_reusable(workspaces, client, fixtures_dir):
     _upload(client, fixtures_dir / "cic_ddos_sample.csv")
     assert len(workspaces) == 1
 
-    cleared = client.delete("/workspace")
+    cleared = client.delete("/api/v1/workspace")
     assert cleared.status_code == 200
     assert len(workspaces) == 0, "the workspace's data must be released"
-    assert client.post("/preview_data", json={"num_rows": 5}).status_code == 400
+    assert client.get("/api/v1/dataset/preview", query_string={"rows": 5}).status_code == 400
 
     again = _upload(client, fixtures_dir / "cic_ddos_sample.csv")
     assert again.status_code == 200
-    assert client.post("/preview_data", json={"num_rows": 5}).status_code == 200
+    assert client.get("/api/v1/dataset/preview", query_string={"rows": 5}).status_code == 200
 
 
 def test_clear_workspace_blocked_cross_site(client):
-    response = client.delete("/workspace", headers={"Origin": "http://evil.example"})
+    response = client.delete("/api/v1/workspace", headers={"Origin": "http://evil.example"})
     assert response.status_code == 403
 
 
@@ -84,7 +84,7 @@ def test_idle_workspaces_are_dropped(workspaces, two_clients, fixtures_dir, monk
     alice, bob = two_clients
     _upload(alice, fixtures_dir / "cic_ddos_sample.csv")
     monkeypatch.setattr(workspaces, "idle_seconds", -1)
-    bob.post("/preview_data", json={"num_rows": 5})
+    bob.get("/api/v1/dataset/preview", query_string={"rows": 5})
     assert len(workspaces) == 1, "Alice's idle workspace should have been dropped"
 
 

@@ -256,7 +256,7 @@ Project/
 ├── README.md                        # This file
 │
 ├── data/raw/                        # Local datasets (gitignored, see docs/datasets.md)
-├── docs/                            # Improvement plan, v5.0 checklist, datasets, baseline, ML report
+├── docs/                            # Improvement plan, checklists, datasets, web API, baseline, ML report
 ├── scripts/baseline_v4.py           # Reproduces the "before" baseline (docs/baseline/)
 ├── scripts/ml_report.py             # Re-runs it on the v5 ML core (docs/report/)
 ├── tests/                           # pytest suite + small fixtures

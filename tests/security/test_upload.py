@@ -10,7 +10,7 @@ CSV_B = b"f1,f2,Label\n5,6,A\n7,8,B\n9,9,A\n1,1,B\n"
 
 
 def _post(client, payload: bytes, filename: str):
-    return client.post("/upload", data={"dataset": (io.BytesIO(payload), filename)},
+    return client.post("/api/v1/dataset", data={"dataset": (io.BytesIO(payload), filename)},
                        content_type="multipart/form-data")
 
 
