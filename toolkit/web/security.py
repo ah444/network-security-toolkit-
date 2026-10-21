@@ -1,12 +1,16 @@
 """Security headers and the cross-site check on every request (S5, S10), and safe names
 for uploaded and exported files (S2-S4)."""
 
+from __future__ import annotations
+
 import re
 from pathlib import PureWindowsPath
 from uuid import uuid4
 
-from flask import jsonify, request
+from flask import Flask, Response, request
 from werkzeug.utils import secure_filename
+
+from .api import CROSS_SITE, error_response
 
 CONTENT_SECURITY_POLICY = "; ".join([
     "default-src 'self'",
@@ -20,7 +24,7 @@ CONTENT_SECURITY_POLICY = "; ".join([
 ])
 
 
-def _security_headers(response):
+def _security_headers(response: Response) -> Response:
     """Security headers on every response (S5, S10)."""
     response.headers["Content-Security-Policy"] = CONTENT_SECURITY_POLICY
     response.headers["X-Content-Type-Options"] = "nosniff"
@@ -29,17 +33,17 @@ def _security_headers(response):
     return response
 
 
-def _block_cross_site_requests():
+def _block_cross_site_requests() -> tuple[Response, int] | None:
     """Interim CSRF protection (S10) until the v5.1 token: reject state-changing
     requests whose Origin header names another site."""
     if request.method in ("POST", "PUT", "PATCH", "DELETE"):
         origin = request.headers.get("Origin")
         if origin is not None and origin.rstrip("/") != request.host_url.rstrip("/"):
-            return jsonify({"error": "Cross-site request blocked."}), 403
+            return error_response("Cross-site request blocked.", 403, CROSS_SITE)
     return None
 
 
-def register_security(app):
+def register_security(app: Flask) -> None:
     app.after_request(_security_headers)
     app.before_request(_block_cross_site_requests)
 
@@ -47,13 +51,13 @@ def register_security(app):
 _EXPORT_NAME = re.compile(r"[A-Za-z0-9_-]{1,80}")
 
 
-def safe_upload_name(original):
+def safe_upload_name(original: str | None) -> str:
     """Unique, sanitised file name for an upload (no path parts, no '..'), S2/S3."""
     cleaned = secure_filename(original or "") or "upload"
     return f"{uuid4().hex}_{cleaned}"
 
 
-def safe_model_basename(name):
+def safe_model_basename(name: object) -> str:
     """Return the export base name if it only uses letters, digits, '_' and '-' (1-80 chars).
 
     Raises ValueError otherwise, so a download name can never carry a path (S4).
@@ -63,7 +67,7 @@ def safe_model_basename(name):
     return name
 
 
-def display_name(original):
+def display_name(original: str | None) -> str:
     """The uploaded file's own name for messages and the run record: no folder parts
     (from either OS), no control characters. Only safe_upload_name() names files on disk."""
     name = PureWindowsPath(original or "").name  # splits on both '\' and '/'

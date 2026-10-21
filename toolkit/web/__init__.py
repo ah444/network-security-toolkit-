@@ -11,13 +11,15 @@ NOT silenced (B19): they flag problems such as a model saved with a different
 scikit-learn version.
 """
 
+from __future__ import annotations
+
 import logging
 import secrets
 
 from flask import Flask
 
 from ..bundle_files import BundleStore
-from ..config import instance_dir, web_config
+from ..config import WebConfig, instance_dir, web_config
 from ..logging_setup import setup_logging
 from . import bundles, datasets, pages, training, workspace
 from .api import register_error_handlers
@@ -28,7 +30,7 @@ from .workspace import WorkspaceStore
 BLUEPRINTS = (pages.bp, datasets.bp, training.bp, bundles.bp, workspace.bp)
 
 
-def create_app(config=None):
+def create_app(config: WebConfig | None = None) -> Flask:
     """The web trainer with its own workspaces; settings from ``config`` (default: the
     ``TOOLKIT_*`` environment variables, see ``toolkit.config.web_config``)."""
     config = config or web_config()
@@ -57,7 +59,7 @@ def create_app(config=None):
     return app
 
 
-def run_server(config=None):
+def run_server(config: WebConfig | None = None) -> None:
     """Serve the app on this computer only (127.0.0.1), S6.
 
     - Default: waitress, a production-grade pure-Python server (works on every OS).

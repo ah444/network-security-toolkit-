@@ -183,7 +183,7 @@ document.addEventListener("DOMContentLoaded", function() {
           tableHTML += '</tbody></table>';
           dataPreviewTable.innerHTML = tableHTML;
         } else {
-          dataStats.textContent = "Error: " + result.error;
+          dataStats.textContent = "Error: " + result.error.message;
         }
       })
       .catch(error => {
@@ -301,7 +301,7 @@ document.addEventListener("DOMContentLoaded", function() {
           fetchDataPreview();
           document.getElementById("analyzeClassBtn").click();
         } else {
-          resultDiv.innerHTML = `<span style='color: #dc3545;'>❌ Error: ${escapeHtml(result.error)}</span>`;
+          resultDiv.innerHTML = `<span style='color: #dc3545;'>❌ Error: ${escapeHtml(result.error.message)}</span>`;
         }
       })
       .catch(error => {
@@ -360,7 +360,7 @@ document.addEventListener("DOMContentLoaded", function() {
           }
           resultDiv.innerHTML = html;
         } else {
-          resultDiv.textContent = "Error: " + result.error;
+          resultDiv.textContent = "Error: " + result.error.message;
         }
       })
       .catch(error => {
@@ -551,7 +551,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
           loadAvailableModels();
         } else {
-          uploadResult.textContent = "Error: " + result.error;
+          uploadResult.textContent = "Error: " + result.error.message;
         }
       })
       .catch(error => {
@@ -614,7 +614,7 @@ document.addEventListener("DOMContentLoaded", function() {
           buildLoadedPredictionForm(result.features_info);
           document.getElementById("loadedFeaturesSection").style.display = "block";
         } else {
-          loadResult.textContent = "Error: " + result.error;
+          loadResult.textContent = "Error: " + result.error.message;
         }
       })
       .catch(error => {
@@ -657,7 +657,7 @@ document.addEventListener("DOMContentLoaded", function() {
           recommendationResult.innerHTML = recHTML;
           setChecked(document.getElementById("inputFeatures"), recommendedList);
         } else {
-          recommendationResult.textContent = "Error: " + result.error;
+          recommendationResult.textContent = "Error: " + result.error.message;
         }
       })
       .catch(error => {
@@ -735,7 +735,7 @@ document.addEventListener("DOMContentLoaded", function() {
           balancingHint.innerHTML = BALANCING_HINTS[rec.recommended] || "";
           classDistributionResult.innerHTML = distHTML;
         } else {
-          classDistributionResult.textContent = "Error: " + result.error;
+          classDistributionResult.textContent = "Error: " + result.error.message;
         }
       })
       .catch(error => {
@@ -845,7 +845,7 @@ document.addEventListener("DOMContentLoaded", function() {
           document.getElementById("exportSection").style.display = "block";
           document.getElementById("exportResult").innerHTML = "";
         } else {
-          configResult.textContent = "Error: " + result.error;
+          configResult.textContent = "Error: " + result.error.message;
         }
       })
       .catch(error => {
@@ -904,7 +904,7 @@ document.addEventListener("DOMContentLoaded", function() {
           exportResult.appendChild(details);
           exportResult.appendChild(link);
         } else {
-          exportResult.textContent = "Error: " + result.error;
+          exportResult.textContent = "Error: " + result.error.message;
         }
       })
       .catch(error => {
@@ -1010,7 +1010,7 @@ document.addEventListener("DOMContentLoaded", function() {
         if (result.prediction !== undefined) {
           predictionResult.textContent = "Predicted Value: " + result.prediction;
         } else {
-          predictionResult.textContent = "Error: " + result.error;
+          predictionResult.textContent = "Error: " + result.error.message;
         }
       })
       .catch(error => {
@@ -1035,7 +1035,7 @@ document.addEventListener("DOMContentLoaded", function() {
         if (result.prediction !== undefined) {
           loadedPredictionResult.textContent = "Predicted Value: " + result.prediction;
         } else {
-          loadedPredictionResult.textContent = "Error: " + result.error;
+          loadedPredictionResult.textContent = "Error: " + result.error.message;
         }
       })
       .catch(error => {

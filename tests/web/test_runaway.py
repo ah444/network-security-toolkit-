@@ -60,7 +60,8 @@ def test_second_training_returns_409(web_app, client, columns, held_training):
         assert entered.wait(30), "first training never started"
         second = client.post("/configure", json=_train_body(columns))
         assert second.status_code == 409
-        assert "already" in second.get_json()["error"].lower()
+        assert second.get_json()["error"]["code"] == "BUSY"
+        assert "already" in second.get_json()["error"]["message"].lower()
     finally:
         release.set()
         thread.join(60)
@@ -75,8 +76,10 @@ def test_busy_flag_cleared_after_failure(client, columns, monkeypatch):
 
     real_train = training.train_run
     monkeypatch.setattr(training, "train_run", broken)
-    with pytest.raises(RuntimeError):
-        client.post("/configure", json=_train_body(columns))
+    failed = client.post("/configure", json=_train_body(columns))
+    assert failed.status_code == 500  # an unexpected error: answered, never shown (S8)
+    assert failed.get_json()["error"]["code"] == "INTERNAL"
+    assert "boom" not in failed.get_data(as_text=True)
     monkeypatch.setattr(training, "train_run", real_train)
     assert client.post("/configure", json=_train_body(columns)).status_code == 200
 

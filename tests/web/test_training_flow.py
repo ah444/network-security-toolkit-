@@ -99,7 +99,7 @@ def test_training_errors_are_clear(client, cic):
     unknown = client.post("/configure", json={
         "input_features": _features(cic["columns"]), "target": TARGET,
         "selected_models": ["quantum_forest"]})
-    assert unknown.status_code == 400 and "quantum_forest" in unknown.get_json()["error"]
+    assert unknown.status_code == 400 and "quantum_forest" in unknown.get_json()["error"]["message"]
     label_as_feature = client.post("/configure", json={
         "input_features": cic["columns"], "target": TARGET, "selected_models": ["decision_tree"]})
     assert label_as_feature.status_code == 400
@@ -107,7 +107,7 @@ def test_training_errors_are_clear(client, cic):
 
 def test_training_without_dataset(client):
     response = client.post("/configure", json={"input_features": ["a"], "target": TARGET})
-    assert response.status_code == 400 and "dataset" in response.get_json()["error"].lower()
+    assert response.status_code == 400 and response.get_json()["error"]["code"] == "NO_DATASET"
 
 
 def test_nslkdd_official_pair_uses_official_split(client, fixtures_dir):
@@ -189,7 +189,7 @@ def test_session_predict_uses_saved_pipeline(client, cic, fixtures_dir):
     values = dict(_rows(fixtures_dir, 1)[0][0])
     values[_features(cic["columns"])[0]] = "fast"
     bad = client.post("/predict", json={"values": values, "algorithm": "decision_tree"})
-    assert bad.status_code == 400 and "must be a number" in bad.get_json()["error"]
+    assert bad.status_code == 400 and "must be a number" in bad.get_json()["error"]["message"]
     unknown = client.post("/predict", json={"values": values, "algorithm": "svm"})
     assert unknown.status_code == 400
 
@@ -260,7 +260,7 @@ def test_web_load_accepts_signed_rejects_other(workspaces, client, cic, monkeypa
     for name, (data, code) in cases.items():
         response = _load(client, data, f"{name}.bundle")
         assert response.status_code == 400, name
-        assert response.get_json()["code"] == code, name
+        assert response.get_json()["error"]["code"] == code, name
     monkeypatch.setattr(joblib, "load", real_joblib_load)
     assert _load(client, good).status_code == 200
 
@@ -274,7 +274,7 @@ def _session_run(workspaces):
 def test_predict_loaded_route(client, cic, fixtures_dir):
     values = _rows(fixtures_dir, 1)[0][0]
     empty = client.post("/predict_loaded", json={"values": values})
-    assert empty.status_code == 400 and "no model" in empty.get_json()["error"].lower()
+    assert empty.status_code == 400 and empty.get_json()["error"]["code"] == "NO_MODEL_LOADED"
     assert client.post("/predict_loaded/", json={"values": values}).status_code == 404
     assert _train(client, cic["columns"]).status_code == 200
     _export(client)

@@ -28,4 +28,5 @@ class WebState:
 
 def state() -> WebState:
     """The state of the app that handles the current request."""
-    return current_app.extensions["toolkit"]
+    web_state: WebState = current_app.extensions["toolkit"]
+    return web_state

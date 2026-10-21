@@ -5,9 +5,12 @@ balancing preview) looks at the **training split only**; the dataset itself is n
 changed by them.
 """
 
+from __future__ import annotations
+
 import hashlib
 import logging
 from dataclasses import asdict
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -16,24 +19,41 @@ from flask import Blueprint, jsonify, request
 from ..config import SplitConfig
 from ..ids_core import registry
 from ..ids_core.balancing import recommend_balancing
-from ..ids_core.datasets import DatasetError, load_dataset
+from ..ids_core.datasets import DatasetError, LoadedDataset, load_dataset
 from ..ids_core.preview import preview_balancing
 from ..ids_core.preview import recommend_features as score_features
 from ..ids_core.runs import DatasetRef
-from ..ids_core.split import split_dataset
-from .api import BadRequestBody, error_response, int_param, json_body, test_size_param
+from ..ids_core.split import SplitResult, split_dataset
+from .api import (
+    NO_DATASET,
+    UNKNOWN_COLUMN,
+    UNREADABLE_FILE,
+    Answer,
+    ApiError,
+    error_response,
+    json_body,
+)
+from .schemas import (
+    BalancingPreviewRequest,
+    ClassesRequest,
+    DistributionRequest,
+    FeatureScoresRequest,
+    FilterRequest,
+    PreviewRequest,
+    load,
+)
 from .security import display_name, safe_upload_name
 from .state import state
-from .workspace import UploadedData, current_workspace
+from .workspace import UploadedData, Workspace, current_workspace
 
 bp = Blueprint("datasets", __name__)
 
 
-def label_values(frame, target):
+def label_values(frame: pd.DataFrame, target: str) -> pd.Series:
     return frame[target].dropna().astype(str)
 
 
-def _json_records(frame):
+def _json_records(frame: pd.DataFrame) -> list[dict[str, Any]]:
     """Rows as JSON-safe dicts: missing -> null, inf -> "inf" (JSON has no NaN/inf)."""
     values = frame.astype(object).where(frame.notna(), None)
     for column in frame.columns:
@@ -41,10 +61,11 @@ def _json_records(frame):
             infinite = np.isinf(frame[column].to_numpy())
             if infinite.any():
                 values.loc[infinite, column] = np.where(frame[column][infinite] > 0, "inf", "-inf")
-    return values.to_dict(orient="records")
+    records: list[dict[str, Any]] = values.to_dict(orient="records")
+    return records
 
 
-def _combine(loaded):
+def _combine(loaded: list[tuple[str, LoadedDataset]]) -> UploadedData:
     """One UploadedData from the loaded files: an official train/test pair (NSL-KDD with a
     file named '*test*'), or several files with the same columns stacked together."""
     names = [name for name, _ in loaded]
@@ -73,7 +94,7 @@ def _combine(loaded):
                                           len(frame.columns)))
 
 
-def _dataset_summary(data):
+def _dataset_summary(data: UploadedData) -> dict[str, Any]:
     profile = data.profile
     return {
         "files": data.files,
@@ -92,7 +113,7 @@ def _dataset_summary(data):
 
 
 @bp.route("/upload", methods=["POST"])
-def upload():
+def upload() -> Answer:
     ws = current_workspace()
     if "dataset" not in request.files:
         return error_response("No files uploaded.")
@@ -103,7 +124,7 @@ def upload():
     loaded = []
     for file in files:
         name = display_name(file.filename)
-        if not file.filename.lower().endswith((".csv", ".txt")):
+        if not (file.filename or "").lower().endswith((".csv", ".txt")):
             return error_response(f"Unsupported file type: {name} (use .csv or .txt).")
         # Unique, sanitised name inside uploads/ (S2, S3). The file is deleted
         # as soon as it has been read into memory (S11).
@@ -115,7 +136,8 @@ def upload():
             loaded.append((name, load_dataset(save_path)))
         except (DatasetError, ValueError, UnicodeError, OSError):
             logging.exception("Could not read an uploaded file")
-            return error_response(f"Could not read {name} as a CSV/TXT dataset. Check the file format.")
+            return error_response(f"Could not read {name} as a CSV/TXT dataset. Check the file "
+                                  "format.", code=UNREADABLE_FILE)
         finally:
             save_path.unlink(missing_ok=True)
 
@@ -123,38 +145,38 @@ def upload():
         data = _combine(loaded)
     except ValueError:
         logging.exception("Uploaded files don't fit together")
-        return error_response("The files can't be combined: they must be parts of the same dataset with "
-                      "identical columns (or an official train file plus a file named '*test*').")
+        return error_response("The files can't be combined: they must be parts of the same dataset "
+                              "with identical columns (or an official train file plus a file "
+                              "named '*test*').")
     ws.data, ws.split = data, None
     message = f"Successfully processed {len(files)} file(s). Total rows: {len(data.frame)}."
-    if data.test_source:
+    if data.test_source and data.test_frame is not None:
         message += (f" {data.test_source.name} is used as the official test file "
                     f"({len(data.test_frame)} rows).")
     return jsonify({"columns": [str(c) for c in data.frame.columns], "message": message,
                     "dataset": _dataset_summary(data)})
 
 
-def require_data(ws):
+def require_data(ws: Workspace) -> UploadedData:
     if ws.data is None:
-        raise BadRequestBody("No dataset uploaded.")
+        raise ApiError("No dataset uploaded.", NO_DATASET)
     return ws.data
 
 
-def _require_target(data, target):
+def _require_target(data: UploadedData, target: str) -> str:
     if not target or target not in data.frame.columns:
-        raise BadRequestBody("Target column not specified or not found.")
+        raise ApiError("Target column not specified or not found.", UNKNOWN_COLUMN)
     return target
 
 
 @bp.route("/preview_data", methods=["POST"])
-def preview_data():
+def preview_data() -> Answer:
     """Return a preview of the uploaded dataset (first N rows)."""
     ws = current_workspace()
-    req = json_body()
-    num_rows = int_param(req, "num_rows", 10, 1, 100)  # clamped (S9)
+    req = load(PreviewRequest, json_body())  # num_rows clamped to 1-100 (S9)
     df = require_data(ws).frame
     return jsonify({
-        "preview": _json_records(df.head(num_rows)),
+        "preview": _json_records(df.head(req.num_rows)),
         "columns": [str(c) for c in df.columns],
         "stats": {
             "total_rows": len(df),
@@ -166,16 +188,15 @@ def preview_data():
 
 
 @bp.route("/filter_target_values", methods=["POST"])
-def filter_target_values():
+def filter_target_values() -> Answer:
     """Remove the rows of the selected classes (from the test file too)."""
     ws = current_workspace()
-    req = json_body()
+    req = load(FilterRequest, json_body())
     data = require_data(ws)
-    target = _require_target(data, req.get("target_column"))
-    to_remove = req.get("values_to_remove") or []
-    if not isinstance(to_remove, list) or not to_remove:
+    target = _require_target(data, req.target_column)
+    to_remove = req.values_to_remove
+    if not to_remove:
         return error_response("No values selected for removal.")
-    to_remove = [str(v) for v in to_remove]
     current = set(label_values(data.frame, target))
     unknown = [v for v in to_remove if v not in current]
     if unknown:
@@ -202,26 +223,27 @@ def filter_target_values():
         "remaining_values": remaining,
         "remaining_count": len(remaining),
         "total_rows": len(data.frame),
-        "new_class_counts": {k: int(v) for k, v in label_values(data.frame, target).value_counts().items()},
+        "new_class_counts": {k: int(v) for k, v in
+                             label_values(data.frame, target).value_counts().items()},
         "message": f"Successfully removed {len(to_remove)} class(es) ({removed:,} rows). "
                    f"{len(remaining)} classes remaining with {len(data.frame):,} total rows.",
     })
 
 
 @bp.route("/get_target_values", methods=["POST"])
-def get_target_values():
+def get_target_values() -> Answer:
     """Values of the target column with their counts."""
     ws = current_workspace()
-    req = json_body()
+    req = load(ClassesRequest, json_body())
     data = require_data(ws)
-    target = _require_target(data, req.get("target_column"))
+    target = _require_target(data, req.target_column)
     counts = {k: int(v) for k, v in label_values(data.frame, target).value_counts().items()}
     return jsonify({"values": list(counts), "value_counts": counts, "count": len(counts)})
 
 
-def _training_split(ws, target, test_size):
+def _training_split(ws: Workspace, target: str, test_size: float) -> SplitResult:
     """The split training will use (same profile, strategy, seed), cached for the previews."""
-    data = ws.data
+    data = require_data(ws)
     key = (id(data.frame), target, test_size)
     if ws.split is None or ws.split[0] != key:
         ws.split = None  # free the old split first (big datasets)
@@ -232,39 +254,40 @@ def _training_split(ws, target, test_size):
     return ws.split[1]
 
 
-def _split_summary(split):
+def _split_summary(split: SplitResult) -> dict[str, Any]:
     return {"strategy": split.strategy, "train_rows": len(split.train),
             "test_rows": len(split.test), "test_size": split.test_size,
             "warnings": list(split.warnings)}
 
 
-def _candidate_features(data, target, chosen=None):
+def _candidate_features(data: UploadedData, target: str,
+                        chosen: list[str] | None = None) -> list[str]:
     blocked = set(data.profile.blocked_columns)
     if chosen:
-        if not isinstance(chosen, list) or any(c not in data.frame.columns for c in chosen):
-            raise BadRequestBody("Unknown input feature.")
+        if any(c not in data.frame.columns for c in chosen):
+            raise ApiError("Unknown input feature.", UNKNOWN_COLUMN)
         return [c for c in chosen if c != target]
     return [c for c in data.frame.columns if c != target and c not in blocked]
 
 
 @bp.route("/analyze_class_distribution", methods=["POST"])
-def analyze_class_distribution():
+def analyze_class_distribution() -> Answer:
     """Class counts of the dataset; the balancing recommendation uses the training split."""
     ws = current_workspace()
-    req = json_body()
+    req = load(DistributionRequest, json_body())
     data = require_data(ws)
-    target = _require_target(data, req.get("target"))
+    target = _require_target(data, req.target)
     counts = label_values(data.frame, target).value_counts()
     total = int(counts.sum())
     percentages = {k: float(v) / total * 100 for k, v in counts.items()}
     try:
-        split = _training_split(ws, target, test_size_param(req))
+        split = _training_split(ws, target, req.test_size)
         recommendation = recommend_balancing(split.train[target],
                                              len(_candidate_features(data, target)))
     except ValueError:
         logging.exception("Could not split the dataset for the recommendation")
-        return error_response("Could not make a training split with this target (is there more than "
-                      "one class?).")
+        return error_response("Could not make a training split with this target (is there more "
+                              "than one class?).")
     return jsonify({
         "class_counts": {k: int(v) for k, v in counts.items()},
         "class_percentages": percentages,
@@ -280,22 +303,22 @@ def analyze_class_distribution():
 
 
 @bp.route("/apply_smote", methods=["POST"])
-def apply_smote_endpoint():
+def apply_smote_endpoint() -> Answer:
     """Preview a balancing method on the **training split** (nothing is stored or changed).
 
     Training applies the method inside each pipeline, to training rows only; this shows
     the class counts it would produce.
     """
     ws = current_workspace()
-    req = json_body()
+    req = load(BalancingPreviewRequest, json_body())
     data = require_data(ws)
-    target = _require_target(data, req.get("target"))
-    method = req.get("balancing_method") or "smote"
+    target = _require_target(data, req.target)
+    method = req.balancing_method or "smote"
     if method != "recommended" and method not in registry.BALANCERS:
         return error_response(f"Unknown balancing method: {method}")
-    features = _candidate_features(data, target, req.get("input_features"))
+    features = _candidate_features(data, target, req.input_features)
     try:
-        split = _training_split(ws, target, test_size_param(req))
+        split = _training_split(ws, target, req.test_size)
         preview = preview_balancing(split.train, target, method, features=features)
     except ValueError:
         logging.exception("Balancing preview failed")
@@ -317,22 +340,21 @@ def apply_smote_endpoint():
 
 
 @bp.route("/recommend_features", methods=["POST"])
-def recommend_features():
+def recommend_features() -> Answer:
     """Feature scores on the training split, after the leakage guard."""
     ws = current_workspace()
-    req = json_body()
+    req = load(FeatureScoresRequest, json_body())  # k clamped to 1-10,000 (S9)
     data = require_data(ws)
-    target = _require_target(data, req.get("target"))
-    k_val = int_param(req, "k", 10, 1, 10_000)  # clamped (S9)
+    target = _require_target(data, req.target)
     try:
-        split = _training_split(ws, target, test_size_param(req))
+        split = _training_split(ws, target, req.test_size)
         result = score_features(split.train, target,
                                 profile_blocked=data.profile.blocked_columns)
     except ValueError:
         logging.exception("Feature scoring failed")
         return error_response("Feature scores could not be computed for this dataset.")
     return jsonify({
-        "recommended_features": [[name, score] for name, score in result.scores[:k_val]],
+        "recommended_features": [[name, score] for name, score in result.scores[:req.k]],
         "all_feature_scores": dict(result.scores),
         "blocked": [{"column": c, "reason": r} for c, r in result.blocked],
         "method": result.method,

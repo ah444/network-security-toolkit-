@@ -51,4 +51,5 @@ def test_bad_export_name_refused_over_http(client, trained, bad):
 def test_export_needs_a_trained_model(client):
     response = client.post("/export_model", json={"model_name": "x"})
     assert response.status_code == 400
-    assert "train" in response.get_json()["error"].lower()
+    assert response.get_json()["error"]["code"] == "NOT_TRAINED"
+    assert "train" in response.get_json()["error"]["message"].lower()

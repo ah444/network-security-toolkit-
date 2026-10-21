@@ -6,7 +6,7 @@ unnoticed: strict mode, the modules of step 1.1e, the hook step and the pinned v
 
 import tomllib
 
-STRICT_MODULES = {"toolkit/recon", "toolkit/ports.py", "toolkit/logging_setup.py",
+STRICT_MODULES = {"toolkit/recon", "toolkit/web", "toolkit/ports.py", "toolkit/logging_setup.py",
                   "toolkit/config.py"}
 
 
@@ -22,10 +22,13 @@ def test_strict_mypy_covers_the_new_modules(repo_root):
 
 
 def test_untyped_modules_are_only_read_silently(repo_root):
-    """Modules imported for types only may be read silently, never skipped or ignored."""
+    """Our untyped modules may be read silently (never skipped or ignored); only
+    third-party libraries without type information may be ignored."""
     for override in _mypy_config(repo_root).get("overrides", []):
-        assert set(override) <= {"module", "follow_imports"}
+        assert set(override) <= {"module", "follow_imports", "ignore_missing_imports"}
         assert override.get("follow_imports", "silent") == "silent"
+        if override.get("ignore_missing_imports"):
+            assert not [m for m in override["module"] if m.startswith("toolkit")]
 
 
 def test_hook_runs_mypy_and_mypy_is_pinned(repo_root):

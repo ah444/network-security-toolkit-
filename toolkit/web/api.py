@@ -1,59 +1,103 @@
-"""Request and response helpers shared by the routes (S8, S9, S10 interim)."""
+"""Request and response helpers shared by the routes (S8, S9, S10 interim).
 
-from flask import jsonify, request
+Every error answer has one shape: ``{"error": {"code", "message", "details"?}}``, with
+the HTTP status the route always used. Messages are written for the user and never
+contain exception text, tracebacks or server paths (S8).
+"""
 
-from ..config import SplitConfig
+from __future__ import annotations
+
+import logging
+from collections.abc import Mapping
+from typing import Any
+
+from flask import Flask, Response, jsonify, request
+from werkzeug.exceptions import HTTPException
+
 from .state import state
 
-class BadRequestBody(Exception):
-    """The request body or one of its values is invalid (answered with HTTP 400)."""
+# Error codes (bundle refusals keep the code of their BundleError, e.g. BAD_SIGNATURE).
+BAD_REQUEST = "BAD_REQUEST"  # the request body or a value in it is invalid
+NO_DATASET = "NO_DATASET"
+UNKNOWN_COLUMN = "UNKNOWN_COLUMN"
+NOT_TRAINED = "NOT_TRAINED"
+NO_MODEL_LOADED = "NO_MODEL_LOADED"
+BUSY = "BUSY"  # 409: a training run is already in progress in this workspace
+TOO_LARGE = "TOO_LARGE"  # 413
+UNREADABLE_FILE = "UNREADABLE_FILE"
+TRAINING_FAILED = "TRAINING_FAILED"
+CROSS_SITE = "CROSS_SITE"  # 403
+NOT_FOUND = "NOT_FOUND"  # 404
+METHOD_NOT_ALLOWED = "METHOD_NOT_ALLOWED"  # 405
+INTERNAL = "INTERNAL"  # 500: anything unexpected; details only in the server log
+
+Answer = Response | tuple[Response, int]
 
 
-def json_body():
-    """Return the request's JSON object, or raise BadRequestBody (S9, S10 interim).
+class ApiError(Exception):
+    """An error answer raised from anywhere in a route."""
+
+    def __init__(self, message: str, code: str = BAD_REQUEST, status: int = 400,
+                 details: Mapping[str, Any] | None = None) -> None:
+        super().__init__(message)
+        self.message = message
+        self.code = code
+        self.status = status
+        self.details = dict(details or {})
+
+
+def error_response(message: str, status: int = 400, code: str = BAD_REQUEST,
+                   **details: Any) -> tuple[Response, int]:
+    """The error answer: ``{"error": {"code", "message", "details"}}`` (details if any)."""
+    error: dict[str, Any] = {"code": code, "message": message}
+    if details:
+        error["details"] = details
+    return jsonify({"error": error}), status
+
+
+def json_body() -> dict[str, Any]:
+    """Return the request's JSON object, or raise ApiError (S9, S10 interim).
 
     Requiring a JSON object (Content-Type: application/json) also means a plain
     HTML form on another website can't trigger these routes.
     """
     data = request.get_json(silent=True)
     if not isinstance(data, dict):
-        raise BadRequestBody("Request body must be a JSON object (Content-Type: application/json).")
+        raise ApiError("Request body must be a JSON object (Content-Type: application/json).")
     return data
 
 
-def int_param(data, key, default, low, high):
-    """Read an integer value from a JSON body, clamped to [low, high]."""
-    value = data.get(key, default)
-    try:
-        number = int(value)
-    except (TypeError, ValueError):
-        raise BadRequestBody(f"'{key}' must be a whole number.") from None
-    return max(low, min(high, number))
+def _api_error(error: ApiError) -> tuple[Response, int]:
+    return error_response(error.message, error.status, error.code, **error.details)
 
 
-def test_size_param(data):
-    """Share of rows held out for the test split (clamped to 10-50 %)."""
-    value = data.get("test_size", SplitConfig().test_size)
-    try:
-        number = float(value)
-    except (TypeError, ValueError):
-        raise BadRequestBody("'test_size' must be a number between 0.1 and 0.5.") from None
-    return max(0.1, min(0.5, number))
+def _upload_too_large(_error: HTTPException) -> tuple[Response, int]:
+    return error_response(f"Upload too large (limit: {state().config.max_upload_mb} MB).", 413,
+                          TOO_LARGE)
 
 
-def error_response(message, status=400, **extra):
-    return jsonify({"error": message, **extra}), status
+HTTP_CODES = {404: NOT_FOUND, 405: METHOD_NOT_ALLOWED}
 
 
-def _bad_request_body(error):
-    return jsonify({"error": str(error)}), 400
+def _http_error(error: HTTPException) -> HTTPException | tuple[Response, int]:
+    """JSON for the API's own 404/405; pages keep Flask's HTML answers."""
+    if request.path.startswith("/api/") and error.code in HTTP_CODES:
+        message = ("No such API route." if error.code == 404
+                   else f"{request.method} is not allowed on this API route.")
+        return error_response(message, error.code, HTTP_CODES[error.code])
+    return error
 
 
-def _upload_too_large(_error):
-    return jsonify({"error": f"Upload too large (limit: {state().config.max_upload_mb} MB)."}), 413
+def _unexpected(_error: Exception) -> tuple[Response, int]:
+    """Anything unexpected: logged with its traceback, answered without details (S8)."""
+    logging.exception("Unexpected error in %s %s", request.method, request.path)
+    return error_response("Something went wrong on the server. Details are in the server log.",
+                          500, INTERNAL)
 
 
-def register_error_handlers(app):
-    """JSON answers for invalid request bodies (400) and too-large uploads (413)."""
-    app.register_error_handler(BadRequestBody, _bad_request_body)
+def register_error_handlers(app: Flask) -> None:
+    """One JSON error shape for API errors, too-large uploads and unexpected errors."""
+    app.register_error_handler(ApiError, _api_error)
     app.register_error_handler(413, _upload_too_large)
+    app.register_error_handler(HTTPException, _http_error)
+    app.register_error_handler(Exception, _unexpected)

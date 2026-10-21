@@ -1,5 +1,7 @@
 """The two HTML pages."""
 
+from __future__ import annotations
+
 from flask import Blueprint, render_template
 
 from .state import state
@@ -8,10 +10,10 @@ bp = Blueprint("pages", __name__)
 
 
 @bp.route("/")
-def homepage():
+def homepage() -> str:
     return render_template("home.html")
 
 
 @bp.route("/dynamic_ids")
-def dynamic_ids_page():
+def dynamic_ids_page() -> str:
     return render_template("dynamic_ids.html", idle_minutes=state().config.workspace_idle_minutes)

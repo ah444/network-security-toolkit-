@@ -16,7 +16,8 @@ def test_oversized_upload_413(web_app, client):
     response = client.post("/upload", data={"dataset": (io.BytesIO(payload), "big.csv")},
                            content_type="multipart/form-data")
     assert response.status_code == 413
-    assert "too large" in response.get_json()["error"].lower()
+    assert response.get_json()["error"]["code"] == "TOO_LARGE"
+    assert "too large" in response.get_json()["error"]["message"].lower()
 
 
 def test_upload_limit_is_configured_by_default(web_app):
@@ -27,7 +28,8 @@ def test_upload_limit_is_configured_by_default(web_app):
 def test_non_json_400(client, route):
     response = client.post(route, data="target=x", content_type="text/plain")
     assert response.status_code == 400
-    assert "json" in response.get_json()["error"].lower()
+    assert response.get_json()["error"]["code"] == "BAD_REQUEST"
+    assert "json" in response.get_json()["error"]["message"].lower()
 
 
 def test_preview_rows_clamped(client, upload, fixtures_dir):
