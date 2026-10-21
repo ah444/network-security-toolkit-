@@ -24,10 +24,12 @@ from ..ids_core.bundle import Bundle
 from ..ids_core.profiles import ProfileMatch
 from ..ids_core.runs import DatasetRef, TrainingRun
 from ..ids_core.split import SplitResult
-from .api import BUSY, DATA_LIMIT, Answer, ApiError
+from .api import BUSY, DATA_LIMIT, NOT_FOUND, Answer, ApiError
+from .jobs import FINISHED, Job
 from .state import state
 
 bp = Blueprint("workspace", __name__, url_prefix="/api/v1")
+JOBS_KEPT = 5
 
 
 @dataclass
@@ -71,6 +73,7 @@ class Workspace:
         self.training = threading.Lock()  # held while a training runs (one at a time)
         self.last_used = time.monotonic()
         self.data_bytes = 0  # memory of the loaded dataset (counted by the store's cap)
+        self.jobs: dict[str, Job] = {}  # this session's last JOBS_KEPT training jobs
         self._leases = 0
         self._lease_lock = threading.Lock()
 
@@ -79,16 +82,38 @@ class Workspace:
         """True while a training (later: a job) still needs this workspace."""
         return self._leases > 0 or self.training.locked()
 
+    def acquire_lease(self) -> None:
+        """Keep this workspace from being dropped until ``release_lease`` (D22); a job
+        takes it when submitted and gives it back in the worker thread."""
+        with self._lease_lock:
+            self._leases += 1
+
+    def release_lease(self) -> None:
+        with self._lease_lock:
+            self._leases -= 1
+
     @contextmanager
     def lease(self) -> Iterator[None]:
         """Keep this workspace from being dropped while the block runs (D22)."""
-        with self._lease_lock:
-            self._leases += 1
+        self.acquire_lease()
         try:
             yield
         finally:
-            with self._lease_lock:
-                self._leases -= 1
+            self.release_lease()
+
+    def add_job(self, job: Job) -> None:
+        """Remember a job; only the last JOBS_KEPT finished ones are kept."""
+        self.jobs[job.id] = job
+        finished = [j for j in self.jobs.values() if j.state in FINISHED]
+        for old in finished[:max(0, len(self.jobs) - JOBS_KEPT)]:
+            del self.jobs[old.id]
+
+    def job(self, job_id: str) -> Job:
+        """This session's job, else 404 (another session's job id answers the same)."""
+        job = self.jobs.get(job_id)
+        if job is None:
+            raise ApiError("No such training job in this session.", NOT_FOUND, 404)
+        return job
 
     def require_no_training(self) -> None:
         """Refuse a dataset change while a training reads the dataset (409 BUSY)."""
@@ -220,20 +245,20 @@ def workspace(create: bool = False) -> Iterator[Workspace]:
         yield ws
 
 
-View = Callable[[Workspace], Answer]
+View = Callable[..., Answer]
 
 
 def with_workspace(create: bool = False,
-                   changes_dataset: bool = False) -> Callable[[View], Callable[[], Answer]]:
+                   changes_dataset: bool = False) -> Callable[[View], Callable[..., Answer]]:
     """Route decorator: the view gets the session's workspace, locked for the request.
     ``changes_dataset`` routes are refused (409 BUSY) while a training runs."""
-    def decorate(view: View) -> Callable[[], Answer]:
+    def decorate(view: View) -> Callable[..., Answer]:
         @functools.wraps(view)
-        def route() -> Answer:
+        def route(**kwargs: str) -> Answer:  # URL parts, e.g. a job id
             with workspace(create) as ws:
                 if changes_dataset:
                     ws.require_no_training()
-                return view(ws)
+                return view(ws, **kwargs)
         return route
     return decorate
 

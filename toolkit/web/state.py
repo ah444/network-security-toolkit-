@@ -15,6 +15,7 @@ from ..config import WebConfig
 from ..ports import ModelStore
 
 if TYPE_CHECKING:
+    from .jobs import JobRunner
     from .workspace import WorkspaceStore
 
 
@@ -24,6 +25,7 @@ class WebState:
     workspaces: WorkspaceStore
     model_store: ModelStore  # exports and loads: signed bundles in instance/bundles
     upload_dir: Path  # uploads are written here only while the loader reads them (S11)
+    jobs: JobRunner  # one training at a time for the whole server, others queued
 
 
 def state() -> WebState:

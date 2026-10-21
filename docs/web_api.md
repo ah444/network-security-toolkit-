@@ -34,7 +34,9 @@ computer (`127.0.0.1`).
 | POST | `/api/v1/dataset/balancing-preview` | `target`, `balancing`, `features`, `test_size` | class counts before/after, on the training split only |
 | POST | `/api/v1/dataset/feature-scores` | `target`, `k` (1-10,000, default 10), `test_size` | feature scores on the training split |
 | GET | `/api/v1/models` | none | the models that can be trained here |
-| POST | `/api/v1/run` | `target`, `features`, `models`, `balancing`, `test_size` | leaderboard, split, CV, leakage findings, confusion matrices |
+| POST | `/api/v1/jobs/training` | `target`, `features`, `models`, `balancing`, `test_size` | **202** and the job (see below) |
+| GET | `/api/v1/jobs/<job_id>` | none | the job's state and progress; when done, the result: leaderboard, split, CV, leakage findings, confusion matrices |
+| DELETE | `/api/v1/jobs/<job_id>` | none | **202**: a queued job is cancelled at once, a running one at its next step |
 | GET | `/api/v1/run/confusion` | `model` (default: the selected one) | test-split confusion matrix |
 | POST | `/api/v1/run/predict` | `values`: {feature: value}, `model` | prediction |
 | POST | `/api/v1/run/export` | `name` (letters, digits, `_`, `-`; max 80) | signed bundle saved in `instance/bundles/` |
@@ -42,6 +44,29 @@ computer (`127.0.0.1`).
 | POST | `/api/v1/bundle` | multipart `file`: a `.bundle` exported by this install | the loaded models and their scores |
 | POST | `/api/v1/bundle/predict` | `values`, `model` | prediction with the loaded bundle |
 | DELETE | `/api/v1/workspace` | none | the session's dataset and models are forgotten |
+
+## Training jobs
+
+A training runs in the background as a **job**. The server runs one job at a time (each
+uses `TOOLKIT_MAX_WORKERS` cores); others wait in a queue. While a session's job waits or
+runs, that session can read and predict, but not change its dataset or start a second
+job (`BUSY`). A job is visible only to its own session (another session's job id answers
+`NOT_FOUND`); each session keeps its last 5 jobs.
+
+```json
+{"id": "...", "url": "/api/v1/jobs/...", "state": "running", "done": 7, "total": 22,
+ "percent": 32, "phase": "Cross-validation, fold 2 of 3", "elapsed_seconds": 72.4}
+```
+
+- `state`: `queued` (with `queue_position`: jobs that run first), `running`, `cancelling`
+  (cancel asked, waiting for the current model's fit to end), `done` (with `result`),
+  `failed` or `cancelled` (with `error`: `{"code", "message"}`).
+- Steps: 2 (split, leakage check) + models x (CV folds + final fit), so 22 for 5 models
+  and 3 folds; failed or skipped models count too.
+- Cancel is cooperative: it takes effect at the next step, after the current model's fit.
+  A job that doesn't end in `done` keeps nothing; the session's previous run stays.
+- A job running longer than `TOOLKIT_JOB_MAX_MIN` minutes (default 180) is stopped the same
+  way, with the code `TIME_LIMIT`.
 
 ## Errors
 
@@ -57,7 +82,9 @@ Every error answer has the same shape; `details` is present only when there is m
 | `NO_DATASET` | 400 | no dataset uploaded in this session yet |
 | `UNKNOWN_COLUMN` | 400 | the target or a feature is not a column of the dataset |
 | `UNREADABLE_FILE` | 400 | an uploaded file can't be read as a CSV/TXT dataset |
-| `TRAINING_FAILED` | 400 | training could not run with these settings |
+| `TRAINING_FAILED` | in a job | training could not run with these settings |
+| `CANCELLED` | in a job | the job was cancelled; nothing was kept |
+| `TIME_LIMIT` | in a job | the job ran longer than `TOOLKIT_JOB_MAX_MIN`; nothing was kept |
 | `NOT_TRAINED` | 400 (404 for the download) | no model trained or exported yet in this session |
 | `NO_MODEL_LOADED` | 400 | no bundle loaded yet in this session |
 | `NOT_A_BUNDLE`, `BAD_SIGNATURE`, `EMPTY`, ... | 400 | a bundle was refused before anything in it was loaded |

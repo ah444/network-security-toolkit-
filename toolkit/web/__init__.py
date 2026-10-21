@@ -24,6 +24,7 @@ from ..logging_setup import setup_logging
 from . import bundles, datasets, pages, training, workspace
 from .api import register_error_handlers
 from .datasets import remove_stale_uploads
+from .jobs import JobRunner
 from .security import register_security
 from .state import WebState
 from .workspace import WorkspaceStore, start_idle_sweep
@@ -55,6 +56,7 @@ def create_app(config: WebConfig | None = None) -> Flask:
                                   max_data_bytes=config.max_data_mb * 2**20),
         model_store=BundleStore(),
         upload_dir=upload_dir,
+        jobs=JobRunner(),
     )
     register_error_handlers(app)
     register_security(app)

@@ -5,10 +5,11 @@ import importlib
 import pytest
 
 import toolkit.web as web
+from web_jobs import train_and_wait
 
 TARGET = "Label"  # stripped by the v5 loader (B17)
-WEB_MODULES = ("api", "bundles", "datasets", "pages", "security", "state", "training",
-               "workspace")
+WEB_MODULES = ("api", "bundles", "datasets", "jobs", "pages", "schemas", "security", "state",
+               "training", "workspace")
 
 
 def _upload(test_client, path):
@@ -19,7 +20,7 @@ def _upload(test_client, path):
 
 def _train(test_client, columns):
     features = [c for c in columns if c != TARGET]
-    return test_client.post("/api/v1/run", json={
+    return train_and_wait(test_client, {
         "features": features, "target": TARGET, "balancing": "none",
         "test_size": 0.3, "models": ["decision_tree"],
     })

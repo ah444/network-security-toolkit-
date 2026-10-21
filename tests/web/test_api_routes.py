@@ -7,7 +7,8 @@ import pytest
 OLD_ROUTES = ["/upload", "/preview_data", "/filter_target_values", "/get_target_values",
               "/analyze_class_distribution", "/apply_smote", "/recommend_features",
               "/get_available_models", "/configure", "/get_confusion_matrix", "/predict",
-              "/predict_loaded", "/export_model", "/download_bundle", "/load_model", "/workspace"]
+              "/predict_loaded", "/export_model", "/download_bundle", "/load_model", "/workspace",
+              "/api/v1/run"]  # /api/v1/run: replaced by the training jobs in step 1.2d
 
 
 def _documented(repo_root):
@@ -22,7 +23,7 @@ def _served(web_app):
 
 
 def test_routes_match_the_documentation(repo_root, web_app):
-    assert len(_documented(repo_root)) == 16
+    assert len(_documented(repo_root)) == 18
     assert _served(web_app) == _documented(repo_root)
 
 

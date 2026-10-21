@@ -6,7 +6,7 @@ import pytest
 
 # Every POST route with a JSON body (GET routes read the query string; uploads are multipart).
 JSON_ROUTES = ["/api/v1/dataset/filter", "/api/v1/dataset/balancing-preview",
-               "/api/v1/dataset/feature-scores", "/api/v1/run", "/api/v1/run/predict",
+               "/api/v1/dataset/feature-scores", "/api/v1/jobs/training", "/api/v1/run/predict",
                "/api/v1/bundle/predict", "/api/v1/run/export"]
 
 

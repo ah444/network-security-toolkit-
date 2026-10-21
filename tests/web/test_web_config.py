@@ -14,10 +14,12 @@ def test_defaults_without_environment():
 def test_values_from_environment():
     config = web_config({"TOOLKIT_MAX_UPLOAD_MB": "64", "TOOLKIT_WORKSPACE_IDLE_MIN": "5",
                          "TOOLKIT_MAX_WORKSPACES": "2", "TOOLKIT_MAX_DATA_MB": "512",
+                         "TOOLKIT_JOB_MAX_MIN": "30",
                          "TOOLKIT_PORT": "5055", "TOOLKIT_HTTPS": "1", "TOOLKIT_DEBUG": "1",
                          "TOOLKIT_SECRET_KEY": "k" * 32})
     assert config == WebConfig(max_upload_mb=64, workspace_idle_minutes=5, max_workspaces=2,
-                               max_data_mb=512, port=5055, https=True, debug=True,
+                               max_data_mb=512, job_max_minutes=30, port=5055, https=True,
+                               debug=True,
                                secret_key="k" * 32)
 
 

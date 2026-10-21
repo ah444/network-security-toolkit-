@@ -179,6 +179,7 @@ class WebConfig:
     workspace_idle_minutes: int = 240  # unused workspaces are dropped (not while training)
     max_workspaces: int = 4  # open workspaces (browser sessions with a dataset or bundle)
     max_data_mb: int = 4096  # loaded datasets of all workspaces together (models not counted)
+    job_max_minutes: int = 180  # a training job is stopped (cancelled) after this long
     port: int = 5000
     https: bool = False  # Secure session cookie: only behind HTTPS (D23)
     debug: bool = False  # Flask's debug server: development only, its debugger can run code
@@ -192,7 +193,7 @@ def _int_setting(environ: Mapping[str, str], variable: str, default: int) -> int
 
 def web_config(environ: Mapping[str, str] | None = None) -> WebConfig:
     """``TOOLKIT_MAX_UPLOAD_MB``, ``TOOLKIT_WORKSPACE_IDLE_MIN``, ``TOOLKIT_MAX_WORKSPACES``,
-    ``TOOLKIT_MAX_DATA_MB``, ``TOOLKIT_PORT``, ``TOOLKIT_HTTPS=1``, ``TOOLKIT_DEBUG=1`` and
+    ``TOOLKIT_MAX_DATA_MB``, ``TOOLKIT_JOB_MAX_MIN``, ``TOOLKIT_PORT``, ``TOOLKIT_HTTPS=1``, ``TOOLKIT_DEBUG=1`` and
     ``TOOLKIT_SECRET_KEY``, else the defaults."""
     environ = os.environ if environ is None else environ
     return WebConfig(
@@ -201,6 +202,7 @@ def web_config(environ: Mapping[str, str] | None = None) -> WebConfig:
                                             WebConfig.workspace_idle_minutes),
         max_workspaces=_int_setting(environ, "TOOLKIT_MAX_WORKSPACES", WebConfig.max_workspaces),
         max_data_mb=_int_setting(environ, "TOOLKIT_MAX_DATA_MB", WebConfig.max_data_mb),
+        job_max_minutes=_int_setting(environ, "TOOLKIT_JOB_MAX_MIN", WebConfig.job_max_minutes),
         port=_int_setting(environ, "TOOLKIT_PORT", WebConfig.port),
         https=environ.get("TOOLKIT_HTTPS") == "1",
         debug=environ.get("TOOLKIT_DEBUG") == "1",

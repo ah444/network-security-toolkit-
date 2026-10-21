@@ -176,6 +176,11 @@
           <p class="section-description">Models are compared by 3-fold cross-validation on the training rows; the test rows are scored once, at the end. Datasets with an official test file (NSL-KDD) use it instead.</p>
         </div>
         <button type="submit" class="btn">Train Model</button>
+        <div id="trainingProgress" class="training-progress" style="display: none;" aria-live="polite">
+          <progress id="trainingProgressBar" max="100" value="0" aria-label="Training progress"></progress>
+          <span id="trainingProgressText"></span>
+          <button type="button" id="cancelTrainingBtn" class="btn" disabled>Cancel training</button>
+        </div>
       </form>
       <div id="configResult" class="message"></div>
 

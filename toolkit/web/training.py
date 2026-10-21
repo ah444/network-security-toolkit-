@@ -1,7 +1,8 @@
-"""Training routes: the models that can be trained, training itself, and its results."""
+"""Training routes: the models that can be trained, training jobs, and their results."""
 
 from __future__ import annotations
 
+import functools
 import logging
 from collections.abc import Mapping
 from dataclasses import asdict
@@ -26,7 +27,9 @@ from .api import (
     query,
 )
 from .datasets import label_values, require_data
+from .jobs import FINISHED, Job, job_view
 from .schemas import ConfusionRequest, TrainRequest, load
+from .state import state
 from .workspace import UploadedData, Workspace, with_workspace, workspace
 
 bp = Blueprint("training", __name__, url_prefix="/api/v1")
@@ -43,24 +46,52 @@ def models() -> Answer:
     ]})
 
 
-@bp.route("/run", methods=["POST"])
-def train() -> Answer:
-    """Train the chosen models on the session dataset (synchronous until step 1.2d).
+@bp.route("/jobs/training", methods=["POST"])
+def start_training() -> Answer:
+    """Queue a training of the chosen models on the session dataset (202 + the job).
 
-    One training at a time per workspace (``training`` lock, else 409 BUSY). The workspace
-    lock is held only to read the dataset and to store the run, so the session can still
-    preview and predict meanwhile; a lease keeps the workspace from being dropped (D22).
+    The request and settings are checked here, so mistakes get a 400 at once. One training
+    at a time per workspace (``training`` lock, else 409 BUSY); the lock and a lease
+    (D22) are held from now until the job ends, so the dataset can't change and the
+    workspace isn't dropped while the job waits or runs.
     """
     req = load(TrainRequest, json_body())
     with workspace() as ws:
+        data = require_data(ws)
+        settings = _training_settings(data, req)
         if not ws.training.acquire(blocking=False):
             return error_response("A training run is already in progress in this workspace. "
-                                  "Wait for it to finish.", 409, BUSY)
-    try:
-        with ws.lease():
-            return _train(ws, req)
-    finally:
-        ws.training.release()
+                                  "Wait for it to finish or cancel it.", 409, BUSY)
+        ws.acquire_lease()
+
+        def release() -> None:
+            ws.release_lease()
+            ws.training.release()
+
+        job = Job(work=functools.partial(_run_training, ws, data, settings), on_end=release,
+                  max_seconds=state().config.job_max_minutes * 60,
+                  models=len(settings.models or ()), folds=settings.evaluation.cv_folds)
+        ws.split = None  # free the preview split: training makes its own
+        ws.add_job(job)
+        state().jobs.submit(job)
+        return jsonify(job_view(job, state().jobs)), 202
+
+
+@bp.route("/jobs/<job_id>", methods=["GET"])
+@with_workspace()
+def job_status(ws: Workspace, job_id: str) -> Answer:
+    """State, progress and, at the end, the result (or the error) of this session's job."""
+    return jsonify(job_view(ws.job(job_id), state().jobs))
+
+
+@bp.route("/jobs/<job_id>", methods=["DELETE"])
+@with_workspace()
+def cancel_job(ws: Workspace, job_id: str) -> Answer:
+    """Cancel this session's job: a queued one at once, a running one at its next step."""
+    job = ws.job(job_id)
+    if job.state not in FINISHED:
+        state().jobs.cancel(job)
+    return jsonify(job_view(job, state().jobs)), 202
 
 
 def _training_settings(data: UploadedData, req: TrainRequest) -> TrainSettings:
@@ -102,27 +133,25 @@ def _blocked(leakage_record: Mapping[str, Any]) -> list[dict[str, Any]]:
     return [{"column": c, "reason": reasons.get(c, "BLOCKED")} for c in leakage_record["blocked"]]
 
 
-def _train(ws: Workspace, req: TrainRequest) -> Answer:
-    with ws.lock:
-        data = require_data(ws)
-        settings = _training_settings(data, req)
-        ws.split = None  # free the preview split: training makes its own
-    # Outside the lock: dataset changes are refused (409) while the training lock is held.
+def _run_training(ws: Workspace, data: UploadedData, settings: TrainSettings,
+                  job: Job) -> dict[str, Any]:
+    """The job's work, in the worker thread. Without the workspace lock: dataset changes
+    are refused (409) while the training lock is held. Only a finished training is
+    stored; a cancel (JobCancelled from ``job.advance``) or a failure stores nothing."""
     try:
         run = train_run(data.frame, profile=data.profile, settings=settings,
                         test_frame=data.test_frame, source=data.source,
-                        test_source=data.test_source, sources=data.sources)
+                        test_source=data.test_source, sources=data.sources, progress=job)
     except ValueError:
         logging.exception("Training failed")
-        return error_response("Training could not run with these settings (for example: every "
-                              "chosen feature was blocked by the leakage guard, or a class is too "
-                              "small for the split). Details are in the server log.",
-                              code=TRAINING_FAILED)
+        raise ApiError("Training could not run with these settings (for example: every chosen "
+                       "feature was blocked by the leakage guard, or a class is too small for "
+                       "the split). Details are in the server log.", TRAINING_FAILED) from None
     evaluation = run.evaluation
     if not evaluation.training.models or evaluation.selected is None:
-        return error_response("No model could be trained. Details are in the server log.",
-                              code=TRAINING_FAILED,
-                              failures=[asdict(f) for f in evaluation.failures])
+        raise ApiError("No model could be trained. Details are in the server log.",
+                       TRAINING_FAILED,
+                       details={"failures": [asdict(f) for f in evaluation.failures]})
     with ws.lock:
         ws.run, ws.export = run, None
 
@@ -130,7 +159,7 @@ def _train(ws: Workspace, req: TrainRequest) -> Answer:
     result = record["evaluation"]
     selected = evaluation.training.models[evaluation.selected]
     title = registry.MODELS[evaluation.selected].title
-    return jsonify({
+    return {
         "message": f"Trained {len(evaluation.training.models)} model(s). Selected: {title} "
                    f"(best mean macro-F1 over {evaluation.cv_folds} CV folds of the training "
                    "split); the test split was scored once.",
@@ -153,7 +182,7 @@ def _train(ws: Workspace, req: TrainRequest) -> Answer:
                                for m in result["models"]},
         "features_info": features_info(selected),
         "notes": result["notes"],
-    })
+    }
 
 
 @bp.route("/run/confusion", methods=["GET"])

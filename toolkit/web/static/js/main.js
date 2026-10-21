@@ -792,10 +792,102 @@ document.addEventListener("DOMContentLoaded", function() {
       }
       configResult.innerHTML = "Training models (cross-validation on the training split, then one test)... this can take a while on big datasets.";
 
-      // One training at a time (the server also answers 409 to a second request)
+      // Training runs as a job on the server (one at a time per workspace, 409 otherwise):
+      // submit it, then ask for its state every second; Cancel stops it at the next step.
       const trainButton = configForm.querySelector('button[type="submit"]');
+      const progressBox = document.getElementById("trainingProgress");
+      const progressBar = document.getElementById("trainingProgressBar");
+      const progressText = document.getElementById("trainingProgressText");
+      const cancelButton = document.getElementById("cancelTrainingBtn");
       trainButton.disabled = true;
-      fetch("/api/v1/run", {
+      let jobUrl = null;
+
+      function showTrainingResult(result) {
+        configResult.innerHTML = renderTrainingResult(result);
+
+        confusionMatrixData = result.confusion_matrices;
+        const cmModelSelect = document.getElementById("cmModelSelect");
+        const algorithmSelect = document.getElementById("algorithmSelect");
+        cmModelSelect.innerHTML = "";
+        algorithmSelect.innerHTML = "";
+        result.leaderboard.forEach(row => {
+          const cmOption = document.createElement("option");
+          cmOption.value = row.model;
+          cmOption.text = row.title;
+          cmOption.selected = row.selected;
+          cmModelSelect.appendChild(cmOption);
+          const option = document.createElement("option");
+          option.value = row.model;
+          option.text = `${row.title} (CV macro-F1 ${fmt(row.cv_macro_f1_mean, 3)})`;
+          option.selected = row.selected;
+          algorithmSelect.appendChild(option);
+        });
+        document.getElementById("confusionMatrixSection").style.display = "block";
+        const chosen = confusionMatrixData[result.selected];
+        if (chosen) {
+          displayConfusionMatrix(chosen.matrix, chosen.labels, result.selected);
+        }
+        buildPredictionForm(result.features_info);
+        document.getElementById("predictionSection").style.display = "block";
+        document.getElementById("exportSection").style.display = "block";
+        document.getElementById("exportResult").innerHTML = "";
+      }
+
+      function showJob(job) {
+        progressBar.value = job.percent;
+        const minutes = Math.floor(job.elapsed_seconds / 60);
+        const seconds = Math.round(job.elapsed_seconds % 60);
+        if (job.state === "queued") {
+          progressText.textContent = job.phase + " (" + job.queue_position + " ahead of this one)";
+        } else {
+          progressText.textContent = "Step " + job.done + " of " + job.total + " (" +
+            job.percent + "%): " + job.phase + ", " + minutes + " min " + seconds + " s" +
+            (job.state === "cancelling" ? ". Cancelling after the current model..." : "");
+        }
+      }
+
+      function endJob() {
+        trainButton.disabled = false;
+        cancelButton.disabled = true;
+        progressBox.style.display = "none";
+      }
+
+      function poll() {
+        fetch(jobUrl)
+        .then(response => response.json())
+        .then(job => {
+          if (!job.state) {  // not a job: an error answer (e.g. the workspace was dropped)
+            throw new Error(job.error ? job.error.message : "unknown answer");
+          }
+          showJob(job);
+          if (job.state === "done") {
+            showTrainingResult(job.result);
+            endJob();
+          } else if (job.state === "failed" || job.state === "cancelled") {
+            configResult.textContent = (job.state === "failed" ? "Error: " : "") + job.error.message;
+            endJob();
+          } else {
+            setTimeout(poll, 1000);
+          }
+        })
+        .catch(error => {
+          configResult.textContent = "Error: " + error.message;
+          endJob();
+        });
+      }
+
+      cancelButton.onclick = () => {
+        if (!jobUrl) {
+          return;
+        }
+        cancelButton.disabled = true;
+        fetch(jobUrl, { method: "DELETE" })
+        .then(response => response.json())
+        .then(job => { if (job.state) { showJob(job); } })
+        .catch(() => {});
+      };
+
+      fetch("/api/v1/jobs/training", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -806,46 +898,22 @@ document.addEventListener("DOMContentLoaded", function() {
           models: selectedModels
         })
       })
-      .then(response => response.json())
-      .then(result => {
-        if (result.leaderboard) {
-          configResult.innerHTML = renderTrainingResult(result);
-
-          confusionMatrixData = result.confusion_matrices;
-          const cmModelSelect = document.getElementById("cmModelSelect");
-          const algorithmSelect = document.getElementById("algorithmSelect");
-          cmModelSelect.innerHTML = "";
-          algorithmSelect.innerHTML = "";
-          result.leaderboard.forEach(row => {
-            const cmOption = document.createElement("option");
-            cmOption.value = row.model;
-            cmOption.text = row.title;
-            cmOption.selected = row.selected;
-            cmModelSelect.appendChild(cmOption);
-            const option = document.createElement("option");
-            option.value = row.model;
-            option.text = `${row.title} (CV macro-F1 ${fmt(row.cv_macro_f1_mean, 3)})`;
-            option.selected = row.selected;
-            algorithmSelect.appendChild(option);
-          });
-          document.getElementById("confusionMatrixSection").style.display = "block";
-          const chosen = confusionMatrixData[result.selected];
-          if (chosen) {
-            displayConfusionMatrix(chosen.matrix, chosen.labels, result.selected);
-          }
-          buildPredictionForm(result.features_info);
-          document.getElementById("predictionSection").style.display = "block";
-          document.getElementById("exportSection").style.display = "block";
-          document.getElementById("exportResult").innerHTML = "";
-        } else {
-          configResult.textContent = "Error: " + result.error.message;
+      .then(async response => {
+        const job = await response.json();
+        if (response.status !== 202) {
+          configResult.textContent = "Error: " + job.error.message;
+          endJob();
+          return;
         }
+        jobUrl = job.url;
+        progressBox.style.display = "block";
+        cancelButton.disabled = false;
+        showJob(job);
+        setTimeout(poll, 1000);
       })
       .catch(error => {
         configResult.textContent = "Error: " + error;
-      })
-      .finally(() => {
-        trainButton.disabled = false;
+        endJob();
       });
     });
 

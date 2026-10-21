@@ -1,7 +1,8 @@
 """v5.1 step 1.2c: a lock per workspace, a lease while training, workspaces only on upload.
 
 Concurrency is tested with blocking hooks (threading.Event): the Flask test client sends
-requests one after another, so a request is held in a background thread while others run.
+requests one after another, so a request is held in a background thread while others run;
+a training job is held inside training in the app's worker thread.
 """
 
 import io
@@ -11,6 +12,7 @@ import pytest
 
 from toolkit.web import training
 from toolkit.web.workspace import Workspace
+from web_jobs import TRAIN_URL, wait_for
 
 TARGET = "Label"
 CSV = b"a,b,Label\n1,2,X\n3,4,Y\n5,6,X\n7,8,Y\n"
@@ -53,17 +55,17 @@ def held_training(monkeypatch):
 
 @pytest.fixture
 def training_now(web_app, client, upload, fixtures_dir, held_training):
-    """A training in progress in client's session (held until the test ends)."""
+    """A training job running in client's session (held until the test ends)."""
     columns = upload(fixtures_dir / "cic_ddos_sample.csv").get_json()["columns"]
     entered, release = held_training
     body = {"features": [c for c in columns if c != TARGET], "target": TARGET,
             "balancing": "none", "models": ["decision_tree"]}
-    thread, result = _in_background(web_app, client, "post", "/api/v1/run", json=body)
+    submitted = client.post(TRAIN_URL, json=body)
+    assert submitted.status_code == 202, submitted.get_json()
     assert entered.wait(30), "the training never started"
     yield columns
     release.set()
-    thread.join(60)
-    assert result["response"].status_code == 200, result["response"].get_json()
+    assert wait_for(client, submitted.get_json()["url"])["state"] == "done"
 
 
 def test_reads_create_no_workspace(client, workspaces):
@@ -75,7 +77,7 @@ def test_reads_create_no_workspace(client, workspaces):
     for url, body in (("/api/v1/run/predict", {"values": {"a": 1}}),
                       ("/api/v1/bundle/predict", {"values": {"a": 1}}),
                       ("/api/v1/run/export", {"name": "x"}),
-                      ("/api/v1/run", {"target": "x", "features": ["a"]}),
+                      ("/api/v1/jobs/training", {"target": "x", "features": ["a"]}),
                       ("/api/v1/dataset/filter", {"target": "x", "remove": ["y"]})):
         response = client.post(url, json=body)
         assert response.status_code == 400 and "Set-Cookie" not in response.headers, url
@@ -109,10 +111,14 @@ def test_dataset_changes_allowed_after_training(client, workspaces, training_now
     assert _upload(client).status_code == 200
 
 
-def test_leased_workspace_is_not_dropped(web_app, workspaces, training_now, monkeypatch):
-    monkeypatch.setattr(workspaces, "idle_seconds", -1)
-    assert _upload(web_app.test_client()).status_code == 200  # drops idle workspaces first
-    assert len(workspaces) == 2, "the training's workspace was dropped"
+def test_leased_workspace_is_not_dropped(web_app, workspaces, training_now):
+    idle = workspaces.idle_seconds
+    workspaces.idle_seconds = -1  # restored before the job ends (its workspace is then idle)
+    try:
+        assert _upload(web_app.test_client()).status_code == 200  # drops idle ones first
+        assert len(workspaces) == 2, "the training's workspace was dropped"
+    finally:
+        workspaces.idle_seconds = idle
 
 
 def test_lease_counts():

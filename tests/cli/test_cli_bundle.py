@@ -18,6 +18,7 @@ import pytest
 from toolkit import bundle_files
 from toolkit.ids_core import bundle as core_bundle
 from toolkit.ids_core.datasets import load_dataset
+from web_jobs import train_and_wait
 
 MODELS = "tools/IDS/IDS_CLI - CIC-2017/models"
 CLI_FILE = "tools/IDS/IDS_CLI - CIC-2017/IDS_with_Machine_Learning.py"
@@ -29,7 +30,7 @@ TARGET = "Label"
 def exported(client, upload, fixtures_dir):
     """A bundle trained and exported through the real web routes (this install's key)."""
     columns = upload(fixtures_dir / CIC).get_json()["columns"]
-    trained = client.post("/api/v1/run", json={
+    trained = train_and_wait(client, {
         "features": [c for c in columns if c != TARGET], "target": TARGET,
         "balancing": "none", "models": ["decision_tree", "logistic_regression"]})
     assert trained.status_code == 200, trained.get_json()
@@ -159,7 +160,7 @@ def test_interactive_examples_manual_and_exit(cli_module, exported, monkeypatch,
 def two_exports(client, exported):
     """``exported`` plus a newer export of a second run (decision tree only)."""
     columns = list(cli_frame_columns(exported))
-    trained = client.post("/api/v1/run", json={
+    trained = train_and_wait(client, {
         "features": columns, "target": TARGET, "balancing": "none",
         "models": ["decision_tree"]})
     assert trained.status_code == 200, trained.get_json()

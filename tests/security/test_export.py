@@ -4,6 +4,7 @@ import pytest
 
 from toolkit import bundle_files
 from toolkit.web.security import safe_model_basename
+from web_jobs import train_and_wait
 
 TARGET = "Label"
 
@@ -22,7 +23,7 @@ def test_good_export_name_kept(good):
 @pytest.fixture
 def trained(client, upload, fixtures_dir):
     columns = upload(fixtures_dir / "cic_ddos_sample.csv").get_json()["columns"]
-    response = client.post("/api/v1/run", json={
+    response = train_and_wait(client, {
         "features": [c for c in columns if c != TARGET], "target": TARGET,
         "models": ["decision_tree"], "balancing": "none"})
     assert response.status_code == 200, response.get_json()

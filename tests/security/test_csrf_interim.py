@@ -4,7 +4,7 @@ import io
 
 
 def test_form_post_rejected(client):
-    response = client.post("/api/v1/run", data={"target": "x"})  # HTML-form style body
+    response = client.post("/api/v1/jobs/training", data={"target": "x"})  # HTML-form style body
     assert response.status_code == 400
 
 
