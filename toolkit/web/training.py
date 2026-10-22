@@ -13,7 +13,7 @@ from flask import Blueprint, jsonify
 from ..config import SplitConfig
 from ..ids_core import registry
 from ..ids_core.pipeline import FittedModel
-from ..ids_core.runs import TrainSettings
+from ..ids_core.runs import TrainingRun, TrainSettings
 from ..ids_core.runs import train as train_run
 from .api import (
     BUSY,
@@ -154,7 +154,15 @@ def _run_training(ws: Workspace, data: UploadedData, settings: TrainSettings,
                        details={"failures": [asdict(f) for f in evaluation.failures]})
     with ws.lock:
         ws.run, ws.export = run, None
+    return run_result(run)
 
+
+def run_result(run: TrainingRun) -> dict[str, Any]:
+    """A finished training's result: the job's result, and the run part of
+    GET /api/v1/workspace after a reload (step 1.3c)."""
+    evaluation = run.evaluation
+    if evaluation.selected is None:  # never stored: _run_training refuses such runs
+        raise ApiError("No model could be trained.", TRAINING_FAILED)
     record = run.to_dict()
     result = record["evaluation"]
     selected = evaluation.training.models[evaluation.selected]

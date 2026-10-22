@@ -25,7 +25,7 @@ def _served(web_app):
 
 
 def test_routes_match_the_documentation(repo_root, web_app):
-    assert len(_documented(repo_root)) == 18
+    assert len(_documented(repo_root)) == 19
     assert _served(web_app) == _documented(repo_root)
 
 

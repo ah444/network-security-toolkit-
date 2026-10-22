@@ -6,12 +6,13 @@ from __future__ import annotations
 import logging
 import warnings
 from collections.abc import Mapping
+from typing import Any
 
 from flask import Blueprint, jsonify, request, send_file
 
 from .. import run_files
 from ..ids_core import registry
-from ..ids_core.bundle import BundleError, BundleVersionWarning
+from ..ids_core.bundle import Bundle, BundleError, BundleVersionWarning
 from ..ids_core.pipeline import FittedModel
 from .api import NO_MODEL_LOADED, NOT_TRAINED, Answer, error_response, json_body
 from .schemas import ExportRequest, PredictRequest, load
@@ -93,16 +94,21 @@ def export(ws: Workspace) -> Answer:
                                   409)
         ws.export = ExportedBundle(saved, name)
     ws.export.name = name
-    saved = ws.export.saved
-    return jsonify({
+    return jsonify(export_answer(ws.export))
+
+
+def export_answer(export: ExportedBundle) -> dict[str, Any]:
+    """The export's answer; GET /api/v1/workspace repeats it after a reload (step 1.3c)."""
+    saved = export.saved
+    return {
         "message": "Saved as a signed bundle. Download it below; it loads only on this "
                    "computer's toolkit install (keep a backup of the instance/ folder).",
         "file": saved.path.name,
         "run_id": saved.run.run_id,
         "sha256": saved.sha256,
         "download_url": "/api/v1/run/bundle",
-        "download_name": f"{name}.bundle",
-    })
+        "download_name": f"{export.name}.bundle",
+    }
 
 
 @bp.route("/run/bundle", methods=["GET"])
@@ -131,9 +137,15 @@ def load_bundle(ws: Workspace) -> Answer:
     except BundleError as error:
         return _bundle_refused(error)
     ws.loaded = bundle
+    return jsonify(bundle_answer(bundle))
+
+
+def bundle_answer(bundle: Bundle) -> dict[str, Any]:
+    """The bundle load's answer; GET /api/v1/workspace repeats it after a reload
+    (step 1.3c)."""
     run = bundle.run
     rows = {row["model"]: row for row in run["evaluation"]["leaderboard"]}
-    return jsonify({
+    return {
         "message": f"Loaded {len(bundle.models)} model(s) from run {bundle.run_id}.",
         "run_id": bundle.run_id,
         "created_at": run["created_at"],
@@ -146,4 +158,4 @@ def load_bundle(ws: Workspace) -> Answer:
                    for name in bundle.models],
         "features_info": features_info(bundle.model()),
         "warnings": list(bundle.warnings),
-    })
+    }

@@ -50,6 +50,7 @@ computer (`127.0.0.1`).
 | GET | `/api/v1/run/bundle` | none | the exported bundle as a download |
 | POST | `/api/v1/bundle` | multipart `file`: a `.bundle` exported by this install | the loaded models and their scores |
 | POST | `/api/v1/bundle/predict` | `values`, `model` | prediction with the loaded bundle |
+| GET | `/api/v1/workspace` | none | what the session holds, to resume after a reload (see below) |
 | DELETE | `/api/v1/workspace` | none | the session's dataset and models are forgotten |
 
 ## Security token
@@ -64,6 +65,29 @@ no longer matches: the answer is `CSRF_TOKEN` with "Reload the page".
 A script on this computer works the same way: keep the cookies, `GET /dynamic_ids`, read
 the token from the meta tag, and send it in the `X-CSRF-Token` header. `GET` routes need
 no token.
+
+## Resuming after a reload
+
+`GET /api/v1/workspace` answers what the session's workspace holds, each part in the same
+shape its own route answered, or `null`:
+
+```json
+{"dataset": {"columns": [], "message": "...", "dataset": {}},
+ "run": {"run_id": "...", "leaderboard": [], "confusion_matrices": {}},
+ "job": {"id": "...", "url": "/api/v1/jobs/...", "state": "running"},
+ "export": {"download_url": "/api/v1/run/bundle", "download_name": "..."},
+ "bundle": {"run_id": "...", "models": [], "features_info": []}}
+```
+
+- `dataset`: as `POST /api/v1/dataset` answered (after a class filter: the rows left).
+- `run`: the last finished training, as its job's `result`.
+- `job`: a training that is still `queued` or `running` (as `GET /api/v1/jobs/<id>`).
+- `export`: as `POST /api/v1/run/export` answered, once the run was exported.
+- `bundle`: as `POST /api/v1/bundle` answered.
+
+A session without a workspace gets all `null`s; nothing is created. The page uses this
+route on every load; results of the explore routes (distribution, previews, scores) are
+not kept and are asked for again.
 
 ## Training jobs
 

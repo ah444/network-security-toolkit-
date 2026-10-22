@@ -133,6 +133,17 @@ def _dataset_summary(data: UploadedData, size: int) -> dict[str, Any]:
     }
 
 
+def dataset_answer(data: UploadedData, size: int) -> dict[str, Any]:
+    """The upload's answer; GET /api/v1/workspace repeats it after a reload (step 1.3c)."""
+    message = f"Successfully processed {len(data.files)} file(s). Total rows: {len(data.frame)}."
+    if data.test_source and data.test_frame is not None:
+        message += (f" {data.test_source.name} is used as the official test file "
+                    f"({len(data.test_frame)} rows).")
+    message += f" Memory used: {size / 2**20:,.1f} MB."
+    return {"columns": [str(c) for c in data.frame.columns], "message": message,
+            "dataset": _dataset_summary(data, size)}
+
+
 @bp.route("/dataset", methods=["POST"])
 @with_workspace(create=True, changes_dataset=True)
 def upload(ws: Workspace) -> Answer:
@@ -172,13 +183,7 @@ def upload(ws: Workspace) -> Answer:
     size = dataset_bytes(data)
     state().workspaces.reserve_data(ws, size)  # may drop other idle workspaces, or refuse
     ws.data, ws.split = data, None
-    message = f"Successfully processed {len(files)} file(s). Total rows: {len(data.frame)}."
-    if data.test_source and data.test_frame is not None:
-        message += (f" {data.test_source.name} is used as the official test file "
-                    f"({len(data.test_frame)} rows).")
-    message += f" Memory used: {size / 2**20:,.1f} MB."
-    return jsonify({"columns": [str(c) for c in data.frame.columns], "message": message,
-                    "dataset": _dataset_summary(data, size)})
+    return jsonify(dataset_answer(data, size))
 
 
 def require_data(ws: Workspace) -> UploadedData:

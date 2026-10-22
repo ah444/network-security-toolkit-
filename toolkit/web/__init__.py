@@ -22,7 +22,7 @@ from flask import Flask
 from ..bundle_files import BundleStore
 from ..config import WebConfig, instance_dir, web_config
 from ..logging_setup import setup_logging
-from . import bundles, datasets, pages, training, workspace
+from . import bundles, datasets, pages, resume, training, workspace
 from .api import register_error_handlers
 from .datasets import remove_stale_uploads
 from .jobs import JobRunner
@@ -30,7 +30,7 @@ from .security import register_security
 from .state import WebState
 from .workspace import WorkspaceStore, start_idle_sweep
 
-BLUEPRINTS = (pages.bp, datasets.bp, training.bp, bundles.bp, workspace.bp)
+BLUEPRINTS = (pages.bp, datasets.bp, training.bp, bundles.bp, workspace.bp, resume.bp)
 
 
 def create_app(config: WebConfig | None = None) -> Flask:
