@@ -271,7 +271,7 @@ Project/
 │   │   └── intel/                   #   scanner, export; intel: NVD, OpenRouter, AbuseIPDB
 │   └── web/                         # Web trainer: create_app(), blueprints, workspaces
 │       ├── templates/               # home.html, dynamic_ids.html
-│       └── static/                  # css/style.css, css/style2.css, js/main.js
+│       └── static/                  # css/app.css, js/ (ES modules, main.js entry)
 │
 └── tools/
     ├── Port_scan/                   # Network Reconnaissance
