@@ -17,7 +17,7 @@ from .api import CROSS_SITE, CSRF_TOKEN, error_response
 CONTENT_SECURITY_POLICY = "; ".join([
     "default-src 'self'",
     "script-src 'self'",                  # no inline scripts, no eval (S5 second layer)
-    "style-src 'self' 'unsafe-inline'",   # inline style="" is still used; tightened in v5.1
+    "style-src 'self'",                   # app.css only: no inline styles (v5.1 step 1.3b)
     "img-src 'self' data:",
     "object-src 'none'",
     "base-uri 'self'",

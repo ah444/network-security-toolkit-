@@ -48,8 +48,8 @@ def test_csp_present_and_scripts_strict(client):
     assert "'unsafe-inline'" not in directives["script-src"]
     assert directives["object-src"] == "'none'"
     assert directives["frame-ancestors"] == "'none'"
-    # Inline style attributes are still used by the v4 page (tightened in v5.1).
-    assert directives["style-src"] == "'self' 'unsafe-inline'"
+    # v5.1 step 1.3b: no inline styles left (tests/web/test_css.py), so none are allowed.
+    assert directives["style-src"] == "'self'"
 
 
 def test_templates_have_no_inline_scripts_or_handlers(repo_root):
