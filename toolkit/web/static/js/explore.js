@@ -1,8 +1,9 @@
-// Explore: class distribution and the balancing recommendation, the class filter, the
-// balancing preview and the feature scores. All of them use the training split only.
+// Explore, Clean and Features: the target column, class distribution and the balancing
+// recommendation, the class filter, the balancing preview and the feature scores. All of
+// them use the training split only.
 
 import { getJSON, send } from "./api.js";
-import { byId, checkedValues, el, fillCheckboxList, message, setChecked, setContent, show, table } from "./dom.js";
+import { byId, checkedValues, el, fillCheckboxList, fillSelect, message, setChecked, setContent, table } from "./dom.js";
 import { BALANCING_HINTS, balancingName, fmt, ratioText } from "./format.js";
 import { emit, on, state, testSize } from "./state.js";
 
@@ -22,6 +23,33 @@ function populateTargetValueFilter(classCounts) {
   const sortedClasses = Object.entries(classCounts).sort((a, b) => a[1] - b[1]);
   fillCheckboxList(byId("targetValuesToRemove"), sortedClasses.map(
     ([className, count]) => ({ value: className, text: className + " (" + count.toLocaleString() + " samples)" })));
+}
+
+// The class filter's list for the chosen target
+async function loadClassFilter() {
+  setContent(byId("targetValuesToRemove"));
+  if (!state.target) {
+    return;
+  }
+  try {
+    const result = await getJSON("/api/v1/dataset/classes", { target: state.target });
+    populateTargetValueFilter(result.value_counts);
+  } catch (error) {
+    message(byId("targetFilterResult"), "error", "❌ Error: " + error.message);
+  }
+}
+
+// The target chosen in Explore is used by the class filter and the balancing preview, and
+// pre-filled in Features and Train (still changeable there)
+function chooseTarget() {
+  state.target = byId("targetForDist").value || null;
+  if (state.target) {
+    byId("targetForRec").value = state.target;
+  }
+  setContent(byId("classDistributionResult"));
+  setContent(byId("targetFilterResult"));
+  loadClassFilter();
+  emit("target:chosen", state.target);
 }
 
 function analysisItem(label, value, valueClass = "") {
@@ -51,31 +79,27 @@ function recommendationBox(result) {
         el("p", { class: "alternatives" }, el("strong", {}, "Alternatives:"), " " + rec.alternatives.map(balancingName).join(", "))));
 }
 
+// The recommended balancing method is pre-selected in Clean
 async function analyzeClasses(event) {
   event.preventDefault();
   const resultDiv = byId("classDistributionResult");
-  const target = byId("targetForDist").value;
+  const target = state.target;
   if (!target) {
     setContent(resultDiv, "Please select a target column for class distribution analysis.");
     return;
   }
-  state.target = target;
   setContent(resultDiv, "Analyzing class distribution...");
   try {
     const result = await getJSON("/api/v1/dataset/distribution", { target: target, test_size: testSize() });
-    populateTargetValueFilter(result.class_counts);
-    show(byId("targetValueFilterSection"));
-    setContent(byId("targetFilterResult"));
-    show(byId("smoteOption"));
     byId("balancingMethod").value = result.recommendation.recommended;
     showBalancingHint(result.recommendation.recommended, "");
     setContent(resultDiv,
       el("strong", {}, "Class Distribution (whole dataset):"), el("br"),
-      el("table", {}, el("tbody", {},
+      el("div", { class: "table-container" }, el("table", {}, el("tbody", {},
         el("tr", {}, el("th", {}, "Class"), el("th", {}, "Count"), el("th", {}, "Percentage")),
         result.sorted_classes.map(([className, percentage]) => el("tr", {},
           el("td", {}, className), el("td", {}, result.class_counts[className].toLocaleString()),
-          el("td", {}, percentage.toFixed(2) + "%"))))),
+          el("td", {}, percentage.toFixed(2) + "%")))))),
       el("p", {}, "Total samples: " + result.total_samples.toLocaleString()),
       result.test_file_counts &&
         el("p", {}, "Official test file: " + Object.entries(result.test_file_counts).map(([c, n]) => c + " " + n).join(", ")),
@@ -93,7 +117,7 @@ async function removeClasses() {
     return;
   }
   if (!state.target) {
-    message(resultDiv, "error", "❌ Error: Target column not set. Please analyze class distribution first.");
+    message(resultDiv, "error", "❌ Error: Target column not set. Please choose it in Explore first.");
     return;
   }
   setContent(resultDiv, "Removing selected values...");
@@ -111,7 +135,7 @@ async function removeClasses() {
 // Balancing preview on the training split (/api/v1/dataset/balancing-preview changes nothing)
 async function previewBalancing() {
   const resultDiv = byId("balancingPreviewResult");
-  const target = state.target || byId("targetForDist").value;
+  const target = state.target;
   const features = checkedValues(byId("inputFeatures")).filter(f => f !== target);
   setContent(resultDiv, "Running the balancing method on the training split...");
   try {
@@ -122,8 +146,9 @@ async function previewBalancing() {
       el("p", {}, el("strong", {}, balancingName(result.balancer)),
          ` on ${result.rows.toLocaleString()} training rows`,
          result.sampled && ` (a stratified sample of ${result.train_rows.toLocaleString()})`, ":"),
-      table("metrics-table", ["Class", "Before", "After"], Object.keys(result.before).map(cls => [
-        cls, result.before[cls].toLocaleString(), (result.after[cls] || 0).toLocaleString()])),
+      el("div", { class: "table-container" },
+        table("metrics-table", ["Class", "Before", "After"], Object.keys(result.before).map(cls => [
+          cls, result.before[cls].toLocaleString(), (result.after[cls] || 0).toLocaleString()]))),
       !result.changes_rows && el("p", {}, "The number of rows does not change with this method."));
   } catch (error) {
     resultDiv.textContent = "Error: " + error.message;
@@ -156,25 +181,24 @@ async function recommendFeatures(event) {
   }
 }
 
-// A new dataset: forget the previous analysis and show this part of the page
-function resetForDataset() {
+// A new dataset: forget the previous analysis; the profile's label is the first target
+function resetForDataset({ columns, dataset }) {
+  const label = dataset.profile.label_column;
+  ["targetForDist", "targetForRec"].forEach(id => {
+    fillSelect(byId(id), columns.map(col => ({ value: col, text: col, selected: col === label })));
+  });
   byId("balancingMethod").value = "none";
-  show(byId("smoteOption"), false);
-  setContent(byId("classDistributionResult"));
   setContent(byId("balancingPreviewResult"));
-  show(byId("targetValueFilterSection"), false);
-  setContent(byId("targetFilterResult"));
-  setContent(byId("targetValuesToRemove"));
-  show(byId("classImbalanceSection"));
-  show(byId("recommendationSection"));
+  setContent(byId("recommendationResult"));
+  chooseTarget();
 }
 
 export function setup() {
+  byId("targetForDist").addEventListener("change", chooseTarget);
   byId("analyzeClassBtn").addEventListener("click", analyzeClasses);
   byId("removeTargetValuesBtn").addEventListener("click", removeClasses);
   byId("skipTargetFilterBtn").addEventListener("click", () => {
     message(byId("targetFilterResult"), "info", "ℹ️ Keeping all target values.");
-    show(byId("smoteOption"));
   });
   byId("balancingMethod").addEventListener("change", function() {
     showBalancingHint(this.value, "Select a method to handle class imbalance.");

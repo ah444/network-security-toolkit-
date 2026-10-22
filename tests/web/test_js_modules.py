@@ -60,7 +60,8 @@ def test_every_event_has_a_sender_and_a_listener():
     code = all_js()
     sent = set(re.findall(r"""emit\(\s*["']([a-z:]+)["']""", code))
     heard = set(re.findall(r"""\bon\(\s*["']([a-z:]+)["']""", code))
-    assert sent == heard == {"dataset:loaded", "dataset:changed", "run:ready", "bundle:loaded"}
+    assert sent == heard == {"dataset:loaded", "dataset:changed", "run:ready", "bundle:loaded",
+                             "target:chosen", "path:changed", "workspace:resumed", "steps:restore"}
 
 
 def test_js_is_served_as_javascript_even_if_the_os_says_otherwise(make_app):

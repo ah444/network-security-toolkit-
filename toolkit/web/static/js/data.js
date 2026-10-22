@@ -28,26 +28,23 @@ function watchFileInput(input, placeholder, emptyText) {
   });
 }
 
-// Show the upload path or the bundle path
+// Show the upload path or the bundle path; the steps start again from Data
 function toggleSections() {
-  if (byId("optionTrained").checked) {
+  const bundlePath = byId("optionTrained").checked;
+  if (bundlePath) {
     resetFileInputs("uploadForm");
     setContent(byId("uploadResult"));
-    ["uploadDatasetSection", "dataPreviewSection", "recommendationSection", "configSection",
-     "predictionSection", "exportSection", "classImbalanceSection", "smoteOption",
-     "loadedFeaturesSection"].forEach(id => show(byId(id), false));
     setContent(byId("dynamicInputs"));
     setContent(byId("classDistributionResult"));
-    show(byId("loadModelSection"));
+  } else {
     resetFileInputs("loadModelForm");
     setContent(byId("loadModelResult"));
-  } else if (byId("optionNotTrained").checked) {
-    resetFileInputs("loadModelForm");
-    setContent(byId("loadModelResult"));
-    show(byId("loadModelSection"), false);
-    show(byId("loadedFeaturesSection"), false);
-    show(byId("uploadDatasetSection"));
   }
+  show(byId("uploadDatasetSection"), !bundlePath);
+  show(byId("loadModelSection"), bundlePath);
+  ["dataPreviewSection","predictionSection", "exportSection", "loadedFeaturesSection"]
+    .forEach(id => show(byId(id), false));
+  emit("path:changed", bundlePath ? "bundle" : "upload");
 }
 
 function previewTable(columns, rows) {
@@ -81,6 +78,20 @@ async function fetchDataPreview() {
   }
 }
 
+// The upload's answer (also after a reload, from GET /api/v1/workspace)
+function showDataset(result) {
+  const profile = result.dataset.profile;
+  setContent(byId("uploadResult"),
+    el("p", {}, result.message),
+    el("p", {}, "Detected dataset: ", el("strong", {}, profile.name), ` (${profile.variant}); label column: `,
+       el("strong", {}, profile.label_column || "not detected"), `; split: ${profile.split_strategy}.`),
+    profile.blocked_columns.length > 0 &&
+      el("p", {}, "Never used as features (label-derived, IDs or time): " + profile.blocked_columns.join(", ")));
+  emit("dataset:loaded", { columns: result.columns, dataset: result.dataset });
+  show(byId("dataPreviewSection"));
+  fetchDataPreview();
+}
+
 async function uploadDataset(event) {
   event.preventDefault();
   const uploadResult = byId("uploadResult");
@@ -93,20 +104,23 @@ async function uploadDataset(event) {
   const formData = new FormData();
   Array.from(files).forEach(file => formData.append("dataset", file));
   try {
-    const result = await send("/api/v1/dataset", "POST", formData);
-    const profile = result.dataset.profile;
-    setContent(uploadResult,
-      el("p", {}, result.message),
-      el("p", {}, "Detected dataset: ", el("strong", {}, profile.name), ` (${profile.variant}); label column: `,
-         el("strong", {}, profile.label_column || "not detected"), `; split: ${profile.split_strategy}.`),
-      profile.blocked_columns.length > 0 &&
-        el("p", {}, "Never used as features (label-derived, IDs or time): " + profile.blocked_columns.join(", ")));
-    emit("dataset:loaded", { columns: result.columns, dataset: result.dataset });
-    show(byId("dataPreviewSection"));
-    fetchDataPreview();
+    showDataset(await send("/api/v1/dataset", "POST", formData));
   } catch (error) {
     uploadResult.textContent = "Error: " + error.message;
   }
+}
+
+// The bundle load's answer (also after a reload)
+function showBundle(result) {
+  setContent(byId("loadModelResult"),
+    el("p", {}, result.message),
+    el("p", {}, `Trained on ${result.dataset || "unknown data"} at ${result.created_at}.`),
+    el("div", { class: "table-container" },
+      table("metrics-table", ["Model", "CV macro-F1", "Test macro-F1"], result.models.map(model => [
+        model.name + (model.id === result.selected ? " (selected)" : ""),
+        fmt(model.cv_macro_f1, 3), fmt(model.test_macro_f1, 3)]))),
+    result.warnings.map(warning => el("div", { class: "warning-message" }, warning)));
+  emit("bundle:loaded", result);
 }
 
 // Only signed bundles from this install are accepted
@@ -122,15 +136,7 @@ async function loadBundle(event) {
   const formData = new FormData();
   formData.append("file", fileInput.files[0]);
   try {
-    const result = await send("/api/v1/bundle", "POST", formData);
-    setContent(loadResult,
-      el("p", {}, result.message),
-      el("p", {}, `Trained on ${result.dataset || "unknown data"} at ${result.created_at}.`),
-      table("metrics-table", ["Model", "CV macro-F1", "Test macro-F1"], result.models.map(model => [
-        model.name + (model.id === result.selected ? " (selected)" : ""),
-        fmt(model.cv_macro_f1, 3), fmt(model.test_macro_f1, 3)])),
-      result.warnings.map(warning => el("div", { class: "warning-message" }, warning)));
-    emit("bundle:loaded", result);
+    showBundle(await send("/api/v1/bundle", "POST", formData));
   } catch (error) {
     loadResult.textContent = "Error: " + error.message;
   }
@@ -149,6 +155,17 @@ async function clearWorkspace() {
   }
 }
 
+// After a reload: the dataset path when the session has a dataset, else its bundle
+function resumeData(answer) {
+  if (answer.dataset) {
+    showDataset(answer.dataset);
+  } else if (answer.bundle) {
+    byId("optionTrained").checked = true;
+    toggleSections();
+    showBundle(answer.bundle);
+  }
+}
+
 export function setup() {
   byId("optionTrained").addEventListener("change", toggleSections);
   byId("optionNotTrained").addEventListener("change", toggleSections);
@@ -161,4 +178,5 @@ export function setup() {
   byId("loadModelForm").addEventListener("submit", loadBundle);
   byId("clearWorkspaceBtn").addEventListener("click", clearWorkspace);
   on("dataset:changed", fetchDataPreview);
+  on("workspace:resumed", resumeData);
 }

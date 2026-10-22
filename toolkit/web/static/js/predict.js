@@ -47,18 +47,22 @@ function predictWith(url, inputsId, algorithmId, resultId) {
   };
 }
 
+// The export's answer, with the download link (also after a reload)
+function showExport(result) {
+  setContent(byId("exportResult"),
+    el("p", {}, result.message),
+    el("p", {}, "Run " + result.run_id + ", SHA-256 " + result.sha256.substring(0, 16) + "…"),
+    el("a", { href: result.download_url, download: result.download_name, class: "btn btn-sm" },
+       "Download " + result.download_name));
+}
+
 // A signed bundle, then a download link
 async function exportRun(event) {
   event.preventDefault();
   const exportResult = byId("exportResult");
   exportResult.textContent = "Saving the signed bundle...";
   try {
-    const result = await send("/api/v1/run/export", "POST", { name: byId("modelName").value });
-    setContent(exportResult,
-      el("p", {}, result.message),
-      el("p", {}, "Run " + result.run_id + ", SHA-256 " + result.sha256.substring(0, 16) + "…"),
-      el("a", { href: result.download_url, download: result.download_name, class: "btn btn-sm" },
-         "Download " + result.download_name));
+    showExport(await send("/api/v1/run/export", "POST", { name: byId("modelName").value }));
   } catch (error) {
     exportResult.textContent = "Error: " + error.message;
   }
@@ -83,5 +87,10 @@ export function setup() {
       value: model.id, text: model.name, selected: model.id === result.selected })));
     buildPredictionForm("loadedDynamicInputs", "loaded-feature-", result.features_info);
     show(byId("loadedFeaturesSection"));
+  });
+  on("workspace:resumed", answer => {  // after train.js has shown the run
+    if (answer.export) {
+      showExport(answer.export);
+    }
   });
 }

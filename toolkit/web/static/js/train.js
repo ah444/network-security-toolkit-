@@ -6,13 +6,11 @@ import { byId, checkedValues, el, fillCheckboxList, fillSelect, message, setCont
 import { balancingName, fmt, splitMessage } from "./format.js";
 import { emit, modelTitle, on, state, testSize } from "./state.js";
 
-// Fill the target lists and the feature list; the profile's label is preselected
+// Fill the target list and the feature list; the profile's label is preselected
 function populateColumns({ columns, dataset }) {
   const label = dataset.profile.label_column;
   const blocked = dataset.profile.blocked_columns || [];
-  ["targetColumn", "targetForRec", "targetForDist"].forEach(id => {
-    fillSelect(byId(id), columns.map(col => ({ value: col, text: col, selected: col === label })));
-  });
+  fillSelect(byId("targetColumn"), columns.map(col => ({ value: col, text: col, selected: col === label })));
   fillCheckboxList(byId("inputFeatures"), columns
     .filter(col => col !== label)
     .map(col => ({ value: col, text: col, checked: !blocked.includes(col),
@@ -120,6 +118,9 @@ function trainingResult(result) {
 }
 
 function showTrainingResult(result) {
+  result.leaderboard.forEach(row => {  // titles also when the run comes back after a reload
+    state.modelTitles[row.model] = row.title;
+  });
   setContent(byId("configResult"), trainingResult(result));
   state.confusion = result.confusion_matrices;
   fillSelect(byId("cmModelSelect"), result.leaderboard.map(row =>
@@ -135,6 +136,7 @@ function showTrainingResult(result) {
 // Training runs as a job on the server (one at a time per workspace, 409 otherwise):
 // submit it, then ask for its state every second; Cancel stops it at the next step.
 let jobUrl = null;
+const TRAINING_MESSAGE = "Training models (cross-validation on the training split, then one test)... this can take a while on big datasets.";
 
 function showJob(job) {
   const progressText = byId("trainingProgressText");
@@ -176,6 +178,17 @@ async function poll() {
   }
 }
 
+// Follow a job that was still queued or running when the page was reloaded
+function followJob(job) {
+  jobUrl = job.url;
+  setContent(byId("configResult"), TRAINING_MESSAGE);
+  byId("configForm").querySelector('button[type="submit"]').disabled = true;
+  show(byId("trainingProgress"));
+  byId("cancelTrainingBtn").disabled = job.state === "cancelling";
+  showJob(job);
+  setTimeout(poll, 1000);
+}
+
 async function cancelJob() {
   if (!jobUrl) {
     return;
@@ -202,7 +215,7 @@ async function train(event) {
     message(configResult, "error", "❌ Please tick at least one model to train.");
     return;
   }
-  setContent(configResult, "Training models (cross-validation on the training split, then one test)... this can take a while on big datasets.");
+  setContent(configResult, TRAINING_MESSAGE);
   byId("configForm").querySelector('button[type="submit"]').disabled = true;
   jobUrl = null;
   try {
@@ -217,6 +230,14 @@ async function train(event) {
   } catch (error) {
     configResult.textContent = "Error: " + error.message;
     endJob();
+  }
+}
+
+// The target chosen in Explore, pre-filled here (still changeable)
+function prefillTarget(target) {
+  if (target) {
+    byId("targetColumn").value = target;
+    untickTarget();
   }
 }
 
@@ -249,7 +270,15 @@ export function setup() {
   byId("showConfusionMatrixBtn").addEventListener("click", showConfusionMatrix);
   on("dataset:loaded", detail => {
     populateColumns(detail);
-    show(byId("configSection"));
     loadAvailableModels();
+  });
+  on("target:chosen", prefillTarget);
+  on("workspace:resumed", answer => {
+    if (answer.run) {
+      showTrainingResult(answer.run);
+    }
+    if (answer.job) {
+      followJob(answer.job);
+    }
   });
 }

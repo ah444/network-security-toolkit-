@@ -67,6 +67,7 @@ This project is being reworked into **v5.0 ("correct & safe")**; see [docs/IMPRO
 
 ### 3. Intrusion Detection System (Web) ⭐ NEW FEATURES
 - 🌐 Web-based UI with Flask
+- 🧭 **Step by step** - Data → Explore → Clean → Features → Train → Use, one step at a time (a loaded bundle: Data → Use); after a reload the page shows the session's dataset, results, a running training and the export link again
 - 📤 Upload custom datasets (CSV/TXT)
 - 📊 **Data Preview** - View first N rows with statistics
 - 🎛️ **Dynamic model training** - Train on any dataset
@@ -235,6 +236,7 @@ Visual evaluation of model performance:
 
 ### 🔀 Train/Test Split Slider
 Customize data splits:
+- In the Explore step, next to the target column: the class analysis, balancing preview, feature scores and training all use this split
 - Slider range: 10% to 50% for the test split (default 20% → Train: 80% | Test: 20%)
 - Datasets with an official test file (NSL-KDD) use that file instead
 - Real-time label update

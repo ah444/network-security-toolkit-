@@ -4,13 +4,17 @@
 //   dataset:changed                     classes were removed from it
 //   run:ready       result              a training run finished
 //   bundle:loaded   result              an exported bundle was loaded
+//   target:chosen   target              the target column chosen in Explore
+//   path:changed    "upload" | "bundle" training from a dataset, or using a bundle
+//   workspace:resumed answer            GET /api/v1/workspace when the page loads
+//   steps:restore                       the page has resumed: open the last step viewed
 
 import { byId } from "./dom.js";
 
 export const state = {
   modelTitles: {},  // model id -> title, from /api/v1/models
   confusion: {},    // test-split confusion matrices of the last run: model -> {labels, matrix}
-  target: null,     // the target column analysed for the class filter
+  target: null,     // the target column chosen in Explore
 };
 
 export function modelTitle(id) {

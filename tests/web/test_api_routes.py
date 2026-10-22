@@ -42,9 +42,10 @@ def test_wrong_method_is_json_405(client):
 
 
 def test_page_uses_only_api_routes():
-    # the two predict routes are passed to predictWith(url, ...), which calls send(url, ...)
+    # the two predict routes are passed to predictWith(url, ...), which calls send(url, ...);
+    # /api/v1/workspace is used twice: GET to resume after a reload, DELETE to clear
     urls = re.findall(r'(?:getJSON|send|predictWith)\("(/[^"?]*)', all_js())
-    assert len(urls) == 13 and all(url.startswith("/api/v1/") for url in urls), urls
+    assert len(urls) == 15 and all(url.startswith("/api/v1/") for url in urls), urls
 
 
 def test_page_sends_every_state_change_with_the_token():
