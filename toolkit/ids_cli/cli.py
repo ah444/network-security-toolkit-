@@ -5,12 +5,13 @@ Predicts with the models you export from the web trainer: the features, classes 
 model come from the bundle itself (plan D5, step 0.5). No model is shipped with the
 project: train one in the web trainer and click Export (saved in instance/bundles).
 
-    python -m toolkit.ids_cli                     interactive: choose an export
-    python -m toolkit.ids_cli --list              list the exports
-    python -m toolkit.ids_cli --csv flows.csv     label every row (newest export)
-    python -m toolkit.ids_cli --bundle my.bundle --json '{"Flow Duration": 3, ...}'
+    python -m toolkit ids                     interactive: choose an export
+    python -m toolkit ids --list              list the exports
+    python -m toolkit ids --csv flows.csv     label every row (newest export)
+    python -m toolkit ids --bundle my.bundle --json '{"Flow Duration": 3, ...}'
 
-(from the project folder; moved from tools/IDS/IDS_CLI - CIC-2017/ in v5.1 step 1.4a)
+(from the project folder; ``python -m toolkit.ids_cli`` also works; moved from
+tools/IDS/IDS_CLI - CIC-2017/ in v5.1 step 1.4a)
 
 Trust (D11): a bundle is opened only if it is signed by this install's key
 (instance/signing.key). Nothing else is ever opened.
@@ -20,6 +21,7 @@ import argparse
 import json
 import sys
 import warnings
+from collections.abc import Sequence
 from pathlib import Path
 
 import numpy as np
@@ -346,9 +348,9 @@ def interactive(bundle, model=None):
 # Main
 # ============================================================
 
-def parse_args(argv):
+def parse_args(argv, prog=None):
     parser = argparse.ArgumentParser(
-        description="Intrusion detection with a model bundle exported by the web trainer.")
+        prog=prog, description="Intrusion detection with a model bundle exported by the web trainer.")
     parser.add_argument("--bundle", help="a .bundle exported on this computer "
                         "(default: choose one; without a prompt, the newest export)")
     parser.add_argument("--list", action="store_true", help="list the exports and exit")
@@ -362,8 +364,8 @@ def parse_args(argv):
     return parser.parse_args(argv)
 
 
-def main(argv=None):
-    args = parse_args(argv)
+def main(argv=None, prog=None):
+    args = parse_args(argv, prog)
     if args.list:
         return list_exports()
     interactive_mode = not (args.csv or args.json or args.info)
@@ -403,8 +405,9 @@ def utf8_output():
             stream.reconfigure(encoding="utf-8")
 
 
-def run(argv=None):
-    """The command: UTF-8 output, the tool's log, then ``main``; exits with its code."""
+def run(argv: Sequence[str] | None = None, prog: str | None = None) -> None:
+    """The command: UTF-8 output, the tool's log, then ``main``; exits with its code.
+    ``prog`` is the command its help shows (``python -m toolkit ids``)."""
     utf8_output()
     setup_logging("ids_cli")  # instance/logs/ids_cli.log; warnings also on the console
-    sys.exit(main(argv))
+    sys.exit(main(argv, prog))

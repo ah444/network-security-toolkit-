@@ -34,11 +34,12 @@ preview = true
 python_version = "3.11"
 strict = true
 files = ["toolkit/recon", "toolkit/web", "toolkit/ports.py", "toolkit/logging_setup.py",
-         "toolkit/config.py"]
+         "toolkit/config.py", "toolkit/cli.py", "toolkit/__main__.py"]
 
 # Imported for types only and not typed yet: read for their types, their errors not reported.
 [[tool.mypy.overrides]]
-module = ["toolkit.ids_core.*", "toolkit.bundle_files", "toolkit.run_files"]
+module = ["toolkit.ids_core.*", "toolkit.bundle_files", "toolkit.run_files",
+          "toolkit.ids_cli.*"]
 follow_imports = "silent"
 
 # Third-party libraries without type information: their names are Any for mypy.

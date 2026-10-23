@@ -13,9 +13,11 @@ scikit-learn version.
 
 from __future__ import annotations
 
+import argparse
 import logging
 import mimetypes
 import secrets
+from collections.abc import Sequence
 
 from flask import Flask
 
@@ -90,3 +92,14 @@ def run_server(config: WebConfig | None = None) -> None:
     else:
         from waitress import serve
         serve(app, host=host, port=port)
+
+
+def run(argv: Sequence[str] | None = None, prog: str | None = None) -> None:
+    """The command (``python -m toolkit web``, ``python -m toolkit.web``): no flags yet,
+    ``--help`` says what it does; then ``run_server``."""
+    argparse.ArgumentParser(
+        prog=prog,
+        description="The web trainer, on this computer only (127.0.0.1). Settings: "
+                    "environment variables TOOLKIT_PORT (default 5000), TOOLKIT_DEBUG and the "
+                    "other TOOLKIT_* settings in toolkit/config.py.").parse_args(argv)
+    run_server()

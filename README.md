@@ -130,19 +130,33 @@ git config core.hooksPath .githooks         # once per clone: lint, types + test
 
 ### Main Menu
 ```bash
-python main.py
+# From the project folder (python main.py does the same)
+python -m toolkit
 ```
 
 This launches an interactive menu with options:
 1. **Network Reconnaissance** - Port scanning and vulnerability detection
 2. **Intrusion Detection (CLI)** - Command-line ML-based IDS
 3. **Intrusion Detection (Web)** - Web-based IDS trainer
-4. **Exit**
+4. **Exit** (or `q`)
+
+Each tool runs on its own and the menu comes back when it ends (Ctrl+C stops a tool).
+Every tool can also be started directly with a command:
+
+| Command | Tool |
+|---|---|
+| `python -m toolkit scan` | Network reconnaissance |
+| `python -m toolkit ids` | IDS CLI |
+| `python -m toolkit web` | IDS web interface |
+
+`python -m toolkit --help` lists them and `python -m toolkit <command> --help` shows a tool's options.
 
 ### Network Reconnaissance
 ```bash
 # Run directly (from the project folder)
-python -m toolkit.recon.cli
+python -m toolkit scan
+# Scripts: confirm you are authorised to scan the target without the question
+python -m toolkit scan --i-am-authorized
 ```
 
 Features:
@@ -156,11 +170,11 @@ Features:
 ### IDS CLI
 ```bash
 # Interactive: lists your exports from the web trainer, you pick one
-python -m toolkit.ids_cli
+python -m toolkit ids
 # Label every row of a CSV file (with the newest export)
-python -m toolkit.ids_cli --csv flows.csv
+python -m toolkit ids --csv flows.csv
 # A specific export
-python -m toolkit.ids_cli --bundle "instance/bundles/<run id>.bundle"
+python -m toolkit ids --bundle "instance/bundles/<run id>.bundle"
 ```
 
 Train and export a model in the web trainer first; `--list` shows your exports and `--info` the chosen model's card.
@@ -168,7 +182,7 @@ Train and export a model in the web trainer first; `--list` shows your exports a
 ### IDS Web Interface
 ```bash
 # Run the web server (from the project folder)
-python -m toolkit.web
+python -m toolkit web
 ```
 
 Then open `http://localhost:5000` in your browser.
@@ -247,7 +261,7 @@ Customize data splits:
 
 ```
 Project/
-├── main.py                          # Main entry point
+├── main.py                          # Same as python -m toolkit
 ├── requirements.txt                 # Pinned runtime dependencies
 ├── requirements-dev.txt             # + pytest, ruff, mypy, pip-audit
 ├── requirements.lock                # Exact environment
@@ -264,6 +278,7 @@ Project/
 ├── tests/                           # pytest suite + small fixtures
 │
 ├── toolkit/                         # Shared package (printing and prompts only in web/, ids_cli/, recon/cli.py)
+│   ├── __main__.py, cli.py          # python -m toolkit: the menu and scan / ids / web
 │   ├── config.py                    # Settings, paths, .env reader
 │   ├── logging_setup.py             # Log files in instance/logs, secrets redacted
 │   ├── ports.py                     # ModelStore, IntelProvider, ProgressSink
@@ -271,10 +286,10 @@ Project/
 │   ├── ids_core/                    # Leakage-free ML core (see "ML core" below)
 │   ├── recon/                       # Scanner logic: targets, os_detect, probes registry,
 │   │   ├── intel/                   #   scanner, export; intel: NVD, OpenRouter, AbuseIPDB
-│   │   └── cli.py                   # The scanner's questions and printing (python -m toolkit.recon.cli)
-│   ├── ids_cli/                     # CLI IDS: predicts with your exports (python -m toolkit.ids_cli)
+│   │   └── cli.py                   # The scanner's questions and printing (python -m toolkit scan)
+│   ├── ids_cli/                     # CLI IDS: predicts with your exports (python -m toolkit ids)
 │   └── web/                         # Web trainer: create_app(), blueprints, workspaces
-│       ├── __main__.py              #   python -m toolkit.web (uploads: instance/uploads/, read and
+│       ├── __main__.py              #   python -m toolkit web (uploads: instance/uploads/, read and
 │       │                            #   deleted; exports: instance/bundles/; runs: instance/runs/)
 │       ├── templates/               # home.html, dynamic_ids.html
 │       └── static/                  # css/app.css, js/ (ES modules, main.js entry)

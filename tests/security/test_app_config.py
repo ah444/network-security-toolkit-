@@ -43,8 +43,8 @@ def test_main_block_uses_run_server(repo_root):
     package = (repo_root / "toolkit/web/__init__.py").read_text(encoding="utf-8")
     assert "debug=True" not in package.split("def run_server", 1)[0], "debug hard-coded"
     source = (repo_root / "toolkit/web/__main__.py").read_text(encoding="utf-8")
-    assert "debug=" not in source and ".run(" not in source, "python -m only calls run_server"
+    assert "debug=" not in source and ".run(" not in source, "python -m only calls run"
     tree = ast.parse(source)
     calls = [ast.unparse(n) for n in tree.body
              if isinstance(n, ast.Expr) and isinstance(n.value, ast.Call)]
-    assert calls == ["run_server()"]
+    assert calls == ["run()"]  # step 1.4b: its --help, then run_server (tests/cli/test_main_menu.py)

@@ -3,10 +3,11 @@
 Only scan systems you own or have written permission to test. Every scan asks for that
 confirmation first (or ``--i-am-authorized`` in scripts) and has host/port limits (S16).
 
-    python -m toolkit.recon.cli                     interactive
-    python -m toolkit.recon.cli --i-am-authorized   skip the authorization question (scripts)
+    python -m toolkit scan                     interactive
+    python -m toolkit scan --i-am-authorized   skip the authorization question (scripts)
 
-(from the project folder; moved from tools/Port_scan/Port_Scan.py in v5.1 step 1.4a)
+(from the project folder; ``python -m toolkit.recon.cli`` also works; moved from
+tools/Port_scan/Port_Scan.py in v5.1 step 1.4a)
 
 What leaves this computer (step 0.6, plan D13-D15):
 - CVE lookups send only the detected product and version (for example "OpenSSH 8.9") to
@@ -225,16 +226,17 @@ def scan_target(target: str, ports: range, protocols: Sequence[str], intel: Inte
     return entries
 
 
-def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
+def parse_args(argv: Sequence[str] | None = None,
+               prog: str | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Port scanner. Only scan systems you are authorised to scan.")
+        prog=prog, description="Port scanner. Only scan systems you are authorised to scan.")
     parser.add_argument("--i-am-authorized", action="store_true",
                         help="confirm you are authorised to scan the target (for scripts)")
     return parser.parse_args(argv)
 
 
-def main(argv: Sequence[str] | None = None) -> int:
-    args = parse_args(argv)
+def main(argv: Sequence[str] | None = None, prog: str | None = None) -> int:
+    args = parse_args(argv, prog)
     try:
         limits = scan_limits()
     except ValueError as error:
@@ -315,11 +317,12 @@ def utf8_output() -> None:
             stream.reconfigure(encoding="utf-8", errors="replace")
 
 
-def run(argv: Sequence[str] | None = None) -> None:
-    """The command: UTF-8 output, the tool's log, then ``main``; exits with its code."""
+def run(argv: Sequence[str] | None = None, prog: str | None = None) -> None:
+    """The command: UTF-8 output, the tool's log, then ``main``; exits with its code.
+    ``prog`` is the command its help shows (``python -m toolkit scan``)."""
     utf8_output()
     setup_logging("scanner")  # instance/logs/scanner.log; warnings also on the console
-    sys.exit(main(argv))
+    sys.exit(main(argv, prog))
 
 
 if __name__ == "__main__":
