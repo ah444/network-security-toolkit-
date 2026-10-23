@@ -2,7 +2,9 @@
 IntelProviders (``toolkit.ports.IntelProvider``): NVD, OpenRouter, AbuseIPDB.
 """
 
+import threading
 from collections.abc import Iterable, Mapping
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any, TypedDict
 
 import requests
@@ -11,7 +13,7 @@ from ...ports import CveEntry, IntelFinding, IntelProvider
 from .abuseipdb import AbuseIpdbProvider
 from .keys import ai_model
 from .llm import OpenRouterProvider
-from .lookup import INTEL_TIMEOUT, LOOKUP_ERRORS, describe
+from .lookup import INTEL_TIMEOUT, INTEL_WORKERS, LOOKUP_ERRORS, describe
 from .nvd import NvdProvider
 
 
@@ -26,8 +28,9 @@ class LookupResult(TypedDict):
 
 
 class Intel:
-    """Online lookups for open ports, one at a time, each with a timeout (R3). A failed
-    lookup is recorded and the scan goes on.
+    """Online lookups for open ports, each with a timeout (R3); ``lookup_many`` runs up to
+    INTEL_WORKERS at a time (step 1.4e). A failed lookup is recorded and the scan goes on;
+    a product looked up without an error is not sent again in this scan.
 
     The sources are IntelProviders: by default NVD, plus OpenRouter after consent and
     AbuseIPDB when there is a key; ``providers`` replaces them (offline sources, tests).
@@ -51,6 +54,8 @@ class Intel:
                 defaults.append(AbuseIpdbProvider(self.session, keys["abuseipdb"], timeout))
             providers = defaults
         self.providers = list(providers)
+        self._done: dict[str, LookupResult] = {}  # products looked up without an error
+        self._lock = threading.Lock()
 
     def _ask(self, kind: str, subject: str, errors: list[str]) -> list[IntelFinding]:
         """Findings of every provider of ``kind``; failures go to ``errors``."""
@@ -63,7 +68,11 @@ class Intel:
         return found
 
     def lookup(self, software: str) -> LookupResult:
-        """CVEs, worst CVSS severity and the optional AI text for one product."""
+        """CVEs, worst CVSS severity and the optional AI text for one product; once per
+        scan, unless it failed (then it is tried again the next time, e.g. on the next host)."""
+        with self._lock:
+            if software in self._done:
+                return self._done[software]
         result: LookupResult = {"cves": [], "max_cvss": None, "severity": "UNKNOWN",
                                 "ai_explanation": "", "errors": []}
         answers = self._ask("cves", software, result["errors"])
@@ -75,7 +84,30 @@ class Intel:
             result["severity"] = worst["severity"] if worst else "NO KNOWN CVE"
         texts = self._ask("explanation", software, result["errors"])
         result["ai_explanation"] = "\n\n".join(t.text for t in texts if t.text)
+        if not result["errors"]:
+            with self._lock:
+                self._done[software] = result
         return result
+
+    def lookup_many(self, products: Iterable[str],
+                    workers: int = INTEL_WORKERS) -> dict[str, LookupResult]:
+        """``lookup`` of each distinct product, up to ``workers`` at a time; in the order
+        given. On Ctrl+C the queued lookups are cancelled (running ones end within their
+        timeout)."""
+        distinct = list(dict.fromkeys(products))
+        if not distinct:
+            return {}
+        results: dict[str, LookupResult] = {}
+        with ThreadPoolExecutor(max_workers=min(workers, len(distinct)),
+                                thread_name_prefix="intel") as executor:
+            futures = {executor.submit(self.lookup, product): product for product in distinct}
+            try:
+                for future in as_completed(futures):
+                    results[futures[future]] = future.result()
+            except BaseException:
+                executor.shutdown(wait=False, cancel_futures=True)
+                raise
+        return {product: results[product] for product in distinct}
 
     def abuse_report(self, ip: str) -> tuple[dict[str, Any] | None, str | None]:
         """(reputation data, error message)."""

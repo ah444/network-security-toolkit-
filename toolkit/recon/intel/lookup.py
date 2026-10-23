@@ -5,6 +5,7 @@
 import requests
 
 INTEL_TIMEOUT = 15  # seconds per lookup: a slow service can't stop the scan
+INTEL_WORKERS = 4  # lookups at a time (step 1.4e); more wouldn't help: NVD limits the rate
 
 
 def describe(error: BaseException) -> str:

@@ -3,6 +3,7 @@ the CVSS score, never taken from the AI (S13).
 """
 
 import re
+import threading
 import time
 from collections.abc import Mapping
 from typing import Any
@@ -60,7 +61,9 @@ def parse_nvd(data: Mapping[str, Any]) -> list[CveEntry]:
 
 class NvdProvider:
     """CVEs from the NVD CVE API 2.0 keyword search (IntelProvider, kind "cves"); keeps
-    NVD's request spacing and caches each product's answer."""
+    NVD's request spacing and caches each product's answer. Thread-safe (step 1.4e): each
+    request takes the next start slot, NVD_INTERVAL after the previous request's start, so
+    parallel lookups never start more than NVD's limit in any 30 s."""
 
     name = "NVD"
     kind = "cves"
@@ -71,21 +74,25 @@ class NvdProvider:
         self.key = key
         self.timeout = timeout
         self._cache: dict[str, IntelFinding] = {}
-        self._next = 0.0
+        self._next = 0.0  # the earliest start of the next request (time.monotonic)
+        self._lock = threading.Lock()
 
     def lookup(self, subject: str) -> IntelFinding:
-        if subject not in self._cache:
-            wait = self._next - time.monotonic()
-            if wait > 0:
-                time.sleep(wait)
-            params: dict[str, str | int] = {"keywordSearch": subject,
-                                            "resultsPerPage": NVD_RESULTS}
-            try:
-                response = self.session.get(
-                    NVD_URL, params=params,
-                    headers={"apiKey": self.key} if self.key else {}, timeout=self.timeout)
-            finally:
-                self._next = time.monotonic() + NVD_INTERVAL[bool(self.key)]
-            response.raise_for_status()
-            self._cache[subject] = IntelFinding(cves=tuple(parse_nvd(response.json())))
-        return self._cache[subject]
+        with self._lock:
+            cached = self._cache.get(subject)
+            if cached is not None:
+                return cached
+            start = max(time.monotonic(), self._next)
+            self._next = start + NVD_INTERVAL[bool(self.key)]
+        wait = start - time.monotonic()
+        if wait > 0:
+            time.sleep(wait)
+        params: dict[str, str | int] = {"keywordSearch": subject, "resultsPerPage": NVD_RESULTS}
+        response = self.session.get(NVD_URL, params=params,
+                                    headers={"apiKey": self.key} if self.key else {},
+                                    timeout=self.timeout)
+        response.raise_for_status()
+        finding = IntelFinding(cves=tuple(parse_nvd(response.json())))
+        with self._lock:
+            self._cache[subject] = finding
+        return finding

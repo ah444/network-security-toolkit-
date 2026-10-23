@@ -31,6 +31,9 @@ class FakeIntel:
         return {"cves": [], "max_cvss": None, "severity": "UNKNOWN", "ai_explanation": "",
                 "errors": []}
 
+    def lookup_many(self, products):
+        return {product: self.lookup(product) for product in products}
+
     def abuse_report(self, ip):
         self.abuse_checked.append(ip)
         return {"ipAddress": ip, "abuseConfidenceScore": 0}, None

@@ -45,6 +45,7 @@ from ..logging_setup import add_secrets, setup_logging
 from .export import EXPORT_FORMATS, ReportEntry, export_results, make_entry
 from .intel import Intel, LookupResult
 from .intel.keys import KEY_VARIABLES, ai_model, legacy_key_file_notice, load_api_keys
+from .intel.lookup import INTEL_WORKERS
 from .os_detect import guess_os, ping_host
 from .probes import product_version
 from .scanner import PortResult, scan_ports
@@ -307,12 +308,19 @@ def scan_target(target: str, request: ScanRequest, intel: Intel) -> list[ReportE
         return []
 
     print_table(open_ports, "OPEN PORTS")
+    products = [product_version(result.banner) for result in open_ports]
+    distinct = [software for software in dict.fromkeys(products) if software]
+    if len(distinct) > 1:
+        print(f"\nLooking up {len(distinct)} products online (up to {INTEL_WORKERS} at a "
+              "time)...")
+    elif distinct:
+        print("\nLooking up 1 product online...")
+    looked_up = intel.lookup_many(distinct)  # each product once, in parallel (step 1.4e)
     print("\nVulnerability details per open port:")
     entries: list[ReportEntry] = []
-    for result in open_ports:
-        software = product_version(result.banner)
+    for result, software in zip(open_ports, products, strict=True):
         found: LookupResult = (
-            intel.lookup(software) if software else
+            looked_up[software] if software else
             {"cves": [], "max_cvss": None, "severity": "UNKNOWN", "ai_explanation": "",
              "errors": []})
         entry = make_entry(target, result, software, found)

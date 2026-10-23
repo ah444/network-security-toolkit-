@@ -1,4 +1,4 @@
-"""R3: lookups run one at a time, each with a timeout; a scan always finishes."""
+"""R3: every lookup has a timeout; a scan always finishes (parallel since step 1.4e)."""
 
 import builtins
 
