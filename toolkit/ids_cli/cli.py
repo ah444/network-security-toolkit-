@@ -5,10 +5,12 @@ Predicts with the models you export from the web trainer: the features, classes 
 model come from the bundle itself (plan D5, step 0.5). No model is shipped with the
 project: train one in the web trainer and click Export (saved in instance/bundles).
 
-    python IDS_with_Machine_Learning.py                     interactive: choose an export
-    python IDS_with_Machine_Learning.py --list              list the exports
-    python IDS_with_Machine_Learning.py --csv flows.csv     label every row (newest export)
-    python IDS_with_Machine_Learning.py --bundle my.bundle --json '{"Flow Duration": 3, ...}'
+    python -m toolkit.ids_cli                     interactive: choose an export
+    python -m toolkit.ids_cli --list              list the exports
+    python -m toolkit.ids_cli --csv flows.csv     label every row (newest export)
+    python -m toolkit.ids_cli --bundle my.bundle --json '{"Flow Duration": 3, ...}'
+
+(from the project folder; moved from tools/IDS/IDS_CLI - CIC-2017/ in v5.1 step 1.4a)
 
 Trust (D11): a bundle is opened only if it is signed by this install's key
 (instance/signing.key). Nothing else is ever opened.
@@ -23,17 +25,12 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-# The toolkit package lives at the repo root and isn't installed yet (v5.1 packaging).
-REPO_ROOT = Path(__file__).resolve().parents[3]
-if str(REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(REPO_ROOT))
-
-from toolkit.bundle_files import BundleStore  # noqa: E402
-from toolkit.ids_core.bundle import BundleError, BundleVersionWarning  # noqa: E402
-from toolkit.ids_core.datasets import DatasetError, load_dataset  # noqa: E402
-from toolkit.ids_core.registry import MODELS  # noqa: E402
-from toolkit.logging_setup import setup_logging  # noqa: E402
-from toolkit.ports import ModelStore  # noqa: E402
+from ..bundle_files import BundleStore
+from ..ids_core.bundle import BundleError, BundleVersionWarning
+from ..ids_core.datasets import DatasetError, load_dataset
+from ..ids_core.registry import MODELS
+from ..logging_setup import setup_logging
+from ..ports import ModelStore
 
 MODEL_STORE: ModelStore = BundleStore()  # this install's exports (instance/bundles)
 LARGE_BUNDLE = 500 * 2**20  # bytes: say that loading takes a while
@@ -406,7 +403,8 @@ def utf8_output():
             stream.reconfigure(encoding="utf-8")
 
 
-if __name__ == "__main__":
+def run(argv=None):
+    """The command: UTF-8 output, the tool's log, then ``main``; exits with its code."""
     utf8_output()
     setup_logging("ids_cli")  # instance/logs/ids_cli.log; warnings also on the console
-    sys.exit(main())
+    sys.exit(main(argv))

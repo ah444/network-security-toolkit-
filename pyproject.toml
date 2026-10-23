@@ -26,7 +26,6 @@ preview = true
 # New code must be clean. Remove a code from this list in the same commit
 # that fixes it (ratchet: the list only ever shrinks).
 [tool.ruff.lint.per-file-ignores]
-"tools/IDS/IDS_CLI - CIC-2017/IDS_with_Machine_Learning.py" = ["F401", "B904", "E722"]
 "tests/**" = ["S101"]
 
 # Strict typing for the new toolkit modules (v5.1 steps 1.1e, 1.2b); a module joins the list once

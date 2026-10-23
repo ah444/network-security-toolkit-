@@ -1,4 +1,4 @@
-"""S15: API keys from the environment or .env, with api_keys.txt as a fallback."""
+"""S15: API keys from the environment or .env (api_keys.txt is no longer read, step 1.4a)."""
 
 import logging
 
@@ -7,23 +7,33 @@ from toolkit.recon.intel import keys as intel_keys
 
 
 def test_env_overrides_file(tmp_path, caplog):
-    key_file = tmp_path / "api_keys.txt"
-    key_file.write_text("# comment\nopenrouter=from-file\nabuseipdb=your_abuseipdb_api_key_here\n"
-                        "nvd = file-nvd \n", encoding="utf-8")
     env_file = tmp_path / ".env"
-    env_file.write_text('export NVD_API_KEY="from-dotenv"\nABUSEIPDB_API_KEY=\n',
-                        encoding="utf-8")
+    env_file.write_text('export NVD_API_KEY="from-dotenv"\nABUSEIPDB_API_KEY=\n'
+                        "OPENROUTER_API_KEY=from-dotenv\n", encoding="utf-8")
     environ = {"OPENROUTER_API_KEY": "from-env"}
-    keys = intel_keys.load_api_keys(environ, key_file, env_file)
+    keys = intel_keys.load_api_keys(environ, env_file)
     assert keys == {"openrouter": "from-env", "abuseipdb": "", "nvd": "from-dotenv"}
-    assert intel_keys.load_api_keys({}, key_file, tmp_path / "none.env")["nvd"] == "file-nvd"
     assert intel_keys.load_api_keys({"OPENROUTER_API_KEY": "your_openrouter_api_key_here"},
-                                    key_file, env_file)["openrouter"] == "from-file"
+                                    env_file)["openrouter"] == "from-dotenv"
+
+
+def test_old_key_file_is_not_read_but_noticed(tmp_path, scanner, monkeypatch, capsys):
+    """Step 1.4a: tools/ is gone; an api_keys.txt left there is named once, never read."""
+    old = tmp_path / "api_keys.txt"
+    assert intel_keys.legacy_key_file_notice(old) is None
+    old.write_text("nvd=old-file-key\n", encoding="utf-8")
+    notice = intel_keys.legacy_key_file_notice(old)
+    assert notice and "no longer read" in notice and ".env" in notice
+    assert intel_keys.load_api_keys({}, tmp_path / "none.env")["nvd"] == ""
+    monkeypatch.setattr(intel_keys.legacy_key_file_notice, "__defaults__", (old,))
+    monkeypatch.setattr("builtins.input", lambda prompt="": "")  # empty target: stops at once
+    assert scanner.main([]) == 2
+    assert capsys.readouterr().out.count("no longer read") == 1
 
 
 def test_missing_key_files_are_not_errors(tmp_path, caplog):
     with caplog.at_level(logging.WARNING):
-        keys = intel_keys.load_api_keys({}, tmp_path / "missing.txt", tmp_path / "missing.env")
+        keys = intel_keys.load_api_keys({}, tmp_path / "missing.env")
     assert keys == {"openrouter": "", "abuseipdb": "", "nvd": ""}
     assert caplog.records == []
 

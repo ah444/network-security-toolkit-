@@ -1,8 +1,10 @@
 """Module boundaries of the toolkit package (plan §2, v5.1 step 1.1a).
 
 The package is a modular monolith: the ML core (``ids_core``) and the scanner (``recon``)
-never import each other, nothing in ``toolkit`` imports the old ``tools/`` scripts or a
-presentation module, and only presentation modules may print or use the web framework.
+never import each other, nothing in ``toolkit`` imports the old ``tools/`` scripts (gone
+since v5.1 step 1.4a) or a presentation module, and only presentation modules may print or
+use the web framework. Presentation is ``web``, ``ids_cli`` and any ``cli`` or ``__main__``
+module (``toolkit/recon/cli.py`` is the scanner's user side).
 The ML-core-only rules (no network) are in ``tests/ml/test_core_rules.py``.
 """
 
@@ -10,6 +12,7 @@ import ast
 from pathlib import Path
 
 PRESENTATION = {"web", "ids_cli", "cli", "__main__"}  # first name under toolkit/
+USER_SIDE = {"cli", "__main__"}  # a module with this last name talks to the user
 WEB_FRAMEWORK = {"flask", "werkzeug", "jinja2", "waitress"}
 INDEPENDENT = ("ids_core", "recon")
 
@@ -40,6 +43,10 @@ def _imported(tree: ast.AST, module: str, is_package: bool) -> list[str]:
     return names
 
 
+def _presentation(module: str) -> bool:
+    return _area(module) in PRESENTATION or module.split(".")[-1] in USER_SIDE
+
+
 def _area(module: str) -> str:
     """``toolkit.recon.scanner`` -> ``recon``; top-level modules give their own name."""
     parts = module.split(".")
@@ -53,7 +60,7 @@ def boundary_violations(root: Path) -> list[str]:
         module, is_package = _module_name(path, root)
         tree = ast.parse(path.read_text(encoding="utf-8"))
         area = _area(module)
-        presentation = area in PRESENTATION
+        presentation = _presentation(module)
         for name in _imported(tree, module, is_package):
             top = name.split(".")[0]
             if top == "tools":
@@ -62,7 +69,7 @@ def boundary_violations(root: Path) -> list[str]:
                 other = _area(name)
                 if other in INDEPENDENT and other != area:
                     found.append(f"{module} imports {name} ({area} and {other} are independent)")
-            if not presentation and top == "toolkit" and _area(name) in PRESENTATION:
+            if not presentation and top == "toolkit" and _presentation(name):
                 found.append(f"{module} imports the presentation module {name}")
             if not presentation and top in WEB_FRAMEWORK:
                 found.append(f"{module} imports the web framework ({name})")
@@ -89,6 +96,8 @@ def test_each_boundary_rule_is_detected(tmp_path):
         "toolkit/ids_core/split.py": "from ..recon import scanner\n",
         "toolkit/recon/__init__.py": "",
         "toolkit/recon/scanner.py": "import flask\nprint('scanning')\n",
+        "toolkit/recon/cli.py": "from .scanner import scan\nprint('ok')\n",
+        "toolkit/recon/export.py": "from .cli import main\n",
         "toolkit/recon/nvd.py": "from toolkit.ids_core.runs import train\n",
         "toolkit/web/__init__.py": "import flask\nfrom toolkit.recon import scanner\nprint('ok')\n",
     }
@@ -105,5 +114,15 @@ def test_each_boundary_rule_is_detected(tmp_path):
     assert "toolkit.recon.nvd imports toolkit.ids_core.runs " in found
     assert "toolkit.recon.scanner imports the web framework (flask)" in found
     assert "toolkit.recon.scanner calls print() at lines [2]" in found
-    assert not [v for v in violations if v.startswith("toolkit.web")]  # presentation may
-    assert len(violations) == 6
+    assert "toolkit.recon.export imports the presentation module toolkit.recon.cli" in found
+    assert not [v for v in violations if v.startswith(("toolkit.web", "toolkit.recon.cli"))]
+    assert len(violations) == 7
+
+
+def test_no_tools_folder_in_git(repo_root):
+    """Step 1.4a: the scripts moved into toolkit/; git tracks nothing under tools/."""
+    import subprocess
+
+    tracked = subprocess.run(["git", "ls-files", "tools"], cwd=repo_root, capture_output=True,
+                             text=True, encoding="utf-8", check=True).stdout.split()
+    assert tracked == []

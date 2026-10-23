@@ -3,8 +3,10 @@
 Only scan systems you own or have written permission to test. Every scan asks for that
 confirmation first (or ``--i-am-authorized`` in scripts) and has host/port limits (S16).
 
-    python Port_Scan.py                     interactive
-    python Port_Scan.py --i-am-authorized   skip the authorization question (scripts)
+    python -m toolkit.recon.cli                     interactive
+    python -m toolkit.recon.cli --i-am-authorized   skip the authorization question (scripts)
+
+(from the project folder; moved from tools/Port_scan/Port_Scan.py in v5.1 step 1.4a)
 
 What leaves this computer (step 0.6, plan D13-D15):
 - CVE lookups send only the detected product and version (for example "OpenSSH 8.9") to
@@ -16,11 +18,11 @@ What leaves this computer (step 0.6, plan D13-D15):
 
 API keys (all optional): environment variables OPENROUTER_API_KEY, ABUSEIPDB_API_KEY,
 NVD_API_KEY (and OPENROUTER_MODEL), or the same lines in a .env file in the project
-folder, or api_keys.txt next to this script (see api_keys.example.txt) (S15).
-Results are saved as UTF-8 in instance/scans/, never overwriting a file (B12, S14).
+folder (S15). Results are saved as UTF-8 in instance/scans/, never overwriting a file
+(B12, S14).
 
 The scanning logic is in ``toolkit.recon`` (targets, ping and OS guess, probes registry,
-scanner, online lookups, export); this script only talks to the user (v5.1 step 1.1d).
+scanner, online lookups, export); this module only talks to the user (v5.1 step 1.1d).
 """
 
 from __future__ import annotations
@@ -29,28 +31,19 @@ import argparse
 import sys
 import threading
 import time
-from pathlib import Path
+from collections.abc import Mapping, Sequence
+from typing import Any
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-if str(REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(REPO_ROOT))
-
-from toolkit.config import scan_limits  # noqa: E402
-from toolkit.logging_setup import add_secrets, setup_logging  # noqa: E402
-from toolkit.recon.export import EXPORT_FORMATS, export_results, make_entry  # noqa: E402
-from toolkit.recon.intel import Intel  # noqa: E402
-from toolkit.recon.intel.keys import ai_model, load_api_keys  # noqa: E402
-from toolkit.recon.os_detect import guess_os, ping_host  # noqa: E402
-from toolkit.recon.probes import product_version  # noqa: E402
-from toolkit.recon.scanner import scan_ports  # noqa: E402
-from toolkit.recon.targets import (  # noqa: E402
-    check_limits,
-    is_ip_literal,
-    is_public_ip,
-    parse_port_range,
-    parse_target,
-)
-from toolkit.recon.text import one_line  # noqa: E402
+from ..config import scan_limits
+from ..logging_setup import add_secrets, setup_logging
+from .export import EXPORT_FORMATS, ReportEntry, export_results, make_entry
+from .intel import Intel, LookupResult
+from .intel.keys import ai_model, legacy_key_file_notice, load_api_keys
+from .os_detect import guess_os, ping_host
+from .probes import product_version
+from .scanner import PortResult, scan_ports
+from .targets import check_limits, is_ip_literal, is_public_ip, parse_port_range, parse_target
+from .text import one_line
 
 # --- Authorization (S16) ----------------------------------------------------------------------
 
@@ -59,7 +52,7 @@ AUTHORIZATION = ("\nOnly scan systems you own or have written permission to test
                  "{target}: ")
 
 
-def confirm_authorized(target, flag=False):
+def confirm_authorized(target: str, flag: bool = False) -> bool:
     """True if the user confirms (or passed --i-am-authorized)."""
     if flag:
         return True
@@ -72,15 +65,15 @@ class ConsoleProgress:
     """ProgressSink for verbose mode: prints the progress line every ``interval`` seconds
     from its own thread (a slow port can't freeze it), then the final 100 % line."""
 
-    def __init__(self, interval=2):
+    def __init__(self, interval: float = 2) -> None:
         self.interval = interval
         self._total = 0
         self._done = 0
         self._lock = threading.Lock()
         self._stop = threading.Event()
-        self._thread = None
+        self._thread: threading.Thread | None = None
 
-    def start(self, total):
+    def start(self, total: int) -> None:
         self._total, self._done = total, 0
         self._stop.clear()
         if total > 0:  # nothing to show (and no division by zero) for 0 tasks
@@ -88,11 +81,11 @@ class ConsoleProgress:
             self._thread = threading.Thread(target=self._repeat, daemon=True)
             self._thread.start()
 
-    def advance(self, done=1):
+    def advance(self, done: int = 1) -> None:
         with self._lock:
             self._done += done
 
-    def finish(self):
+    def finish(self) -> None:
         if self._thread is None:
             return
         self._stop.set()
@@ -101,11 +94,11 @@ class ConsoleProgress:
         self._write()
         print("\nProgress: 100.00% complete")
 
-    def _repeat(self):
+    def _repeat(self) -> None:
         while not self._stop.wait(self.interval):
             self._write()
 
-    def _write(self):
+    def _write(self) -> None:
         with self._lock:
             done = self._done
         sys.stdout.write(f"\rProgress: {done / self._total * 100:.2f}% complete | "
@@ -122,7 +115,7 @@ ABUSE_FIELDS = (
 )
 
 
-def print_abuse_report(data):
+def print_abuse_report(data: Mapping[str, Any]) -> None:
     for field in ABUSE_FIELDS:
         value = data.get(field, "N/A")
         if isinstance(value, list):
@@ -130,7 +123,7 @@ def print_abuse_report(data):
         print(f"  {field}: {one_line(value, 200)}")
 
 
-def print_table(results, title):
+def print_table(results: Sequence[PortResult], title: str) -> None:
     print(f"\n{title}")
     header = f"| {'PORT':^9} | {'STATE':^7} | {'SERVICE':^10} | {'BANNER':^40} |"
     separator = "+" + "-" * (len(header) - 2) + "+"
@@ -143,7 +136,7 @@ def print_table(results, title):
     print(separator)
 
 
-def print_entry(entry):
+def print_entry(entry: ReportEntry) -> None:
     print(f"\nPort: {entry['port']}/{entry['protocol']}")
     print(f"Service: {entry['service']}")
     print(f"Banner: {one_line(entry['banner'], 200)}")
@@ -166,11 +159,11 @@ def print_entry(entry):
 
 # --- Interactive scan -------------------------------------------------------------------------
 
-def ask_yes_no(question):
+def ask_yes_no(question: str) -> bool:
     return input(question).strip().lower() in ("y", "yes")
 
 
-def ask_protocols():
+def ask_protocols() -> list[str]:
     while True:
         choice = input("Select protocol for scanning (TCP/UDP/both): ").strip().lower()
         if choice in ("tcp", "udp"):
@@ -180,7 +173,8 @@ def ask_protocols():
         print("Please type TCP, UDP or both.")
 
 
-def scan_target(target, ports, protocols, intel, verbose):
+def scan_target(target: str, ports: range, protocols: Sequence[str], intel: Intel,
+                verbose: bool) -> list[ReportEntry]:
     """Scan one host and look up its open ports; returns the report entries."""
     if is_public_ip(target):
         if not intel.keys.get("abuseipdb"):
@@ -188,7 +182,7 @@ def scan_target(target, ports, protocols, intel, verbose):
         elif ask_yes_no(f"Send {target} to AbuseIPDB to check its reputation? (Y/N): "):
             data, error = intel.abuse_report(target)
             print(f"\nAbuseIPDB reputation info for {target}:")
-            if error:
+            if data is None:  # the lookup failed: error says why
                 print(f"  Lookup failed: {error}")
             else:
                 print_abuse_report(data)
@@ -218,19 +212,20 @@ def scan_target(target, ports, protocols, intel, verbose):
 
     print_table(open_ports, "OPEN PORTS")
     print("\nVulnerability details per open port:")
-    entries = []
+    entries: list[ReportEntry] = []
     for result in open_ports:
         software = product_version(result.banner)
-        found = (intel.lookup(software) if software else
-                 {"cves": [], "max_cvss": None, "severity": "UNKNOWN", "ai_explanation": "",
-                  "errors": []})
+        found: LookupResult = (
+            intel.lookup(software) if software else
+            {"cves": [], "max_cvss": None, "severity": "UNKNOWN", "ai_explanation": "",
+             "errors": []})
         entry = make_entry(target, result, software, found)
         print_entry(entry)
         entries.append(entry)
     return entries
 
 
-def parse_args(argv=None):
+def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Port scanner. Only scan systems you are authorised to scan.")
     parser.add_argument("--i-am-authorized", action="store_true",
@@ -238,15 +233,18 @@ def parse_args(argv=None):
     return parser.parse_args(argv)
 
 
-def main(argv=None):
+def main(argv: Sequence[str] | None = None) -> int:
     args = parse_args(argv)
     try:
         limits = scan_limits()
     except ValueError as error:
         print(error)
         return 2
+    notice = legacy_key_file_notice()
+    if notice:
+        print(notice)
     keys = load_api_keys()
-    add_secrets(*keys.values())  # keys from .env / api_keys.txt never reach the log
+    add_secrets(*keys.values())  # keys from the environment / .env never reach the log
     start_time = time.time()
 
     target_text = input("Enter target IP (IPv4 or IPv6), network (e.g. 192.168.1.0/24) "
@@ -283,7 +281,7 @@ def main(argv=None):
     print("CVE lookups send only the detected software name and version to the NVD API "
           "(services.nvd.nist.gov).")
 
-    entries = []
+    entries: list[ReportEntry] = []
     for target in targets:
         entries.extend(scan_target(target, ports, protocols, intel, verbose))
         print("=" * 60)
@@ -309,7 +307,7 @@ def main(argv=None):
     return 0
 
 
-def utf8_output():
+def utf8_output() -> None:
     """UTF-8 output even when redirected (Windows would use cp1252 and crash on banners)."""
     for stream in (sys.stdout, sys.stderr):
         if hasattr(stream, "reconfigure") and \
@@ -317,7 +315,12 @@ def utf8_output():
             stream.reconfigure(encoding="utf-8", errors="replace")
 
 
-if __name__ == "__main__":
+def run(argv: Sequence[str] | None = None) -> None:
+    """The command: UTF-8 output, the tool's log, then ``main``; exits with its code."""
     utf8_output()
     setup_logging("scanner")  # instance/logs/scanner.log; warnings also on the console
-    sys.exit(main())
+    sys.exit(main(argv))
+
+
+if __name__ == "__main__":
+    run()

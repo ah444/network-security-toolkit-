@@ -1,38 +1,31 @@
 """Fixtures for the port scanner tests (step 0.6). No test reaches the internet."""
 
-import importlib.util
 import socket
-import sys
 import threading
 
 import pytest
 
+from toolkit.recon import cli
 from toolkit.recon.intel import nvd
 from toolkit.recon.intel import keys as intel_keys
 
-SCANNER_FILE = "tools/Port_scan/Port_Scan.py"
-
 
 @pytest.fixture(scope="module")
-def scanner(request):
-    """Import the scanner script as a module."""
-    path = request.config.rootpath / SCANNER_FILE
-    spec = importlib.util.spec_from_file_location("port_scan_under_test", path)
-    module = importlib.util.module_from_spec(spec)
-    sys.modules["port_scan_under_test"] = module
-    spec.loader.exec_module(module)
-    return module
+def scanner():
+    """The scanner's user side (``toolkit/recon/cli.py`` since v5.1 step 1.4a)."""
+    return cli
 
 
 @pytest.fixture(autouse=True)
 def _no_real_keys(scanner, monkeypatch, tmp_path):
-    """The user's own API keys (environment, .env, api_keys.txt) are never used in tests."""
+    """The user's own API keys (environment, .env) are never used in tests, and an old
+    tools/Port_scan/api_keys.txt on this computer doesn't change what they print."""
     for variable in (*intel_keys.KEY_VARIABLES.values(), "OPENROUTER_MODEL"):
         monkeypatch.delenv(variable, raising=False)
-    monkeypatch.setattr(intel_keys, "API_KEYS_PATH", tmp_path / "no_api_keys.txt")
     monkeypatch.setattr(intel_keys, "ENV_PATH", tmp_path / "no.env")
-    monkeypatch.setattr(intel_keys.load_api_keys, "__defaults__",
-                        (None, tmp_path / "no_api_keys.txt", tmp_path / "no.env"))
+    monkeypatch.setattr(intel_keys.load_api_keys, "__defaults__", (None, tmp_path / "no.env"))
+    monkeypatch.setattr(intel_keys.legacy_key_file_notice, "__defaults__",
+                        (tmp_path / "no_api_keys.txt",))
 
 
 @pytest.fixture

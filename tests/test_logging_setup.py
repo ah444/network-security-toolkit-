@@ -9,9 +9,8 @@ import pytest
 from toolkit import logging_setup
 from toolkit.config import log_level
 
-TOOL_FILES = ("main.py", "tools/Port_scan/Port_Scan.py", "tools/IDS/IDS_Web_CIC_Dynamic/app.py",
-              "toolkit/web/__init__.py",
-              "tools/IDS/IDS_CLI - CIC-2017/IDS_with_Machine_Learning.py")
+TOOL_FILES = ("main.py", "toolkit/recon/cli.py", "toolkit/web/__main__.py",
+              "toolkit/web/__init__.py", "toolkit/ids_cli/cli.py")
 
 
 @pytest.fixture

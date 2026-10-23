@@ -20,8 +20,9 @@ from toolkit.ids_core import bundle as core_bundle
 from toolkit.ids_core.datasets import load_dataset
 from web_jobs import train_and_wait
 
-MODELS = "tools/IDS/IDS_CLI - CIC-2017/models"
-CLI_FILE = "tools/IDS/IDS_CLI - CIC-2017/IDS_with_Machine_Learning.py"
+CLI_DIR = "toolkit/ids_cli"
+CLI_FILE = "toolkit/ids_cli/cli.py"
+MODELS_README = "docs/ids_cli_models.md"
 CIC = "cic_ddos_sample.csv"
 TARGET = "Label"
 
@@ -127,8 +128,8 @@ def test_cli_refuses_untrusted_files(cli_module, exported, tmp_path, monkeypatch
 def test_cli_output_redirected(exported, repo_root):
     """Redirected output is cp1252 on Windows by default: the emoji must not crash it."""
     env = {k: v for k, v in os.environ.items() if k not in ("PYTHONIOENCODING", "PYTHONUTF8")}
-    result = subprocess.run([sys.executable, str(repo_root / CLI_FILE), "--bundle", str(exported),
-                             "--info"], capture_output=True, env=env, timeout=120)
+    result = subprocess.run([sys.executable, "-m", "toolkit.ids_cli", "--bundle", str(exported),
+                             "--info"], capture_output=True, env=env, timeout=120, cwd=repo_root)
     assert result.returncode == 0, result.stderr.decode("utf-8", "replace")
     assert "📦 Model bundle" in result.stdout.decode("utf-8")
 
@@ -220,17 +221,19 @@ def test_interactive_chooses_an_export(cli_module, two_exports, monkeypatch, cap
 
 
 def test_nothing_is_shipped_with_the_cli(repo_root):
-    models = repo_root / MODELS
-    assert sorted(p.name for p in models.iterdir()) == ["README.md"]
+    shipped = sorted(p.name for p in (repo_root / CLI_DIR).iterdir() if p.name != "__pycache__")
+    assert shipped == ["__init__.py", "__main__.py", "cli.py"], "code only, no model files"
     assert not (repo_root / "scripts" / "pin_default_model.py").exists()
-    card = (models / "README.md").read_text(encoding="utf-8")
+    card = (repo_root / MODELS_README).read_text(encoding="utf-8")
     assert "Export" in card and "instance/bundles" in card
 
 
 def test_no_v4_artifacts_remain(repo_root):
-    models = repo_root / MODELS
-    assert not list(models.glob("*.pkl")), "v4 pickles must be deleted"
-    assert not (models / "config.json").exists(), "v4 config.json lists the leaky feature"
+    tracked = subprocess.run(["git", "ls-files"], cwd=repo_root, capture_output=True,
+                             text=True, encoding="utf-8").stdout.splitlines()
+    assert not [p for p in tracked if p.endswith(".pkl")], "v4 pickles must be deleted"
+    assert not [p for p in tracked if p.endswith("models/config.json")], \
+        "v4 config.json lists the leaky feature"
     source = (repo_root / CLI_FILE).read_text(encoding="utf-8")
     for leftover in ("Attempted Category", "pickle", "scaler.pkl", "label_encoder"):
         assert leftover not in source, leftover

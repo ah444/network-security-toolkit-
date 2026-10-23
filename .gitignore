@@ -65,7 +65,6 @@ data/
 # Web IDS: uploaded files and exported models are runtime data
 **/uploads/*
 !**/uploads/.gitkeep
-tools/IDS/IDS_Web_CIC_Dynamic/models/
 
 # ==============================
 # IDE and Editor

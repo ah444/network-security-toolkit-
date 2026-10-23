@@ -1,6 +1,6 @@
 """Step 0.2: published claims must match the measured baseline (docs/baseline/)."""
 
-MODELS_README = "tools/IDS/IDS_CLI - CIC-2017/models/README.md"
+MODELS_README = "docs/ids_cli_models.md"
 
 
 def _read(repo_root, rel):

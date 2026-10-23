@@ -44,7 +44,7 @@ def test_no_exits_app_on_n(launcher, monkeypatch):
         module.main_menu()
     assert stop.value.code == 0
     assert list(remaining) == [], "menu must be shown again after 'n' (the '4' was never read)"
-    assert calls["tools"] == ["Port_scan/Port_Scan.py"]
+    assert calls["tools"] == ["toolkit.recon.cli"]
 
 
 def test_no_recursion_depth_growth(launcher, monkeypatch):
@@ -66,4 +66,23 @@ def test_return_from_intrusion_menu_goes_back_to_main(launcher, monkeypatch):
     with pytest.raises(SystemExit):
         module.main_menu()
     assert list(remaining) == []
-    assert calls["tools"] == ["Port_scan/Port_Scan.py"]
+    assert calls["tools"] == ["toolkit.recon.cli"]
+
+
+def test_tools_run_as_child_processes(request, monkeypatch):
+    """Step 1.4a: each tool is ``python -m <module>`` from the project folder, so its
+    memory is freed and Ctrl+C or a crash in it brings the menu back."""
+    spec = importlib.util.spec_from_file_location("launcher_child_test",
+                                                  request.config.rootpath / "main.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    started = []
+    monkeypatch.setattr(module.subprocess, "run",
+                        lambda args, cwd=None: started.append((args, cwd)))
+    for name in (module.SCANNER, module.CLI_IDS, module.WEB_IDS):
+        module.run_tool(name)
+    root = str(request.config.rootpath)
+    assert started == [([sys.executable, "-m", name], root) for name in
+                       ("toolkit.recon.cli", "toolkit.ids_cli", "toolkit.web")]
+    for name in ("toolkit.recon.cli", "toolkit.ids_cli", "toolkit.web"):
+        assert importlib.util.find_spec(name) is not None, f"{name} can't be started"

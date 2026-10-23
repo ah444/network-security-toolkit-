@@ -11,5 +11,5 @@ A bundle is opened only if it was exported on this install (signed with `instanc
 
 ## Previous v4 model (withdrawn)
 
-The v4 model (pickles, deleted in v5.0 step 0.5) used **`Attempted Category`**, a label-derived feature: its value comes from the attack label, so the model read the answer from its input. Its published accuracy (~97-98 %) is **withdrawn**. See [docs/baseline/FINDINGS.md](../../../../docs/baseline/FINDINGS.md), section 7, and [docs/baseline/cli_v4.json](../../../../docs/baseline/cli_v4.json).
+The v4 model (pickles, deleted in v5.0 step 0.5) used **`Attempted Category`**, a label-derived feature: its value comes from the attack label, so the model read the answer from its input. Its published accuracy (~97-98 %) is **withdrawn**. See [docs/baseline/FINDINGS.md](baseline/FINDINGS.md), section 7, and [docs/baseline/cli_v4.json](baseline/cli_v4.json).
 

@@ -42,9 +42,9 @@ def test_port_from_environment(calls, monkeypatch):
 def test_main_block_uses_run_server(repo_root):
     package = (repo_root / "toolkit/web/__init__.py").read_text(encoding="utf-8")
     assert "debug=True" not in package.split("def run_server", 1)[0], "debug hard-coded"
-    source = (repo_root / "tools/IDS/IDS_Web_CIC_Dynamic/app.py").read_text(encoding="utf-8")
-    assert "debug=" not in source and ".run(" not in source, "the shell only calls run_server"
+    source = (repo_root / "toolkit/web/__main__.py").read_text(encoding="utf-8")
+    assert "debug=" not in source and ".run(" not in source, "python -m only calls run_server"
     tree = ast.parse(source)
-    main_blocks = [n for n in tree.body if isinstance(n, ast.If)
-                   and "__main__" in ast.unparse(n.test)]
-    assert main_blocks and "run_server()" in ast.unparse(main_blocks[-1])
+    calls = [ast.unparse(n) for n in tree.body
+             if isinstance(n, ast.Expr) and isinstance(n.value, ast.Call)]
+    assert calls == ["run_server()"]

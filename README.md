@@ -13,7 +13,7 @@ A comprehensive network security tool combining **Network Reconnaissance** and *
 
 This project is being reworked into **v5.0 ("correct & safe")**; see [docs/IMPROVEMENT_PLAN.md](docs/IMPROVEMENT_PLAN.md) and the day-to-day [docs/V5.0_CHECKLIST.md](docs/V5.0_CHECKLIST.md). A measured baseline of the current version ([docs/baseline/FINDINGS.md](docs/baseline/FINDINGS.md)) showed that **earlier accuracy claims were not valid**:
 
-- **IDS CLI model (v4):** it uses `Attempted Category`, a feature derived from the attack label itself. Changing only that value flips the prediction (e.g. `-1` turns every sample into BENIGN), and none of the CLI's 4 built-in sample flows is classified as intended. **The previously stated ~97–98 % accuracy is withdrawn.** Its files were deleted in v5.0 step 0.5: the CLI now uses the models you train and export in the fixed web trainer, and shows each one's real metrics from its training record (see the CLI's [model card](<tools/IDS/IDS_CLI - CIC-2017/models/README.md>)).
+- **IDS CLI model (v4):** it uses `Attempted Category`, a feature derived from the attack label itself. Changing only that value flips the prediction (e.g. `-1` turns every sample into BENIGN), and none of the CLI's 4 built-in sample flows is classified as intended. **The previously stated ~97–98 % accuracy is withdrawn.** Its files were deleted in v5.0 step 0.5: the CLI now uses the models you train and export in the fixed web trainer, and shows each one's real metrics from its training record (see the CLI's [model card](docs/ids_cli_models.md)).
 - **Web IDS trainer (v4):** its results were **optimistic**. "Apply SMOTE" and "Recommend Features" ran on the *whole* dataset before the train/test split, duplicate rows could land in both train and test, and label-derived columns (e.g. NSL-KDD `level`) were not blocked. The recommender even ranked `level` among the top 10 features. The app reported accuracy and weighted F1 only, which hide weak minority classes: on NSL-KDD, random forest showed 99.8 % accuracy but 76.6 % macro-F1. **Since 5.0-rc1 (step 0.4g) the web trainer runs on the leakage-free ML core** described under "ML core" below. The same datasets and scenarios re-run on that core, before vs after, are in the **ML report**: [docs/report/FINDINGS.md](docs/report/FINDINGS.md).
 
 ### Known limitations (current version)
@@ -141,8 +141,8 @@ This launches an interactive menu with options:
 
 ### Network Reconnaissance
 ```bash
-# Run directly
-python tools/Port_scan/Port_Scan.py
+# Run directly (from the project folder)
+python -m toolkit.recon.cli
 ```
 
 Features:
@@ -156,19 +156,19 @@ Features:
 ### IDS CLI
 ```bash
 # Interactive: lists your exports from the web trainer, you pick one
-python "tools/IDS/IDS_CLI - CIC-2017/IDS_with_Machine_Learning.py"
+python -m toolkit.ids_cli
 # Label every row of a CSV file (with the newest export)
-python "tools/IDS/IDS_CLI - CIC-2017/IDS_with_Machine_Learning.py" --csv flows.csv
+python -m toolkit.ids_cli --csv flows.csv
 # A specific export
-python "tools/IDS/IDS_CLI - CIC-2017/IDS_with_Machine_Learning.py" --bundle "instance/bundles/<run id>.bundle"
+python -m toolkit.ids_cli --bundle "instance/bundles/<run id>.bundle"
 ```
 
 Train and export a model in the web trainer first; `--list` shows your exports and `--info` the chosen model's card.
 
 ### IDS Web Interface
 ```bash
-# Run Flask server
-python tools/IDS/IDS_Web_CIC_Dynamic/app.py
+# Run the web server (from the project folder)
+python -m toolkit.web
 ```
 
 Then open `http://localhost:5000` in your browser.
@@ -263,32 +263,23 @@ Project/
 ├── scripts/ml_report.py             # Re-runs it on the v5 ML core (docs/report/)
 ├── tests/                           # pytest suite + small fixtures
 │
-├── toolkit/                         # Shared package (no printing or prompts outside web/)
+├── toolkit/                         # Shared package (printing and prompts only in web/, ids_cli/, recon/cli.py)
 │   ├── config.py                    # Settings, paths, .env reader
 │   ├── logging_setup.py             # Log files in instance/logs, secrets redacted
 │   ├── ports.py                     # ModelStore, IntelProvider, ProgressSink
 │   ├── bundle_files.py, run_files.py  # Signed model bundles, training records
 │   ├── ids_core/                    # Leakage-free ML core (see "ML core" below)
 │   ├── recon/                       # Scanner logic: targets, os_detect, probes registry,
-│   │   └── intel/                   #   scanner, export; intel: NVD, OpenRouter, AbuseIPDB
+│   │   ├── intel/                   #   scanner, export; intel: NVD, OpenRouter, AbuseIPDB
+│   │   └── cli.py                   # The scanner's questions and printing (python -m toolkit.recon.cli)
+│   ├── ids_cli/                     # CLI IDS: predicts with your exports (python -m toolkit.ids_cli)
 │   └── web/                         # Web trainer: create_app(), blueprints, workspaces
+│       ├── __main__.py              #   python -m toolkit.web (uploads: instance/uploads/, read and
+│       │                            #   deleted; exports: instance/bundles/; runs: instance/runs/)
 │       ├── templates/               # home.html, dynamic_ids.html
 │       └── static/                  # css/app.css, js/ (ES modules, main.js entry)
 │
-└── tools/
-    ├── Port_scan/                   # Network Reconnaissance
-    │   ├── Port_Scan.py             # Port scanner (questions and printing; logic in toolkit/recon)
-    │   └── api_keys.example.txt     # API keys template
-    │
-    └── IDS/
-        ├── IDS_CLI - CIC-2017/      # CLI-based IDS
-        │   ├── IDS_with_Machine_Learning.py
-        │   └── models/
-        │       └── README.md        # Where its models come from (your exports)
-        │
-        └── IDS_Web_CIC_Dynamic/     # Web-based IDS
-            └── app.py               # Starts toolkit.web (uploads: instance/uploads/, read
-                                     #   and deleted; exports: instance/bundles/; runs: instance/runs/)
+└── docs/ids_cli_models.md           # Where the CLI's models come from (your exports)
 ```
 
 ---
@@ -375,24 +366,9 @@ The scanner works without any key. CVE lookups use the NVD API, which works with
    - Request a key: https://nvd.nist.gov/developers/request-an-api-key
 
 ### Configuration
-Set environment variables (`OPENROUTER_API_KEY`, `ABUSEIPDB_API_KEY`, `NVD_API_KEY`, optionally `OPENROUTER_MODEL`), or put the same `NAME=value` lines in a `.env` file in the project folder: copy `.env.example` to `.env` and fill in what you use. An environment variable wins over `.env`. The older key file still works as a fallback:
+Set environment variables (`OPENROUTER_API_KEY`, `ABUSEIPDB_API_KEY`, `NVD_API_KEY`, optionally `OPENROUTER_MODEL`), or put the same `NAME=value` lines in a `.env` file in the project folder: copy `.env.example` to `.env` and fill in what you use. An environment variable wins over `.env`. The older `tools/Port_scan/api_keys.txt` is no longer read (v5.1): if it is still on disk, the scanner says so once; move its keys into `.env`.
 
-```bash
-# Copy the example file
-cp tools/Port_scan/api_keys.example.txt tools/Port_scan/api_keys.txt
-
-# Edit with your keys
-notepad tools/Port_scan/api_keys.txt
-```
-
-Format:
-```
-openrouter=your_openrouter_api_key_here
-abuseipdb=your_abuseipdb_api_key_here
-nvd=your_nvd_api_key_here
-```
-
-⚠️ **Never commit `api_keys.txt` or `.env` to Git!** (Both are in .gitignore)
+⚠️ **Never commit `.env` to Git!** (It is in .gitignore)
 
 ### Log files
 Each tool writes a log file in `instance/logs/` (`web.log`, `scanner.log`, `ids_cli.log`), UTF-8, rotated at 1 MB with 3 old files kept. Set `TOOLKIT_LOG_LEVEL` (`DEBUG`, `INFO`, `WARNING`, `ERROR`; default `INFO`) as an environment variable to change how much is written. API keys and `Authorization` / `Bearer` values are replaced by `[REDACTED]`, and dataset values are never logged. Library warnings (for example a scikit-learn version mismatch) appear on the console and in the log.

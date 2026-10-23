@@ -34,21 +34,21 @@ def welcome_message():
         time.sleep(0.5)
     print()
 
-def run_tool(relative_path):
+def run_tool(module):
+    """Run one tool as a child process (``python -m <module>``) from the project folder,
+    so its memory (a large model bundle) is freed and Ctrl+C or a crash in it brings the
+    menu back."""
     base_dir = os.path.dirname(os.path.abspath(__file__))
-    script_path = os.path.join(base_dir, "tools", relative_path)
-    if not os.path.exists(script_path):
-        print(f"Error: {script_path} not found.")
-        return
     try:
-        subprocess.run([sys.executable, script_path])
+        subprocess.run([sys.executable, "-m", module], cwd=base_dir)
     except KeyboardInterrupt:
         print("\nExecution interrupted by user.")
     except Exception as e:
-        print(f"Error running {script_path}: {e}")
+        print(f"Error running {module}: {e}")
 
-CLI_IDS = "IDS/IDS_CLI - CIC-2017/IDS_with_Machine_Learning.py"
-WEB_IDS = "IDS/IDS_Web_CIC_Dynamic/app.py"
+SCANNER = "toolkit.recon.cli"
+CLI_IDS = "toolkit.ids_cli"
+WEB_IDS = "toolkit.web"
 
 
 def ask_yes_no(question):
@@ -71,7 +71,7 @@ def main_menu():
         print("4. Exit")
         choice = input("Enter your choice [1-4]: ").strip()
         if choice == "1":
-            run_tool("Port_scan/Port_Scan.py")
+            run_tool(SCANNER)
             if intrusion_prompt():
                 intrusion_menu()
         elif choice == "2":
