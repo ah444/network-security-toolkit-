@@ -4,7 +4,7 @@
 
 import { getJSON, send } from "./api.js";
 import { byId, checkedValues, el, fillCheckboxList, fillSelect, message, setChecked, setContent, table } from "./dom.js";
-import { BALANCING_HINTS, balancingName, fmt, ratioText } from "./format.js";
+import { BALANCING_HINTS, INFINITE_SCORE_HINT, balancingName, ratioText, scoreText } from "./format.js";
 import { emit, on, state, testSize } from "./state.js";
 
 function showBalancingHint(method, fallback) {
@@ -172,7 +172,9 @@ async function recommendFeatures(event) {
     setContent(resultDiv,
       el("p", {}, `Scored on ${result.rows.toLocaleString()} training rows (${result.method}). The recommended features are now ticked in the feature list.`),
       el("strong", {}, "Recommended Features:"), el("br"),
-      result.recommended_features.map(([name, score]) => [`${name} (Score: ${fmt(score, 2)})`, el("br")]),
+      result.recommended_features.map(([name, score]) => [`${name} (Score: ${scoreText(score)})`, el("br")]),
+      result.recommended_features.some(([, score]) => score === "inf") &&
+        el("p", { class: "section-description" }, INFINITE_SCORE_HINT),
       result.blocked.length > 0 && [el("br"), el("strong", {}, "Blocked by the leakage guard:"), el("br"),
         result.blocked.map(item => [`${item.column} (${item.reason})`, el("br")])]);
     setChecked(byId("inputFeatures"), result.recommended_features.map(item => item[0]));

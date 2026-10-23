@@ -158,3 +158,23 @@ def test_tools_use_setup_logging_not_basic_config(repo_root):
         calls = [n.lineno for n in ast.walk(tree) if isinstance(n, ast.Call)
                  and isinstance(n.func, ast.Attribute) and n.func.attr == "basicConfig"]
         assert calls == [], f"{name}: logging.basicConfig at lines {calls}; use setup_logging"
+
+
+LOG_CALLS = {"debug", "info", "warning", "error", "exception", "critical", "log"}
+
+
+def test_toolkit_logs_through_module_loggers(repo_root):
+    """Step 1.3d: no ``logging.info(...)`` on the root logger in ``toolkit/``; a module that
+    logs has ``log = logging.getLogger(__name__)``, so each line names its module."""
+    for path in sorted((repo_root / "toolkit").rglob("*.py")):
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        name = path.relative_to(repo_root).as_posix()
+        root_calls = [n.lineno for n in ast.walk(tree) if isinstance(n, ast.Call)
+                      and isinstance(n.func, ast.Attribute) and n.func.attr in LOG_CALLS
+                      and isinstance(n.func.value, ast.Name) and n.func.value.id == "logging"]
+        assert root_calls == [], f"{name}: root logger at lines {root_calls}"
+        log_calls = [n for n in ast.walk(tree) if isinstance(n, ast.Call)
+                     and isinstance(n.func, ast.Attribute) and n.func.attr in LOG_CALLS
+                     and isinstance(n.func.value, ast.Name) and n.func.value.id == "log"]
+        if log_calls:
+            assert "log = logging.getLogger(__name__)" in ast.unparse(tree), name

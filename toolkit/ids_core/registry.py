@@ -186,16 +186,24 @@ class _Scores:
         self.method = method
         self.seed = seed
 
-    def __call__(self, X, y):
+    def raw(self, X, y):
+        """The scores as found: NaN for constant features, inf for a feature with one
+        value per class (the F-test divides by a zero within-class spread)."""
         X = np.asarray(X, dtype=np.float64)
         varies = np.ptp(X, axis=0) > 0
         scores = np.full(X.shape[1], np.nan)
         if varies.any():
             if self.method == "f_classif":
-                found = f_classif(X[:, varies], y)[0]
+                with np.errstate(divide="ignore", invalid="ignore"):
+                    found = f_classif(X[:, varies], y)[0]
             else:
                 found = mutual_info_classif(X[:, varies], y, random_state=self.seed)
-            scores[varies] = np.nan_to_num(found, nan=0.0, posinf=np.finfo(np.float64).max)
+            scores[varies] = np.nan_to_num(found, nan=0.0, posinf=np.inf)
+        return scores
+
+    def __call__(self, X, y):
+        scores = self.raw(X, y)
+        scores[np.isposinf(scores)] = np.finfo(np.float64).max
         return scores
 
 

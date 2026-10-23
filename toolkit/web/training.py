@@ -32,6 +32,8 @@ from .schemas import ConfusionRequest, TrainRequest, load
 from .state import state
 from .workspace import UploadedData, Workspace, with_workspace, workspace
 
+log = logging.getLogger(__name__)
+
 bp = Blueprint("training", __name__, url_prefix="/api/v1")
 
 
@@ -143,7 +145,7 @@ def _run_training(ws: Workspace, data: UploadedData, settings: TrainSettings,
                         test_frame=data.test_frame, source=data.source,
                         test_source=data.test_source, sources=data.sources, progress=job)
     except ValueError:
-        logging.exception("Training failed")
+        log.exception("Training failed")
         raise ApiError("Training could not run with these settings (for example: every chosen "
                        "feature was blocked by the leakage guard, or a class is too small for "
                        "the split). Details are in the server log.", TRAINING_FAILED) from None

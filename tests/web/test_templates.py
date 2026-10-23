@@ -69,3 +69,11 @@ def test_dynamic_form_labels_are_linked():
     assert "input.id = idPrefix + index" in builder
     prefixes = re.findall(r'buildPredictionForm\("\w+", "([\w-]+)"', predict)
     assert sorted(prefixes) == ["loaded-feature-", "session-feature-"]
+
+
+def test_home_page_describes_signed_bundles(repo_root):
+    """Step 1.3d: export and load are signed bundles; nothing loads PKL files or retrains."""
+    html = (repo_root / TEMPLATES / "home.html").read_text(encoding="utf-8")
+    assert "PKL" not in html.upper() and "continue training" not in html
+    assert "signed .bundle file" in html
+    assert "exported by this toolkit on this computer" in html

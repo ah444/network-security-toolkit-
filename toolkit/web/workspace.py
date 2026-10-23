@@ -28,6 +28,8 @@ from .api import BUSY, DATA_LIMIT, NOT_FOUND, Answer, ApiError
 from .jobs import FINISHED, Job
 from .state import state
 
+log = logging.getLogger(__name__)
+
 bp = Blueprint("workspace", __name__, url_prefix="/api/v1")
 JOBS_KEPT = 5
 
@@ -162,8 +164,8 @@ class WorkspaceStore:
             if now - ws.last_used > self.idle_seconds and not ws.leased:
                 del self._workspaces[ws_id]
                 dropped += 1
-                logging.info("Dropped a workspace (idle for over %d minutes)",
-                             self.idle_seconds // 60)
+                log.info("Dropped a workspace (idle for over %d minutes)",
+                         self.idle_seconds // 60)
         return dropped
 
     def drop_idle(self) -> int:
@@ -179,7 +181,7 @@ class WorkspaceStore:
             return False
         _, ws_id = min(candidates)
         del self._workspaces[ws_id]
-        logging.info("Dropped the least recently used workspace (%s)", reason)
+        log.info("Dropped the least recently used workspace (%s)", reason)
         return True
 
     def reserve_data(self, ws: Workspace, size: int) -> None:
@@ -281,7 +283,7 @@ def start_idle_sweep(store: WorkspaceStore, interval: float = 300) -> threading.
             try:
                 store.drop_idle()
             except Exception:  # the sweep must never die silently
-                logging.exception("Idle workspace sweep failed")
+                log.exception("Idle workspace sweep failed")
 
     threading.Thread(target=sweep, name="workspace-sweep", daemon=True).start()
     return stop

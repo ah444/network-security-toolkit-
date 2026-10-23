@@ -16,6 +16,8 @@ from werkzeug.exceptions import HTTPException
 
 from .state import state
 
+log = logging.getLogger(__name__)
+
 # Error codes (bundle refusals keep the code of their BundleError, e.g. BAD_SIGNATURE).
 BAD_REQUEST = "BAD_REQUEST"  # the request body or a value in it is invalid
 NO_DATASET = "NO_DATASET"
@@ -99,7 +101,7 @@ def _http_error(error: HTTPException) -> HTTPException | tuple[Response, int]:
 
 def _unexpected(_error: Exception) -> tuple[Response, int]:
     """Anything unexpected: logged with its traceback, answered without details (S8)."""
-    logging.exception("Unexpected error in %s %s", request.method, request.path)
+    log.exception("Unexpected error in %s %s", request.method, request.path)
     return error_response("Something went wrong on the server. Details are in the server log.",
                           500, INTERNAL)
 

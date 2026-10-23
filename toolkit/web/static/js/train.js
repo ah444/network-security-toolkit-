@@ -144,7 +144,9 @@ function showJob(job) {
   const minutes = Math.floor(job.elapsed_seconds / 60);
   const seconds = Math.round(job.elapsed_seconds % 60);
   if (job.state === "queued") {
-    progressText.textContent = job.phase + " (" + job.queue_position + " ahead of this one)";
+    const ahead = job.queue_position;
+    progressText.textContent = ahead === 0 ? "Starting..." :
+      "Waiting for " + ahead + " other training" + (ahead === 1 ? "" : "s") + " to finish";
   } else {
     progressText.textContent = "Step " + job.done + " of " + job.total + " (" + job.percent + "%): " +
       job.phase + ", " + minutes + " min " + seconds + " s" +

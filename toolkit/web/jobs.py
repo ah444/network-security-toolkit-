@@ -21,6 +21,8 @@ from typing import Any
 
 from .api import CANCELLED, INTERNAL, TIME_LIMIT, ApiError
 
+log = logging.getLogger(__name__)
+
 QUEUED, RUNNING, DONE, FAILED, STOPPED = "queued", "running", "done", "failed", "cancelled"
 FINISHED = (DONE, FAILED, STOPPED)
 
@@ -143,14 +145,14 @@ class JobRunner:
             except JobCancelled as stop:
                 job.error = {"code": stop.code, "message": stop.message}
                 job.state = STOPPED
-                logging.info("Training job stopped (%s)", stop.code)
+                log.info("Training job stopped (%s)", stop.code)
             except ApiError as error:
                 job.error = {"code": error.code, "message": error.message}
                 if error.details:
                     job.error["details"] = error.details
                 job.state = FAILED
             except Exception:  # the worker must survive anything a job does
-                logging.exception("Training job failed")
+                log.exception("Training job failed")
                 job.error = {"code": INTERNAL, "message": "Something went wrong on the server. "
                                                           "Details are in the server log."}
                 job.state = FAILED
@@ -161,7 +163,7 @@ class JobRunner:
                 try:
                     job.on_end()
                 except Exception:
-                    logging.exception("Releasing a finished job's workspace failed")
+                    log.exception("Releasing a finished job's workspace failed")
 
 
 def job_view(job: Job, runner: JobRunner) -> dict[str, Any]:
@@ -181,6 +183,8 @@ def job_view(job: Job, runner: JobRunner) -> dict[str, Any]:
     }
     if job.state == QUEUED:
         view["queue_position"] = runner.position(job)
+        if view["queue_position"] == 0:  # submitted, the worker has not picked it up yet
+            view["phase"] = "Starting"
     if job.result is not None:
         view["result"] = job.result
     if job.error is not None:

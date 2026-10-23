@@ -49,6 +49,8 @@ from .security import display_name, safe_upload_name
 from .state import state
 from .workspace import UploadedData, Workspace, dataset_bytes, with_workspace
 
+log = logging.getLogger(__name__)
+
 bp = Blueprint("datasets", __name__, url_prefix="/api/v1")
 
 
@@ -62,10 +64,10 @@ def remove_stale_uploads(directory: Path, max_age: float = 3600) -> int:
                 path.unlink()
                 removed += 1
         except OSError:
-            logging.warning("Could not remove a leftover upload", exc_info=True)
+            log.warning("Could not remove a leftover upload", exc_info=True)
     if removed:
-        logging.info("Removed %d leftover upload(s) older than %d minutes", removed,
-                     max_age // 60)
+        log.info("Removed %d leftover upload(s) older than %d minutes", removed,
+                 max_age // 60)
     return removed
 
 
@@ -167,7 +169,7 @@ def upload(ws: Workspace) -> Answer:
             file.save(save_path)
             loaded.append((name, load_dataset(save_path)))
         except (DatasetError, ValueError, UnicodeError, OSError):
-            logging.exception("Could not read an uploaded file")
+            log.exception("Could not read an uploaded file")
             return error_response(f"Could not read {name} as a CSV/TXT dataset. Check the file "
                                   "format.", code=UNREADABLE_FILE)
         finally:
@@ -176,7 +178,7 @@ def upload(ws: Workspace) -> Answer:
     try:
         data = _combine(loaded)
     except ValueError:
-        logging.exception("Uploaded files don't fit together")
+        log.exception("Uploaded files don't fit together")
         return error_response("The files can't be combined: they must be parts of the same dataset "
                               "with identical columns (or an official train file plus a file "
                               "named '*test*').")
@@ -245,7 +247,7 @@ def filter_classes(ws: Workspace) -> Answer:
     ws.split = None
     ws.data_bytes = dataset_bytes(data)  # smaller now: no room to reserve
     removed = before - len(data.frame)
-    logging.info("Removed %d target values (%d rows)", len(to_remove), removed)
+    log.info("Removed %d target values (%d rows)", len(to_remove), removed)
     return jsonify({
         "success": True,
         "removed_values": to_remove,
@@ -315,7 +317,7 @@ def distribution(ws: Workspace) -> Answer:
         recommendation = recommend_balancing(split.train[target],
                                              len(_candidate_features(data, target)))
     except ValueError:
-        logging.exception("Could not split the dataset for the recommendation")
+        log.exception("Could not split the dataset for the recommendation")
         return error_response("Could not make a training split with this target (is there more "
                               "than one class?).")
     return jsonify({
@@ -351,7 +353,7 @@ def balancing_preview(ws: Workspace) -> Answer:
         split = _training_split(ws, target, req.test_size)
         preview = preview_balancing(split.train, target, method, features=features)
     except ValueError:
-        logging.exception("Balancing preview failed")
+        log.exception("Balancing preview failed")
         return error_response("The balancing preview could not run on this data.")
     return jsonify({
         "message": "Preview on the training split only: your dataset and the test split are "
@@ -381,11 +383,12 @@ def feature_scores(ws: Workspace) -> Answer:
         result = score_features(split.train, target,
                                 profile_blocked=data.profile.blocked_columns)
     except ValueError:
-        logging.exception("Feature scoring failed")
+        log.exception("Feature scoring failed")
         return error_response("Feature scores could not be computed for this dataset.")
-    return jsonify({
-        "recommended_features": [[name, score] for name, score in result.scores[:req.k]],
-        "all_feature_scores": dict(result.scores),
+    scores = [(name, "inf" if np.isinf(score) else score) for name, score in result.scores]
+    return jsonify({  # JSON has no inf: a feature with one value per class scores "inf"
+        "recommended_features": [[name, score] for name, score in scores[:req.k]],
+        "all_feature_scores": dict(scores),
         "blocked": [{"column": c, "reason": r} for c, r in result.blocked],
         "method": result.method,
         "rows": result.rows,

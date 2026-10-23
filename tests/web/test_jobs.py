@@ -10,8 +10,9 @@ import threading
 import pytest
 
 from toolkit.config import WebConfig
-from toolkit.web import training
+from toolkit.web import jobs, training
 from web_jobs import TRAIN_URL, train_and_wait, wait_for
+from web_js import js_sources
 
 TARGET = "Label"
 
@@ -94,6 +95,18 @@ def test_second_session_waits_in_the_queue(web_app, client, columns, gate, fixtu
     release.set()
     assert wait_for(client, first["url"])["state"] == "done"
     assert wait_for(other, second["url"])["state"] == "done"
+
+
+def test_a_job_with_nothing_ahead_is_starting():
+    """Step 1.3d: submitted, not yet picked up by the worker: "Starting", not "0 ahead"."""
+    runner = jobs.JobRunner()
+    job = jobs.Job(work=lambda job: {}, on_end=lambda: None, max_seconds=60, models=1, folds=3)
+    runner._waiting.append(job)  # what submit() does before the worker takes it
+    view = jobs.job_view(job, runner)
+    assert (view["state"], view["queue_position"], view["phase"]) == ("queued", 0, "Starting")
+    train_js = js_sources()["train.js"]
+    assert '"Starting..."' in train_js and "ahead of this one" not in train_js
+    assert '"Waiting for " + ahead + " other training"' in train_js
 
 
 def test_cancel_a_queued_job(web_app, client, columns, gate, fixtures_dir):

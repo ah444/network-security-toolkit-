@@ -21,6 +21,8 @@ from .state import state
 from .training import features_info
 from .workspace import ExportedBundle, Workspace, with_workspace
 
+log = logging.getLogger(__name__)
+
 bp = Blueprint("bundles", __name__, url_prefix="/api/v1")
 
 
@@ -42,7 +44,7 @@ def _predict(models: Mapping[str, FittedModel], default: str | None,
     try:
         prediction = fitted.predict(row)[0]
     except Exception:
-        logging.exception("Prediction error")
+        log.exception("Prediction error")
         return error_response("Prediction failed for these input values.", 500)
     return jsonify({"prediction": str(prediction), "model": algorithm})
 

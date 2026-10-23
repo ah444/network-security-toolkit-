@@ -5,6 +5,13 @@ export function fmt(value, digits) {
   return value === null || value === undefined || isNaN(value) ? "n/a" : Number(value).toFixed(digits);
 }
 
+// Feature score for display: the server sends "inf" for a feature with one value per class
+export function scoreText(score) {
+  return score === "inf" ? "∞" : fmt(score, 2);
+}
+
+export const INFINITE_SCORE_HINT = "∞: the feature has one value per class on this split, so it separates the classes perfectly. Check that it isn't a label leak.";
+
 // Imbalance ratio (smallest / largest class) for display
 export function ratioText(ratio) {
   const percent = ratio * 100;

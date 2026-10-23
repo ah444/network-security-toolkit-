@@ -8,6 +8,7 @@ import json
 import pickle
 
 import joblib
+import pandas as pd
 import pytest
 
 from toolkit import bundle_files
@@ -15,7 +16,7 @@ from toolkit.ids_core.bundle import pack
 from toolkit.ids_core.datasets import load_dataset
 from toolkit.web import datasets, training
 from web_jobs import train_and_wait
-from web_js import all_js
+from web_js import all_js, js_sources
 
 CIC = "cic_ddos_sample.csv"
 TARGET = "Label"  # the v5 loader strips the header's leading space (B17)
@@ -178,6 +179,30 @@ def test_recommend_features_train_only_and_guarded(client, upload, fixtures_dir)
     assert len(names) == 3 and not blocked & set(names)
     assert names[0] == "f_strong"
     assert result["rows"] == result["train_rows"] < 300
+
+
+def test_infinite_feature_score_answers_inf(client, upload, fixtures_dir, tmp_path):
+    """Step 1.3d: JSON has no inf, so a feature with one value per class scores "inf"."""
+    data = pd.read_csv(fixtures_dir / "label_leak.csv")
+    data["port_flag"] = (data["Label"] == "PortScan").astype(float)
+    data.to_csv(tmp_path / "flagged.csv", index=False)
+    upload(tmp_path / "flagged.csv")
+    response = client.post("/api/v1/dataset/feature-scores",
+                           json={"target": "Label", "k": 2, "test_size": 0.3})
+    assert response.status_code == 200
+    result = json.loads(response.get_data(as_text=True),  # as strict as the browser's JSON
+                        parse_constant=lambda token: pytest.fail(f"{token} is not JSON"))
+    assert result["recommended_features"][0] == ["port_flag", "inf"]
+    assert result["all_feature_scores"]["port_flag"] == "inf"
+    assert all(isinstance(score, float) for name, score in result["all_feature_scores"].items()
+               if name != "port_flag")
+
+
+def test_page_shows_inf_as_infinity_with_a_hint():
+    js = js_sources()
+    assert 'score === "inf" ? "∞"' in js["format.js"]
+    assert "scoreText(score)" in js["explore.js"] and "fmt(score" not in js["explore.js"]
+    assert 'score === "inf") &&' in js["explore.js"] and "INFINITE_SCORE_HINT" in js["explore.js"]
 
 
 # --- predicting ---------------------------------------------------------------------------------

@@ -33,7 +33,7 @@ _MIN_PER_CLASS = 50  # rows kept per class when sampling (or the whole class)
 
 @dataclass(frozen=True)
 class FeatureScores:
-    scores: tuple[tuple[str, float], ...]  # allowed features, best first
+    scores: tuple[tuple[str, float], ...]  # allowed features, best first (may be inf)
     blocked: tuple[tuple[str, str], ...]  # (column, reason code) from the leakage guard
     method: str
     rows: int  # training rows scored
@@ -99,9 +99,9 @@ def recommend_features(
     if guard.features:
         X, order = _prepared(data, guard.features)
         y = LabelEncoder().fit_transform(data[label].astype(str))
-        found = registry._Scores(method, seed)(X, y)
-        scores = {name: float(np.nan_to_num(score)) for name, score in zip(order, found,
-                                                                            strict=True)}
+        found = registry._Scores(method, seed).raw(X, y)  # inf kept: one value per class
+        scores = {name: float(np.nan_to_num(score, posinf=np.inf))
+                  for name, score in zip(order, found, strict=True)}
     ranked = sorted(scores.items(), key=lambda item: (-item[1], guard.features.index(item[0])))
     return FeatureScores(tuple(ranked), blocked, method, len(data), int(train[label].notna().sum()))
 

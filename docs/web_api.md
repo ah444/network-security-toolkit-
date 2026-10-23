@@ -39,7 +39,7 @@ computer (`127.0.0.1`).
 | GET | `/api/v1/dataset/distribution` | `target`, `test_size` (0.1-0.5, default 0.2) | class counts, balancing recommendation (training split) |
 | POST | `/api/v1/dataset/filter` | `target`, `remove`: classes to drop | rows removed, classes left |
 | POST | `/api/v1/dataset/balancing-preview` | `target`, `balancing`, `features`, `test_size` | class counts before/after, on the training split only |
-| POST | `/api/v1/dataset/feature-scores` | `target`, `k` (1-10,000, default 10), `test_size` | feature scores on the training split |
+| POST | `/api/v1/dataset/feature-scores` | `target`, `k` (1-10,000, default 10), `test_size` | feature scores on the training split (`"inf"` for a feature with one value per class: JSON has no infinity) |
 | GET | `/api/v1/models` | none | the models that can be trained here |
 | POST | `/api/v1/jobs/training` | `target`, `features`, `models`, `balancing`, `test_size` | **202** and the job (see below) |
 | GET | `/api/v1/jobs/<job_id>` | none | the job's state and progress; when done, the result: leaderboard, split, CV, leakage findings, confusion matrices |
@@ -102,7 +102,8 @@ job (`BUSY`). A job is visible only to its own session (another session's job id
  "percent": 32, "phase": "Cross-validation, fold 2 of 3", "elapsed_seconds": 72.4}
 ```
 
-- `state`: `queued` (with `queue_position`: jobs that run first), `running`, `cancelling`
+- `state`: `queued` (with `queue_position`: jobs that run first; at 0 the phase is
+  `Starting`, as the worker is about to pick it up), `running`, `cancelling`
   (cancel asked, waiting for the current model's fit to end), `done` (with `result`),
   `failed` or `cancelled` (with `error`: `{"code", "message"}`).
 - Steps: 2 (split, leakage check) + models x (CV folds + final fit), so 22 for 5 models
