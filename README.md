@@ -153,10 +153,12 @@ Every tool can also be started directly with a command:
 
 ### Network Reconnaissance
 ```bash
-# Run directly (from the project folder)
+# Interactive: asks for the target, ports, protocol and the rest (from the project folder)
 python -m toolkit scan
-# Scripts: confirm you are authorised to scan the target without the question
-python -m toolkit scan --i-am-authorized
+# With a target: asks nothing but "are you authorised?"
+python -m toolkit scan 192.168.1.10 -p 1-1024 --protocol both --export csv
+# Scripts: not even that (you confirm you are authorised to scan the target)
+python -m toolkit scan 192.168.1.10 -p 22,80,443 --i-am-authorized
 ```
 
 Features:
@@ -166,6 +168,20 @@ Features:
 - Confirm you are authorised to scan the target (or pass `--i-am-authorized`)
 - View vulnerability reports
 - Export results
+- Ctrl+C cancels a scan ("Scan cancelled.", exit code 130)
+
+With a target, every choice is a flag (`python -m toolkit scan --help`), and nothing but the CVE lookups leaves your computer unless a flag says so:
+
+| Flag | Default |
+|---|---|
+| `-p`, `--ports` `80`, `1-1024` or `22,80,8000-8100` | `1-1024` |
+| `--protocol tcp\|udp\|both` | `tcp` |
+| `-v`, `--verbose` (progress while scanning) | off |
+| `--ai` (software names to OpenRouter, needs `OPENROUTER_API_KEY`) | off |
+| `--abuseipdb` (public target IPs to AbuseIPDB, needs `ABUSEIPDB_API_KEY`) | off |
+| `--scan-unresponsive` (hosts that don't answer ping) | skipped |
+| `--export txt\|json\|csv` (to `instance/scans/`, never overwrites) | no export |
+| `--i-am-authorized` | asks |
 
 ### IDS CLI
 ```bash

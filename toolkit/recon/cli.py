@@ -3,11 +3,15 @@
 Only scan systems you own or have written permission to test. Every scan asks for that
 confirmation first (or ``--i-am-authorized`` in scripts) and has host/port limits (S16).
 
-    python -m toolkit scan                     interactive
-    python -m toolkit scan --i-am-authorized   skip the authorization question (scripts)
+    python -m toolkit scan                      interactive: asks its questions
+    python -m toolkit scan 192.168.1.10 -p 1-1024 --protocol both --export csv
+                                               no questions but the authorization one
+    python -m toolkit scan ... --i-am-authorized   not even that one (scripts)
 
 (from the project folder; ``python -m toolkit.recon.cli`` also works; moved from
-tools/Port_scan/Port_Scan.py in v5.1 step 1.4a)
+tools/Port_scan/Port_Scan.py in v5.1 step 1.4a, flags in step 1.4c). With a TARGET nothing
+is sent online but the CVE lookups unless a flag says so (``--ai``, ``--abuseipdb``).
+Ctrl+C (or the end of input at a question) cancels: "Scan cancelled.", exit code 130.
 
 What leaves this computer (step 0.6, plan D13-D15):
 - CVE lookups send only the detected product and version (for example "OpenSSH 8.9") to
@@ -33,17 +37,19 @@ import sys
 import threading
 import time
 from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
 from typing import Any
 
-from ..config import scan_limits
+from ..config import ScanConfig, scan_limits
 from ..logging_setup import add_secrets, setup_logging
 from .export import EXPORT_FORMATS, ReportEntry, export_results, make_entry
 from .intel import Intel, LookupResult
-from .intel.keys import ai_model, legacy_key_file_notice, load_api_keys
+from .intel.keys import KEY_VARIABLES, ai_model, legacy_key_file_notice, load_api_keys
 from .os_detect import guess_os, ping_host
 from .probes import product_version
 from .scanner import PortResult, scan_ports
-from .targets import check_limits, is_ip_literal, is_public_ip, parse_port_range, parse_target
+from .targets import (check_limits, is_ip_literal, is_public_ip, parse_port_range, parse_ports,
+                      parse_target)
 from .text import one_line
 
 # --- Authorization (S16) ----------------------------------------------------------------------
@@ -93,7 +99,7 @@ class ConsoleProgress:
         self._thread.join()
         self._thread = None
         self._write()
-        print("\nProgress: 100.00% complete")
+        print("\nProgress: 100.00% complete" if self._done >= self._total else "")  # else cancelled
 
     def _repeat(self) -> None:
         while not self._stop.wait(self.interval):
@@ -158,7 +164,32 @@ def print_entry(entry: ReportEntry) -> None:
         print(f"Lookup failed: {error}")
 
 
-# --- Interactive scan -------------------------------------------------------------------------
+# --- What to scan ------------------------------------------------------------------------------
+
+DEFAULT_PORTS = "1-1024"  # the well-known ports
+PROTOCOLS = {"tcp": ["tcp"], "udp": ["udp"], "both": ["tcp", "udp"]}
+NOT_AUTHORIZED = "Scan cancelled: only scan systems you are authorised to scan."
+# The flags that only make sense with a TARGET (without one, the scanner asks instead)
+SCAN_FLAGS = ("ports", "protocol", "verbose", "ai", "abuseipdb", "scan_unresponsive", "export")
+
+
+@dataclass(frozen=True)
+class ScanRequest:
+    """What to scan and what may leave this computer: from the flags (``scan TARGET``),
+    or from the questions (``interactive``: AbuseIPDB, hosts that don't answer ping and
+    the export are then asked during the scan instead)."""
+
+    target_text: str
+    targets: list[str]
+    ports: list[int]
+    protocols: list[str]
+    verbose: bool = False
+    use_ai: bool = False
+    abuseipdb: bool = False
+    scan_unresponsive: bool = False
+    export: str | None = None
+    interactive: bool = False
+
 
 def ask_yes_no(question: str) -> bool:
     return input(question).strip().lower() in ("y", "yes")
@@ -167,20 +198,79 @@ def ask_yes_no(question: str) -> bool:
 def ask_protocols() -> list[str]:
     while True:
         choice = input("Select protocol for scanning (TCP/UDP/both): ").strip().lower()
-        if choice in ("tcp", "udp"):
-            return [choice]
-        if choice == "both":
-            return ["tcp", "udp"]
+        if choice in PROTOCOLS:
+            return PROTOCOLS[choice]
         print("Please type TCP, UDP or both.")
 
 
-def scan_target(target: str, ports: range, protocols: Sequence[str], intel: Intel,
-                verbose: bool) -> list[ReportEntry]:
+def resolve_targets(text: str, limits: ScanConfig) -> list[str]:
+    targets = parse_target(text, limits.max_hosts)
+    if "/" not in text and not is_ip_literal(text):
+        print(f"Domain {text} resolved to IP: {targets[0]}")
+    return targets
+
+
+def check_scan(targets: Sequence[str], ports: Sequence[int], protocols: Sequence[str],
+               limits: ScanConfig) -> None:
+    problem = check_limits(len(targets), len(targets) * len(ports) * len(protocols), limits)
+    if problem:
+        raise ValueError(problem)
+
+
+def ask_request(keys: Mapping[str, str], limits: ScanConfig, authorized: bool) -> ScanRequest:
+    """No TARGET: the questions, in the order they have always been asked."""
+    target_text = input("Enter target IP (IPv4 or IPv6), network (e.g. 192.168.1.0/24) "
+                        "or domain: ").strip()
+    targets = resolve_targets(target_text, limits)
+    ports = list(parse_port_range(input("Enter start port: "), input("Enter end port: ")))
+    protocols = ask_protocols()
+    check_scan(targets, ports, protocols, limits)
+    if not confirm_authorized(target_text, authorized):
+        raise ValueError(NOT_AUTHORIZED)
+    verbose = ask_yes_no("Enable verbose mode? (Y/N): ")
+    use_ai = False
+    if keys["openrouter"]:
+        use_ai = ask_yes_no(
+            f"Send the detected software names (e.g. 'OpenSSH 8.9', never the raw banner) "
+            f"to OpenRouter ({ai_model()}) for an AI explanation? (Y/N): ")
+    return ScanRequest(target_text, targets, ports, protocols, verbose, use_ai,
+                       interactive=True)
+
+
+def request_from_flags(args: argparse.Namespace, keys: Mapping[str, str],
+                       limits: ScanConfig) -> ScanRequest:
+    """``scan TARGET [flags]``: nothing asked but the authorization (unless the flag)."""
+    targets = resolve_targets(args.target, limits)
+    ports = parse_ports(args.ports or DEFAULT_PORTS)
+    protocols = PROTOCOLS[args.protocol or "tcp"]
+    check_scan(targets, ports, protocols, limits)
+    if not confirm_authorized(args.target, args.i_am_authorized):
+        raise ValueError(NOT_AUTHORIZED)
+    use_ai = args.ai and bool(keys["openrouter"])
+    if args.ai and not use_ai:
+        print(f"--ai: no {KEY_VARIABLES['openrouter']} set, so no AI explanation.")
+    elif use_ai:
+        print(f"--ai: the detected software names (e.g. 'OpenSSH 8.9', never the raw banner) "
+              f"go to OpenRouter ({ai_model()}) for an AI explanation.")
+    abuseipdb = args.abuseipdb and bool(keys["abuseipdb"])
+    if args.abuseipdb and not abuseipdb:
+        print(f"--abuseipdb: no {KEY_VARIABLES['abuseipdb']} set, so no reputation check.")
+    elif abuseipdb:
+        print("--abuseipdb: public target IPs go to AbuseIPDB for a reputation check.")
+    return ScanRequest(args.target, targets, ports, protocols, args.verbose, use_ai,
+                       abuseipdb, args.scan_unresponsive, args.export)
+
+
+# --- The scan ----------------------------------------------------------------------------------
+
+def scan_target(target: str, request: ScanRequest, intel: Intel) -> list[ReportEntry]:
     """Scan one host and look up its open ports; returns the report entries."""
     if is_public_ip(target):
-        if not intel.keys.get("abuseipdb"):
+        has_key = bool(intel.keys.get("abuseipdb"))
+        if request.interactive and not has_key:
             print(f"{target} is a public IP; AbuseIPDB check skipped (no key).")
-        elif ask_yes_no(f"Send {target} to AbuseIPDB to check its reputation? (Y/N): "):
+        elif has_key and (ask_yes_no(f"Send {target} to AbuseIPDB to check its reputation? "
+                                     "(Y/N): ") if request.interactive else request.abuseipdb):
             data, error = intel.abuse_report(target)
             print(f"\nAbuseIPDB reputation info for {target}:")
             if data is None:  # the lookup failed: error says why
@@ -191,7 +281,11 @@ def scan_target(target: str, ports: range, protocols: Sequence[str], intel: Inte
     alive, ttl = ping_host(target)
     if not alive:
         print(f"Host {target} did not respond to ping.")
-        if not ask_yes_no("Do you want to scan this host anyway? (Y/N): "):
+        if request.interactive:
+            if not ask_yes_no("Do you want to scan this host anyway? (Y/N): "):
+                return []
+        elif not request.scan_unresponsive:
+            print("Skipped (--scan-unresponsive scans it anyway).")
             return []
     print(f"\nScanning target: {target}")
     guess = guess_os(ttl)
@@ -201,7 +295,8 @@ def scan_target(target: str, ports: range, protocols: Sequence[str], intel: Inte
     else:
         print("OS guess: not possible (no TTL in the ping reply)")
 
-    results = scan_ports(target, ports, protocols, ConsoleProgress() if verbose else None)
+    results = scan_ports(target, request.ports, request.protocols,
+                         ConsoleProgress() if request.verbose else None)
     open_ports = [r for r in results if r.state == "open"]
     silent_udp = [r.port for r in results if r.state == "open|filtered"]
     if silent_udp:
@@ -226,17 +321,84 @@ def scan_target(target: str, ports: range, protocols: Sequence[str], intel: Inte
     return entries
 
 
-def parse_args(argv: Sequence[str] | None = None,
-               prog: str | None = None) -> argparse.Namespace:
+def run_scan(request: ScanRequest, keys: Mapping[str, str], start_time: float) -> int:
+    """Scan every target, print the summary, export (asked, or ``--export``)."""
+    intel = Intel(keys, request.use_ai)
+    print("CVE lookups send only the detected software name and version to the NVD API "
+          "(services.nvd.nist.gov).")
+
+    entries: list[ReportEntry] = []
+    for target in request.targets:
+        entries.extend(scan_target(target, request, intel))
+        print("=" * 60)
+
+    failed = [f"{e['port']}/{e['protocol']} {error}" for e in entries
+              for error in e["lookup_errors"]]
+    print("\nScan Summary Report")
+    print("-------------------")
+    print(f"Total targets scanned: {len(request.targets)}")
+    print(f"Total open ports found: {len(entries)}")
+    print(f"Failed lookups: {len(failed)}" + (f" ({'; '.join(failed)})" if failed else ""))
+    print(f"Elapsed time: {time.time() - start_time:.2f} seconds")
+
+    if not entries:
+        if request.interactive or request.export:
+            print("No open port results to export.")
+        return 0
+    fmt = request.export
+    if request.interactive and ask_yes_no("Do you want to export the results to a file? "
+                                          "(Y/N): "):
+        fmt = input("Enter desired file extension (txt, json, csv): ").strip().lower()
+        if fmt not in EXPORT_FORMATS:
+            print("Unknown extension. No export performed.")
+            return 0
+    if fmt:
+        print(f"Results exported to {export_results(entries, fmt)}")
+    return 0
+
+
+# --- The command -------------------------------------------------------------------------------
+
+def build_parser(prog: str | None = None) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog=prog, description="Port scanner. Only scan systems you are authorised to scan.")
+        prog=prog, formatter_class=argparse.RawDescriptionHelpFormatter,
+        description="Port scanner. Only scan systems you are authorised to scan.\n\n"
+                    "Without a TARGET it asks its questions. With one it asks nothing but the\n"
+                    "authorization question, and sends nothing online but the CVE lookups\n"
+                    "unless --ai or --abuseipdb says so.",
+        epilog="example:\n  %(prog)s 192.168.1.10 -p 1-1024 --protocol both --export csv")
+    parser.add_argument("target", nargs="?", metavar="TARGET",
+                        help="IPv4 or IPv6 address, network (e.g. 192.168.1.0/24) or domain")
+    parser.add_argument("-p", "--ports", metavar="SPEC",
+                        help=f"80, 1-1024 or a list such as 22,80,8000-8100 "
+                             f"(default {DEFAULT_PORTS})")
+    parser.add_argument("--protocol", type=str.lower, choices=list(PROTOCOLS),
+                        help="default tcp")
+    parser.add_argument("-v", "--verbose", action="store_true",
+                        help="show the progress while scanning")
+    parser.add_argument("--ai", action="store_true",
+                        help="send the detected software names (never the raw banner) to "
+                             f"OpenRouter for an AI explanation (needs "
+                             f"{KEY_VARIABLES['openrouter']})")
+    parser.add_argument("--abuseipdb", action="store_true",
+                        help="send public target IPs to AbuseIPDB for a reputation check "
+                             f"(needs {KEY_VARIABLES['abuseipdb']})")
+    parser.add_argument("--scan-unresponsive", action="store_true",
+                        help="also scan hosts that don't answer ping (default: skip them)")
+    parser.add_argument("--export", type=str.lower, choices=list(EXPORT_FORMATS),
+                        help="save the report in instance/scans/ (never overwrites a file)")
     parser.add_argument("--i-am-authorized", action="store_true",
                         help="confirm you are authorised to scan the target (for scripts)")
-    return parser.parse_args(argv)
+    return parser
 
 
 def main(argv: Sequence[str] | None = None, prog: str | None = None) -> int:
-    args = parse_args(argv, prog)
+    parser = build_parser(prog)
+    args = parser.parse_args(argv)
+    used = ["--" + name.replace("_", "-") for name in SCAN_FLAGS if getattr(args, name)]
+    if args.target is None and used:
+        parser.error(f"{', '.join(used)}: only with a TARGET (without one the scanner asks "
+                     "its questions)")
     try:
         limits = scan_limits()
     except ValueError as error:
@@ -248,65 +410,17 @@ def main(argv: Sequence[str] | None = None, prog: str | None = None) -> int:
     keys = load_api_keys()
     add_secrets(*keys.values())  # keys from the environment / .env never reach the log
     start_time = time.time()
-
-    target_text = input("Enter target IP (IPv4 or IPv6), network (e.g. 192.168.1.0/24) "
-                        "or domain: ").strip()
     try:
-        targets = parse_target(target_text, limits.max_hosts)
-    except ValueError as error:
-        print(error)
-        return 2
-    if "/" not in target_text and not is_ip_literal(target_text):
-        print(f"Domain {target_text} resolved to IP: {targets[0]}")
-    try:
-        ports = parse_port_range(input("Enter start port: "), input("Enter end port: "))
-    except ValueError as error:
-        print(error)
-        return 2
-    protocols = ask_protocols()
-    problem = check_limits(len(targets), len(targets) * len(ports) * len(protocols), limits)
-    if problem:
-        print(problem)
-        return 2
-    if not confirm_authorized(target_text, args.i_am_authorized):
-        print("Scan cancelled: only scan systems you are authorised to scan.")
-        return 2
-
-    verbose = ask_yes_no("Enable verbose mode? (Y/N): ")
-    use_ai = False
-    if keys["openrouter"]:
-        model = ai_model()
-        use_ai = ask_yes_no(
-            f"Send the detected software names (e.g. 'OpenSSH 8.9', never the raw banner) "
-            f"to OpenRouter ({model}) for an AI explanation? (Y/N): ")
-    intel = Intel(keys, use_ai)
-    print("CVE lookups send only the detected software name and version to the NVD API "
-          "(services.nvd.nist.gov).")
-
-    entries: list[ReportEntry] = []
-    for target in targets:
-        entries.extend(scan_target(target, ports, protocols, intel, verbose))
-        print("=" * 60)
-
-    failed = [f"{e['port']}/{e['protocol']} {error}" for e in entries
-              for error in e["lookup_errors"]]
-    print("\nScan Summary Report")
-    print("-------------------")
-    print(f"Total targets scanned: {len(targets)}")
-    print(f"Total open ports found: {len(entries)}")
-    print(f"Failed lookups: {len(failed)}" + (f" ({'; '.join(failed)})" if failed else ""))
-    print(f"Elapsed time: {time.time() - start_time:.2f} seconds")
-
-    if not entries:
-        print("No open port results to export.")
-        return 0
-    if ask_yes_no("Do you want to export the results to a file? (Y/N): "):
-        fmt = input("Enter desired file extension (txt, json, csv): ").strip().lower()
-        if fmt in EXPORT_FORMATS:
-            print(f"Results exported to {export_results(entries, fmt)}")
-        else:
-            print("Unknown extension. No export performed.")
-    return 0
+        try:
+            request = (ask_request(keys, limits, args.i_am_authorized) if args.target is None
+                       else request_from_flags(args, keys, limits))
+        except ValueError as error:  # bad target or ports, a limit, no authorization
+            print(error)
+            return 2
+        return run_scan(request, keys, start_time)
+    except (EOFError, KeyboardInterrupt):
+        print("\nScan cancelled.")
+        return 130
 
 
 def utf8_output() -> None:

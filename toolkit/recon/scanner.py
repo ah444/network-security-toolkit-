@@ -96,8 +96,12 @@ def scan_ports(host: str, ports: Iterable[int], protocols: Sequence[str],
     try:
         with ThreadPoolExecutor(max_workers=workers) as executor:
             futures = [executor.submit(run, scan, port) for scan, port in tasks]
-            for future in as_completed(futures):
-                results.append(future.result())
+            try:
+                for future in as_completed(futures):
+                    results.append(future.result())
+            except BaseException:  # Ctrl+C: only the checks already running finish
+                executor.shutdown(wait=False, cancel_futures=True)
+                raise
     finally:
         sink.finish()
     return sorted(results, key=lambda r: (r.port, r.protocol))

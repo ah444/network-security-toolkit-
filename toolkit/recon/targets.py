@@ -46,6 +46,24 @@ def parse_port_range(start_text: str, end_text: str) -> range:
     return range(start, end + 1)
 
 
+def parse_ports(spec: str) -> list[int]:
+    """Ports from ``80``, ``1-1024`` or a list such as ``22,80,8000-8100``: sorted, each
+    port once; ValueError with a message otherwise."""
+    parts = [part.strip() for part in spec.split(",")]
+    if not any(parts):
+        raise ValueError("No ports given (examples: 80, 1-1024, 22,80,8000-8100).")
+    ports: set[int] = set()
+    for part in parts:
+        if not part:
+            raise ValueError(f"{spec!r} has an empty item between commas.")
+        start, dash, end = part.partition("-")
+        try:
+            ports.update(parse_port_range(start, end if dash else start))
+        except ValueError as error:
+            raise ValueError(f"{part!r}: {error}") from None
+    return sorted(ports)
+
+
 def check_limits(host_count: int, probe_count: int, limits: ScanConfig) -> str | None:
     """A message when a scan is above the limits, else None."""
     if host_count > limits.max_hosts:
