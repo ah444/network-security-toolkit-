@@ -21,12 +21,12 @@ This project is being reworked into **v5.0 ("correct & safe")**; see [docs/IMPRO
 - Exported models are signed **`.bundle`** files that load only on the toolkit install that made them. The signing key is created in `instance/signing.key` on the first export: back up the `instance/` folder. If the key is lost, the bundles can't be loaded any more; retrain from the run's record in `instance/runs/`. Loading bundles from another computer comes in v5.1.
 - Training runs as a background job with a progress bar and a **Cancel training** button. The server trains one job at a time; others wait in a queue. Cancel takes effect after the model being fitted at that moment, so on the full CIC file it can take a while; a job is also stopped after 180 minutes (`TOOLKIT_JOB_MAX_MIN`). A cancelled or failed job keeps nothing. On the full CIC file training takes many minutes and about 6 GB of memory.
 - Web trainer data lives in memory, one workspace per browser session (tabs of the same browser share it). It is lost when the app restarts, removed after 240 minutes without use (`TOOLKIT_WORKSPACE_IDLE_MIN`), or with the **Clear workspace** button. Only one training runs at a time per workspace, and the dataset can't be changed while it runs. At most 4 workspaces (`TOOLKIT_MAX_WORKSPACES`) and 4,096 MB of loaded datasets (`TOOLKIT_MAX_DATA_MB`; trained models not counted) are kept: the least recently used other session's workspace makes room first. The upload message reports how much memory the dataset takes. If you serve the app over HTTPS, set `TOOLKIT_HTTPS=1` so the session cookie is marked `Secure`. The page sends a per-session security token with every change (CSRF protection); after the app restarts, reload the page before going on.
-- Port scanner, what leaves your computer: CVE lookups send the detected software name and version (for example `OpenSSH 8.9`) to the public NVD API. The optional AI explanation (OpenRouter) and the AbuseIPDB check run only after you agree in that scan, and the AI gets the same software name only, never the raw banner.
+- Port scanner, what leaves your computer: CVE lookups send the detected software name and version (for example `OpenSSH 8.9`) to the public NVD API. The optional AI explanation (OpenRouter) and the AbuseIPDB check run only after you agree in that scan (or pass `--ai` / `--abuseipdb`), and the AI gets the same software name only, never the raw banner.
 - CVEs come from an NVD **keyword search** on that name and version, so the list can include CVEs that don't affect the exact build, or miss some. Severity comes from the CVSS scores only. Lookups run one at a time with a 15 s timeout each; without an NVD key, NVD allows about one request every 6 seconds, so scans with many open ports are slow (parallel lookups come in v5.1).
 - The OS guess comes from the ping TTL, so it is only a rough family guess (Windows, Linux/macOS/BSD, network device). Hosts that don't answer ping, and IPv6 targets on Windows (no TTL shown), get no guess. On Windows, closed and firewalled TCP ports look the same, so both are reported as closed. A UDP port that doesn't answer is reported as `open|filtered`.
 - Scans are limited to 256 hosts and 65,536 host×port checks (`TOOLKIT_SCAN_MAX_HOSTS`, `TOOLKIT_SCAN_MAX_PROBES`), and each one asks you to confirm you are authorised (`--i-am-authorized` in scripts).
 - No model is shipped with the project: train and export one in the web trainer first. The CLI lists the exports in `instance/bundles` and opens only bundles exported on this install. Large models (for example Random Forest on the full CIC file, about 2 GB) take minutes to load and need several times their size in memory. A bundle made with a different scikit-learn, imbalanced-learn, XGBoost or LightGBM minor version is refused (retrain it); smaller version differences are shown as a warning.
-- Starting the web trainer from the launcher menu prints its address (`http://127.0.0.1:5000/`) but doesn't open a browser; stop it with Ctrl+C to get back to the menu.
+- The web trainer opens in your default browser once it is ready and prints its address (`http://127.0.0.1:5000/`; `--no-browser` or `TOOLKIT_NO_BROWSER=1` to not open it); stop it with Ctrl+C (from the launcher menu, that brings the menu back).
 - Tested on Windows with Python 3.14 (419 automated tests, a fresh install followed by a scripted walk-through of every menu path, `scripts/menu_walkthrough.py`, and a browser session through the whole web trainer on real CIC-IDS2017 and NSL-KDD data, see `docs/release/`). **Linux and macOS are not tested on real machines:** the OS-specific logic (ping options, paths, file encodings) is unit-tested only.
 - Only scan systems you are authorised to scan.
 
@@ -197,11 +197,15 @@ Train and export a model in the web trainer first; `--list` shows your exports a
 
 ### IDS Web Interface
 ```bash
-# Run the web server (from the project folder)
+# Run the web server (from the project folder); the page opens in your default browser
 python -m toolkit web
+# Another port, without opening the browser
+python -m toolkit web --port 5001 --no-browser
 ```
 
-Then open `http://localhost:5000` in your browser.
+The page is `http://127.0.0.1:5000/` (the address is always printed); Ctrl+C stops the server.
+If the port is already in use (for example, the trainer is already running), it says so and
+stops: start it on another port with `--port`. `TOOLKIT_NO_BROWSER=1` never opens the browser.
 
 ---
 
@@ -480,7 +484,7 @@ Alternatives: Class Weights, SMOTE + Tomek, ADASYN
 | `ModuleNotFoundError` | Run `pip install -r requirements.txt` |
 | Port Scanner timeout | Check firewall settings |
 | SMOTE fails | Minority class needs ≥6 samples |
-| Web app not starting | Check port 5000 is free |
+| Web app says the port is in use | It may already be running (open the address it prints), or start it with `python -m toolkit web --port 5001` |
 
 ### Memory Issues with Large Datasets
 For datasets >500K rows:

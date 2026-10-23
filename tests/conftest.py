@@ -26,6 +26,7 @@ def fixtures_dir() -> Path:
 def _scratch_instance_dir(tmp_path_factory, monkeypatch):
     """Runs, bundles and the signing key go to a temporary instance/ in every test."""
     monkeypatch.setenv("TOOLKIT_INSTANCE_DIR", str(tmp_path_factory.mktemp("instance")))
+    monkeypatch.setenv("TOOLKIT_NO_BROWSER", "1")  # no test ever opens a real browser
 
 
 @pytest.fixture

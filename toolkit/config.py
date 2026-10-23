@@ -184,6 +184,7 @@ class WebConfig:
     https: bool = False  # Secure session cookie: only behind HTTPS (D23)
     debug: bool = False  # Flask's debug server: development only, its debugger can run code
     secret_key: str = ""  # session signing key; '' = random per start
+    open_browser: bool = True  # open the trainer in the default browser (TOOLKIT_NO_BROWSER=1: no)
 
 
 def _int_setting(environ: Mapping[str, str], variable: str, default: int) -> int:
@@ -191,10 +192,21 @@ def _int_setting(environ: Mapping[str, str], variable: str, default: int) -> int
     return int(raw) if raw else default
 
 
+def port_number(text: str, source: str = "TOOLKIT_PORT") -> int:
+    """A TCP port (1-65535) from ``text``; ValueError naming ``source`` otherwise."""
+    try:
+        port = int(text.strip())
+    except ValueError:
+        port = 0
+    if not 1 <= port <= 65535:
+        raise ValueError(f"{source} must be a port number from 1 to 65535, not {text!r}")
+    return port
+
+
 def web_config(environ: Mapping[str, str] | None = None) -> WebConfig:
     """``TOOLKIT_MAX_UPLOAD_MB``, ``TOOLKIT_WORKSPACE_IDLE_MIN``, ``TOOLKIT_MAX_WORKSPACES``,
-    ``TOOLKIT_MAX_DATA_MB``, ``TOOLKIT_JOB_MAX_MIN``, ``TOOLKIT_PORT``, ``TOOLKIT_HTTPS=1``, ``TOOLKIT_DEBUG=1`` and
-    ``TOOLKIT_SECRET_KEY``, else the defaults."""
+    ``TOOLKIT_MAX_DATA_MB``, ``TOOLKIT_JOB_MAX_MIN``, ``TOOLKIT_PORT``, ``TOOLKIT_HTTPS=1``, ``TOOLKIT_DEBUG=1``,
+    ``TOOLKIT_SECRET_KEY`` and ``TOOLKIT_NO_BROWSER=1``, else the defaults."""
     environ = os.environ if environ is None else environ
     return WebConfig(
         max_upload_mb=_int_setting(environ, "TOOLKIT_MAX_UPLOAD_MB", WebConfig.max_upload_mb),
@@ -203,10 +215,12 @@ def web_config(environ: Mapping[str, str] | None = None) -> WebConfig:
         max_workspaces=_int_setting(environ, "TOOLKIT_MAX_WORKSPACES", WebConfig.max_workspaces),
         max_data_mb=_int_setting(environ, "TOOLKIT_MAX_DATA_MB", WebConfig.max_data_mb),
         job_max_minutes=_int_setting(environ, "TOOLKIT_JOB_MAX_MIN", WebConfig.job_max_minutes),
-        port=_int_setting(environ, "TOOLKIT_PORT", WebConfig.port),
+        port=port_number(environ["TOOLKIT_PORT"]) if environ.get("TOOLKIT_PORT", "").strip()
+        else WebConfig.port,
         https=environ.get("TOOLKIT_HTTPS") == "1",
         debug=environ.get("TOOLKIT_DEBUG") == "1",
         secret_key=environ.get("TOOLKIT_SECRET_KEY", ""),
+        open_browser=environ.get("TOOLKIT_NO_BROWSER") != "1",
     )
 
 

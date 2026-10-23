@@ -178,7 +178,7 @@ def test_tool_help_names_the_command(monkeypatch, capsys, name, module):
 
 def test_web_command_starts_the_server(monkeypatch):
     started = []
-    monkeypatch.setattr("toolkit.web.run_server", lambda: started.append(True))
+    monkeypatch.setattr("toolkit.web.run_server", lambda config=None: started.append(True))
     assert cli.main(["web"]) == 0
     assert started == [True]
     with pytest.raises(SystemExit) as stop:
