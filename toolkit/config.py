@@ -176,6 +176,7 @@ class WebConfig:
     """Web trainer settings (plan S6, S9, D7, D23; one place since v5.1 step 1.2a)."""
 
     max_upload_mb: int = 2048  # large enough for the full CIC-IDS2017 file (~1 GB), S9
+    max_predict_mb: int = 512  # one "Predict a CSV file" upload (it is read into memory)
     workspace_idle_minutes: int = 240  # unused workspaces are dropped (not while training)
     max_workspaces: int = 4  # open workspaces (browser sessions with a dataset or bundle)
     max_data_mb: int = 4096  # loaded datasets of all workspaces together (models not counted)
@@ -204,12 +205,14 @@ def port_number(text: str, source: str = "TOOLKIT_PORT") -> int:
 
 
 def web_config(environ: Mapping[str, str] | None = None) -> WebConfig:
-    """``TOOLKIT_MAX_UPLOAD_MB``, ``TOOLKIT_WORKSPACE_IDLE_MIN``, ``TOOLKIT_MAX_WORKSPACES``,
+    """``TOOLKIT_MAX_UPLOAD_MB``, ``TOOLKIT_MAX_PREDICT_MB``, ``TOOLKIT_WORKSPACE_IDLE_MIN``,
+    ``TOOLKIT_MAX_WORKSPACES``,
     ``TOOLKIT_MAX_DATA_MB``, ``TOOLKIT_JOB_MAX_MIN``, ``TOOLKIT_PORT``, ``TOOLKIT_HTTPS=1``, ``TOOLKIT_DEBUG=1``,
     ``TOOLKIT_SECRET_KEY`` and ``TOOLKIT_NO_BROWSER=1``, else the defaults."""
     environ = os.environ if environ is None else environ
     return WebConfig(
         max_upload_mb=_int_setting(environ, "TOOLKIT_MAX_UPLOAD_MB", WebConfig.max_upload_mb),
+        max_predict_mb=_int_setting(environ, "TOOLKIT_MAX_PREDICT_MB", WebConfig.max_predict_mb),
         workspace_idle_minutes=_int_setting(environ, "TOOLKIT_WORKSPACE_IDLE_MIN",
                                             WebConfig.workspace_idle_minutes),
         max_workspaces=_int_setting(environ, "TOOLKIT_MAX_WORKSPACES", WebConfig.max_workspaces),

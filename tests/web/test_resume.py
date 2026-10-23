@@ -11,7 +11,8 @@ from web_jobs import TRAIN_URL, train_and_wait, wait_for
 
 URL = "/api/v1/workspace"
 TARGET = "Label"
-EMPTY = {"dataset": None, "run": None, "job": None, "export": None, "bundle": None}
+EMPTY = {"dataset": None, "run": None, "job": None, "export": None, "bundle": None,
+         "predictions": None}
 
 
 @pytest.fixture

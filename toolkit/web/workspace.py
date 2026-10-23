@@ -15,6 +15,7 @@ import time
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
+from typing import Any
 
 import pandas as pd
 from flask import Blueprint, jsonify, session
@@ -55,6 +56,16 @@ class ExportedBundle:
     name: str
 
 
+@dataclass
+class BatchPredictions:
+    """The last "Predict a CSV file" (step 1.4f): the labelled CSV for the download and
+    the answer the route gave (GET /api/v1/workspace repeats it). The uploaded rows are
+    not kept."""
+
+    csv: bytes
+    answer: dict[str, Any]
+
+
 class Workspace:
     """Everything one browser session has uploaded and trained.
 
@@ -71,6 +82,7 @@ class Workspace:
         self.run: TrainingRun | None = None  # TrainingRun of the last training
         self.export: ExportedBundle | None = None  # once the run was exported
         self.loaded: Bundle | None = None  # bundle loaded back from a file
+        self.predictions: BatchPredictions | None = None  # the last "Predict a CSV file"
         self.lock = threading.RLock()
         self.training = threading.Lock()  # held while a training runs (one at a time)
         self.last_used = time.monotonic()

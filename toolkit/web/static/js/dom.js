@@ -86,6 +86,15 @@ export function setChecked(container, values) {
   });
 }
 
+// Show the chosen file names in place of a file input's placeholder
+export function watchFileInput(input, placeholder, emptyText) {
+  input.addEventListener("change", () => {
+    const files = Array.from(input.files);
+    placeholder.textContent = files.length === 0 ? emptyText :
+      `${files.length} file(s) selected: ${files.map(f => f.name).join(", ")}`;
+  });
+}
+
 // A table with a header row: headers are texts, rows are arrays of cell texts or nodes
 export function table(className, headers, rows) {
   return el("table", { class: className },

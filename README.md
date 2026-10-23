@@ -63,7 +63,7 @@ This project is being reworked into **v5.0 ("correct & safe")**; see [docs/IMPRO
 - 🧠 Predicts with any model bundle exported by the web trainer (features, classes and best model come from the bundle)
 - 📊 Uses the models you export from the web trainer: it lists them (newest first) and you pick one; each shows its real metrics from its training record
 - ⌨️ Manual input (prefilled from a real example), real test-split examples, model switching
-- 📄 `--csv` batch prediction (writes `<file>.predictions.csv`, never overwritten), `--json` input, `--info` model card
+- 📄 `--csv` batch prediction (writes `<file>.predictions.csv`, never overwritten; the web trainer's "Predict a CSV file" gives the same file), `--json` input, `--info` model card
 
 ### 3. Intrusion Detection System (Web) ⭐ NEW FEATURES
 - 🌐 Web-based UI with Flask
@@ -78,6 +78,7 @@ This project is being reworked into **v5.0 ("correct & safe")**; see [docs/IMPRO
 - 📉 **Confusion Matrix** - Visual model evaluation
 - 🔀 **Train/Test Split Slider** - Customize data splits
 - 💾 **Export / Load Models** - signed `.bundle` files (all models of a run plus its training record)
+- 📄 **Predict a CSV file** - label every row of a file with the session's model or a loaded bundle: rows per class with bars, how many match the file's label column, and the labelled CSV to download (the same file as the CLI's `--csv`; files up to 512 MB, `TOOLKIT_MAX_PREDICT_MB`)
 
 ---
 

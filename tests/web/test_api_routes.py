@@ -25,7 +25,7 @@ def _served(web_app):
 
 
 def test_routes_match_the_documentation(repo_root, web_app):
-    assert len(_documented(repo_root)) == 19
+    assert len(_documented(repo_root)) == 22
     assert _served(web_app) == _documented(repo_root)
 
 
@@ -42,19 +42,22 @@ def test_wrong_method_is_json_405(client):
 
 
 def test_page_uses_only_api_routes():
-    # the two predict routes are passed to predictWith(url, ...), which calls send(url, ...);
+    # the two predict routes are passed to predictWith(url, ...), which calls send(url, ...),
+    # the two predict-file routes are the url of predict.js's BATCH parts (step 1.4f);
     # /api/v1/workspace is used twice: GET to resume after a reload, DELETE to clear
-    urls = re.findall(r'(?:getJSON|send|predictWith)\("(/[^"?]*)', all_js())
-    assert len(urls) == 15 and all(url.startswith("/api/v1/") for url in urls), urls
+    urls = re.findall(r'(?:getJSON|send|predictWith)\("(/[^"?]*)|\burl: "(/[^"?]*)', all_js())
+    urls = [call or part for call, part in urls]
+    assert len(urls) == 17 and all(url.startswith("/api/v1/") for url in urls), urls
 
 
 def test_page_sends_every_state_change_with_the_token():
     """Step 1.2e: a POST/DELETE without the token is refused (403 CSRF_TOKEN). Since step
     1.3a every request goes through api.js, and send() always adds the token."""
     code = all_js()
-    # 11 POST/DELETE routes in 10 send() calls: both predict routes share predictWith's
+    # 13 POST/DELETE routes in 11 send() calls: both predict routes share predictWith's,
+    # both predict-file routes predictFile's (step 1.4f)
     sends = re.findall(r'\bsend\([^,]+,\s*"([A-Z]+)"', code)
-    assert len(sends) == 10 and set(sends) == {"POST", "DELETE"}, sends
+    assert len(sends) == 11 and set(sends) == {"POST", "DELETE"}, sends
     api = js_sources()["api.js"]
     assert api.count("fetch(") == 2  # getJSON and send
     assert '"X-CSRF-Token": csrfToken()' in api

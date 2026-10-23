@@ -9,10 +9,11 @@ session can still read and predict, but not change its dataset. Everything runs 
 computer (`127.0.0.1`).
 
 - **Requests:** `POST` bodies are JSON objects (`Content-Type: application/json`), except
-  the two file uploads (`multipart/form-data`). `GET` routes read the query string.
+  the file uploads (`multipart/form-data`). `GET` routes read the query string.
 - **Limits:** lists hold at most 10,000 items, texts at most 1,000 characters; `rows`,
   `k` and `test_size` are moved into their range instead of being refused. Uploads are
-  limited by `TOOLKIT_MAX_UPLOAD_MB` (default 2,048 MB).
+  limited by `TOOLKIT_MAX_UPLOAD_MB` (default 2,048 MB), a file to predict by
+  `TOOLKIT_MAX_PREDICT_MB` (default 512 MB; `TOO_LARGE`, 413).
 - **Memory:** at most `TOOLKIT_MAX_WORKSPACES` workspaces (default 4) and
   `TOOLKIT_MAX_DATA_MB` of loaded datasets in all of them together (default 4,096 MB;
   trained models are not counted). When a new workspace or dataset doesn't fit, other
@@ -46,12 +47,36 @@ computer (`127.0.0.1`).
 | DELETE | `/api/v1/jobs/<job_id>` | none | **202**: a queued job is cancelled at once, a running one at its next step |
 | GET | `/api/v1/run/confusion` | `model` (default: the selected one) | test-split confusion matrix |
 | POST | `/api/v1/run/predict` | `values`: {feature: value}, `model` | prediction |
+| POST | `/api/v1/run/predict-file` | multipart `file` (`.csv`/`.txt`), `model` | every row predicted: counts per class, matches, download (see below) |
 | POST | `/api/v1/run/export` | `name` (letters, digits, `_`, `-`; max 80) | signed bundle saved in `instance/bundles/` |
 | GET | `/api/v1/run/bundle` | none | the exported bundle as a download |
 | POST | `/api/v1/bundle` | multipart `file`: a `.bundle` exported by this install | the loaded models and their scores |
 | POST | `/api/v1/bundle/predict` | `values`, `model` | prediction with the loaded bundle |
+| POST | `/api/v1/bundle/predict-file` | multipart `file`, `model` | the same with the loaded bundle |
+| GET | `/api/v1/predictions` | none | the last predicted file's labelled CSV as a download (404 `NOT_FOUND` before any) |
 | GET | `/api/v1/workspace` | none | what the session holds, to resume after a reload (see below) |
 | DELETE | `/api/v1/workspace` | none | the session's dataset and models are forgotten |
+
+## Batch prediction (v5.1 step 1.4f)
+
+`POST /api/v1/run/predict-file` and `/api/v1/bundle/predict-file` label every row of an
+uploaded `.csv`/`.txt` file with `model` (default: the run's selected model). The file is
+read like a dataset upload and deleted at once; it needs the model's feature columns
+(otherwise `UNKNOWN_COLUMN`, 400, naming them), and extra columns are ignored. The answer:
+
+```json
+{"message": "2,000 rows predicted with Random Forest.", "source": "run", "model": "random_forest",
+ "file": "flows.csv", "rows": 2000,
+ "counts": [{"label": "BENIGN", "count": 1600, "share": 0.8}, ...],
+ "matches": {"matching": 1995, "rows": 2000, "share": 0.9975}, "label_column": "Label",
+ "download_url": "/api/v1/predictions", "download_name": "flows.predictions.csv"}
+```
+
+`counts` are largest first; `matches` and `label_column` are null when the file has no
+label column. `GET /api/v1/predictions` downloads the labelled CSV with the columns of
+`python -m toolkit ids --csv`: `row, prediction, confidence[, true_label]` (both are made
+by `toolkit.ids_core.batch`). Only the last result is kept, in the session's workspace;
+`GET /api/v1/workspace` repeats its answer as `predictions`.
 
 ## Security token
 
@@ -76,7 +101,8 @@ shape its own route answered, or `null`:
  "run": {"run_id": "...", "leaderboard": [], "confusion_matrices": {}},
  "job": {"id": "...", "url": "/api/v1/jobs/...", "state": "running"},
  "export": {"download_url": "/api/v1/run/bundle", "download_name": "..."},
- "bundle": {"run_id": "...", "models": [], "features_info": []}}
+ "bundle": {"run_id": "...", "models": [], "features_info": []},
+ "predictions": {"source": "run", "rows": 2000, "counts": [], "download_url": "/api/v1/predictions"}}
 ```
 
 - `dataset`: as `POST /api/v1/dataset` answered (after a class filter: the rows left).
@@ -84,6 +110,8 @@ shape its own route answered, or `null`:
 - `job`: a training that is still `queued` or `running` (as `GET /api/v1/jobs/<id>`).
 - `export`: as `POST /api/v1/run/export` answered, once the run was exported.
 - `bundle`: as `POST /api/v1/bundle` answered.
+- `predictions`: as the last `POST /api/v1/run/predict-file` or `/api/v1/bundle/predict-file`
+  answered (its `source` says which); the labelled CSV is still at `/api/v1/predictions`.
 
 A session without a workspace gets all `null`s; nothing is created. The page uses this
 route on every load; results of the explore routes (distribution, previews, scores) are

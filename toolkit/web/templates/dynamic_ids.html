@@ -255,6 +255,22 @@
           <button type="submit" class="btn">Predict</button>
         </form>
         <div id="predictionResult" class="message" role="status"></div>
+        <div class="predict-file">
+          <h4>Predict a CSV File</h4>
+          <p class="section-description">Labels every row of a .csv or .txt file with the algorithm chosen above. The file needs the model's feature columns; if it also has the label column, the predictions are compared with it.</p>
+          <form id="predictFileForm" enctype="multipart/form-data">
+            <div class="form-group">
+              <label for="predictFile" class="label">Select CSV or TXT File:</label>
+              <div class="file-input-wrapper">
+                <input type="file" id="predictFile" name="file" accept=".csv,.txt" required>
+                <div class="file-input-placeholder">Choose file...</div>
+              </div>
+            </div>
+            <button type="submit" class="btn">Predict File</button>
+          </form>
+          <div id="predictFileResult" class="message" role="status"></div>
+          <div id="predictFileOutput" class="batch-output"></div>
+        </div>
       </div>
 
       <div class="section" id="exportSection" hidden>
@@ -281,6 +297,22 @@
           <button type="submit" class="btn">Predict</button>
         </form>
         <div id="loadedPredictionResult" class="message" role="status"></div>
+        <div class="predict-file">
+          <h4>Predict a CSV File</h4>
+          <p class="section-description">Labels every row of a .csv or .txt file with the algorithm chosen above (loaded bundle). The file needs the model's feature columns; if it also has the label column, the predictions are compared with it.</p>
+          <form id="loadedPredictFileForm" enctype="multipart/form-data">
+            <div class="form-group">
+              <label for="loadedPredictFile" class="label">Select CSV or TXT File:</label>
+              <div class="file-input-wrapper">
+                <input type="file" id="loadedPredictFile" name="file" accept=".csv,.txt" required>
+                <div class="file-input-placeholder">Choose file...</div>
+              </div>
+            </div>
+            <button type="submit" class="btn">Predict File</button>
+          </form>
+          <div id="loadedPredictFileResult" class="message" role="status"></div>
+          <div id="loadedPredictFileOutput" class="batch-output"></div>
+        </div>
       </div>
       <div class="step-actions">
         <button type="button" class="btn btn-sm btn-secondary step-back">Back</button>

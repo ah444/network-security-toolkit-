@@ -55,6 +55,8 @@ def test_each_session_gets_its_own_token(web_app):
     ("post", "/api/v1/run/export"),
     ("post", "/api/v1/run/predict"),
     ("post", "/api/v1/bundle/predict"),
+    ("post", "/api/v1/run/predict-file"),
+    ("post", "/api/v1/bundle/predict-file"),
     ("delete", "/api/v1/workspace"),
     ("delete", "/api/v1/jobs/abc"),
 ])

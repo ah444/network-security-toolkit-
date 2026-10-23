@@ -2,7 +2,7 @@
 // clearing the workspace.
 
 import { getJSON, send } from "./api.js";
-import { byId, el, setContent, show, table } from "./dom.js";
+import { byId, el, setContent, show, table, watchFileInput } from "./dom.js";
 import { fmt } from "./format.js";
 import { emit, on } from "./state.js";
 
@@ -16,15 +16,6 @@ function resetFileInputs(formId) {
     if (placeholder) {
       placeholder.textContent = input.multiple ? "Choose file(s)..." : "Choose file...";
     }
-  });
-}
-
-// Show the chosen file names in place of the placeholder
-function watchFileInput(input, placeholder, emptyText) {
-  input.addEventListener("change", () => {
-    const files = Array.from(input.files);
-    placeholder.textContent = files.length === 0 ? emptyText :
-      `${files.length} file(s) selected: ${files.map(f => f.name).join(", ")}`;
   });
 }
 

@@ -232,6 +232,12 @@ textarea:focus-visible {
   outline-offset: 2px;
 }
 
+/* A file input is invisible on top of its placeholder: the placeholder shows its focus */
+.file-input-wrapper:has(input:focus-visible) .file-input-placeholder {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
 /* ---------- Layout ---------- */
 .navbar {
   background: var(--accent-strong);
@@ -674,6 +680,103 @@ textarea:focus-visible {
   background: var(--indigo-30);
   padding: 5px 12px;
   border-radius: var(--radius);
+}
+
+/* Batch prediction (v5.1 step 1.4f): "Predict a CSV file", rows per class with a bar */
+.predict-file {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--table-border);
+}
+
+.predict-file h4 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 0.5rem;
+}
+
+.batch-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+  font-size: 0.9rem;
+  background: var(--table-bg);
+}
+
+.batch-table th,
+.batch-table td {
+  padding: 8px 12px;
+  border: 1px solid var(--table-border);
+  text-align: left;
+  color: var(--table-text);
+  overflow-wrap: break-word; /* whole words where they fit; a too-long name still wraps */
+}
+
+.batch-table th {
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 600;
+}
+
+.batch-table th:nth-child(2),
+.batch-table td:nth-child(2) {
+  white-space: nowrap; /* a count never breaks inside its digits, even on phones */
+  overflow-wrap: normal;
+}
+
+.batch-table td:nth-child(2) {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.batch-share {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-variant-numeric: tabular-nums;
+}
+
+.batch-bar {
+  flex: 1 1 32px;
+  width: 32px; /* a meter's own width (about 80px) would set the table's minimum width */
+  min-width: 32px;
+  height: 10px;
+  border: none;
+  border-radius: 5px;
+  background: var(--table-border);
+}
+
+.batch-bar::-webkit-meter-bar {
+  height: 10px;
+  border: none;
+  border-radius: 5px;
+  background: var(--table-border);
+}
+
+.batch-bar::-webkit-meter-optimum-value {
+  border-radius: 5px;
+  background: var(--accent);
+}
+
+.batch-bar::-moz-meter-bar {
+  border-radius: 5px;
+  background: var(--accent);
+}
+
+.batch-output .btn {
+  margin-top: 1rem;
+}
+
+@media (max-width: 600px) {
+  .batch-table th,
+  .batch-table td {
+    padding: 8px 6px;
+  }
+
+  .batch-share {
+    gap: 6px;
+  }
 }
 
 /* Training job progress (v5.1 step 1.2d) */

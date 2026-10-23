@@ -28,6 +28,7 @@ import numpy as np
 import pandas as pd
 
 from ..bundle_files import BundleStore
+from ..ids_core.batch import prediction_csv, prediction_summary, prediction_table
 from ..ids_core.bundle import BundleError, BundleVersionWarning
 from ..ids_core.datasets import DatasetError, load_dataset
 from ..ids_core.registry import MODELS
@@ -187,22 +188,19 @@ def run_csv(bundle, csv_path, output=None, model=None):
     if output.exists():
         raise FileExistsError(f"{output} already exists; choose another --output")
     frame = load_dataset(csv_path).frame
-    result = predict_rows(bundle, frame, model)
-    table = pd.DataFrame({"row": np.arange(1, len(frame) + 1),
-                          "prediction": result["prediction"].to_numpy(),
-                          "confidence": result["confidence"].round(4).to_numpy()})
     label = label_column(bundle)
-    if label and label in frame.columns:
-        table["true_label"] = frame[label].astype(str).to_numpy()
+    # the same table as the web trainer's "Predict a CSV file" (ids_core.batch, step 1.4f)
+    table = prediction_table(bundle.model(model), frame, label)
     with output.open("x", encoding="utf-8", newline="") as handle:
-        table.to_csv(handle, index=False)
+        handle.write(prediction_csv(table))
+    summary = prediction_summary(table)
     print(f"✅ {len(table)} rows predicted with {bundle.model(model).name}; saved to {output}")
-    for cls, count in table["prediction"].value_counts().items():
-        print(f"   {cls:<30} {count:>8,}")
-    if "true_label" in table:
-        same = int((table["prediction"] == table["true_label"]).sum())
-        print(f"   {same:,} of {len(table):,} predictions ({same / len(table):.1%}) match the "
-              f"file's {label} column")
+    for count in summary["counts"]:
+        print(f"   {count['label']:<30} {count['count']:>8,}")
+    if summary["matches"]:
+        same = summary["matches"]["matching"]
+        print(f"   {same:,} of {len(table):,} predictions ({summary['matches']['share']:.1%}) "
+              f"match the file's {label} column")
     return 0
 
 

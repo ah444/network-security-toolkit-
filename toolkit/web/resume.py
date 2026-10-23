@@ -29,4 +29,5 @@ def workspace_contents(ws: Workspace) -> Answer:
         "job": job_view(active[-1], state().jobs) if active else None,  # queued or running
         "export": export_answer(ws.export) if ws.export is not None else None,
         "bundle": bundle_answer(ws.loaded) if ws.loaded is not None else None,
+        "predictions": ws.predictions.answer if ws.predictions is not None else None,
     })
