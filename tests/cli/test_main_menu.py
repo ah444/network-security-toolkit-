@@ -208,3 +208,27 @@ def test_entry_points_from_the_project_folder(repo_root, entry):
                            stdin=subprocess.DEVNULL)
     assert wrong.returncode == 2
     assert "invalid choice: 'bogus'" in wrong.stderr
+
+
+def test_walkthrough_script_waits_only_for_prompts_the_tools_print(repo_root):
+    """scripts/menu_walkthrough.py (the release gate) follows the flat menu: every prompt
+    it waits for is in the toolkit's code, and none of the removed menus is."""
+    script = (repo_root / "scripts/menu_walkthrough.py").read_text(encoding="utf-8")
+    tree = ast.parse(script)
+    constants = {node.targets[0].id: node.value.value for node in tree.body
+                 if isinstance(node, ast.Assign) and isinstance(node.targets[0], ast.Name)
+                 and isinstance(node.value, ast.Constant)}
+    waited = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Call) and getattr(node.func, "id", None) in ("answer",
+                                                                             "expect"):
+            for arg in node.args[:1] if node.func.id == "answer" else node.args:
+                if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
+                    waited.add(arg.value)
+                elif isinstance(arg, ast.Name) and arg.id in constants:
+                    waited.add(constants[arg.id])
+    assert len(waited) > 15
+    code = "".join(path.read_text(encoding="utf-8")
+                   for path in (repo_root / "toolkit").rglob("*.py"))
+    assert sorted(p for p in waited if p not in code) == []
+    assert 'start("-m", "toolkit")' in script and 'start("main.py")' in script
