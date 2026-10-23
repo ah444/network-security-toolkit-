@@ -52,7 +52,7 @@
           <button type="button" id="clearWorkspaceBtn" class="btn btn-secondary btn-sm">Clear workspace</button>
           <span class="section-description">Your dataset and models stay in memory for this browser session only, and are removed after {{ idle_minutes }} minutes without use.</span>
         </div>
-        <div id="clearWorkspaceResult" class="message"></div>
+        <div id="clearWorkspaceResult" class="message" role="status"></div>
       </div>
 
       <div class="section" id="uploadDatasetSection">
@@ -68,7 +68,7 @@
           </div>
           <button type="submit" class="btn">Upload File</button>
         </form>
-        <div id="uploadResult" class="message"></div>
+        <div id="uploadResult" class="message" role="status"></div>
       </div>
 
       <div class="section" id="dataPreviewSection" hidden>
@@ -95,7 +95,7 @@
           </div>
           <button type="submit" class="btn">Load Model</button>
         </form>
-        <div id="loadModelResult" class="message"></div>
+        <div id="loadModelResult" class="message" role="status"></div>
       </div>
       <div class="step-actions">
         <button type="button" class="btn btn-sm step-next" disabled>Next</button>
@@ -121,7 +121,7 @@
           <p class="section-description">Models are compared by 3-fold cross-validation on the training rows; the test rows are scored once, at the end. Datasets with an official test file (NSL-KDD) use it instead.</p>
         </div>
         <button id="analyzeClassBtn" class="btn">Analyze Class Distribution</button>
-        <div id="classDistributionResult" class="message"></div>
+        <div id="classDistributionResult" class="message" role="status"></div>
       </div>
       <div class="step-actions">
         <button type="button" class="btn btn-sm btn-secondary step-back">Back</button>
@@ -140,7 +140,7 @@
           <button id="removeTargetValuesBtn" class="btn btn-danger">Remove Selected Values</button>
           <button id="skipTargetFilterBtn" class="btn btn-secondary">Skip (Keep All Values)</button>
         </div>
-        <div id="targetFilterResult" class="message"></div>
+        <div id="targetFilterResult" class="message" role="status"></div>
       </div>
 
       <div class="section" id="smoteOption">
@@ -162,7 +162,7 @@
           <p class="balancing-hint" id="balancingHint">Select a method to handle class imbalance in your dataset.</p>
         </div>
         <button type="button" id="previewBalancingBtn" class="btn btn-sm">Preview on training split</button>
-        <div id="balancingPreviewResult" class="message"></div>
+        <div id="balancingPreviewResult" class="message" role="status"></div>
       </div>
       <div class="step-actions">
         <button type="button" class="btn btn-sm btn-secondary step-back">Back</button>
@@ -185,7 +185,7 @@
           <select id="targetForRec" name="targetForRec" required></select>
         </div>
         <button id="recommendBtn" class="btn">Recommend Features</button>
-        <div id="recommendationResult" class="message"></div>
+        <div id="recommendationResult" class="message" role="status"></div>
       </div>
 
       <div class="section" id="featureListSection">
@@ -223,7 +223,7 @@
             <button type="button" id="cancelTrainingBtn" class="btn" disabled>Cancel training</button>
           </div>
         </form>
-        <div id="configResult" class="message"></div>
+        <div id="configResult" class="message" role="status"></div>
 
         <div id="confusionMatrixSection" class="subsection" hidden>
           <h3>Confusion Matrix (test split)</h3>
@@ -254,7 +254,7 @@
           <div id="dynamicInputs"></div>
           <button type="submit" class="btn">Predict</button>
         </form>
-        <div id="predictionResult" class="message"></div>
+        <div id="predictionResult" class="message" role="status"></div>
       </div>
 
       <div class="section" id="exportSection" hidden>
@@ -267,7 +267,7 @@
           </div>
           <button type="submit" class="btn">Export Models</button>
         </form>
-        <div id="exportResult" class="message"></div>
+        <div id="exportResult" class="message" role="status"></div>
       </div>
 
       <div class="section" id="loadedFeaturesSection" hidden>
@@ -280,7 +280,7 @@
           <div id="loadedDynamicInputs"></div>
           <button type="submit" class="btn">Predict</button>
         </form>
-        <div id="loadedPredictionResult" class="message"></div>
+        <div id="loadedPredictionResult" class="message" role="status"></div>
       </div>
       <div class="step-actions">
         <button type="button" class="btn btn-sm btn-secondary step-back">Back</button>
