@@ -2,9 +2,10 @@
 
 import requests
 
-from toolkit.ports import IntelFinding, IntelProvider
+from toolkit.data.recon.findings import IntelFinding
+from toolkit.ports import IntelProvider
 from toolkit.recon import intel as recon_intel
-from toolkit.recon.intel import abuseipdb, llm, nvd
+from toolkit.data.recon import abuseipdb, openrouter as llm, nvd
 
 
 class OfflineCves:

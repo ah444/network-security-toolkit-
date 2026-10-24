@@ -49,7 +49,7 @@ class SplitConfig:
     official_dedupe: bool = False
 
 
-REPO_ROOT = Path(__file__).resolve().parent.parent  # the project folder, when run from it
+REPO_ROOT = Path(__file__).resolve().parents[2]  # the project folder, when run from it
 APP_NAME = "network-security-toolkit"
 
 

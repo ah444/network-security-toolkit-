@@ -16,12 +16,12 @@ large model bundle) is freed when it ends, and Ctrl+C or a crash in it brings th
 from __future__ import annotations
 
 import argparse
-import subprocess
 import sys
 from collections.abc import Callable, Sequence
 from typing import NamedTuple
 
-from .config import REPO_ROOT, instance_dir, is_checkout
+from .data.settings import REPO_ROOT, instance_dir, is_checkout
+from .data.processes import run_toolkit
 
 PROG = "python -m toolkit"
 
@@ -91,8 +91,7 @@ def run_child(command: str) -> int:
     """``python -m toolkit <command>`` as a child process from the project folder (an
     installed copy: the current folder); its code."""
     try:
-        return subprocess.run([sys.executable, "-m", "toolkit", command],
-                              cwd=REPO_ROOT if is_checkout() else None, check=False).returncode
+        return run_toolkit(command, REPO_ROOT if is_checkout() else None)
     except KeyboardInterrupt:
         print("\nStopped.")
         return 130

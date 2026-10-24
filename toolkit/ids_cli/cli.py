@@ -28,12 +28,15 @@ from typing import Any, cast
 import numpy as np
 import pandas as pd
 
-from ..bundle_files import BundleInfo, BundleStore
+from ..ids_core.exports import BundleInfo, BundleStore
 from ..ids_core.batch import prediction_csv, prediction_summary, prediction_table
-from ..ids_core.bundle import Bundle, BundleError, BundleVersionWarning
-from ..ids_core.datasets import DatasetError, load_dataset
+from ..ids_core.bundle import Bundle, BundleVersionWarning
+from ..data.ids.bundle_files import BundleError
+from ..data.ids.dataset_files import DatasetError
+from ..ids_core.datasets import load_dataset
 from ..ids_core.registry import MODELS
-from ..logging_setup import setup_logging
+from ..data.files import read_text, write_new_text
+from ..data.logs import setup_logging
 from ..ports import ModelStore
 
 MODEL_STORE: ModelStore = BundleStore()  # this install's exports (instance/bundles)
@@ -195,8 +198,7 @@ def run_csv(bundle: Bundle, csv_path: str | Path, output: str | Path | None = No
     label = label_column(bundle)
     # the same table as the web trainer's "Predict a CSV file" (ids_core.batch, step 1.4f)
     table = prediction_table(bundle.model(model), frame, label)
-    with output.open("x", encoding="utf-8", newline="") as handle:
-        handle.write(prediction_csv(table))
+    write_new_text(output, prediction_csv(table))
     summary = prediction_summary(table)
     print(f"✅ {len(table)} rows predicted with {bundle.model(model).name}; saved to {output}")
     for count in summary["counts"]:
@@ -212,7 +214,7 @@ def run_json(bundle: Bundle, text: str, model: str | None = None) -> int:
     """Rows given as JSON (an object or a list, inline or a .json file) -> JSON results."""
     source = Path(text)
     if text.strip()[:1] not in "[{" and source.is_file():
-        text = source.read_text(encoding="utf-8")
+        text = read_text(source)
     rows = json.loads(text)
     rows = [rows] if isinstance(rows, dict) else rows
     if not isinstance(rows, list) or not all(isinstance(r, dict) for r in rows):

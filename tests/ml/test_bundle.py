@@ -11,9 +11,11 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from toolkit import bundle_files, run_files
+from toolkit.data.ids import bundle_files
+from toolkit.ids_core import exports as core_exports
 from toolkit.ids_core import bundle
-from toolkit.ids_core.bundle import BundleError, BundleVersionWarning, pack, unpack
+from toolkit.data.ids.bundle_files import BundleError
+from toolkit.ids_core.bundle import BundleVersionWarning, pack, unpack
 from toolkit.ids_core.runs import DatasetRef, TrainSettings, train
 
 KEY = bytes(range(32))
@@ -231,25 +233,25 @@ def test_key_created_once(monkeypatch, tmp_path):
 
 def test_save_and_load_bundle(monkeypatch, tmp_path, run):
     monkeypatch.setenv("TOOLKIT_INSTANCE_DIR", str(tmp_path))
-    saved = bundle_files.save_bundle(run)
+    saved = core_exports.save_bundle(run)
     assert saved.path == tmp_path / "bundles" / f"{run.run_id}.bundle"
     assert saved.sha256 == hashlib.sha256(saved.path.read_bytes()).hexdigest()
     assert saved.run.bundle_sha256 == saved.sha256 and run.bundle_sha256 is None
-    record = run_files.read_run(run_files.write_run(saved.run))  # caller saves the record
+    record = core_exports.read_run(core_exports.write_run(saved.run))  # caller saves the record
     assert record["bundle_sha256"] == saved.sha256
     with pytest.raises(FileExistsError):
-        bundle_files.save_bundle(run)  # never overwritten
-    loaded = bundle_files.load_bundle(saved.path)
+        core_exports.save_bundle(run)  # never overwritten
+    loaded = core_exports.load_bundle(saved.path)
     assert loaded.sha256 == saved.sha256 and loaded.run["bundle_sha256"] is None
-    assert bundle_files.load_bundle(saved.path, pinned_sha256=saved.sha256).trust == "pinned"
+    assert core_exports.load_bundle(saved.path, pinned_sha256=saved.sha256).trust == "pinned"
 
 
 def test_missing_key_clear_message(monkeypatch, tmp_path, run, no_deserialize):
     monkeypatch.setenv("TOOLKIT_INSTANCE_DIR", str(tmp_path))
-    path = bundle_files.save_bundle(run).path
+    path = core_exports.save_bundle(run).path
     bundle_files.key_path().unlink()
     with pytest.raises(BundleError) as excinfo:
-        bundle_files.load_bundle(path)
+        core_exports.load_bundle(path)
     assert _code(excinfo) == "NO_KEY"
     message = str(excinfo.value)
     assert "signing key" in message and "retrain" in message.lower()
@@ -257,7 +259,7 @@ def test_missing_key_clear_message(monkeypatch, tmp_path, run, no_deserialize):
     # a new key does not bring the old bundles back
     bundle_files.signing_key(create=True)
     with pytest.raises(BundleError) as foreign:
-        bundle_files.load_bundle(path)
+        core_exports.load_bundle(path)
     assert _code(foreign) == "BAD_SIGNATURE"
 
 

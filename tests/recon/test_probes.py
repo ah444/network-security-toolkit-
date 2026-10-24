@@ -6,7 +6,7 @@ case), generated from that code: (reader, detail, TLS, UDP payload) per port. Th
 registry must make exactly the same decisions.
 """
 
-from toolkit.recon import probes
+from toolkit.data.recon import probes
 
 EXPECTED = {
     21: ("greeting", "", False, b"\r\n"),

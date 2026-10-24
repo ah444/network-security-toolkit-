@@ -15,7 +15,8 @@ import joblib
 import pandas as pd
 import pytest
 
-from toolkit import bundle_files
+from toolkit.data.ids import bundle_files
+from toolkit.ids_core import exports as core_exports
 from toolkit.ids_core import bundle as core_bundle
 from toolkit.ids_core.datasets import load_dataset
 from web_jobs import train_and_wait
@@ -181,7 +182,7 @@ def test_exports_listed_newest_first_from_headers(two_exports, monkeypatch):
         raise AssertionError("listing must not deserialize models")
 
     monkeypatch.setattr(joblib, "load", forbidden)
-    exports = bundle_files.list_bundles()
+    exports = core_exports.list_bundles()
     assert [e.path for e in exports] == [newer, older], "newest first; junk files skipped"
     assert exports[0].manifest["models"] == ["decision_tree"]
     assert exports[0].size == newer.stat().st_size
@@ -190,7 +191,7 @@ def test_exports_listed_newest_first_from_headers(two_exports, monkeypatch):
     body = int.from_bytes(data[len(core_bundle.MAGIC):len(core_bundle.MAGIC) + 8], "big")
     cut = bundle_files.bundles_dir() / "cut.bundle"
     cut.write_bytes(data[:len(core_bundle.MAGIC) + 8 + body + 10])
-    assert bundle_files.read_manifest_header(cut) == core_bundle.peek_manifest(data)
+    assert core_exports.read_manifest_header(cut) == core_bundle.peek_manifest(data)
 
 
 def test_cli_without_exports(cli_module, capsys):

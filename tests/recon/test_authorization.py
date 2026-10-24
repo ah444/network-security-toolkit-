@@ -6,7 +6,7 @@ import subprocess
 
 import pytest
 
-from toolkit.config import ScanConfig, scan_limits
+from toolkit.data.settings import ScanConfig, scan_limits
 from toolkit.recon import targets
 
 

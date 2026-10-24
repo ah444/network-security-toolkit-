@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 
 from flask import current_app
 
-from ..config import WebConfig
+from ..data.settings import WebConfig
 from ..ports import ModelStore
 
 if TYPE_CHECKING:

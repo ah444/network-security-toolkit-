@@ -63,7 +63,7 @@ addopts = "-ra"
 # Pythons without installing them (plan D19, Python policy B).
 target-version = "py311"
 line-length = 100
-extend-exclude = [".venv", "data"]
+extend-exclude = [".venv", "./data"]  # the local datasets, not toolkit/data/
 
 [tool.ruff.lint]
 select = ["E4", "E7", "E9", "F", "B", "S602", "S604", "PLW1514"]

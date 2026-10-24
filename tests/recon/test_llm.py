@@ -6,11 +6,12 @@ import json
 
 import pytest
 
-from toolkit.recon import export, probes
+from toolkit.data.recon import scan_files as export, probes
+from toolkit.recon import report
 from toolkit.recon import intel as recon_intel
-from toolkit.recon import scanner as recon_scanner
-from toolkit.recon import text as recon_text
-from toolkit.recon.intel import llm, nvd
+from toolkit.data.recon import scanner as recon_scanner
+from toolkit.data.recon import text as recon_text
+from toolkit.data.recon import openrouter as llm, nvd
 
 BANNER = "SSH-2.0-OpenSSH_8.9p1 Ubuntu-3ubuntu0.1 host=db01.corp.internal user=admin"
 EVIL_REPLY = (
@@ -86,7 +87,7 @@ def test_llm_reply_is_plain_text_and_ignored_for_severity(scanner, fake_session,
     # nothing in the reply is acted on: the only requests are the NVD and AI lookups
     assert {call[1] for call in session.calls} == {nvd.NVD_URL, llm.OPENROUTER_API_URL}
     port = recon_scanner.PortResult(22, "tcp", "open", "ssh", BANNER)
-    entry = export.make_entry("10.0.0.5", port, "OpenSSH 8.9", found)
+    entry = report.make_entry("10.0.0.5", port, "OpenSSH 8.9", found)
     scanner.print_entry(entry)
     out = capsys.readouterr().out
     assert "AI explanation (may be wrong):" in out and "\x1b" not in out
@@ -100,7 +101,7 @@ def test_fake_cve_in_llm_reply_never_in_report(fake_session, nvd_openssh,
         "OpenSSH 8.9")
     assert [c["id"] for c in found["cves"]] == ["CVE-2023-28531", "CVE-2021-36368"]
     port = recon_scanner.PortResult(22, "tcp", "open", "ssh", BANNER)
-    entry = export.make_entry("10.0.0.5", port, "OpenSSH 8.9", found)
+    entry = report.make_entry("10.0.0.5", port, "OpenSSH 8.9", found)
     for fmt in export.EXPORT_FORMATS:
         path = export.export_results([entry], fmt, directory=tmp_path)
         assert "CVE-9999-00000" not in path.read_text(encoding="utf-8")

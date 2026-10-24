@@ -20,7 +20,7 @@ from typing import Any
 import pandas as pd
 from flask import Blueprint, jsonify, session
 
-from ..bundle_files import SavedBundle
+from ..ids_core.exports import SavedBundle
 from ..ids_core.bundle import Bundle
 from ..ids_core.profiles import ProfileMatch
 from ..ids_core.runs import DatasetRef, TrainingRun

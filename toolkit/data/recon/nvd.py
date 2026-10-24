@@ -10,7 +10,7 @@ from typing import Any
 
 import requests
 
-from ...ports import CveEntry, IntelFinding
+from .findings import CveEntry, IntelFinding
 from .lookup import INTEL_TIMEOUT
 
 NVD_URL = "https://services.nvd.nist.gov/rest/json/cves/2.0"

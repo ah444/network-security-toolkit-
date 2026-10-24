@@ -10,7 +10,7 @@ from typing import Any
 
 from flask import Blueprint, jsonify
 
-from ..config import SplitConfig
+from ..data.settings import SplitConfig
 from ..ids_core import registry
 from ..ids_core.pipeline import FittedModel
 from ..ids_core.runs import TrainingRun, TrainSettings

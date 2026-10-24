@@ -6,8 +6,9 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from toolkit import run_files
-from toolkit.config import instance_dir
+from toolkit.data.ids import run_files
+from toolkit.ids_core import exports as core_exports
+from toolkit.data.settings import instance_dir
 from toolkit.ids_core.datasets import load_dataset
 from toolkit.ids_core.evaluation import EvaluationResult
 from toolkit.ids_core.runs import (
@@ -143,11 +144,11 @@ def test_label_required():
 # --- writer (edge code) ----------------------------------------------------------------
 
 def test_writer_roundtrip(run, tmp_path):
-    path = run_files.write_run(run, tmp_path)
+    path = core_exports.write_run(run, tmp_path)
     assert path == tmp_path / f"{run.run_id}.json"
-    assert run_files.read_run(path) == json.loads(json.dumps(run.to_dict()))
+    assert core_exports.read_run(path) == json.loads(json.dumps(run.to_dict()))
     with pytest.raises(FileExistsError):
-        run_files.write_run(run, tmp_path)  # a run record is never overwritten
+        core_exports.write_run(run, tmp_path)  # a run record is never overwritten
     assert run_files.list_runs(tmp_path) == [path]
 
 
@@ -164,17 +165,17 @@ def test_reader_rejects_newer_schema_and_non_records(tmp_path):
     newer.write_text(json.dumps({"schema_version": SCHEMA_VERSION + 1, "run_id": "x"}),
                      encoding="utf-8")
     with pytest.raises(ValueError, match="newer"):
-        run_files.read_run(newer)
+        core_exports.read_run(newer)
     other = tmp_path / "other.json"
     other.write_text(json.dumps({"hello": 1}), encoding="utf-8")
     with pytest.raises(ValueError, match="TrainingRun"):
-        run_files.read_run(other)
+        core_exports.read_run(other)
 
 
 # --- re-run ------------------------------------------------------------------------------
 
 def test_rerun_reproduces_metrics(run, tmp_path):
-    record = run_files.read_run(run_files.write_run(run, tmp_path))
+    record = core_exports.read_run(core_exports.write_run(run, tmp_path))
     again = rerun(record, _frame(), source=SOURCE)
     assert again.run_id != run.run_id
     assert compare_metrics(record, again.to_dict()) == []

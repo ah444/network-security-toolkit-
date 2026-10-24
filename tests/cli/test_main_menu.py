@@ -108,7 +108,7 @@ def test_menu_tools_run_as_child_processes(request, monkeypatch):
         started.append((args, cwd))
         return subprocess.CompletedProcess(args, 3)
 
-    monkeypatch.setattr(cli.subprocess, "run", fake_run)
+    monkeypatch.setattr(subprocess, "run", fake_run)
     codes = [cli.run_child(name) for name in cli.MENU_COMMANDS.values()]
     assert codes == [3, 3, 3]
     assert started == [([sys.executable, "-m", "toolkit", name], request.config.rootpath)
@@ -126,7 +126,7 @@ def test_ctrl_c_in_a_tool_comes_back_to_the_menu(monkeypatch, capsys):
     def interrupted(args, cwd=None, check=None):
         raise KeyboardInterrupt
 
-    monkeypatch.setattr(cli.subprocess, "run", interrupted)
+    monkeypatch.setattr(subprocess, "run", interrupted)
     assert cli.run_child("web") == 130
     assert "Stopped." in capsys.readouterr().out
 

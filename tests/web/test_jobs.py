@@ -9,7 +9,7 @@ import threading
 
 import pytest
 
-from toolkit.config import WebConfig
+from toolkit.data.settings import WebConfig
 from toolkit.web import jobs, training
 from web_jobs import TRAIN_URL, train_and_wait, wait_for
 from web_js import js_sources

@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from toolkit import config
+from toolkit.data import settings as config
 
 APP = "network-security-toolkit"
 

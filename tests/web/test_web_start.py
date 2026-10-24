@@ -8,7 +8,8 @@ import webbrowser
 import pytest
 
 from toolkit import web
-from toolkit.config import WebConfig, port_number, web_config
+from toolkit.data.web import net
+from toolkit.data.settings import WebConfig, port_number, web_config
 
 HOST = "127.0.0.1"
 
@@ -107,7 +108,7 @@ def test_waitress_gets_the_socket_bound_here(started):
 
 
 def test_port_in_use_is_a_message(started, capsys):
-    with web.bind_port(HOST, 0) as taken:
+    with net.bind_port(HOST, 0) as taken:
         port = taken.getsockname()[1]
         assert web.run_server(WebConfig(port=port)) == 2
     out = capsys.readouterr().out
@@ -120,7 +121,7 @@ def test_port_in_use_is_a_message(started, capsys):
 def test_the_port_is_never_shared():
     """A second bind fails while the trainer's socket is open, even with SO_REUSEADDR (on
     Windows waitress's own socket would have let it through, step 1.4d)."""
-    with web.bind_port(HOST, 0) as ours:
+    with net.bind_port(HOST, 0) as ours:
         port = ours.getsockname()[1]
         exclusive = getattr(socket, "SO_EXCLUSIVEADDRUSE", None)
         if exclusive is not None:
@@ -133,8 +134,8 @@ def test_the_port_is_never_shared():
                     other.bind((HOST, port))
                     other.listen()
         with pytest.raises(OSError):
-            web.bind_port(HOST, port)
-    web.bind_port(HOST, port).close()  # free again once closed (a quick restart works)
+            net.bind_port(HOST, port)
+    net.bind_port(HOST, port).close()  # free again once closed (a quick restart works)
 
 
 def test_ctrl_c_stops_cleanly(monkeypatch, capsys):
@@ -146,7 +147,7 @@ def test_ctrl_c_stops_cleanly(monkeypatch, capsys):
     port = _free_port()
     assert web.run_server(WebConfig(port=port, open_browser=False)) == 0
     assert capsys.readouterr().out.endswith("Web trainer stopped.\n")
-    web.bind_port(HOST, port).close()  # the port was released
+    net.bind_port(HOST, port).close()  # the port was released
 
 
 def test_ctrl_c_in_debug_mode(monkeypatch, capsys):

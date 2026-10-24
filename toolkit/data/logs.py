@@ -26,7 +26,7 @@ from collections.abc import Mapping
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
-from .config import instance_dir, log_level
+from .settings import instance_dir, log_level
 
 REDACTED = "[REDACTED]"
 SECRET_VARIABLES = ("OPENROUTER_API_KEY", "ABUSEIPDB_API_KEY", "NVD_API_KEY", "TOOLKIT_SECRET_KEY")

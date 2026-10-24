@@ -6,7 +6,7 @@ import io
 import pandas as pd
 import pytest
 
-from toolkit import bundle_files
+from toolkit.data.ids import bundle_files
 from toolkit.ids_core.batch import prediction_summary
 from toolkit.ids_core.datasets import load_dataset
 from web_jobs import train_and_wait

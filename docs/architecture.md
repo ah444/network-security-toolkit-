@@ -54,31 +54,45 @@ Core (no user interface; tested with plain data in, results out):
 | `toolkit/ids_core/preview.py` | train-only previews for the web trainer (feature scores, class counts) |
 | `toolkit/ids_core/runs.py` | `train()` and the `TrainingRun` record of how a model was made |
 | `toolkit/ids_core/bundle.py` | packs and checks signed bundles (bytes only) |
+| `toolkit/ids_core/exports.py` | saves, lists and loads runs and bundles; `BundleStore` is the `ModelStore` |
 | `toolkit/ids_core/batch.py` | labels every row of a table: the CLI's `--csv` and the web's "Predict a CSV file" |
 | `toolkit/recon/__init__.py` | the scanner core package |
 | `toolkit/recon/targets.py` | targets, port lists and scan limits |
-| `toolkit/recon/os_detect.py` | ping (per-OS flags) and the OS guess from the TTL |
-| `toolkit/recon/scanner.py` | TCP and UDP port checks of one host |
-| `toolkit/recon/probes.py` | the banner-probe registry (one entry per port) and product/version parsing |
-| `toolkit/recon/text.py` | makes text from the network safe to show and export |
-| `toolkit/recon/export.py` | scan reports as JSON, CSV or TXT in `instance/scans/` |
+| `toolkit/recon/os_guess.py` | the OS guess from a ping reply's TTL |
+| `toolkit/recon/report.py` | one report entry per open port, its network text cleaned |
 | `toolkit/recon/intel/__init__.py` | `Intel`: the lookups for open ports, in parallel, each product once |
-| `toolkit/recon/intel/nvd.py` | CVEs and CVSS scores from the NVD API (an `IntelProvider`) |
-| `toolkit/recon/intel/llm.py` | the optional AI explanation through OpenRouter (an `IntelProvider`) |
-| `toolkit/recon/intel/abuseipdb.py` | the optional IP reputation from AbuseIPDB (an `IntelProvider`) |
-| `toolkit/recon/intel/lookup.py` | lookup time limits, expected failures and their names |
-| `toolkit/recon/intel/keys.py` | API keys and the AI model setting, from the environment or `.env` |
 
-Ports and edge code (files, settings, logging):
+Ports, and the data layer (`toolkit/data/`: files, settings, logging, the network):
 
 | Module | Role |
 |---|---|
 | `toolkit/__init__.py` | the package |
 | `toolkit/ports.py` | the three ports: `ModelStore`, `IntelProvider`, `ProgressSink` |
-| `toolkit/config.py` | every tunable setting, the `TOOLKIT_*` variables, the data folder, `.env` reading |
-| `toolkit/logging_setup.py` | one rotating log file per tool, secrets redacted |
-| `toolkit/bundle_files.py` | the signing key and the bundle files; `BundleStore` is the `ModelStore` |
-| `toolkit/run_files.py` | writes and reads `TrainingRun` records (`instance/runs/`) |
+| `toolkit/data/__init__.py` | the data layer: files, the network, the environment |
+| `toolkit/data/settings.py` | every tunable setting, the `TOOLKIT_*` variables, the data folder, `.env` reading |
+| `toolkit/data/logs.py` | one rotating log file per tool, secrets redacted |
+| `toolkit/data/keys.py` | API keys and the AI model setting, from the environment or `.env` |
+| `toolkit/data/files.py` | the text files the commands read and write |
+| `toolkit/data/processes.py` | the menu's child processes (`python -m toolkit <command>`) |
+| `toolkit/data/ids/__init__.py` | the IDS's files |
+| `toolkit/data/ids/bundle_files.py` | the signing key and the bundle files, as bytes |
+| `toolkit/data/ids/run_files.py` | `TrainingRun` records on disk, as dicts (`instance/runs/`) |
+| `toolkit/data/ids/dataset_files.py` | a dataset file's first bytes, SHA-256 and row chunks |
+| `toolkit/data/recon/__init__.py` | the scanner's network access and report files |
+| `toolkit/data/recon/scanner.py` | TCP and UDP port checks of one host |
+| `toolkit/data/recon/probes.py` | the banner-probe registry (one entry per port) and product/version parsing |
+| `toolkit/data/recon/ping.py` | ping (per-OS flags) and the TTL of the reply |
+| `toolkit/data/recon/resolve.py` | host names to addresses |
+| `toolkit/data/recon/text.py` | makes text from the network safe to show and export |
+| `toolkit/data/recon/scan_files.py` | scan report files as JSON, CSV or TXT in `instance/scans/` |
+| `toolkit/data/recon/findings.py` | what the intel gateways return (`CveEntry`, `IntelFinding`) |
+| `toolkit/data/recon/nvd.py` | CVEs and CVSS scores from the NVD API (an `IntelProvider`) |
+| `toolkit/data/recon/openrouter.py` | the optional AI explanation through OpenRouter (an `IntelProvider`) |
+| `toolkit/data/recon/abuseipdb.py` | the optional IP reputation from AbuseIPDB (an `IntelProvider`) |
+| `toolkit/data/recon/lookup.py` | the HTTP session, lookup time limits, expected failures and their names |
+| `toolkit/data/web/__init__.py` | the web trainer's files and sockets |
+| `toolkit/data/web/uploads.py` | uploads on disk, only while they are read |
+| `toolkit/data/web/net.py` | the listening socket, and opening the page in the browser |
 
 Presentation (the only code that prints, asks questions or uses Flask):
 
@@ -146,8 +160,8 @@ Arrows point from a module to what it imports (the real imports, as of this page
 - `ids_core` imports no network library (`requests`, `socket`, `urllib`, `http`) and never
   prints: `tests/ml/test_core_rules.py`.
 - `ids_core` writes no files. It reads datasets (`toolkit/ids_core/datasets.py`) and returns
-  results; saving runs and bundles is edge code (`toolkit/run_files.py`,
-  `toolkit/bundle_files.py`).
+  results; saving runs and bundles is edge code (`toolkit/data/ids/run_files.py`,
+  `toolkit/data/ids/bundle_files.py`).
 - `mypy --strict` checks the whole package (`tests/test_type_check.py`).
 
 ## 4. The three ports
@@ -157,7 +171,7 @@ Interfaces exist only where an implementation really is swapped or faked in test
 
 | Port | Used by | Real implementation | In tests |
 |---|---|---|---|
-| `ModelStore` | web trainer, IDS command line | `BundleStore` (`toolkit/bundle_files.py`): signed bundles in `instance/bundles/` | a scratch instance folder |
+| `ModelStore` | web trainer, IDS command line | `BundleStore` (`toolkit/data/ids/bundle_files.py`): signed bundles in `instance/bundles/` | a scratch instance folder |
 | `IntelProvider` | `Intel` in the scanner | `NvdProvider`, `OpenRouterProvider`, `AbuseIpdbProvider` | fake providers; recorded NVD answers in `tests/fixtures/` |
 | `ProgressSink` | `train()`, `evaluate()`, `scan_ports()` | a web job (`toolkit/web/jobs.py`), the scanner's verbose line | `NullProgress` or a recorder |
 
@@ -171,8 +185,8 @@ Everything else is plain functions and dict registries.
 | balancers | `BALANCERS`, same file | none, class weights, SMOTE, SMOTE-ENN, ADASYN, borderline SMOTE, random undersampling, Tomek links, SMOTE-Tomek | a `BalancerSpec` |
 | feature selectors | `SELECTORS`, same file | all chosen features, ANOVA F-test, mutual information | a `SelectorSpec` |
 | dataset profiles | `PROFILES` in `toolkit/ids_core/profiles.py` | CIC-IDS2017, NSL-KDD, generic | a `DatasetProfile` with the real column names (never guessed) |
-| banner probes | `PROBES` and `READERS` in `toolkit/recon/probes.py` | 30 ports, 6 ways to read a banner | a `Probe` for the port |
-| scan export formats | `WRITERS` in `toolkit/recon/export.py` | JSON, CSV, TXT | a writer function |
+| banner probes | `PROBES` and `READERS` in `toolkit/data/recon/probes.py` | 30 ports, 6 ways to read a banner | a `Probe` for the port |
+| scan export formats | `WRITERS` in `toolkit/data/recon/scan_files.py` | JSON, CSV, TXT | a writer function |
 
 A model whose optional package is missing (XGBoost, LightGBM without `[boost]`) is simply
 not offered (`registry.available_models()`).
@@ -303,7 +317,7 @@ exit code 130.
 - An installed copy (`pip install .`) uses a per-user folder: `%LOCALAPPDATA%` on Windows,
   `~/Library/Application Support` on macOS, `$XDG_DATA_HOME` or `~/.local/share` on Linux;
   then `network-security-toolkit`. `toolkit --help` prints the folder in use
-  (`toolkit/config.py`).
+  (`toolkit/data/settings.py`).
 
 ```
  this computer                                  the internet
@@ -328,7 +342,7 @@ The plan's §2 "Target structure" was written before the code. What was built di
 | `services/` (TrainingService, ScanService, PredictionService) | no services layer: the web routes and CLIs call `ids_core` and `recon` directly | each service would have had one caller; `train()` and `scan_target()` already are the use cases |
 | `ids_core/ports.py` | `toolkit/ports.py` | the ports serve the scanner too, not only the ML core |
 | `ids_core/explain.py` (feature importance, SHAP) | not built | explainability (F3) is planned for v5.2 |
-| `recon/probes/` with one file per service | one `toolkit/recon/probes.py` with a registry | each probe is a table entry plus a few shared readers |
-| `recon/report.py` with HTML/PDF | `toolkit/recon/export.py` with JSON, CSV, TXT | HTML/PDF reports (F5) are later features |
+| `recon/probes/` with one file per service | one `toolkit/data/recon/probes.py` with a registry | each probe is a table entry plus a few shared readers |
+| `recon/report.py` with HTML/PDF | `toolkit/data/recon/scan_files.py` with JSON, CSV, TXT | HTML/PDF reports (F5) are later features |
 | `.github/workflows/ci.yml` | none | checks run locally (`python -m pytest`, ruff, mypy, the pre-commit hook), as plan D19 decided |
 | a `train` command in the CLI | none | models are trained in the web trainer (plan D12) |

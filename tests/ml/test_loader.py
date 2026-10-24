@@ -7,7 +7,8 @@ import pandas as pd
 import pytest
 
 from toolkit.ids_core import datasets
-from toolkit.ids_core.datasets import DatasetError, load_dataset
+from toolkit.data.ids.dataset_files import DatasetError
+from toolkit.ids_core.datasets import load_dataset
 
 
 def _write(path, text, encoding="utf-8"):

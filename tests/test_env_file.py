@@ -1,8 +1,8 @@
-"""The shared .env reader in toolkit.config (plan D17, v5.1 step 1.1b)."""
+"""The shared .env reader in toolkit.data.settings (plan D17, v5.1 step 1.1b)."""
 
 import logging
 
-from toolkit.config import env_value, read_env_file
+from toolkit.data.settings import env_value, read_env_file
 
 
 def test_read_env_file_rules(tmp_path):

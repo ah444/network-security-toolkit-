@@ -11,7 +11,8 @@ deserialized until every check has passed: size and layout, then the signature (
 install's key) or a pinned SHA-256 (models shipped with the project), then the manifest,
 then the library-version policy. Only then does ``joblib.load`` run.
 
-This module works on bytes only; ``toolkit.bundle_files`` keeps the key and the files.
+This module works on bytes only: ``toolkit.data.ids.bundle_files`` keeps the key and the
+files, ``exports`` saves, lists and loads them.
 """
 
 from __future__ import annotations
@@ -30,6 +31,7 @@ from typing import Any, cast
 import joblib
 import numpy as np
 
+from ..data.ids.bundle_files import KEY_BYTES, BundleError
 from .pipeline import FittedModel
 from .registry import MODELS
 from .runs import TrainingRun, package_versions
@@ -37,7 +39,6 @@ from .runs import TrainingRun, package_versions
 MAGIC = b"NSTOOLKIT-BUNDLE\n"
 FORMAT = "nst-bundle"
 FORMAT_VERSION = 1
-KEY_BYTES = 32
 _TAG_BYTES = hashlib.sha256().digest_size
 _LENGTH_BYTES = 8
 HEADER_BYTES = len(MAGIC) + _LENGTH_BYTES  # what precedes the manifest
@@ -49,14 +50,6 @@ HEADER_BYTES = len(MAGIC) + _LENGTH_BYTES  # what precedes the manifest
 ALWAYS_USED = ("scikit-learn", "imbalanced-learn")  # every pipeline is an imblearn Pipeline
 ARRAY_LIBRARIES = ("numpy", "pandas")
 WARN_LIBRARIES = ("python", "scipy", "joblib")
-
-
-class BundleError(ValueError):
-    """A bundle that is not loaded; ``code`` says why (e.g. ``BAD_SIGNATURE``)."""
-
-    def __init__(self, code: str, message: str):
-        super().__init__(message)
-        self.code = code
 
 
 class BundleVersionWarning(UserWarning):

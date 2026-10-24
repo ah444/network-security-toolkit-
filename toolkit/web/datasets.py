@@ -9,19 +9,19 @@ from __future__ import annotations
 
 import hashlib
 import logging
-import time
 from dataclasses import asdict
-from pathlib import Path
 from typing import Any
 
 import numpy as np
 import pandas as pd
 from flask import Blueprint, jsonify, request
 
-from ..config import SplitConfig
+from ..data.settings import SplitConfig
+from ..data.web import uploads
 from ..ids_core import registry
 from ..ids_core.balancing import recommend_balancing
-from ..ids_core.datasets import DatasetError, LoadedDataset, load_dataset
+from ..data.ids.dataset_files import DatasetError
+from ..ids_core.datasets import LoadedDataset, load_dataset
 from ..ids_core.preview import preview_balancing
 from ..ids_core.preview import recommend_features as score_features
 from ..ids_core.runs import DatasetRef
@@ -52,23 +52,6 @@ from .workspace import UploadedData, Workspace, dataset_bytes, with_workspace
 log = logging.getLogger(__name__)
 
 bp = Blueprint("datasets", __name__, url_prefix="/api/v1")
-
-
-def remove_stale_uploads(directory: Path, max_age: float = 3600) -> int:
-    """Delete files a crash left in the upload folder (S11). Only files older than
-    ``max_age`` seconds: another server sharing instance/ may be reading a new one."""
-    now, removed = time.time(), 0
-    for path in directory.iterdir():
-        try:
-            if path.is_file() and now - path.stat().st_mtime > max_age:
-                path.unlink()
-                removed += 1
-        except OSError:
-            log.warning("Could not remove a leftover upload", exc_info=True)
-    if removed:
-        log.info("Removed %d leftover upload(s) older than %d minutes", removed,
-                 max_age // 60)
-    return removed
 
 
 def label_values(frame: pd.DataFrame, target: str) -> pd.Series:
@@ -166,14 +149,14 @@ def upload(ws: Workspace) -> Answer:
         if save_path.resolve().parent != state().upload_dir.resolve():
             return error_response("Invalid file name.")
         try:
-            file.save(save_path)
+            uploads.save(file.stream, save_path)
             loaded.append((name, load_dataset(save_path)))
         except (DatasetError, ValueError, UnicodeError, OSError):
             log.exception("Could not read an uploaded file")
             return error_response(f"Could not read {name} as a CSV/TXT dataset. Check the file "
                                   "format.", code=UNREADABLE_FILE)
         finally:
-            save_path.unlink(missing_ok=True)
+            uploads.remove(save_path)
 
     try:
         data = _combine(loaded)

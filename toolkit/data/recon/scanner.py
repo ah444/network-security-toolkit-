@@ -2,7 +2,8 @@
 
 One connection per TCP port, always closed; its banner is read over that connection
 (see ``probes``). A UDP port that doesn't answer is ``open|filtered``. Progress goes to
-a ``ProgressSink`` (none by default).
+an object with ``start``, ``advance`` and ``finish`` (none by default),
+such as a ``toolkit.ports.ProgressSink``.
 """
 
 import logging
@@ -11,13 +12,34 @@ import socket
 from collections.abc import Callable, Iterable, Sequence
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
+from typing import Protocol
 
-from ..ports import NullProgress, ProgressSink
 from .probes import banner_text, read_banner, udp_payload
 
 log = logging.getLogger(__name__)
 
 SCAN_TIMEOUT = 1  # seconds per port
+
+
+class Progress(Protocol):
+    """What the scanner reports to (``toolkit.ports.ProgressSink`` fits)."""
+
+    def start(self, total: int) -> None: ...
+
+    def advance(self, done: int = 1) -> None: ...
+
+    def finish(self) -> None: ...
+
+
+class _NoProgress:
+    def start(self, total: int) -> None:
+        pass
+
+    def advance(self, done: int = 1) -> None:
+        pass
+
+    def finish(self) -> None:
+        pass
 
 
 @dataclass
@@ -75,10 +97,10 @@ Scan = Callable[[str, int], PortResult]
 
 
 def scan_ports(host: str, ports: Iterable[int], protocols: Sequence[str],
-               progress: ProgressSink | None = None) -> list[PortResult]:
+               progress: Progress | None = None) -> list[PortResult]:
     """Every port of ``host`` for each protocol, sorted by port; each finished check is
-    reported to ``progress`` (a ProgressSink, default none)."""
-    sink = progress or NullProgress()
+    reported to ``progress`` (default none)."""
+    sink = progress or _NoProgress()
     scanners: dict[str, Scan] = {"tcp": scan_tcp_port, "udp": scan_udp_port}
     tasks = [(scanners[protocol], port) for port in ports for protocol in protocols]
     if not tasks:

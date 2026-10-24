@@ -13,7 +13,7 @@ import types
 from collections.abc import Mapping
 from typing import Any, TypeVar, Union, get_args, get_origin, get_type_hints
 
-from ..config import SplitConfig
+from ..data.settings import SplitConfig
 from .api import ApiError
 
 MAX_ITEMS = 10_000  # list items or dictionary entries in one field

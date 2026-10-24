@@ -33,7 +33,7 @@ import pandas as pd
 from sklearn.model_selection import StratifiedKFold, cross_val_score
 from sklearn.tree import DecisionTreeClassifier
 
-from ..config import LeakageConfig
+from ..data.settings import LeakageConfig
 from .sampling import stratified_positions
 
 # Whole-word patterns (token sequences), checked after splitting the name into words.

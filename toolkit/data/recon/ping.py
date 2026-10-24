@@ -1,7 +1,7 @@
-"""Ping a host and guess its OS family from the reply's TTL (B6, B7).
+"""Ping a host and read the reply's TTL (B6).
 
-The ping flags and timeouts follow the OS (``platform.system()``); the guess is only
-a guess, because TTLs can be changed.
+The ping flags and timeouts follow the OS (``platform.system()``). What the TTL says
+about the host is ``toolkit.recon.os_guess``.
 """
 
 import ipaddress
@@ -10,14 +10,6 @@ import re
 import subprocess
 
 TTL_PATTERN = re.compile(rb"(?:ttl|hlim)[=:]\s*(\d+)", re.IGNORECASE)
-# Common initial TTLs. Each router hop lowers the TTL by one, so a reply's TTL is at most
-# its initial value: the guess is the smallest initial TTL that is not below it.
-INITIAL_TTLS = (
-    (64, "Linux / macOS / BSD / other Unix"),
-    (128, "Windows"),
-    (255, "Network device (e.g. Cisco) or Solaris/AIX"),
-)
-
 
 def ping_command(host: str, timeout: float = 1) -> list[str]:
     """One echo request with this OS's flags, waiting at most ``timeout`` seconds."""
@@ -49,13 +41,3 @@ def ping_host(host: str, timeout: float = 1) -> tuple[bool, int | None]:
     output = done.stdout + done.stderr
     alive = done.returncode == 0 and b"unreachable" not in output.lower()
     return alive, parse_ttl(output)
-
-
-def guess_os(ttl: int | None) -> tuple[str, int] | None:
-    """(OS family, hops away) from a reply's TTL, or None. A guess only: TTLs can be set."""
-    if ttl is None or not 1 <= ttl <= 255:
-        return None
-    for initial, name in INITIAL_TTLS:
-        if ttl <= initial:
-            return name, initial - ttl
-    return None

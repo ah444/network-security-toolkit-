@@ -13,7 +13,7 @@ import zlib
 import pandas as pd
 import pytest
 
-from toolkit import bundle_files
+from toolkit.data.ids import bundle_files
 from toolkit.ids_core.bundle import _layout, unpack
 
 KEY = bytes(range(32))  # the key the fixture was signed with

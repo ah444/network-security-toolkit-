@@ -20,7 +20,7 @@ import pandas as pd
 from sklearn.preprocessing import LabelEncoder
 from threadpoolctl import threadpool_limits
 
-from ..config import LeakageConfig, PipelineConfig, max_workers
+from ..data.settings import LeakageConfig, PipelineConfig, max_workers
 from . import registry
 from .balancing import BalancingRecommendation, recommend_balancing
 from .leakage import check_leakage

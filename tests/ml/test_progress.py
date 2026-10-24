@@ -12,7 +12,7 @@ import pandas as pd
 import pytest
 from sklearn.base import BaseEstimator, ClassifierMixin
 
-from toolkit.config import PipelineConfig
+from toolkit.data.settings import PipelineConfig
 from toolkit.ids_core import registry
 from toolkit.ids_core.runs import TrainSettings, total_steps, train
 from toolkit.ports import ProgressSink

@@ -1,8 +1,8 @@
-"""v5.1 step 1.2a: the web trainer's settings in one place (toolkit.config.WebConfig)."""
+"""v5.1 step 1.2a: the web trainer's settings in one place (toolkit.data.settings.WebConfig)."""
 
 import pytest
 
-from toolkit.config import WebConfig, web_config
+from toolkit.data.settings import WebConfig, web_config
 
 
 def test_defaults_without_environment():

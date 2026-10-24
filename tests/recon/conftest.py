@@ -6,8 +6,8 @@ import threading
 import pytest
 
 from toolkit.recon import cli
-from toolkit.recon.intel import nvd
-from toolkit.recon.intel import keys as intel_keys
+from toolkit.data.recon import nvd
+from toolkit.data import keys as intel_keys
 
 
 @pytest.fixture(scope="module")

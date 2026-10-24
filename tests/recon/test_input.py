@@ -5,7 +5,7 @@ import builtins
 import pytest
 
 from toolkit.recon import targets
-from toolkit.recon import scanner as recon_scanner
+from toolkit.data.recon import scanner as recon_scanner
 
 
 def test_empty_range_no_crash(scanner, monkeypatch, capsys):

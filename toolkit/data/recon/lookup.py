@@ -18,4 +18,6 @@ def describe(error: BaseException) -> str:
     return type(error).__name__
 
 
+Session = requests.Session  # one per scan, shared by the gateways
+
 LOOKUP_ERRORS = (requests.RequestException, ValueError, KeyError, IndexError, TypeError)

@@ -6,8 +6,8 @@ import warnings
 
 import pytest
 
-from toolkit import logging_setup
-from toolkit.config import log_level
+from toolkit.data import logs as data_logs
+from toolkit.data.settings import log_level
 
 TOOL_FILES = ("main.py", "toolkit/recon/cli.py", "toolkit/web/__main__.py",
               "toolkit/web/__init__.py", "toolkit/ids_cli/cli.py")
@@ -25,7 +25,7 @@ def clean_logging():
     root.handlers[:] = handlers
     root.setLevel(level)
     logging.captureWarnings(False)
-    logging_setup.forget_secrets()
+    data_logs.forget_secrets()
 
 
 def _read_logs(path):
@@ -36,7 +36,7 @@ def _read_logs(path):
 
 def test_log_file_in_instance_logs_utf8_and_rotates(tmp_path, monkeypatch, clean_logging):
     monkeypatch.setenv("TOOLKIT_INSTANCE_DIR", str(tmp_path))
-    path = logging_setup.setup_logging("scanner", max_bytes=400, backups=2)
+    path = data_logs.setup_logging("scanner", max_bytes=400, backups=2)
     assert path == tmp_path / "logs" / "scanner.log"
 
     log = logging.getLogger("toolkit.test")
@@ -50,7 +50,7 @@ def test_log_file_in_instance_logs_utf8_and_rotates(tmp_path, monkeypatch, clean
 
 def test_line_format(tmp_path, monkeypatch, clean_logging):
     monkeypatch.setenv("TOOLKIT_INSTANCE_DIR", str(tmp_path))
-    path = logging_setup.setup_logging("web")
+    path = data_logs.setup_logging("web")
     logging.getLogger("toolkit.ids_core.split").warning("Split %s", "stratified")
     line = _read_logs(path).strip()
     assert line.endswith(" WARNING toolkit.ids_core.split: Split stratified")
@@ -66,7 +66,7 @@ def test_level_from_environment(tmp_path, monkeypatch, clean_logging):
 
     monkeypatch.setenv("TOOLKIT_INSTANCE_DIR", str(tmp_path))
     monkeypatch.setenv("TOOLKIT_LOG_LEVEL", "WARNING")
-    path = logging_setup.setup_logging("web")
+    path = data_logs.setup_logging("web")
     log = logging.getLogger("toolkit.test")
     log.info("not written")
     log.warning("written")
@@ -77,7 +77,7 @@ def test_level_from_environment(tmp_path, monkeypatch, clean_logging):
 def test_third_party_debug_is_capped(tmp_path, monkeypatch, clean_logging):
     monkeypatch.setenv("TOOLKIT_INSTANCE_DIR", str(tmp_path))
     monkeypatch.setenv("TOOLKIT_LOG_LEVEL", "DEBUG")
-    path = logging_setup.setup_logging("scanner")
+    path = data_logs.setup_logging("scanner")
     logging.getLogger("urllib3.connectionpool").debug("GET /rest/json/cves/2.0?keyword=x")
     logging.getLogger("toolkit.recon").debug("our own debug line")
     text = _read_logs(path)
@@ -87,8 +87,8 @@ def test_third_party_debug_is_capped(tmp_path, monkeypatch, clean_logging):
 def test_secrets_redacted_also_in_tracebacks(tmp_path, monkeypatch, clean_logging):
     monkeypatch.setenv("TOOLKIT_INSTANCE_DIR", str(tmp_path))
     monkeypatch.setenv("ABUSEIPDB_API_KEY", "abuse-secret-1234567890")
-    path = logging_setup.setup_logging("scanner")
-    logging_setup.add_secrets("nvd-secret-0987654321", "short")
+    path = data_logs.setup_logging("scanner")
+    data_logs.add_secrets("nvd-secret-0987654321", "short")
     log = logging.getLogger("toolkit.test")
 
     log.warning("headers %s", {"Key": "header-secret-abcdef12", "Accept": "application/json"})
@@ -105,22 +105,22 @@ def test_secrets_redacted_also_in_tracebacks(tmp_path, monkeypatch, clean_loggin
     for secret in ("header-secret-abcdef12", "sk-or-v1-0123456789abcdef", "query-secret-77777777",
                    "abuse-secret-1234567890", "nvd-secret-0987654321", "trace-secret-55555555"):
         assert secret not in text
-    assert text.count(logging_setup.REDACTED) >= 6
+    assert text.count(data_logs.REDACTED) >= 6
     assert "'Accept': 'application/json'" in text and "ip=1.2.3.4" in text
     assert "a short value is kept: short" in text  # too short to redact safely
 
 
 def test_setup_twice_does_not_duplicate_lines(tmp_path, monkeypatch, clean_logging):
     monkeypatch.setenv("TOOLKIT_INSTANCE_DIR", str(tmp_path))
-    logging_setup.setup_logging("web")
-    path = logging_setup.setup_logging("web")
+    data_logs.setup_logging("web")
+    path = data_logs.setup_logging("web")
     logging.getLogger("toolkit.test").warning("once")
     assert _read_logs(path).count("once") == 1
 
 
 def test_library_warnings_reach_the_log(tmp_path, monkeypatch, clean_logging):
     monkeypatch.setenv("TOOLKIT_INSTANCE_DIR", str(tmp_path))
-    path = logging_setup.setup_logging("ids_cli")
+    path = data_logs.setup_logging("ids_cli")
     with warnings.catch_warnings():
         warnings.simplefilter("always")
         warnings.warn("model saved with scikit-learn 1.6.1", UserWarning, stacklevel=1)
@@ -139,7 +139,7 @@ def test_no_dataset_values_in_logs(tmp_path, monkeypatch, fixtures_dir, clean_lo
     data.write_text("\n".join(lines) + "\n", encoding="utf-8")
     monkeypatch.setenv("TOOLKIT_INSTANCE_DIR", str(tmp_path / "instance"))
     monkeypatch.setenv("TOOLKIT_LOG_LEVEL", "DEBUG")
-    path = logging_setup.setup_logging("web")
+    path = data_logs.setup_logging("web")
 
     loaded = load_dataset(data)
     assert marker in set(loaded.frame["service"])

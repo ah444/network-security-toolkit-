@@ -3,7 +3,7 @@
 import ssl
 from pathlib import Path
 
-from toolkit.recon import probes
+from toolkit.data.recon import probes
 from toolkit.recon import intel as recon_intel
 
 
@@ -11,9 +11,9 @@ def test_banner_context_unverified_only_for_banners(scanner, repo_root):
     context = probes.banner_tls_context()
     assert context.verify_mode == ssl.CERT_NONE and context.check_hostname is False
     assert ssl.create_default_context().verify_mode == ssl.CERT_REQUIRED, "global default kept"
-    files = [Path(scanner.__file__), *sorted((repo_root / "toolkit" / "recon").rglob("*.py"))]
+    files = sorted((repo_root / "toolkit").rglob("*.py"))
     sources = [path.read_text(encoding="utf-8") for path in files]
-    # certificate checks are switched off in exactly one place: the banner context
+    # certificate checks are switched off in exactly one place of the toolkit: the banner context
     assert sum(source.count("CERT_NONE") for source in sources) == 1
     for source in sources:
         assert "verify=False" not in source and "_create_unverified_context" not in source

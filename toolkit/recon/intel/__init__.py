@@ -7,14 +7,13 @@ from collections.abc import Iterable, Mapping
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any, TypedDict
 
-import requests
-
-from ...ports import CveEntry, IntelFinding, IntelProvider
-from .abuseipdb import AbuseIpdbProvider
-from .keys import ai_model
-from .llm import OpenRouterProvider
-from .lookup import INTEL_TIMEOUT, INTEL_WORKERS, LOOKUP_ERRORS, describe
-from .nvd import NvdProvider
+from ...data.recon.findings import CveEntry, IntelFinding
+from ...ports import IntelProvider
+from ...data.recon.abuseipdb import AbuseIpdbProvider
+from ...data.keys import ai_model
+from ...data.recon.openrouter import OpenRouterProvider
+from ...data.recon.lookup import INTEL_TIMEOUT, INTEL_WORKERS, LOOKUP_ERRORS, Session, describe
+from ...data.recon.nvd import NvdProvider
 
 
 class LookupResult(TypedDict):
@@ -37,11 +36,11 @@ class Intel:
     """
 
     def __init__(self, keys: Mapping[str, str], use_ai: bool = False,
-                 session: requests.Session | None = None, timeout: float = INTEL_TIMEOUT,
+                 session: Session | None = None, timeout: float = INTEL_TIMEOUT,
                  providers: Iterable[IntelProvider] | None = None) -> None:
         self.keys = keys
         self.use_ai = bool(use_ai and keys.get("openrouter"))
-        self.session = session or requests.Session()
+        self.session = session or Session()
         self.timeout = timeout
         self.model = ai_model()
         if providers is None:

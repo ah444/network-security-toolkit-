@@ -13,7 +13,7 @@ from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.feature_selection import SelectKBest, f_classif
 from sklearn.utils.validation import check_is_fitted
 
-from toolkit.config import PipelineConfig, max_workers
+from toolkit.data.settings import PipelineConfig, max_workers
 from toolkit.ids_core import registry
 from toolkit.ids_core.pipeline import STEPS, train_models
 from toolkit.ids_core.split import split_dataset

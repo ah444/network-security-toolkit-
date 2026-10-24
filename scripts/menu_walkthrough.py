@@ -35,7 +35,7 @@ if not os.environ.get("TOOLKIT_INSTANCE_DIR", "").strip():
     os.environ["TOOLKIT_INSTANCE_DIR"] = tempfile.mkdtemp(prefix="toolkit-walkthrough-")
 INSTANCE = os.environ["TOOLKIT_INSTANCE_DIR"]
 sys.path.insert(0, str(ROOT))
-from toolkit.bundle_files import list_bundles  # noqa: E402
+from toolkit.ids_core.exports import list_bundles  # noqa: E402
 
 
 def usable_exports():

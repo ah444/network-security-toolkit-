@@ -13,12 +13,15 @@ from typing import Any
 import pandas as pd
 from flask import Blueprint, jsonify, request, send_file
 
-from .. import run_files
+from ..ids_core.exports import write_run
 from ..ids_core import registry
 from ..ids_core.batch import (missing_features, prediction_csv, prediction_summary,
                               prediction_table)
-from ..ids_core.bundle import Bundle, BundleError, BundleVersionWarning
-from ..ids_core.datasets import DatasetError, load_dataset
+from ..ids_core.bundle import Bundle, BundleVersionWarning
+from ..data.ids.bundle_files import BundleError
+from ..data.ids.dataset_files import DatasetError
+from ..data.web import uploads
+from ..ids_core.datasets import load_dataset
 from ..ids_core.pipeline import FittedModel
 from ..ids_core.runs import TrainingRun
 from .api import (NO_MODEL_LOADED, NOT_FOUND, NOT_TRAINED, TOO_LARGE, UNKNOWN_COLUMN,
@@ -100,8 +103,7 @@ def _read_prediction_file() -> pd.DataFrame | Answer:
     if save_path.resolve().parent != state().upload_dir.resolve():
         return error_response("Invalid file name.")
     try:
-        file.save(save_path)
-        if save_path.stat().st_size > state().config.max_predict_mb * 2**20:
+        if uploads.save(file.stream, save_path) > state().config.max_predict_mb * 2**20:
             return _too_large()
         return load_dataset(save_path).frame
     except (DatasetError, ValueError, UnicodeError, OSError):
@@ -109,7 +111,7 @@ def _read_prediction_file() -> pd.DataFrame | Answer:
         return error_response(f"Could not read {name} as a CSV/TXT file. Check the file "
                               "format.", code=UNREADABLE_FILE)
     finally:
-        save_path.unlink(missing_ok=True)
+        uploads.remove(save_path)
 
 
 def _predict_file(ws: Workspace, source: str, models: Mapping[str, FittedModel],
@@ -210,7 +212,7 @@ def export(ws: Workspace) -> Answer:
     if ws.export is None:
         try:
             saved = state().model_store.save(ws.run)
-            run_files.write_run(saved.run)
+            write_run(saved.run)
         except BundleError as error:
             return _bundle_refused(error)
         except FileExistsError:

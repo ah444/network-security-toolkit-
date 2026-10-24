@@ -1,38 +1,41 @@
-"""Signing key and bundle files (edge code for ``toolkit.ids_core.bundle``, plan D11).
+"""Saving, listing and loading this install's runs and bundles (plan D11, D21).
 
-The key is created once, on the first save, in ``instance/signing.key`` (gitignored;
-``TOOLKIT_INSTANCE_DIR`` moves ``instance/``). Loading never creates a key. If the key is
-lost, the bundles saved on this install can no longer be checked, so they are not loaded:
-back up ``instance/``, or retrain from the run's TrainingRun record (``instance/runs/``).
-Bundles live in ``instance/bundles/<run id>.bundle`` and are never overwritten; the CLI
-lists and loads them from there (no model is shipped with the project).
+The bytes come from and go to ``toolkit.data.ids`` (``bundle_files``, ``run_files``); what
+they mean is ``bundle`` (format, signature, library versions) and ``runs`` (the TrainingRun
+record). If the signing key is lost, the bundles saved on this install can no longer be
+checked, so they are not loaded: back up ``instance/``, or retrain from the run's
+TrainingRun record (``instance/runs/``). No model is shipped with the project.
 """
 
 from __future__ import annotations
 
 import dataclasses
 import hashlib
-import os
 import re
-import secrets
-from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from .config import instance_dir
-from .ids_core.bundle import (
-    HEADER_BYTES,
-    KEY_BYTES,
-    Bundle,
+from ..data.ids.bundle_files import (
     BundleError,
+    new_bundle_path,
+    read_all,
+    read_start,
+    signing_key,
+    stored_bundles,
+    write_new,
+)
+from ..data.ids.run_files import read_record, write_record
+from .bundle import (
+    HEADER_BYTES,
+    Bundle,
     manifest_length,
     pack,
     parse_manifest,
     peek_manifest,
     unpack,
 )
-from .ids_core.runs import TrainingRun
+from .runs import SCHEMA_VERSION, TrainingRun
 
 
 @dataclass(frozen=True)
@@ -49,52 +52,12 @@ class BundleInfo:
     manifest: dict[str, Any]  # read without checking the signature: for lists and messages only
 
 
-def key_path(environ: Mapping[str, str] | None = None) -> Path:
-    return instance_dir(environ) / "signing.key"
-
-
-def bundles_dir(environ: Mapping[str, str] | None = None) -> Path:
-    return instance_dir(environ) / "bundles"
-
-
-def signing_key(path: str | Path | None = None, *, create: bool = False) -> bytes:
-    """This install's key; with ``create`` it is made on first use (and never replaced)."""
-    path = Path(path) if path is not None else key_path()
-    if not path.is_file():
-        if not create:
-            raise BundleError("NO_KEY", f"This install has no signing key ({path.name})")
-        path.parent.mkdir(parents=True, exist_ok=True)
-        try:
-            with path.open("x", encoding="ascii", newline="\n") as handle:
-                handle.write(secrets.token_bytes(KEY_BYTES).hex() + "\n")
-        except FileExistsError:
-            pass  # made at the same moment by another process: use that one
-        else:
-            try:
-                os.chmod(path, 0o600)  # owner only (Windows keeps its own ACLs)
-            except OSError:
-                pass
-    try:
-        key = bytes.fromhex(path.read_text(encoding="ascii").strip())
-    except (UnicodeDecodeError, ValueError):
-        key = b""
-    if len(key) != KEY_BYTES:
-        raise BundleError("BAD_KEY", f"{path.name} is not a signing key "
-                          f"({KEY_BYTES * 2} hex digits)")
-    return key
-
-
 def save_bundle(run: TrainingRun, directory: str | Path | None = None, *,
                 key_file: str | Path | None = None) -> SavedBundle:
     """Write ``<run id>.bundle``; raises FileExistsError rather than replace one."""
-    directory = Path(directory) if directory is not None else bundles_dir()
-    path = directory / f"{run.run_id}.bundle"
-    if path.exists():
-        raise FileExistsError(path)
+    path = new_bundle_path(run.run_id, directory)
     data = pack(run, signing_key(key_file, create=True))
-    directory.mkdir(parents=True, exist_ok=True)
-    with path.open("xb") as handle:
-        handle.write(data)
+    write_new(path, data)
     sha256 = hashlib.sha256(data).hexdigest()
     return SavedBundle(path, sha256, dataclasses.replace(run, bundle_sha256=sha256))
 
@@ -103,30 +66,29 @@ def read_manifest_header(path: str | Path) -> dict[str, Any] | None:
     """A bundle file's manifest, reading only the start of the file (never its models, so
     listing multi-GB bundles is instant). Unchecked: None if it isn't a bundle."""
     try:
-        with Path(path).open("rb") as handle:
-            length = manifest_length(handle.read(HEADER_BYTES))
-            return None if length is None else parse_manifest(handle.read(length))
+        length = manifest_length(read_start(path, HEADER_BYTES))
+        if length is None:
+            return None
+        return parse_manifest(read_start(path, HEADER_BYTES + length)[HEADER_BYTES:])
     except OSError:
         return None
 
 
 def list_bundles(directory: str | Path | None = None) -> list[BundleInfo]:
     """The bundles in ``instance/bundles`` (this install's exports), newest first."""
-    directory = Path(directory) if directory is not None else bundles_dir()
     found = []
-    for path in directory.glob("*.bundle") if directory.is_dir() else ():
+    for path, size, mtime in stored_bundles(directory):
         manifest = read_manifest_header(path)
         if manifest is not None:
-            stat = path.stat()
-            found.append((str(manifest.get("created_at", "")), stat.st_mtime,
-                          BundleInfo(path, stat.st_size, manifest)))
+            found.append((str(manifest.get("created_at", "")), mtime,
+                          BundleInfo(path, size, manifest)))
     return [info for *_, info in sorted(found, key=lambda item: item[:2], reverse=True)]
 
 
 def load_bundle(path: str | Path, *, key_file: str | Path | None = None,
                 pinned_sha256: str | None = None) -> Bundle:
     """Load a bundle saved on this install (or, with ``pinned_sha256``, a shipped one)."""
-    return open_bundle(Path(path).read_bytes(), key_file=key_file, pinned_sha256=pinned_sha256)
+    return open_bundle(read_all(path), key_file=key_file, pinned_sha256=pinned_sha256)
 
 
 class BundleStore:
@@ -176,3 +138,19 @@ def open_bundle(data: bytes, *, key_file: str | Path | None = None,
                           "to make a new bundle. Keep a backup copy of the instance/ folder "
                           "to avoid this.") from None
     return unpack(data, key=key)
+
+
+def write_run(run: TrainingRun, directory: str | Path | None = None) -> Path:
+    """Write ``<run id>.json``; raises FileExistsError rather than replace a record."""
+    return write_record(run.run_id, run.to_dict(), directory)
+
+
+def read_run(path: str | Path) -> dict[str, Any]:
+    record = read_record(path)
+    if not isinstance(record, dict) or "schema_version" not in record or "run_id" not in record:
+        raise ValueError(f"{Path(path).name} is not a TrainingRun record")
+    version = record["schema_version"]
+    if not isinstance(version, int) or version > SCHEMA_VERSION:
+        raise ValueError(f"{Path(path).name} uses TrainingRun schema {version}, newer than this "
+                         f"version of the toolkit understands ({SCHEMA_VERSION}); update it")
+    return record

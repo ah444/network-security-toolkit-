@@ -3,7 +3,7 @@ or faked in tests. There are exactly three; everything else is plain functions a
 registries.
 
 - ``ModelStore``: where trained models are kept (signed bundles on disk:
-  ``toolkit.bundle_files.BundleStore``).
+  ``toolkit.ids_core.exports.BundleStore``).
 - ``IntelProvider``: an online (or offline, or fake) source of facts about a detected
   product or an IP address (NVD, OpenRouter, AbuseIPDB).
 - ``ProgressSink``: where a long task reports progress (the console, a web job, a test).
@@ -13,13 +13,12 @@ Ports are structural (``typing.Protocol``): an adapter only needs the right meth
 
 from __future__ import annotations
 
-from collections.abc import Mapping
-from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Protocol, TypedDict, runtime_checkable
+from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 if TYPE_CHECKING:  # types only: the ports themselves import no layer
-    from .bundle_files import BundleInfo, SavedBundle
+    from .ids_core.exports import BundleInfo, SavedBundle
+    from .data.recon.findings import IntelFinding
     from .ids_core.bundle import Bundle
     from .ids_core.runs import TrainingRun
 
@@ -39,24 +38,6 @@ class ModelStore(Protocol):
 
     def open(self, data: bytes) -> Bundle:
         """``load`` for bytes already in memory (e.g. an upload)."""
-
-
-class CveEntry(TypedDict):
-    """One CVE as every "cves" provider reports it; ``severity`` comes from the score."""
-
-    id: str
-    cvss: float | None
-    cvss_version: str
-    severity: str
-
-
-@dataclass(frozen=True)
-class IntelFinding:
-    """What one provider found; each kind of provider fills its own field."""
-
-    cves: tuple[CveEntry, ...] = ()  # kind "cves"
-    text: str = ""  # kind "explanation": plain text, already made safe to show
-    data: Mapping[str, Any] = field(default_factory=dict)  # kind "ip_reputation": raw facts
 
 
 @runtime_checkable

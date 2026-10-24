@@ -18,21 +18,18 @@ import dataclasses
 import logging
 import mimetypes
 import secrets
-import socket
 import sys
 import threading
-import time
-import webbrowser
 from collections.abc import Sequence
 
 from flask import Flask
 
-from ..bundle_files import BundleStore
-from ..config import WebConfig, instance_dir, port_number, web_config
-from ..logging_setup import setup_logging
+from ..ids_core.exports import BundleStore
+from ..data.web import net, uploads
+from ..data.settings import WebConfig, instance_dir, port_number, web_config
+from ..data.logs import setup_logging
 from . import bundles, datasets, pages, resume, training, workspace
 from .api import register_error_handlers
-from .datasets import remove_stale_uploads
 from .jobs import JobRunner
 from .security import register_security
 from .state import WebState
@@ -43,7 +40,7 @@ BLUEPRINTS = (pages.bp, datasets.bp, training.bp, bundles.bp, workspace.bp, resu
 
 def create_app(config: WebConfig | None = None) -> Flask:
     """The web trainer with its own workspaces; settings from ``config`` (default: the
-    ``TOOLKIT_*`` environment variables, see ``toolkit.config.web_config``)."""
+    ``TOOLKIT_*`` environment variables, see ``toolkit.data.settings.web_config``)."""
     config = config or web_config()
     # The page's scripts are ES modules, which browsers run only when served as JavaScript;
     # some Windows installs map ".js" to text/plain in the registry, which mimetypes reads.
@@ -59,8 +56,7 @@ def create_app(config: WebConfig | None = None) -> Flask:
         SESSION_COOKIE_SECURE=config.https,
     )
     upload_dir = instance_dir() / "uploads"
-    upload_dir.mkdir(parents=True, exist_ok=True)
-    remove_stale_uploads(upload_dir)  # left by a crash (S11)
+    uploads.prepare(upload_dir)  # without the files a crash left (S11)
     app.extensions["toolkit"] = WebState(
         config=config,
         workspaces=WorkspaceStore(config.workspace_idle_minutes * 60,
@@ -84,53 +80,12 @@ PORT_IN_USE = ("Port {port} is already in use on this computer: the web trainer 
                "python -m toolkit web --port {other} (or TOOLKIT_PORT={other}).")
 
 
-def bind_port(host: str, port: int) -> socket.socket:
-    """A listening socket on ``host:port`` that no other program can share (step 1.4d).
-
-    waitress sets SO_REUSEADDR, and on Windows that lets a second server bind a port that
-    is already in use, without an error. So the port is bound here and the socket handed
-    to waitress: exclusively on Windows (SO_EXCLUSIVEADDRUSE); elsewhere SO_REUSEADDR only
-    allows a quick restart, never two listeners. OSError when the port is in use.
-    """
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    try:
-        exclusive = getattr(socket, "SO_EXCLUSIVEADDRUSE", None)  # Windows only
-        if exclusive is not None:
-            sock.setsockopt(socket.SOL_SOCKET, exclusive, 1)
-        else:
-            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        sock.bind((host, port))
-        sock.listen(1024)  # waitress's default backlog
-    except OSError:
-        sock.close()
-        raise
-    return sock
-
-
 def open_browser_when_ready(url: str, host: str, port: int,
                             timeout: float = BROWSER_WAIT_SECONDS) -> threading.Thread:
-    """Open ``url`` in the default browser from a thread, once the port answers; if no
-    browser can be opened (no desktop, for example), say where to go instead."""
-    def wait_and_open() -> None:
-        end = time.monotonic() + timeout
-        while True:
-            try:
-                with socket.create_connection((host, port), timeout=1):
-                    break
-            except OSError:
-                if time.monotonic() > end:
-                    return
-                time.sleep(0.2)
-        try:
-            opened = webbrowser.open(url)
-        except webbrowser.Error:
-            opened = False
-        if not opened:
-            print(f"Open {url} in your browser.")
-
-    thread = threading.Thread(target=wait_and_open, name="open-browser", daemon=True)
-    thread.start()
-    return thread
+    """Open ``url`` in the default browser once the port answers; if no browser can be
+    opened (no desktop, for example), say where to go instead."""
+    return net.open_browser_when_ready(url, host, port, timeout,
+                                       lambda: print(f"Open {url} in your browser."))
 
 
 def run_server(config: WebConfig | None = None) -> int:
@@ -148,7 +103,7 @@ def run_server(config: WebConfig | None = None) -> int:
     host, port = HOST, config.port
     url = f"http://{host}:{port}/"
     try:
-        sock = bind_port(host, port)
+        sock = net.bind_port(host, port)
     except OSError:
         print(PORT_IN_USE.format(port=port, url=url, other=port + 1 if port < 65535 else port - 1))
         return 2
@@ -187,7 +142,7 @@ def run(argv: Sequence[str] | None = None, prog: str | None = None) -> None:
         prog=prog,
         description="The web trainer, on this computer only (127.0.0.1). It opens in your "
                     "default browser. Other settings: TOOLKIT_DEBUG and the other TOOLKIT_* "
-                    "environment variables in toolkit/config.py.")
+                    "environment variables in toolkit/data/settings.py.")
     parser.add_argument("--port", type=_port_argument,
                         help="port number (default: TOOLKIT_PORT, else 5000)")
     parser.add_argument("--no-browser", action="store_true",

@@ -4,8 +4,8 @@ the product and version only, and the reply is treated as untrusted plain text.
 
 import requests
 
-from ...ports import IntelFinding
-from ..text import untrusted_text
+from .findings import IntelFinding
+from .text import untrusted_text
 from .lookup import INTEL_TIMEOUT
 
 OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"

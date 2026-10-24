@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from toolkit.config import LeakageConfig
+from toolkit.data.settings import LeakageConfig
 from toolkit.ids_core.datasets import load_dataset
 from toolkit.ids_core.leakage import check_leakage, name_pattern
 

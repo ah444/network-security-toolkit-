@@ -2,7 +2,7 @@
 
 import pytest
 
-from toolkit import bundle_files
+from toolkit.data.ids import bundle_files
 from toolkit.web.security import safe_model_basename
 from web_jobs import train_and_wait
 

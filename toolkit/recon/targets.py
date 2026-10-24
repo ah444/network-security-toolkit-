@@ -1,9 +1,9 @@
 """Scan targets, port ranges and limits (B11, B13, S16)."""
 
 import ipaddress
-import socket
 
-from ..config import ScanConfig
+from ..data.settings import ScanConfig
+from ..data.recon.resolve import first_address
 
 
 def parse_target(text: str, max_hosts: int) -> list[str]:
@@ -27,10 +27,9 @@ def parse_target(text: str, max_hosts: int) -> list[str]:
     except ValueError:
         pass
     try:
-        infos = socket.getaddrinfo(text, None, type=socket.SOCK_STREAM)
+        return [first_address(text)]
     except (OSError, UnicodeError) as error:
         raise ValueError(f"Could not resolve {text!r}: {error}") from None
-    return [str(infos[0][4][0])]
 
 
 def parse_port_range(start_text: str, end_text: str) -> range:

@@ -1,6 +1,7 @@
-"""Scan reports: one entry per open port, saved as UTF-8 JSON, CSV or TXT in
-``instance/scans/`` without ever overwriting a file (B12). Every text that came from
-the network is cleaned, and CSV cells that look like formulas are written as text (S14).
+"""Scan report files: one entry per open port, saved as UTF-8 JSON, CSV or TXT in
+``instance/scans/`` without ever overwriting a file (B12). CSV cells that look like
+formulas are written as text (S14); the entries are made (and their network text
+cleaned) by ``toolkit.recon.report``.
 """
 
 import csv
@@ -10,11 +11,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import TextIO, TypedDict
 
-from ..config import instance_dir
-from ..ports import CveEntry
-from .intel import LookupResult
-from .scanner import PortResult
-from .text import clean_text, csv_cell, one_line
+from ..settings import instance_dir
+from .findings import CveEntry
+from .text import csv_cell
 
 EXPORT_FORMATS = ("txt", "json", "csv")
 CSV_HEADER = ["Target", "Port", "Protocol", "Service", "Banner", "Software", "Severity (CVSS)",
@@ -35,24 +34,6 @@ class ReportEntry(TypedDict):
     severity: str
     ai_explanation: str
     lookup_errors: list[str]
-
-
-def make_entry(target: str, result: PortResult, software: str | None,
-               intel: LookupResult) -> ReportEntry:
-    """One open port for the report; every text from the network is cleaned here."""
-    return {
-        "target": target,
-        "port": result.port,
-        "protocol": result.protocol,
-        "service": one_line(result.service, 40),
-        "banner": clean_text(result.banner, 500),
-        "software": software or "",
-        "cves": intel["cves"],
-        "max_cvss": intel["max_cvss"],
-        "severity": intel["severity"],
-        "ai_explanation": intel["ai_explanation"],
-        "lookup_errors": intel["errors"],
-    }
 
 
 def _cve_list(entry: ReportEntry) -> str:

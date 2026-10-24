@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from toolkit.config import SplitConfig
+from toolkit.data.settings import SplitConfig
 from toolkit.ids_core.datasets import load_dataset
 from toolkit.ids_core.split import dedupe, split_dataset
 

@@ -18,7 +18,6 @@ from __future__ import annotations
 
 import codecs
 import csv
-import hashlib
 import io
 import logging
 import re
@@ -29,21 +28,22 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from ..data.ids.dataset_files import (
+    DatasetError,
+    file_sha256,
+    read_chunks,
+    read_sample,
+)
 from .profiles import ProfileMatch, detect_profile
 
 log = logging.getLogger(__name__)
 
-SAMPLE_BYTES = 64 * 1024
 SAMPLE_ROWS = 200
 SEPARATORS = (",", ";", "\t", "|")
 DEFAULT_CHUNK_ROWS = 200_000
 # Text columns with at most this share of distinct values become 'category'.
 CATEGORY_MAX_SHARE = 0.5
 _SUFFIXED = re.compile(r"^(?P<base>.+)\.(?P<n>\d+)$")
-
-
-class DatasetError(ValueError):
-    """The file can't be read as a dataset (message is safe to show to a user)."""
 
 
 @dataclass(frozen=True)
@@ -121,10 +121,7 @@ def _sniff_separator(lines: list[str]) -> str:
 
 def inspect_dataset(path: str | Path) -> DatasetInfo:
     """Find encoding, separator and profile from the start of the file."""
-    path = Path(path)
-    with path.open("rb") as handle:
-        sample = handle.read(SAMPLE_BYTES)
-        complete = not handle.read(1)
+    sample, complete = read_sample(path)
     if not sample.strip():
         raise DatasetError("The file is empty.")
     encoding = _detect_encoding(sample)
@@ -140,14 +137,6 @@ def inspect_dataset(path: str | Path) -> DatasetInfo:
 
 
 # --- Loading -----------------------------------------------------------------------
-
-def _sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for block in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(block)
-    return digest.hexdigest()
-
 
 def _narrow(frame: pd.DataFrame) -> pd.DataFrame:
     """Smallest exact numeric dtypes: ints shrink, floats become float32 only if lossless."""
@@ -174,18 +163,9 @@ def _unify_text(column: pd.Series) -> pd.Series:
 
 
 def _read_frame(path: Path, info: DatasetInfo, encoding: str, chunk_rows: int) -> pd.DataFrame:
-    chunks = pd.read_csv(
-        path,
-        sep=info.separator,
-        header=None,
-        names=list(info.profile.column_names),
-        skiprows=1 if info.profile.has_header else 0,
-        encoding=encoding,
-        engine="c",
-        chunksize=chunk_rows,
-        skipinitialspace=True,
-        skip_blank_lines=True,
-    )
+    chunks = read_chunks(path, separator=info.separator, names=info.profile.column_names,
+                         skip_header=info.profile.has_header, encoding=encoding,
+                         chunk_rows=chunk_rows)
     parts = [_narrow(chunk) for chunk in chunks]
     if not parts or not any(len(part) for part in parts):
         raise DatasetError("The file has a header but no data rows.")
@@ -259,7 +239,7 @@ def load_dataset(path: str | Path, *, chunk_rows: int = DEFAULT_CHUNK_ROWS) -> L
         renamed = {raw: clean for raw, clean in zip(info.raw_header, match.column_names,
                                                     strict=True) if raw != clean}
     report = LoadReport(
-        sha256=_sha256(path),
+        sha256=file_sha256(path),
         encoding=encoding,
         separator=info.separator,
         has_header=match.has_header,

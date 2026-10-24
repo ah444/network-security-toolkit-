@@ -4,9 +4,10 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from toolkit import bundle_files, ports
+from toolkit.ids_core import exports as core_exports
+from toolkit import ports
 from toolkit.ids_core import bundle
-from toolkit.ids_core.bundle import BundleError
+from toolkit.data.ids.bundle_files import BundleError
 from toolkit.ids_core.runs import DatasetRef, TrainSettings, train
 
 # --- ModelStore ------------------------------------------------------------------------------
@@ -25,12 +26,12 @@ def run():
 
 
 def test_bundle_store_is_a_model_store():
-    assert isinstance(bundle_files.BundleStore(), ports.ModelStore)
+    assert isinstance(core_exports.BundleStore(), ports.ModelStore)
 
 
 def test_bundle_store_round_trip(tmp_path, monkeypatch, run):
     monkeypatch.setenv("TOOLKIT_INSTANCE_DIR", str(tmp_path))
-    store: ports.ModelStore = bundle_files.BundleStore()
+    store: ports.ModelStore = core_exports.BundleStore()
 
     saved = store.save(run)
     assert saved.path == tmp_path / "bundles" / f"{run.run_id}.bundle"
@@ -43,16 +44,16 @@ def test_bundle_store_round_trip(tmp_path, monkeypatch, run):
 
 def test_bundle_store_follows_its_folder(tmp_path, monkeypatch, run):
     monkeypatch.setenv("TOOLKIT_INSTANCE_DIR", str(tmp_path / "instance"))
-    store = bundle_files.BundleStore(tmp_path / "elsewhere", key_file=tmp_path / "other.key")
+    store = core_exports.BundleStore(tmp_path / "elsewhere", key_file=tmp_path / "other.key")
     saved = store.save(run)
     assert saved.path.parent == tmp_path / "elsewhere" and (tmp_path / "other.key").is_file()
     assert store.list_bundles()[0].path == saved.path
-    assert bundle_files.BundleStore().list_bundles() == []  # the default folder is untouched
+    assert core_exports.BundleStore().list_bundles() == []  # the default folder is untouched
 
 
 def test_bundle_store_refuses_tampered_before_loading(tmp_path, monkeypatch, run):
     monkeypatch.setenv("TOOLKIT_INSTANCE_DIR", str(tmp_path))
-    store = bundle_files.BundleStore()
+    store = core_exports.BundleStore()
     data = bytearray(store.save(run).path.read_bytes())
     data[-1] ^= 0xFF
 

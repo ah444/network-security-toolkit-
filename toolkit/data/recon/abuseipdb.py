@@ -2,7 +2,7 @@
 
 import requests
 
-from ...ports import IntelFinding
+from .findings import IntelFinding
 from .lookup import INTEL_TIMEOUT
 
 ABUSEIPDB_URL = "https://api.abuseipdb.com/api/v2/check"

@@ -1,5 +1,5 @@
 """API keys and the AI model setting (S15): the environment, else ``.env`` (project
-folder; an installed copy: its data folder, ``toolkit.config.env_file``). All keys are
+folder; an installed copy: its data folder, ``toolkit.data.settings.env_file``). All keys are
 optional.
 
 The old fallback file ``tools/Port_scan/api_keys.txt`` is no longer read (v5.1 step 1.4a,
@@ -9,7 +9,7 @@ The old fallback file ``tools/Port_scan/api_keys.txt`` is no longer read (v5.1 s
 from collections.abc import Mapping
 from pathlib import Path
 
-from ...config import ENV_FILE, REPO_ROOT, env_value
+from .settings import ENV_FILE, REPO_ROOT, env_value
 
 LEGACY_KEY_FILE = REPO_ROOT / "tools" / "Port_scan" / "api_keys.txt"
 ENV_PATH = ENV_FILE

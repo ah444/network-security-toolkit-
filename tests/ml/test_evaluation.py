@@ -6,7 +6,7 @@ import pandas as pd
 import pytest
 from sklearn.base import BaseEstimator, ClassifierMixin
 
-from toolkit.config import EvaluationConfig
+from toolkit.data.settings import EvaluationConfig
 from toolkit.ids_core import balancing, evaluation, pipeline, registry
 from toolkit.ids_core.evaluation import evaluate, leaderboard_table
 from toolkit.ids_core.split import split_dataset

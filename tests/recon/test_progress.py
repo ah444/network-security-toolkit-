@@ -3,7 +3,7 @@
 import threading
 
 from toolkit.ports import NullProgress, ProgressSink
-from toolkit.recon import scanner as recon_scanner
+from toolkit.data.recon import scanner as recon_scanner
 
 
 class RecordingProgress:

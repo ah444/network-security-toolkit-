@@ -5,7 +5,7 @@
 (dataset SHA-256, profile, split and its reason codes, guard decisions and overrides,
 features, preprocessing, balancing, model parameters, ``EvaluationResult``, package
 versions, re-run tolerance). ``to_dict()`` is the plain-JSON form; the caller saves it
-(``toolkit.run_files``), the core never writes files. ``rerun(record, frame)`` trains
+(``exports``, over ``toolkit.data.ids.run_files``), the core never writes files. ``rerun(record, frame)`` trains
 again with the recorded settings and ``compare_metrics`` checks the result.
 """
 
@@ -24,7 +24,13 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from ..config import EvaluationConfig, LeakageConfig, PipelineConfig, SplitConfig, max_workers
+from ..data.settings import (
+    EvaluationConfig,
+    LeakageConfig,
+    PipelineConfig,
+    SplitConfig,
+    max_workers,
+)
 from ..ports import NullProgress, ProgressSink
 from . import registry
 from .datasets import LoadedDataset

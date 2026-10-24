@@ -5,8 +5,8 @@ import builtins
 import requests
 
 from toolkit.recon import intel as recon_intel
-from toolkit.recon import scanner as recon_scanner
-from toolkit.recon.intel import lookup
+from toolkit.data.recon import scanner as recon_scanner
+from toolkit.data.recon import lookup
 
 
 def test_scan_finishes_when_intel_times_out(scanner, fake_session, monkeypatch, capsys,

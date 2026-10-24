@@ -45,7 +45,7 @@ import numpy as np
 import pandas as pd
 from sklearn.model_selection import StratifiedGroupKFold
 
-from ..config import SplitConfig
+from ..data.settings import SplitConfig
 from .leakage import name_pattern
 from .profiles import ProfileMatch
 
