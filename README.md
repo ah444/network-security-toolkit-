@@ -404,12 +404,12 @@ The scanner works without any key. CVE lookups use the NVD API, which works with
    - Request a key: https://nvd.nist.gov/developers/request-an-api-key
 
 ### Configuration
-Set environment variables (`OPENROUTER_API_KEY`, `ABUSEIPDB_API_KEY`, `NVD_API_KEY`, optionally `OPENROUTER_MODEL`), or put the same `NAME=value` lines in a `.env` file in the project folder: copy `.env.example` to `.env` and fill in what you use. An environment variable wins over `.env`. The older `tools/Port_scan/api_keys.txt` is no longer read (v5.1): if it is still on disk, the scanner says so once; move its keys into `.env`.
+Set environment variables (`OPENROUTER_API_KEY`, `ABUSEIPDB_API_KEY`, `NVD_API_KEY`, optionally `OPENROUTER_MODEL`), or put the same `NAME=value` lines in a `.env` file in the project folder: copy `.env.example` to `.env` and fill in what you use. An environment variable wins over `.env`. The older `tools/Port_scan/api_keys.txt` is no longer read (v5.1): if it is still on disk, the scanner says so once; move its keys into `.env`. Every setting, with its default and allowed values, every flag and every exit code: [docs/reference.md](docs/reference.md).
 
 ⚠️ **Never commit `.env` to Git!** (It is in .gitignore)
 
 ### Log files
-Each tool writes a log file in `instance/logs/` (`web.log`, `scanner.log`, `ids_cli.log`), UTF-8, rotated at 1 MB with 3 old files kept. Set `TOOLKIT_LOG_LEVEL` (`DEBUG`, `INFO`, `WARNING`, `ERROR`; default `INFO`) as an environment variable to change how much is written. API keys and `Authorization` / `Bearer` values are replaced by `[REDACTED]`, and dataset values are never logged. Library warnings (for example a scikit-learn version mismatch) appear on the console and in the log.
+Each tool writes a log file in `instance/logs/` (`web.log`, `scanner.log`, `ids_cli.log`), UTF-8, rotated at 1 MB with 3 old files kept. Set `TOOLKIT_LOG_LEVEL` (`DEBUG`, `INFO`, `WARNING`, `ERROR`; default `INFO`) as an environment variable to change how much is written. API keys and `Authorization` / `Bearer` values are replaced by `[REDACTED]`, and dataset values are never logged. Library warnings (for example a scikit-learn version mismatch) appear on the console and in the log. A bad value (any `TOOLKIT_*` setting) is a one-line message and exit code 2 ([docs/reference.md](docs/reference.md#71-toolkit_-settings)).
 
 ---
 

@@ -121,7 +121,8 @@ def interactive(bundle: Bundle, model: str | None = None) -> int:
             screen.error(error)
 
 
-def parse_args(argv: Sequence[str] | None, prog: str | None = None) -> argparse.Namespace:
+def build_parser(prog: str | None = None) -> argparse.ArgumentParser:
+    """The command's flags (each one is in docs/reference.md)."""
     parser = argparse.ArgumentParser(
         prog=prog, description="Intrusion detection with a model bundle exported by the web trainer.")
     parser.add_argument("--bundle", help="a .bundle exported on this computer "
@@ -134,7 +135,11 @@ def parse_args(argv: Sequence[str] | None, prog: str | None = None) -> argparse.
     parser.add_argument("--json", help="rows as JSON (object or list, inline or a .json file); "
                         "prints JSON results")
     parser.add_argument("--info", action="store_true", help="show the model card and exit")
-    return parser.parse_args(argv)
+    return parser
+
+
+def parse_args(argv: Sequence[str] | None, prog: str | None = None) -> argparse.Namespace:
+    return build_parser(prog).parse_args(argv)
 
 
 def main(argv: Sequence[str] | None = None, prog: str | None = None) -> int:

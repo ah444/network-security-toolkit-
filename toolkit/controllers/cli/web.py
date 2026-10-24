@@ -19,19 +19,24 @@ def _port_argument(text: str) -> int:
         raise argparse.ArgumentTypeError(str(error)) from None
 
 
-def run(argv: Sequence[str] | None = None, prog: str | None = None) -> None:
-    """The command (``python -m toolkit web``): its flags, then ``run_server``; exits with
-    code 2 for a bad setting or a port in use."""
+def build_parser(prog: str | None = None) -> argparse.ArgumentParser:
+    """The command's flags (each one is in docs/reference.md)."""
     parser = argparse.ArgumentParser(
         prog=prog,
         description="The web trainer, on this computer only (127.0.0.1). It opens in your "
                     "default browser. Other settings: TOOLKIT_DEBUG and the other TOOLKIT_* "
-                    "environment variables in toolkit/data/settings.py.")
+                    "environment variables, in docs/reference.md.")
     parser.add_argument("--port", type=_port_argument,
                         help="port number (default: TOOLKIT_PORT, else 5000)")
     parser.add_argument("--no-browser", action="store_true",
                         help="don't open the browser (also TOOLKIT_NO_BROWSER=1)")
-    args = parser.parse_args(argv)
+    return parser
+
+
+def run(argv: Sequence[str] | None = None, prog: str | None = None) -> None:
+    """The command (``python -m toolkit web``): its flags, then ``run_server``; exits with
+    code 2 for a bad setting or a port in use."""
+    args = build_parser(prog).parse_args(argv)
     try:
         config = web_config()
     except ValueError as error:  # a TOOLKIT_* setting that isn't a number, a bad port
