@@ -38,5 +38,11 @@ def stopped() -> None:
     print("\nStopped.")
 
 
+def bad_settings(problems: list[str]) -> None:
+    """Each bad TOOLKIT_* setting, one line each."""
+    for problem in problems:
+        print(problem)
+
+
 def could_not_start(command: str, error: OSError) -> None:
     print(f"Could not start {command}: {error}")

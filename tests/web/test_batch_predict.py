@@ -7,6 +7,7 @@ import pandas as pd
 import pytest
 
 from toolkit.data.ids import bundle_files
+from toolkit.data.settings import WebConfig
 from toolkit.services.ids.batch import prediction_summary
 from toolkit.services.ids.datasets import load_dataset
 from web_jobs import train_and_wait
@@ -171,9 +172,8 @@ def test_not_trained(client, fixtures_dir):
     assert (response.status_code, response.get_json()["error"]["code"]) == (400, "NOT_TRAINED")
 
 
-def test_too_large(make_app, monkeypatch, fixtures_dir):
-    monkeypatch.setenv("TOOLKIT_MAX_PREDICT_MB", "0")
-    app = make_app()
+def test_too_large(make_app, fixtures_dir):
+    app = make_app(WebConfig(max_predict_mb=0))  # every file too large (0 is not a setting)
     with app.test_client() as client:
         columns = client.post("/api/v1/dataset",
                               data={"dataset": (io.BytesIO(_fixture(fixtures_dir)), CIC)},

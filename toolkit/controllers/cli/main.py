@@ -22,13 +22,14 @@ from collections.abc import Callable, Sequence
 from typing import NamedTuple
 
 from ...data.processes import run_toolkit
-from ...data.settings import REPO_ROOT, instance_dir, is_checkout
+from ...data.settings import REPO_ROOT, check_settings, instance_dir, is_checkout
 from ...ui.cli import menu as screen
 
 PROG = "python -m toolkit"
 
 MENU_COMMANDS = {"1": "scan", "2": "ids", "3": "web"}
 EXIT_CHOICES = {"4", "q", "quit", "exit"}
+HELP_FLAGS = {"-h", "--help"}
 
 
 # The tools are imported only when they run, so the menu and --help start at once
@@ -113,6 +114,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         return menu()
     name, rest = args[0], args[1:]
     if name in COMMANDS:
+        # a bad TOOLKIT_* setting of this tool: one line each, exit code 2, before its log
+        # starts (v5.1 step 1.5e); --help always works
+        problems = [] if HELP_FLAGS.intersection(rest) else check_settings(name)
+        if problems:
+            screen.bad_settings(problems)
+            return 2
         COMMANDS[name].start(rest, f"{PROG} {name}")  # the tool exits with its own code
         return 0
     build_parser().parse_args(args)  # --help prints and exits 0, anything else exits 2

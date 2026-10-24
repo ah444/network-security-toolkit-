@@ -137,24 +137,45 @@ def env_value(name: str, environ: Mapping[str, str] | None = None,
     return read_env_file(ENV_FILE if env_file is None else env_file).get(name, "")
 
 
+def whole_number(environ: Mapping[str, str], variable: str, default: int) -> int:
+    """``variable`` as a whole number >= 1; ``default`` when it is unset.
+
+    Anything else is a ValueError naming the setting (v5.1 step 1.5e), so a typo can't lift
+    a limit, turn one into 0 or silently use every core.
+    """
+    raw = environ.get(variable, "").strip()
+    if not raw:
+        return default
+    try:
+        value = int(raw)
+    except ValueError:
+        value = 0
+    if value < 1:
+        raise ValueError(f"{variable} must be a whole number >= 1, not {raw!r}")
+    return value
+
+
+def switch(environ: Mapping[str, str], variable: str) -> bool:
+    """An on/off setting: ``1`` is on, ``0`` or unset is off.
+
+    Anything else (``true``, ``yes``) is a ValueError naming the setting (v5.1 step 1.5e);
+    before, it silently meant off.
+    """
+    raw = environ.get(variable, "").strip()
+    if raw not in ("", "0", "1"):
+        raise ValueError(f"{variable} must be 1 (on) or 0 (off), not {raw!r}")
+    return raw == "1"
+
+
 def max_workers(environ: Mapping[str, str] | None = None) -> int:
     """CPU workers for training and CV: ``TOOLKIT_MAX_WORKERS``, else all cores but one (D8).
 
-    Never more than the machine has; a value that isn't a positive whole number is an error,
-    so a typo can't silently use every core.
+    Never more than the machine has; a value that isn't a positive whole number is an error.
     """
     environ = os.environ if environ is None else environ
     cores = os.cpu_count() or 1
-    raw = environ.get("TOOLKIT_MAX_WORKERS", "").strip()
-    if not raw:
-        return max(1, cores - 1)
-    try:
-        workers = int(raw)
-    except ValueError:
-        workers = 0
-    if workers < 1:
-        raise ValueError(f"TOOLKIT_MAX_WORKERS must be a whole number >= 1, not {raw!r}")
-    return min(workers, cores)
+    workers = whole_number(environ, "TOOLKIT_MAX_WORKERS", 0)
+    return min(workers, cores) if workers else max(1, cores - 1)
 
 
 LOG_LEVELS = ("DEBUG", "INFO", "WARNING", "ERROR")
@@ -223,11 +244,6 @@ class WebConfig:
     open_browser: bool = True  # open the trainer in the default browser (TOOLKIT_NO_BROWSER=1: no)
 
 
-def _int_setting(environ: Mapping[str, str], variable: str, default: int) -> int:
-    raw = environ.get(variable, "").strip()
-    return int(raw) if raw else default
-
-
 def port_number(text: str, source: str = "TOOLKIT_PORT") -> int:
     """A TCP port (1-65535) from ``text``; ValueError naming ``source`` otherwise."""
     try:
@@ -243,22 +259,23 @@ def web_config(environ: Mapping[str, str] | None = None) -> WebConfig:
     """``TOOLKIT_MAX_UPLOAD_MB``, ``TOOLKIT_MAX_PREDICT_MB``, ``TOOLKIT_WORKSPACE_IDLE_MIN``,
     ``TOOLKIT_MAX_WORKSPACES``,
     ``TOOLKIT_MAX_DATA_MB``, ``TOOLKIT_JOB_MAX_MIN``, ``TOOLKIT_PORT``, ``TOOLKIT_HTTPS=1``, ``TOOLKIT_DEBUG=1``,
-    ``TOOLKIT_SECRET_KEY`` and ``TOOLKIT_NO_BROWSER=1``, else the defaults."""
+    ``TOOLKIT_SECRET_KEY`` and ``TOOLKIT_NO_BROWSER=1``, else the defaults. A bad value is a
+    ValueError naming the setting."""
     environ = os.environ if environ is None else environ
     return WebConfig(
-        max_upload_mb=_int_setting(environ, "TOOLKIT_MAX_UPLOAD_MB", WebConfig.max_upload_mb),
-        max_predict_mb=_int_setting(environ, "TOOLKIT_MAX_PREDICT_MB", WebConfig.max_predict_mb),
-        workspace_idle_minutes=_int_setting(environ, "TOOLKIT_WORKSPACE_IDLE_MIN",
+        max_upload_mb=whole_number(environ, "TOOLKIT_MAX_UPLOAD_MB", WebConfig.max_upload_mb),
+        max_predict_mb=whole_number(environ, "TOOLKIT_MAX_PREDICT_MB", WebConfig.max_predict_mb),
+        workspace_idle_minutes=whole_number(environ, "TOOLKIT_WORKSPACE_IDLE_MIN",
                                             WebConfig.workspace_idle_minutes),
-        max_workspaces=_int_setting(environ, "TOOLKIT_MAX_WORKSPACES", WebConfig.max_workspaces),
-        max_data_mb=_int_setting(environ, "TOOLKIT_MAX_DATA_MB", WebConfig.max_data_mb),
-        job_max_minutes=_int_setting(environ, "TOOLKIT_JOB_MAX_MIN", WebConfig.job_max_minutes),
+        max_workspaces=whole_number(environ, "TOOLKIT_MAX_WORKSPACES", WebConfig.max_workspaces),
+        max_data_mb=whole_number(environ, "TOOLKIT_MAX_DATA_MB", WebConfig.max_data_mb),
+        job_max_minutes=whole_number(environ, "TOOLKIT_JOB_MAX_MIN", WebConfig.job_max_minutes),
         port=port_number(environ["TOOLKIT_PORT"]) if environ.get("TOOLKIT_PORT", "").strip()
         else WebConfig.port,
-        https=environ.get("TOOLKIT_HTTPS") == "1",
-        debug=environ.get("TOOLKIT_DEBUG") == "1",
+        https=switch(environ, "TOOLKIT_HTTPS"),
+        debug=switch(environ, "TOOLKIT_DEBUG"),
         secret_key=environ.get("TOOLKIT_SECRET_KEY", ""),
-        open_browser=environ.get("TOOLKIT_NO_BROWSER") != "1",
+        open_browser=not switch(environ, "TOOLKIT_NO_BROWSER"),
     )
 
 
@@ -268,17 +285,46 @@ def scan_limits(environ: Mapping[str, str] | None = None) -> ScanConfig:
     A value that isn't a positive whole number is an error, so a typo can't lift a limit.
     """
     environ = os.environ if environ is None else environ
-    values = {}
-    for field, variable in (("max_hosts", "TOOLKIT_SCAN_MAX_HOSTS"),
-                            ("max_probes", "TOOLKIT_SCAN_MAX_PROBES")):
-        raw = environ.get(variable, "").strip()
-        if not raw:
-            continue
+    return ScanConfig(
+        max_hosts=whole_number(environ, "TOOLKIT_SCAN_MAX_HOSTS", ScanConfig.max_hosts),
+        max_probes=whole_number(environ, "TOOLKIT_SCAN_MAX_PROBES", ScanConfig.max_probes))
+
+
+# The TOOLKIT_* settings each command reads, checked before it starts (v5.1 step 1.5e).
+# TOOLKIT_INSTANCE_DIR and TOOLKIT_SECRET_KEY take any value.
+SHARED_SETTINGS = ("TOOLKIT_LOG_LEVEL",)
+COMMAND_SETTINGS = {
+    "scan": (*SHARED_SETTINGS, "TOOLKIT_SCAN_MAX_HOSTS", "TOOLKIT_SCAN_MAX_PROBES"),
+    "ids": SHARED_SETTINGS,
+    "web": (*SHARED_SETTINGS, "TOOLKIT_MAX_UPLOAD_MB", "TOOLKIT_MAX_PREDICT_MB",
+            "TOOLKIT_WORKSPACE_IDLE_MIN", "TOOLKIT_MAX_WORKSPACES", "TOOLKIT_MAX_DATA_MB",
+            "TOOLKIT_JOB_MAX_MIN", "TOOLKIT_MAX_WORKERS", "TOOLKIT_PORT", "TOOLKIT_HTTPS",
+            "TOOLKIT_DEBUG", "TOOLKIT_NO_BROWSER"),
+}
+SWITCHES = ("TOOLKIT_HTTPS", "TOOLKIT_DEBUG", "TOOLKIT_NO_BROWSER")
+
+
+def _check(environ: Mapping[str, str], variable: str) -> None:
+    if variable == "TOOLKIT_LOG_LEVEL":
+        log_level(environ)
+    elif variable == "TOOLKIT_PORT":
+        if environ.get(variable, "").strip():
+            port_number(environ[variable])
+    elif variable in SWITCHES:
+        switch(environ, variable)
+    else:
+        whole_number(environ, variable, 0)
+
+
+def check_settings(command: str, environ: Mapping[str, str] | None = None) -> list[str]:
+    """One message per bad ``TOOLKIT_*`` setting that ``command`` (scan, ids, web) reads,
+    in a fixed order; [] when all are fine. A setting another command reads is not checked,
+    so a typo in a web setting doesn't stop a scan."""
+    environ = os.environ if environ is None else environ
+    problems = []
+    for variable in COMMAND_SETTINGS[command]:
         try:
-            value = int(raw)
-        except ValueError:
-            value = 0
-        if value < 1:
-            raise ValueError(f"{variable} must be a whole number >= 1, not {raw!r}")
-        values[field] = value
-    return ScanConfig(**values)
+            _check(environ, variable)
+        except ValueError as error:
+            problems.append(str(error))
+    return problems

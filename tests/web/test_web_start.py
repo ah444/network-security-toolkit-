@@ -51,7 +51,9 @@ def test_port_number():
 def test_no_browser_setting():
     assert WebConfig().open_browser and web_config({}).open_browser
     assert not web_config({"TOOLKIT_NO_BROWSER": "1"}).open_browser
-    assert web_config({"TOOLKIT_NO_BROWSER": "yes"}).open_browser  # only "1", as the others
+    assert web_config({"TOOLKIT_NO_BROWSER": "0"}).open_browser
+    with pytest.raises(ValueError, match="TOOLKIT_NO_BROWSER"):  # only 0 or 1 (step 1.5e)
+        web_config({"TOOLKIT_NO_BROWSER": "yes"})
 
 
 def test_browser_opens_once_the_port_answers(monkeypatch):

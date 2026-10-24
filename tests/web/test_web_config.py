@@ -24,8 +24,12 @@ def test_values_from_environment():
 
 
 def test_only_1_switches_https_and_debug_on():
-    config = web_config({"TOOLKIT_HTTPS": "yes", "TOOLKIT_DEBUG": "true"})
+    config = web_config({"TOOLKIT_HTTPS": "0", "TOOLKIT_DEBUG": ""})
     assert not config.https and not config.debug
+    # any other value is an error naming the setting (v5.1 step 1.5e; it used to mean off)
+    for variable, value in (("TOOLKIT_HTTPS", "yes"), ("TOOLKIT_DEBUG", "true")):
+        with pytest.raises(ValueError, match=f"{variable} must be 1 \\(on\\) or 0 \\(off\\)"):
+            web_config({variable: value})
 
 
 def test_bad_number_is_an_error():
