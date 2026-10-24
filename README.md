@@ -415,65 +415,63 @@ Each tool writes a log file in `instance/logs/` (`web.log`, `scanner.log`, `ids_
 
 ## 📸 Screenshots
 
+Real captures of v5.1 (Windows, 2026-10-24). The [user guide](docs/user_guide.md) walks
+through every tool step by step, with a picture of each step of the web trainer. The model
+numbers come from a small NSL-KDD sample and are not results; those are in the
+[model card](docs/model_card.md).
+
 ### Main Menu
 ```
- _       __       __                            
-| |     / /___   / /_____ ____   ____ ___   ___ 
+ _       __       __
+| |     / /___   / /_____ ____   ____ ___   ___
 | | /| / // _ \ / // ___// __ \ / __ `__ \ / _ \
 | |/ |/ //  __// // /__ / /_/ // / / / / //  __/
-|__/|__/ \___//_/ \___/ \____//_/ /_/ /_/ \___/ 
+|__/|__/ \___//_/ \___/ \____//_/ /_/ /_/ \___/
 
 Network Recon and Detection Tool
+Your one-stop solution for network recon and intrusion detection using Machine Learning.
+Let's secure your network with these tools.
 
 1. Network Recon
 2. Intrusion Detection (CLI)
 3. Intrusion Detection (Web)
 4. Exit
+Enter your choice [1-4]: 4
 ```
 
 ### Port Scan Results
+A scan of this computer, on a test port that answers like an OpenSSH 8.9 server:
 ```
-+----------------------------------------------------------+
-| PORT      | STATE   | SERVICE    | BANNER                 |
-+----------------------------------------------------------+
-| 22/tcp    | open    | ssh        | OpenSSH 8.2            |
-| 80/tcp    | open    | http       | nginx/1.18.0           |
-| 443/tcp   | open    | https      | nginx/1.18.0           |
-+----------------------------------------------------------+
-```
-
-### Web IDS - Data Analysis
-```
-📊 Data Analysis
-┌────────────────────┬─────────────────────────┐
-│ Imbalance Ratio    │ 2.2%                    │
-│ Severity           │ SEVERE                  │
-│ Dataset Size       │ 122,859 (very_large)    │
-│ Features           │ 41 (medium)             │
-│ Classes            │ 7 (multi-class)         │
-│ Smallest Class     │ 2,754 samples           │
-└────────────────────┴─────────────────────────┘
-
-✅ Recommended Method: SMOTE-ENN
-Large multi-class dataset with severe imbalance. 
-SMOTE-ENN cleans noisy synthetic samples.
-
-Alternatives: Class Weights, SMOTE + Tomek, ADASYN
+OPEN PORTS
++-----------------------------------------------------------------------------+
+|   PORT    |  STATE  |  SERVICE   |                  BANNER                  |
++-----------------------------------------------------------------------------+
+| 47822/tcp |  open   |            | SSH-2.0-OpenSSH_8.9p1 Ubuntu-3ubuntu0.10 |
++-----------------------------------------------------------------------------+
 ```
 
-### IDS Prediction (output format only, not a real result)
+### Web Trainer
+![The leaderboard after training](docs/user-guide/12-leaderboard.jpg)
+
+![Predictions for a CSV file](docs/user-guide/15-predict-file.jpg)
+
+### IDS Prediction
+A real `neptune` row from the model's test split (`python -m toolkit ids`, option 2):
 ```
-================================================================
+==================================================
 🎯 PREDICTION RESULT
-================================================================
-   Status: ✅ BENIGN
-   Confidence: 98.50%
+==================================================
+   Status: 🚨 ATTACK DETECTED - neptune
+   True label: neptune
+   Confidence: 96.00%
 
    📊 Top Probabilities:
-      BENIGN                    98.50% ████████████████████
-      Portscan                   0.80%
-      DDoS                       0.35%
-================================================================
+      neptune                   96.00% ███████████████████
+      portsweep                  2.00%
+      satan                      2.00%
+      teardrop                   0.00%
+      spy                        0.00%
+==================================================
 ```
 
 ---
