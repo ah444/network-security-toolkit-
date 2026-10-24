@@ -7,7 +7,8 @@ import webbrowser
 
 import pytest
 
-from toolkit import web
+from toolkit.controllers.cli import web as web_command
+from toolkit.controllers.web import server as web
 from toolkit.data.web import net
 from toolkit.data.settings import WebConfig, port_number, web_config
 
@@ -163,30 +164,30 @@ def test_ctrl_c_in_debug_mode(monkeypatch, capsys):
 
 def test_web_flags(monkeypatch):
     received = []
-    monkeypatch.setattr(web, "run_server", lambda config: received.append(config) or 0)
+    monkeypatch.setattr(web_command, "run_server", lambda config: received.append(config) or 0)
     monkeypatch.setenv("TOOLKIT_PORT", "5055")
     monkeypatch.delenv("TOOLKIT_NO_BROWSER")
-    web.run([])
+    web_command.run([])
     assert (received[-1].port, received[-1].open_browser) == (5055, True)
-    web.run(["--port", "5099", "--no-browser"])
+    web_command.run(["--port", "5099", "--no-browser"])
     assert (received[-1].port, received[-1].open_browser) == (5099, False)
 
 
 @pytest.mark.parametrize("argv, env", [(["--port", "0"], None), (["--port", "web"], None),
                                        ([], "abc"), ([], "70000")])
 def test_bad_port_exits_2(monkeypatch, capsys, argv, env):
-    monkeypatch.setattr(web, "run_server", lambda config: pytest.fail("started"))
+    monkeypatch.setattr(web_command, "run_server", lambda config: pytest.fail("started"))
     if env:
         monkeypatch.setenv("TOOLKIT_PORT", env)
     with pytest.raises(SystemExit) as stop:
-        web.run(argv)
+        web_command.run(argv)
     assert stop.value.code == 2
     captured = capsys.readouterr()
     assert "must be a port number from 1 to 65535" in captured.out + captured.err
 
 
 def test_port_in_use_exits_2(monkeypatch):
-    monkeypatch.setattr(web, "run_server", lambda config: 2)
+    monkeypatch.setattr(web_command, "run_server", lambda config: 2)
     with pytest.raises(SystemExit) as stop:
-        web.run([])
+        web_command.run([])
     assert stop.value.code == 2

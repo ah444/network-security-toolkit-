@@ -1,3 +1,3 @@
 """Same as ``python -m toolkit`` (kept so ``python main.py`` still works)."""
-from toolkit.cli import run
+from toolkit.controllers.cli.main import run
 run()

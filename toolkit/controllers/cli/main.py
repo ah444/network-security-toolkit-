@@ -5,7 +5,8 @@
     python -m toolkit ids [flags]      IDS with your exports (python -m toolkit ids --help)
     python -m toolkit web              web trainer on this computer
 
-(from the project folder; ``python main.py`` is the same as ``python -m toolkit``)
+(from the project folder; ``python main.py`` and, once installed, ``toolkit`` are the same
+as ``python -m toolkit``). What the menu shows is ``toolkit.ui.cli.menu``.
 
 The first word picks the tool; everything after it goes to that tool's own parser
 unchanged, so each tool keeps its flags, help and exit code. The menu runs each tool as a
@@ -20,24 +21,12 @@ import sys
 from collections.abc import Callable, Sequence
 from typing import NamedTuple
 
-from .data.settings import REPO_ROOT, instance_dir, is_checkout
-from .data.processes import run_toolkit
+from ...data.processes import run_toolkit
+from ...data.settings import REPO_ROOT, instance_dir, is_checkout
+from ...ui.cli import menu as screen
 
 PROG = "python -m toolkit"
 
-BANNER = r"""
- _       __       __
-| |     / /___   / /_____ ____   ____ ___   ___
-| | /| / // _ \ / // ___// __ \ / __ `__ \ / _ \
-| |/ |/ //  __// // /__ / /_/ // / / / / //  __/
-|__/|__/ \___//_/ \___/ \____//_/ /_/ /_/ \___/
-
-Network Recon and Detection Tool
-Your one-stop solution for network recon and intrusion detection using Machine Learning.
-Let's secure your network with these tools."""
-
-MENU = ("1. Network Recon", "2. Intrusion Detection (CLI)", "3. Intrusion Detection (Web)",
-        "4. Exit")
 MENU_COMMANDS = {"1": "scan", "2": "ids", "3": "web"}
 EXIT_CHOICES = {"4", "q", "quit", "exit"}
 
@@ -46,12 +35,12 @@ EXIT_CHOICES = {"4", "q", "quit", "exit"}
 # (the IDS loads pandas and scikit-learn, the web trainer Flask).
 
 def _scan(argv: list[str], prog: str) -> None:
-    from .recon.cli import run
+    from .scan import run
     run(argv, prog)
 
 
 def _ids(argv: list[str], prog: str) -> None:
-    from .ids_cli.cli import run
+    from .ids import run
     run(argv, prog)
 
 
@@ -93,31 +82,29 @@ def run_child(command: str) -> int:
     try:
         return run_toolkit(command, REPO_ROOT if is_checkout() else None)
     except KeyboardInterrupt:
-        print("\nStopped.")
+        screen.stopped()
         return 130
     except OSError as error:
-        print(f"Could not start {command}: {error}")
+        screen.could_not_start(command, error)
         return 1
 
 
 def menu() -> int:
     """The flat menu: the banner once, then the choices after every tool, until Exit."""
-    print(BANNER)
+    screen.show_banner()
     while True:
-        print()
-        print("\n".join(MENU))
         try:
-            choice = input("Enter your choice [1-4]: ").strip().lower()
+            choice = screen.ask_choice()
         except (EOFError, KeyboardInterrupt):
-            print("\nGoodbye!")
+            screen.goodbye(after_interrupt=True)
             return 0
         if choice in MENU_COMMANDS:
             run_child(MENU_COMMANDS[choice])
         elif choice in EXIT_CHOICES:
-            print("Goodbye!")
+            screen.goodbye()
             return 0
         else:
-            print(f"{choice!r} is not a choice: enter 1, 2, 3 or 4 (q also exits).")
+            screen.not_a_choice(choice)
 
 
 def main(argv: Sequence[str] | None = None) -> int:

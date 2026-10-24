@@ -88,7 +88,7 @@ def make_app():
     """Build a fresh web app (call it after setting env variables): its own workspaces,
     model store and upload folder, so state never leaks between apps or tests. Its test
     clients send the CSRF token (see ``_token_client_class``)."""
-    from toolkit.web import create_app
+    from toolkit.controllers.web import create_app
 
     def _make(config=None):
         app = create_app(config)

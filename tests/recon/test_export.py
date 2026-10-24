@@ -53,9 +53,9 @@ def test_formula_cells_neutralised(tmp_path):
     assert rows[1][1] == "8080", "numbers stay numbers"
 
 
-def test_terminal_output_is_cleaned(scanner, capsys):
+def test_terminal_output_is_cleaned(scan_screen, scanner, capsys):
     port = recon_scanner.PortResult(22, "tcp", "open", "ssh", "SSH-2.0\x1b[8mhidden\x1b[0m\r\n")
-    scanner.print_table([port], "OPEN PORTS")
-    scanner.print_entry(_entry("\x1b]52;c;ZXZpbA==\x07Apache/2.4.49"))
+    scan_screen.print_table([port], "OPEN PORTS")
+    scan_screen.print_entry(_entry("\x1b]52;c;ZXZpbA==\x07Apache/2.4.49"))
     out = capsys.readouterr().out
     assert "\x1b" not in out and "\x07" not in out

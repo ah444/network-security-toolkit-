@@ -4,7 +4,7 @@ import io
 
 import pytest
 
-from toolkit.web.security import safe_upload_name
+from toolkit.controllers.web.security import safe_upload_name
 CSV_A = b"f1,f2,Label\n1,2,A\n3,4,B\n"
 CSV_B = b"f1,f2,Label\n5,6,A\n7,8,B\n9,9,A\n1,1,B\n"
 

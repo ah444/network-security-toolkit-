@@ -31,7 +31,8 @@ from typing import Any, cast
 import joblib
 import numpy as np
 
-from ...data.ids.bundle_files import KEY_BYTES, BundleError
+from ...data.ids.bundle_files import KEY_BYTES
+from ...data.ids.bundle_files import BundleError as BundleError  # the callers' error
 from .legacy_names import old_module_names
 from .pipeline import FittedModel
 from .registry import MODELS

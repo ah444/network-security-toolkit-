@@ -5,15 +5,29 @@ import threading
 
 import pytest
 
-from toolkit.recon import cli
+from toolkit.controllers.cli import scan as scan_command
+from toolkit.services.recon import scan as scan_service_module
+from toolkit.ui.cli import scan as scan_ui
 from toolkit.data.recon import nvd
 from toolkit.data import keys as intel_keys
 
 
 @pytest.fixture(scope="module")
 def scanner():
-    """The scanner's user side (``toolkit/recon/cli.py`` since v5.1 step 1.4a)."""
-    return cli
+    """The scan command (``toolkit/controllers/cli/scan.py`` since v5.1 step 1.5d)."""
+    return scan_command
+
+
+@pytest.fixture(scope="module")
+def scan_service():
+    """The scan itself (``toolkit/services/recon/scan.py``): ping, ports, lookups, export."""
+    return scan_service_module
+
+
+@pytest.fixture(scope="module")
+def scan_screen():
+    """What the scanner shows and asks (``toolkit/ui/cli/scan.py``)."""
+    return scan_ui
 
 
 @pytest.fixture(autouse=True)

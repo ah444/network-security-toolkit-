@@ -26,18 +26,18 @@ def no_network(monkeypatch):
     monkeypatch.setattr(subprocess, "run", forbidden)
 
 
-def test_scan_requires_confirmation(scanner, monkeypatch, no_network, capsys):
+def test_scan_requires_confirmation(scan_screen, scanner, monkeypatch, no_network, capsys):
     for answer in ("no", "", "y"):  # only the word "yes" confirms
         remaining = _answers(monkeypatch, ["127.0.0.1", "80", "80", "tcp", answer])
         assert scanner.main([]) == 2
         assert list(remaining) == []
         assert "Scan cancelled" in capsys.readouterr().out
-    assert scanner.confirm_authorized("10.0.0.1", flag=True)
+    assert scan_screen.confirm_authorized("10.0.0.1", flag=True)
     monkeypatch.setattr(builtins, "input", lambda prompt="": "yes")
-    assert scanner.confirm_authorized("10.0.0.1")
+    assert scan_screen.confirm_authorized("10.0.0.1")
 
 
-def test_flag_skips_the_question(scanner, monkeypatch):
+def test_flag_skips_the_question(scan_service, scanner, monkeypatch):
     prompts = []
     answers = {"Enter target": "127.0.0.1", "Enter start ": "1", "Enter end po": "1",
                "Select proto": "tcp"}
@@ -47,8 +47,8 @@ def test_flag_skips_the_question(scanner, monkeypatch):
         return answers.get(prompt[:12], "n")
 
     monkeypatch.setattr(builtins, "input", answer)
-    monkeypatch.setattr(scanner, "ping_host", lambda host, timeout=1: (True, 128))
-    monkeypatch.setattr(scanner, "scan_ports", lambda *args, **kwargs: [])
+    monkeypatch.setattr(scan_service, "ping_host", lambda host, timeout=1: (True, 128))
+    monkeypatch.setattr(scan_service, "scan_ports", lambda *args, **kwargs: [])
     assert scanner.main(["--i-am-authorized"]) == 0
     assert not any("authorised" in p for p in prompts)
 

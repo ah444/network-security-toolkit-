@@ -22,6 +22,11 @@ from .workspace import UploadedData, Workspace, dataset_bytes
 log = logging.getLogger(__name__)
 
 
+def prepare_uploads(directory: Path) -> None:
+    """The upload folder, made if needed, without the files a crash left there (S11)."""
+    uploads.prepare(directory)
+
+
 def read_upload(stream: IO[bytes], path: Path) -> LoadedDataset:
     """An uploaded file, on disk at ``path`` only while the loader reads it (S11)."""
     try:

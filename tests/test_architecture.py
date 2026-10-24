@@ -10,7 +10,8 @@ only the settings, logs and the plumbing that starts things (the server's socket
 processes); ui may import services' types to show them, never data or controllers;
 services use data; data imports nothing above it. Inside services and data the tools stay
 apart (``ids`` and ``recon`` never import each other; the web trainer is the IDS's).
-Only ui prints or asks; only controllers use Flask or argparse; only data opens files,
+Only ui prints or asks; only controllers use Flask (``web``) or argparse (``cli``); only data
+opens files,
 sockets, HTTP or child processes. The ML-core-only rules are in ``tests/ml/test_core_rules.py``.
 """
 
@@ -18,17 +19,15 @@ import ast
 from pathlib import Path
 
 LAYERS = ("ui", "controllers", "services", "data")
-# Until step 1.5d's controller and UI commit, these are the presentation code.
-TRANSITIONAL = ("toolkit.web", "toolkit.ids_cli", "toolkit.cli", "toolkit.__main__",
-                "toolkit.recon")
-CONTROLLER_DATA = ("toolkit.data.settings", "toolkit.data.logs", "toolkit.data.web.net",
-                   "toolkit.data.processes")
+CONTROLLER_DATA = ("toolkit.data.settings", "toolkit.data.keys", "toolkit.data.logs",
+                   "toolkit.data.web.net", "toolkit.data.processes")
 WEB_FRAMEWORK = {"flask", "werkzeug", "jinja2", "waitress"}
 OUTSIDE = {"socket", "ssl", "requests", "urllib", "http", "subprocess", "webbrowser"}
 FILE_METHODS = {"read_text", "read_bytes", "write_text", "write_bytes", "unlink", "mkdir",
                 "rmdir", "iterdir", "glob", "rglob", "touch"}
 OLD_NAMES = ("toolkit.ids_core", "toolkit.config", "toolkit.logging_setup", "toolkit.ports",
-             "toolkit.bundle_files", "toolkit.run_files", "toolkit.recon.intel", "tools")
+             "toolkit.bundle_files", "toolkit.run_files", "toolkit.recon", "toolkit.web",
+             "toolkit.ids_cli", "toolkit.cli", "tools")
 TOOLS = ("ids", "recon")
 
 
@@ -62,13 +61,11 @@ def _within(name: str, prefixes) -> bool:
 
 
 def layer(module: str) -> str:
-    """``toolkit.services.ids.split`` -> ``services``; transitional presentation code ->
-    ``presentation``; the package itself and ``toolkit.__main__`` -> ``top``."""
+    """``toolkit.services.ids.split`` -> ``services``; the package itself and
+    ``toolkit.__main__`` -> ``top``."""
     parts = module.split(".")
     if len(parts) > 1 and parts[1] in LAYERS:
         return parts[1]
-    if _within(module, TRANSITIONAL) and module != "toolkit.__main__":
-        return "presentation"
     return "top"
 
 
@@ -83,8 +80,7 @@ ALLOWED = {  # layer -> the layers it may import
     "services": {"services", "data"},
     "ui": {"ui", "services"},
     "controllers": {"controllers", "ui", "services", "data"},
-    "presentation": {"presentation", "controllers", "ui", "services", "data", "top"},
-    "top": {"presentation", "controllers", "top"},
+    "top": {"controllers", "top"},
 }
 
 
@@ -114,21 +110,21 @@ def layer_violations(root: Path) -> list[str]:
                 if here in ("services", "data") and here_tool == "recon" and there_tool == "web":
                     found.append(f"{module}:{line} imports {name} (the scanner doesn't use the "
                                  "web trainer)")
-            if top in WEB_FRAMEWORK and here not in ("controllers", "presentation"):
+            if top in WEB_FRAMEWORK and (here != "controllers" or here_tool != "web"):
                 found.append(f"{module}:{line} imports the web framework ({name})")
-            if top == "argparse" and here not in ("controllers", "presentation"):
+            if top == "argparse" and (here != "controllers" or here_tool != "cli"):
                 found.append(f"{module}:{line} imports argparse")
-            if top in OUTSIDE and here not in ("data", "presentation"):
+            if top in OUTSIDE and here != "data":
                 found.append(f"{module}:{line} imports {name}: only the data layer goes outside")
         for node in ast.walk(tree):
             if not isinstance(node, ast.Call):
                 continue
             func = node.func
             if isinstance(func, ast.Name) and func.id in ("print", "input") and \
-                    here not in ("ui", "presentation"):
+                    here != "ui":
                 found.append(f"{module}:{node.lineno} calls {func.id}(): only the UI talks to "
                              "the user")
-            if here not in ("data", "presentation") and (
+            if here != "data" and (
                     (isinstance(func, ast.Name) and func.id == "open")
                     or (isinstance(func, ast.Attribute) and func.attr in FILE_METHODS)):
                 what = func.id if isinstance(func, ast.Name) else func.attr
@@ -138,8 +134,9 @@ def layer_violations(root: Path) -> list[str]:
 
 
 def test_layers_hold(repo_root):
-    for folder in ("services/ids", "services/recon", "services/web", "data/ids", "data/recon",
-                   "data/web"):  # the rules must really see every layer
+    for folder in ("ui/web", "ui/cli", "controllers/web", "controllers/cli", "services/ids",
+                   "services/recon", "services/web", "data/ids", "data/recon", "data/web"):
+        # the rules must really see every layer and tool
         assert (repo_root / "toolkit" / folder / "__init__.py").is_file(), folder
     assert layer_violations(repo_root) == []
 
@@ -163,8 +160,11 @@ def test_each_layer_rule_is_detected(tmp_path):
         "toolkit/ui/__init__.py": "",
         "toolkit/ui/cli.py": "from ..data import settings\nprint('fine')\n",
         "toolkit/controllers/__init__.py": "",
-        "toolkit/controllers/scan.py": "import argparse\nfrom ..data.recon import nvd\n"
-                                        "from ..data import settings\nfrom ..ui import cli\n",
+        "toolkit/controllers/cli/__init__.py": "",
+        "toolkit/controllers/cli/scan.py": "import argparse\nfrom ...data.recon import nvd\n"
+                                            "from ...data import settings\nfrom ...ui import cli\n"
+                                            "import flask\n",
+        "toolkit/controllers/web/__init__.py": "import flask\nimport argparse\n",
     }
     for name, text in files.items():
         (tmp_path / name).parent.mkdir(parents=True, exist_ok=True)
@@ -185,13 +185,18 @@ def test_each_layer_rule_is_detected(tmp_path):
         "toolkit.services.recon.scan:1 imports toolkit.services.ids.runs (recon and ids are",
         "toolkit.services.recon.scan:2 (services) imports toolkit.controllers.x (controllers)",
         "toolkit.ui.cli:1 (ui) imports toolkit.data.settings (data)",
-        "toolkit.controllers.scan:2 (controllers) imports toolkit.data.recon.nvd: use a service",
+        "toolkit.controllers.cli.scan:2 (controllers) imports toolkit.data.recon.nvd: use a "
+        "service",
+        "toolkit.controllers.cli.scan:5 imports the web framework (flask)",
+        "toolkit.controllers.web:2 imports argparse",
     ]
     for line in expected:
         assert line in found, line
     assert len(found.splitlines()) == len(expected), found
     assert "toolkit.data.ids.bundle_files:1 imports socket" not in found  # data may
-    assert "argparse" not in found and "toolkit.controllers.scan:3" not in found
+    assert "toolkit.controllers.cli.scan:1" not in found  # the command line uses argparse
+    assert "toolkit.controllers.cli.scan:3" not in found  # settings: allowed
+    assert "toolkit.controllers.web:1" not in found  # the web routes use Flask
 
 
 def test_no_tools_folder_in_git(repo_root):

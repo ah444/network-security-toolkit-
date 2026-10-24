@@ -24,9 +24,9 @@ class RecordingProgress:
         self.events.append(("finish",))
 
 
-def test_sinks_fulfil_the_port(scanner):
+def test_sinks_fulfil_the_port(scan_screen, scanner):
     assert isinstance(NullProgress(), ProgressSink)
-    assert isinstance(scanner.ConsoleProgress(), ProgressSink)
+    assert isinstance(scan_screen.ConsoleProgress(), ProgressSink)
     assert isinstance(RecordingProgress(), ProgressSink)
 
 
@@ -42,8 +42,8 @@ def test_scan_reports_every_check(tcp_server, free_port):
     assert threading.main_thread().name not in progress.threads  # called from workers
 
 
-def test_console_progress_lines(scanner, capsys):
-    progress = scanner.ConsoleProgress(interval=60)  # only the first and the last line
+def test_console_progress_lines(scan_screen, scanner, capsys):
+    progress = scan_screen.ConsoleProgress(interval=60)  # only the first and the last line
     progress.start(4)
     for _ in range(4):
         progress.advance()
@@ -54,8 +54,8 @@ def test_console_progress_lines(scanner, capsys):
                         "Progress: 100.00% complete\n")
 
 
-def test_zero_tasks_no_division_by_zero(scanner, capsys):
-    progress = scanner.ConsoleProgress()
+def test_zero_tasks_no_division_by_zero(scan_screen, scanner, capsys):
+    progress = scan_screen.ConsoleProgress()
     progress.start(0)
     progress.finish()
     assert capsys.readouterr().out == ""

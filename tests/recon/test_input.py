@@ -8,7 +8,7 @@ from toolkit.services.recon import targets
 from toolkit.data.recon import scanner as recon_scanner
 
 
-def test_empty_range_no_crash(scanner, monkeypatch, capsys):
+def test_empty_range_no_crash(scan_screen, scanner, monkeypatch, capsys):
     assert list(targets.parse_port_range("80", "80")) == [80]
     assert list(targets.parse_port_range(" 1", "3 ")) == [1, 2, 3]
     for start, end, words in (("100", "1", "after the end port"), ("0", "10", "between 1"),
@@ -17,7 +17,7 @@ def test_empty_range_no_crash(scanner, monkeypatch, capsys):
         with pytest.raises(ValueError, match=words):
             targets.parse_port_range(start, end)
     assert recon_scanner.scan_ports("127.0.0.1", range(5, 5), ["tcp"]) == []
-    scanner.ConsoleProgress().start(0)  # no division by zero (see also test_progress.py)
+    scan_screen.ConsoleProgress().start(0)  # no division by zero (see also test_progress.py)
     remaining = iter(["127.0.0.1", "100", "1"])
     monkeypatch.setattr(builtins, "input", lambda prompt="": next(remaining))
     assert scanner.main([]) == 2
@@ -32,8 +32,8 @@ def test_bad_targets():
     assert targets.parse_target("10.0.0.7/32", 256) == ["10.0.0.7"]
 
 
-def test_protocol_asked_again(scanner, monkeypatch, capsys):
+def test_protocol_asked_again(scan_screen, scanner, monkeypatch, capsys):
     remaining = iter(["ftp", "BOTH"])
     monkeypatch.setattr(builtins, "input", lambda prompt="": next(remaining))
-    assert scanner.ask_protocols() == ["tcp", "udp"]
+    assert scan_screen.ask_protocols() == ["tcp", "udp"]
     assert "Please type TCP, UDP or both" in capsys.readouterr().out

@@ -9,8 +9,8 @@ import pytest
 from toolkit.data import logs as data_logs
 from toolkit.data.settings import log_level
 
-TOOL_FILES = ("main.py", "toolkit/recon/cli.py", "toolkit/web/__main__.py",
-              "toolkit/web/__init__.py", "toolkit/ids_cli/cli.py")
+TOOL_FILES = ("main.py", "toolkit/controllers/cli/scan.py", "toolkit/controllers/cli/ids.py",
+              "toolkit/controllers/cli/web.py", "toolkit/controllers/web/server.py")
 
 
 @pytest.fixture

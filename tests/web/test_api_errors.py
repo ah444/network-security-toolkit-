@@ -3,7 +3,7 @@
 import io
 
 from toolkit.services.web import errors
-from toolkit.web import api
+from toolkit.controllers.web import api
 
 
 def _error(response):

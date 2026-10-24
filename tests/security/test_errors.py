@@ -3,7 +3,7 @@
 import ast
 import io
 
-WEB = "toolkit/web"
+WEB = "toolkit/controllers/web"
 
 
 def _leaks(tree):

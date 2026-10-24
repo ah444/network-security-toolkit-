@@ -125,7 +125,7 @@ def test_bundle_predict_file_same_as_run(client, trained, fixtures_dir):
 
 def test_web_file_is_the_cli_file(client, trained, fixtures_dir, tmp_path, capsys):
     """The same bundle and rows give the same bytes from the web and from --csv."""
-    from toolkit.ids_cli import cli
+    from toolkit.controllers.cli import ids as cli
 
     exported = client.post("/api/v1/run/export", json={"name": "m"}).get_json()
     bundle_path = bundle_files.bundles_dir() / exported["file"]
@@ -215,7 +215,7 @@ def test_summary_order_and_matches():
 
 
 def test_page_has_the_forms(repo_root):
-    page = (repo_root / "toolkit/web/templates/dynamic_ids.html").read_text(encoding="utf-8")
+    page = (repo_root / "toolkit/ui/web/templates/dynamic_ids.html").read_text(encoding="utf-8")
     for prefix in ("predict", "loadedPredict"):
         assert f'id="{prefix}FileForm"' in page and f'for="{prefix}File"' in page
         assert f'id="{prefix}FileResult" class="message" role="status"' in page

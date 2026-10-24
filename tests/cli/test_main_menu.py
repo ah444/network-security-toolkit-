@@ -12,12 +12,12 @@ import time
 
 import pytest
 
-from toolkit import cli
+from toolkit.controllers.cli import main as cli
 
 
 @pytest.fixture
 def menu(monkeypatch):
-    """toolkit.cli with the child processes replaced by a recorder; sleeping fails."""
+    """The menu command with the child processes replaced by a recorder; sleeping fails."""
     calls = {"tools": [], "depths": [], "prompts": []}
 
     def fake_run_child(command):
@@ -131,9 +131,9 @@ def test_ctrl_c_in_a_tool_comes_back_to_the_menu(monkeypatch, capsys):
     assert "Stopped." in capsys.readouterr().out
 
 
-@pytest.mark.parametrize("name, module", [("scan", "toolkit.recon.cli"),
-                                          ("ids", "toolkit.ids_cli.cli"),
-                                          ("web", "toolkit.web")])
+@pytest.mark.parametrize("name, module", [("scan", "toolkit.controllers.cli.scan"),
+                                          ("ids", "toolkit.controllers.cli.ids"),
+                                          ("web", "toolkit.controllers.cli.web")])
 def test_subcommand_arguments_and_exit_code_reach_the_tool(monkeypatch, name, module):
     received = []
 
@@ -168,8 +168,9 @@ def test_unknown_command_exits_2(capsys, argv):
     assert "usage: python -m toolkit" in capsys.readouterr().err
 
 
-@pytest.mark.parametrize("name, module", [("scan", "toolkit.recon.cli"),
-                                          ("ids", "toolkit.ids_cli.cli"), ("web", None)])
+@pytest.mark.parametrize("name, module", [("scan", "toolkit.controllers.cli.scan"),
+                                          ("ids", "toolkit.controllers.cli.ids"),
+                                          ("web", None)])
 def test_tool_help_names_the_command(monkeypatch, capsys, name, module):
     if module:  # the tool's log would go to the test instance; not needed for --help
         monkeypatch.setattr(f"{module}.setup_logging", lambda *args, **kwargs: None)
@@ -177,7 +178,7 @@ def test_tool_help_names_the_command(monkeypatch, capsys, name, module):
     def no_server():
         raise AssertionError("--help must not start the server")
 
-    monkeypatch.setattr("toolkit.web.run_server", no_server)
+    monkeypatch.setattr("toolkit.controllers.cli.web.run_server", no_server)
     with pytest.raises(SystemExit) as stop:
         cli.main([name, "--help"])
     assert stop.value.code == 0
@@ -186,7 +187,8 @@ def test_tool_help_names_the_command(monkeypatch, capsys, name, module):
 
 def test_web_command_starts_the_server(monkeypatch):
     started = []
-    monkeypatch.setattr("toolkit.web.run_server", lambda config=None: started.append(True))
+    monkeypatch.setattr("toolkit.controllers.cli.web.run_server",
+                        lambda config=None: started.append(True))
     assert cli.main(["web"]) == 0
     assert started == [True]
     with pytest.raises(SystemExit) as stop:
@@ -199,7 +201,7 @@ def test_main_py_is_a_shim_for_the_entry_point(repo_root):
     source = (repo_root / "main.py").read_text(encoding="utf-8")
     assert len(source.splitlines()) == 3
     body = ast.parse(source).body
-    assert ast.unparse(body[1]) == "from toolkit.cli import run"
+    assert ast.unparse(body[1]) == "from toolkit.controllers.cli.main import run"
     assert ast.unparse(body[2]) == "run()"
 
 

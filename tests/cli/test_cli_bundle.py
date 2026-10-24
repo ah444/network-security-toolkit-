@@ -21,8 +21,9 @@ from toolkit.services.ids import bundle as core_bundle
 from toolkit.services.ids.datasets import load_dataset
 from web_jobs import train_and_wait
 
-CLI_DIR = "toolkit/ids_cli"
-CLI_FILE = "toolkit/ids_cli/cli.py"
+CLI_DIRS = ("toolkit/controllers/cli", "toolkit/ui/cli")
+CLI_FILES = ("toolkit/controllers/cli/ids.py", "toolkit/ui/cli/ids.py",
+             "toolkit/services/ids/prediction.py")
 MODELS_README = "docs/ids_cli_models.md"
 CIC = "cic_ddos_sample.csv"
 TARGET = "Label"
@@ -47,21 +48,21 @@ def frame(fixtures_dir):
 
 # --- any bundle -------------------------------------------------------------------------------
 
-def test_cli_loads_web_export(cli_module, exported):
+def test_cli_loads_web_export(ids_screen, cli_module, exported):
     bundle = cli_module.load_model(exported)
     assert bundle.trust == "signature"
     assert set(bundle.models) == {"decision_tree", "logistic_regression"}
     assert len(bundle.features) == 14 and set(bundle.classes) == {"BENIGN", "DDoS"}
-    card = cli_module.model_card(bundle)
+    card = ids_screen.model_card(bundle)
     assert bundle.run_id in card and "cic_ddos_sample.csv" in card
     assert "macro-F1" in card
 
 
-def test_cli_and_web_same_prediction(cli_module, client, exported, frame):
+def test_cli_and_web_same_prediction(ids_prediction, cli_module, client, exported, frame):
     bundle = cli_module.load_model(exported)
     rows = frame.iloc[[0, 1, 2, 100, 150, 199]]
     for model in ("decision_tree", "logistic_regression"):
-        cli = cli_module.predict_rows(bundle, rows, model=model)
+        cli = ids_prediction.predict_rows(bundle, rows, model=model)
         for (_, row), predicted in zip(rows.iterrows(), cli["prediction"], strict=True):
             values = {c: str(v) for c, v in row.items() if c != TARGET}
             web = client.post("/api/v1/run/predict", json={"values": values, "model": model})
@@ -129,7 +130,7 @@ def test_cli_refuses_untrusted_files(cli_module, exported, tmp_path, monkeypatch
 def test_cli_output_redirected(exported, repo_root):
     """Redirected output is cp1252 on Windows by default: the emoji must not crash it."""
     env = {k: v for k, v in os.environ.items() if k not in ("PYTHONIOENCODING", "PYTHONUTF8")}
-    result = subprocess.run([sys.executable, "-m", "toolkit.ids_cli", "--bundle", str(exported),
+    result = subprocess.run([sys.executable, "-m", "toolkit", "ids", "--bundle", str(exported),
                              "--info"], capture_output=True, env=env, timeout=120, cwd=repo_root)
     assert result.returncode == 0, result.stderr.decode("utf-8", "replace")
     assert "📦 Model bundle" in result.stdout.decode("utf-8")
@@ -222,8 +223,10 @@ def test_interactive_chooses_an_export(cli_module, two_exports, monkeypatch, cap
 
 
 def test_nothing_is_shipped_with_the_cli(repo_root):
-    shipped = sorted(p.name for p in (repo_root / CLI_DIR).iterdir() if p.name != "__pycache__")
-    assert shipped == ["__init__.py", "__main__.py", "cli.py"], "code only, no model files"
+    for folder in CLI_DIRS:
+        shipped = [p.name for p in (repo_root / folder).iterdir() if p.name != "__pycache__"]
+        assert shipped and all(name.endswith(".py") for name in shipped), \
+            f"{folder}: code only, no model files"
     assert not (repo_root / "scripts" / "pin_default_model.py").exists()
     card = (repo_root / MODELS_README).read_text(encoding="utf-8")
     assert "Export" in card and "instance/bundles" in card
@@ -235,15 +238,15 @@ def test_no_v4_artifacts_remain(repo_root):
     assert not [p for p in tracked if p.endswith(".pkl")], "v4 pickles must be deleted"
     assert not [p for p in tracked if p.endswith("models/config.json")], \
         "v4 config.json lists the leaky feature"
-    source = (repo_root / CLI_FILE).read_text(encoding="utf-8")
+    source = "".join((repo_root / name).read_text(encoding="utf-8") for name in CLI_FILES)
     for leftover in ("Attempted Category", "pickle", "scaler.pkl", "label_encoder"):
         assert leftover not in source, leftover
 
 
-def test_prediction_status_names_normal_traffic(cli_module, capsys):
+def test_prediction_status_names_normal_traffic(ids_screen, capsys):
     """CIC-IDS2017 calls normal flows BENIGN, NSL-KDD calls them normal (real labels)."""
     def status(label, classes):
-        cli_module.display_prediction({"prediction": label, "confidence": None, "top": []},
+        ids_screen.display_prediction({"prediction": label, "confidence": None, "top": []},
                                       classes=classes)
         return next(line for line in capsys.readouterr().out.splitlines() if "Status" in line)
 
@@ -255,7 +258,7 @@ def test_prediction_status_names_normal_traffic(cli_module, capsys):
     assert "ATTACK" not in generic and "setosa" in generic
 
 
-def test_examples_of_unlearned_classes_are_marked(cli_module):
+def test_examples_of_unlearned_classes_are_marked(ids_screen, cli_module):
     bundle = types.SimpleNamespace(classes=("neptune", "normal"))
-    assert cli_module.example_name(bundle, {"label": "normal"}) == "normal"
-    assert "not learned" in cli_module.example_name(bundle, {"label": "apache2"})
+    assert ids_screen.example_name(bundle, {"label": "normal"}) == "normal"
+    assert "not learned" in ids_screen.example_name(bundle, {"label": "apache2"})

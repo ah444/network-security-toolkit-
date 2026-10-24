@@ -73,7 +73,7 @@ def test_build_backend_package_and_command(pyproject):
                                          "build-backend": "setuptools.build_meta"}
     project = pyproject["project"]
     assert project["requires-python"] == ">=3.11"
-    assert project["scripts"] == {"toolkit": "toolkit.cli:main"}
+    assert project["scripts"] == {"toolkit": "toolkit.controllers.cli.main:main"}
     # the project folder also holds data/, docs/, scripts/, tests/: only toolkit is the package
     assert pyproject["tool"]["setuptools"]["packages"]["find"]["include"] == ["toolkit*"]
 

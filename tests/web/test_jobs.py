@@ -12,7 +12,7 @@ import pytest
 from toolkit.data.settings import WebConfig
 from toolkit.services.web import jobs
 from toolkit.services.web import training
-from toolkit.web import training as web_training
+from toolkit.controllers.web import training as web_training
 from web_jobs import TRAIN_URL, train_and_wait, wait_for
 from web_js import js_sources
 

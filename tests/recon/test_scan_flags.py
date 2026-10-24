@@ -40,7 +40,7 @@ class FakeIntel:
 
 
 @pytest.fixture
-def fake(scanner, monkeypatch, tmp_path):
+def fake(scan_service, scanner, monkeypatch, tmp_path):
     """The scanner with fake ping, port checks and lookups; every question is recorded
     and fails the test unless it is the authorization one."""
     calls = {"scans": [], "prompts": [], "alive": True, "authorize": "yes",
@@ -61,9 +61,9 @@ def fake(scanner, monkeypatch, tmp_path):
         return list(calls["open"])
 
     monkeypatch.setattr(builtins, "input", fake_input)
-    monkeypatch.setattr(scanner, "ping_host", lambda host, timeout=1: (calls["alive"], 64))
-    monkeypatch.setattr(scanner, "scan_ports", fake_scan)
-    monkeypatch.setattr(scanner, "Intel", FakeIntel)
+    monkeypatch.setattr(scan_service, "ping_host", lambda host, timeout=1: (calls["alive"], 64))
+    monkeypatch.setattr(scan_service, "scan_ports", fake_scan)
+    monkeypatch.setattr(scan_service, "Intel", FakeIntel)
     monkeypatch.setattr(scanner, "load_api_keys",
                         lambda: {"openrouter": "", "abuseipdb": "", "nvd": ""})
     monkeypatch.setattr("toolkit.data.recon.scan_files.scans_dir", lambda: tmp_path / "scans")
@@ -90,13 +90,13 @@ def test_parse_ports():
             targets.parse_ports(spec)
 
 
-def test_target_with_flags_asks_nothing(scanner, fake, capsys):
+def test_target_with_flags_asks_nothing(scan_screen, scanner, fake, capsys):
     assert scanner.main(["127.0.0.1", "-p", "22,80", "--protocol", "BOTH", "-v",
                          AUTHORIZED]) == 0
     assert fake["prompts"] == []
     [(host, ports, protocols, progress)] = fake["scans"]
     assert (host, ports, protocols) == ("127.0.0.1", [22, 80], ["tcp", "udp"])
-    assert isinstance(progress, scanner.ConsoleProgress)
+    assert isinstance(progress, scan_screen.ConsoleProgress)
     out = capsys.readouterr().out
     assert "Total open ports found: 1" in out
     assert "export" not in out.lower(), "no export and no export question without --export"
@@ -224,11 +224,11 @@ def test_cancel_in_the_interactive_questions(scanner, monkeypatch, capsys, stop)
     assert "Scan cancelled." in capsys.readouterr().out
 
 
-def test_ctrl_c_during_the_scan(scanner, fake, monkeypatch, capsys):
+def test_ctrl_c_during_the_scan(scan_service, scanner, fake, monkeypatch, capsys):
     def interrupted(host, ports, protocols, progress=None):
         raise KeyboardInterrupt
 
-    monkeypatch.setattr(scanner, "scan_ports", interrupted)
+    monkeypatch.setattr(scan_service, "scan_ports", interrupted)
     assert scanner.main(["127.0.0.1", "-p", "22", AUTHORIZED]) == 130
     assert "Scan cancelled." in capsys.readouterr().out
 
@@ -252,8 +252,8 @@ def test_ctrl_c_stops_the_queued_checks(monkeypatch):
     assert len(started) < 500
 
 
-def test_cancelled_progress_does_not_say_100(scanner, capsys):
-    progress = scanner.ConsoleProgress(interval=60)
+def test_cancelled_progress_does_not_say_100(scan_screen, scanner, capsys):
+    progress = scan_screen.ConsoleProgress(interval=60)
     progress.start(4)
     progress.advance()
     progress.finish()
@@ -262,7 +262,7 @@ def test_cancelled_progress_does_not_say_100(scanner, capsys):
     assert "100.00%" not in out
 
 
-def test_interactive_mode_unchanged(scanner, monkeypatch, capsys):
+def test_interactive_mode_unchanged(scan_service, scanner, monkeypatch, capsys):
     """No TARGET: the same questions in the same order as before step 1.4c."""
     prompts = []
     answers = {"Enter target": "127.0.0.1", "Enter start ": "20", "Enter end po": "22",
@@ -275,11 +275,11 @@ def test_interactive_mode_unchanged(scanner, monkeypatch, capsys):
 
     scans = []
     monkeypatch.setattr(builtins, "input", answer)
-    monkeypatch.setattr(scanner, "ping_host", lambda host, timeout=1: (True, 128))
-    monkeypatch.setattr(scanner, "scan_ports", lambda host, ports, protocols, progress=None:
+    monkeypatch.setattr(scan_service, "ping_host", lambda host, timeout=1: (True, 128))
+    monkeypatch.setattr(scan_service, "scan_ports", lambda host, ports, protocols, progress=None:
                         scans.append((list(ports), protocols)) or
                         [PortResult(21, "tcp", "open", "ftp", "")])
-    monkeypatch.setattr(scanner, "export_results", lambda entries, fmt: f"report.{fmt}")
+    monkeypatch.setattr(scan_service, "export_results", lambda entries, fmt: f"report.{fmt}")
     assert scanner.main([]) == 0
     assert prompts == ["Enter target", "Enter start ", "Enter end po", "Select proto",
                        "\nOnly scan s", "Enable verbo", "Do you want ", "Enter desire"]

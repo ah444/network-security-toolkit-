@@ -4,8 +4,8 @@ import re
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-JS_DIR = REPO_ROOT / "toolkit/web/static/js"
-TEMPLATE = REPO_ROOT / "toolkit/web/templates/dynamic_ids.html"
+JS_DIR = REPO_ROOT / "toolkit/ui/web/static/js"
+TEMPLATE = REPO_ROOT / "toolkit/ui/web/templates/dynamic_ids.html"
 
 
 def _without_comments(text):

@@ -15,7 +15,7 @@ from toolkit.data.ids import bundle_files
 from toolkit.services.ids.bundle import pack
 from toolkit.services.ids.datasets import load_dataset
 from toolkit.services.web import training
-from toolkit.web import datasets
+from toolkit.controllers.web import datasets
 from web_jobs import train_and_wait
 from web_js import all_js, js_sources
 

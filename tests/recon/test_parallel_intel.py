@@ -140,7 +140,7 @@ def test_ctrl_c_cancels_the_queued_lookups():
     assert len(asked) < 50
 
 
-def test_scan_prints_entries_in_port_order(scanner, monkeypatch, capsys):
+def test_scan_prints_entries_in_port_order(scan_service, scanner, monkeypatch, capsys):
     """Lookups finish in any order; the report keeps the port order, and every port of a
     shared product gets its result."""
     delays = {"OpenSSH 8.9": 0.15, "Apache 2.4.49": 0.0, "vsFTPd 3.0.3": 0.05}
@@ -163,15 +163,15 @@ def test_scan_prints_entries_in_port_order(scanner, monkeypatch, capsys):
 
     source = Uneven()
     real_intel = recon_intel.Intel
-    monkeypatch.setattr(scanner, "Intel", lambda keys, use_ai=False:
+    monkeypatch.setattr(scan_service, "Intel", lambda keys, use_ai=False:
                         real_intel(keys, use_ai, providers=[source]))
     open_ports = [PortResult(21, "tcp", "open", "ftp", "220 (vsFTPd 3.0.3)"),
                   PortResult(22, "tcp", "open", "ssh", "SSH-2.0-OpenSSH_8.9p1"),
                   PortResult(80, "tcp", "open", "http", "Apache/2.4.49 (Unix)"),
                   PortResult(2222, "tcp", "open", "", "SSH-2.0-OpenSSH_8.9p1"),
                   PortResult(9000, "tcp", "open", "", "hello")]
-    monkeypatch.setattr(scanner, "scan_ports", lambda *args, **kwargs: open_ports)
-    monkeypatch.setattr(scanner, "ping_host", lambda host, timeout=1: (True, 64))
+    monkeypatch.setattr(scan_service, "scan_ports", lambda *args, **kwargs: open_ports)
+    monkeypatch.setattr(scan_service, "ping_host", lambda host, timeout=1: (True, 64))
     assert scanner.main(["127.0.0.1", "-p", "1-9000", "--i-am-authorized"]) == 0
     out = capsys.readouterr().out
     assert "Looking up 3 products online (up to 4 at a time)..." in out

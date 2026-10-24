@@ -4,13 +4,13 @@ import importlib
 
 import pytest
 
-import toolkit.web as web
+from toolkit.controllers import web
 from web_jobs import train_and_wait
 
 TARGET = "Label"  # stripped by the v5 loader (B17)
-WEB_MODULES = (*(f"toolkit.web.{name}" for name in (
-    "api", "bundles", "datasets", "pages", "schemas", "security", "state", "training",
-    "workspace")), *(f"toolkit.services.web.{name}" for name in (
+WEB_MODULES = (*(f"toolkit.controllers.web.{name}" for name in (
+    "api", "bundles", "datasets", "pages", "schemas", "security", "server", "state",
+    "training", "workspace")), *(f"toolkit.services.web.{name}" for name in (
     "datasets", "errors", "jobs", "prediction", "training", "workspace")))
 
 

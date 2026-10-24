@@ -42,7 +42,7 @@ dev = [
 ]
 
 [project.scripts]
-toolkit = "toolkit.cli:main"
+toolkit = "toolkit.controllers.cli.main:main"
 
 # Only toolkit/ is the package (the project folder also holds data/, docs/, scripts/, tests/).
 [tool.setuptools.packages.find]
@@ -50,7 +50,7 @@ include = ["toolkit*"]
 
 # The web trainer's page templates and static files.
 [tool.setuptools.package-data]
-"toolkit.web" = ["templates/*", "static/**/*"]
+"toolkit.ui.web" = ["templates/*", "static/**/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
