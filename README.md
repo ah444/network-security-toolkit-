@@ -120,7 +120,7 @@ Datasets are **not** part of the repository. Put them in `data/raw/`; see [docs/
 python -m pip install -r requirements-dev.txt
 python -m pytest              # run the test suite
 python -m ruff check .        # lint
-python -m mypy                # strict type check of the typed toolkit modules
+python -m mypy                # strict type check of the whole toolkit package
 python -m pip_audit -r requirements.lock   # check dependencies for known vulnerabilities
 git config core.hooksPath .githooks         # once per clone: lint, types + tests before every commit
 ```

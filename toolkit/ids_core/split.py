@@ -37,8 +37,9 @@ from __future__ import annotations
 import logging
 import re
 import warnings
-from collections.abc import Sequence
+from collections.abc import Iterator, Sequence
 from dataclasses import dataclass, replace
+from typing import cast
 
 import numpy as np
 import pandas as pd
@@ -215,10 +216,11 @@ def _backward_steps(times: pd.Series, sources: pd.Series | None) -> int:
 def _same_order(first: pd.Series, second: pd.Series) -> bool:
     if not first.isna().equals(second.isna()):
         return False
-    return first.rank(method="dense").equals(second.rank(method="dense"))
+    return cast(bool, first.rank(method="dense").equals(second.rank(method="dense")))
 
 
-def _parse_text_times(text: pd.Series, sources: pd.Series | None):
+def _parse_text_times(text: pd.Series,
+                      sources: pd.Series | None) -> tuple[pd.Series, str]:
     """Parse a text column; returns (times, format) or raises _Failed(TIME_FORMAT_AMBIGUOUS)."""
     unique = pd.Series(pd.unique(text.to_numpy()), dtype=object)
     codes = pd.Index(unique).get_indexer(text.to_numpy())
@@ -259,7 +261,8 @@ def check_time_column(frame: pd.DataFrame, column: str | None, config: SplitConf
         missing = missing | (text == "")
     missing_ratio = float(missing.mean()) if len(values) else 1.0
 
-    def failed(code, fmt=None, parse_ratio=0.0):
+    def failed(code: str, fmt: str | None = None,
+               parse_ratio: float = 0.0) -> tuple[TimeCheck, None]:
         return TimeCheck(column, False, code, fmt, missing_ratio, parse_ratio, len(frame)), None
 
     if missing_ratio > config.max_time_missing:
@@ -297,12 +300,12 @@ def _test_count(rows: int, test_size: float) -> int:
     return min(rows - 1, max(1, int(np.floor(rows * test_size + 0.5))))
 
 
-def _class_positions(labels: np.ndarray):
+def _class_positions(labels: np.ndarray) -> Iterator[tuple[str, np.ndarray]]:
     for name in sorted(np.unique(labels)):
         yield name, np.flatnonzero(labels == name)
 
 
-def _stratified(labels: np.ndarray, config: SplitConfig):
+def _stratified(labels: np.ndarray, config: SplitConfig) -> tuple[np.ndarray, np.ndarray]:
     rng = np.random.default_rng(config.random_state)
     train, test = [], []
     for _, positions in _class_positions(labels):
@@ -327,14 +330,15 @@ def _cut(times: np.ndarray, test_rows: int) -> int | None:
     return min(options, key=lambda p: (abs(rows - p - test_rows), p))
 
 
-def _time_order(times: pd.Series, positions: np.ndarray):
+def _time_order(times: pd.Series, positions: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     keys = times.to_numpy()[positions]
     keys = keys.astype("datetime64[ns]").astype(np.int64) if keys.dtype.kind == "M" else keys
     order = np.argsort(keys, kind="stable")
     return positions[order], keys[order]
 
 
-def _temporal(labels: np.ndarray, times: pd.Series, config: SplitConfig):
+def _temporal(labels: np.ndarray, times: pd.Series,
+              config: SplitConfig) -> tuple[np.ndarray, np.ndarray]:
     usable = np.flatnonzero(times.notna().to_numpy())
     ordered, keys = _time_order(times, usable)
     point = _cut(keys, _test_count(len(ordered), config.test_size))
@@ -350,7 +354,8 @@ def _temporal(labels: np.ndarray, times: pd.Series, config: SplitConfig):
     return train, test
 
 
-def _temporal_per_class(labels: np.ndarray, times: pd.Series, config: SplitConfig):
+def _temporal_per_class(labels: np.ndarray, times: pd.Series,
+                        config: SplitConfig) -> tuple[np.ndarray, np.ndarray]:
     usable = times.notna().to_numpy()
     train, test = [], []
     for _, positions in _class_positions(labels):
@@ -368,7 +373,8 @@ def _temporal_per_class(labels: np.ndarray, times: pd.Series, config: SplitConfi
     return np.concatenate(train), np.concatenate(test) if test else np.array([], dtype=int)
 
 
-def _group(labels: np.ndarray, groups: pd.Series | None, config: SplitConfig):
+def _group(labels: np.ndarray, groups: pd.Series | None,
+           config: SplitConfig) -> tuple[np.ndarray, np.ndarray]:
     if groups is None:
         raise _Failed("GROUP_COLUMN_MISSING")
     folds = max(2, round(1 / config.test_size))
@@ -397,7 +403,8 @@ def _coverage(train: pd.Series, test: pd.Series) -> tuple[ClassCoverage, ...]:
 
 
 def _official(frame: pd.DataFrame, kept: pd.DataFrame, stats: DedupeStats,
-              test_frame: pd.DataFrame, config: SplitConfig):
+              test_frame: pd.DataFrame, config: SplitConfig,
+              ) -> tuple[pd.DataFrame, pd.DataFrame, DedupeStats, list[str]]:
     """Train and test of an official split, the updated stats and the warnings."""
     lacking = [c for c in frame.columns if c not in test_frame.columns]
     if lacking:
@@ -468,7 +475,7 @@ def split_dataset(
         result_warnings.append("LABEL_MISSING_ROWS_DROPPED")
     kept, stats = dedupe(frame, label, ignored)
     if sources is not None:
-        sources = sources.loc[kept.index]
+        sources = cast(pd.Series, sources).loc[kept.index]
     labels = kept[label].astype(str).to_numpy()
 
     reasons: list[str] = []
@@ -487,6 +494,7 @@ def split_dataset(
                 if time_check is None:
                     time_check, times = check_time_column(kept, time_column, config, sources)
                 if not time_check.passed:
+                    assert time_check.reason is not None  # a failed check always has one
                     raise _Failed(time_check.reason)
                 split = _temporal if candidate == "temporal" else _temporal_per_class
                 train_pos, test_pos = split(labels, times, config)

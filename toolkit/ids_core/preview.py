@@ -64,7 +64,7 @@ def _sample(train: pd.DataFrame, label: str, max_rows: int, seed: int) -> pd.Dat
     return data.iloc[stratified_positions(labels, max_rows, minimum, seed)]
 
 
-def _prepared(data: pd.DataFrame, features: Sequence[str]):
+def _prepared(data: pd.DataFrame, features: Sequence[str]) -> tuple[np.ndarray, list[str]]:
     """Features as tree models see them (inf -> missing, imputed, ordinal categories)."""
     numeric = [c for c in features if data[c].dtype.kind in "iufb"]
     categorical = [c for c in features if c not in numeric]
@@ -89,7 +89,7 @@ def recommend_features(
         raise ValueError(f"Unknown scoring method: {method!r}")
     guard = check_leakage(train, label, features=features, profile_blocked=profile_blocked,
                           config=leakage_config)
-    reasons = {}
+    reasons: dict[str, str] = {}
     for finding in guard.findings:
         if finding.action == "block" and finding.column in guard.blocked:
             reasons.setdefault(finding.column, finding.reason)

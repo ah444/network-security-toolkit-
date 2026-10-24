@@ -28,19 +28,12 @@ preview = true
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101"]
 
-# Strict typing for the new toolkit modules (v5.1 steps 1.1e, 1.2b); a module joins the list once
-# it is typed (all of ids_core in step 1.5). Run:  python -m mypy
+# Strict typing for the whole toolkit package (v5.1 steps 1.1e-1.5a); a new module is checked
+# from its first commit. Run:  python -m mypy
 [tool.mypy]
 python_version = "3.11"
 strict = true
-files = ["toolkit/recon", "toolkit/web", "toolkit/ports.py", "toolkit/logging_setup.py",
-         "toolkit/config.py", "toolkit/cli.py", "toolkit/__main__.py"]
-
-# Imported for types only and not typed yet: read for their types, their errors not reported.
-[[tool.mypy.overrides]]
-module = ["toolkit.ids_core.*", "toolkit.bundle_files", "toolkit.run_files",
-          "toolkit.ids_cli.*"]
-follow_imports = "silent"
+files = ["toolkit"]
 
 # Third-party libraries without type information: their names are Any for mypy.
 [[tool.mypy.overrides]]

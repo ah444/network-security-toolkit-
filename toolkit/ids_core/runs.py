@@ -30,6 +30,7 @@ from . import registry
 from .datasets import LoadedDataset
 from .evaluation import EvaluationResult, evaluate
 from .leakage import LeakageReport, check_leakage
+from .pipeline import TrainingOutcome
 from .profiles import ProfileMatch
 from .split import SplitResult, split_dataset
 
@@ -185,7 +186,7 @@ def _split_dict(split: SplitResult) -> dict[str, Any]:
     return data
 
 
-def _training_dict(outcome) -> dict[str, Any]:
+def _training_dict(outcome: TrainingOutcome) -> dict[str, Any]:
     return {
         "train_rows": outcome.train_rows, "classes": list(outcome.classes),
         "class_counts": _jsonable(outcome.class_counts),
@@ -196,8 +197,8 @@ def _training_dict(outcome) -> dict[str, Any]:
     }
 
 
-def _models_dict(outcome) -> dict[str, Any]:
-    models = {}
+def _models_dict(outcome: TrainingOutcome) -> dict[str, Any]:
+    models: dict[str, Any] = {}
     for name, fitted in outcome.models.items():
         steps = fitted.pipeline.named_steps
         numeric = "inf → missing, median imputation"
@@ -223,7 +224,7 @@ def _models_dict(outcome) -> dict[str, Any]:
     return models
 
 
-def _step_dict(step) -> dict[str, Any] | None:
+def _step_dict(step: Any) -> dict[str, Any] | None:
     if step is None or step == "passthrough":
         return None
     return {"class": type(step).__name__, "params": _jsonable(step.get_params(deep=False))}

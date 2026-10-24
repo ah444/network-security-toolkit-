@@ -21,7 +21,7 @@ import logging
 import time
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -61,7 +61,7 @@ class FittedModel:
 
     def predict(self, frame: pd.DataFrame) -> np.ndarray:
         codes = np.asarray(self.pipeline.predict(frame[list(self.features)]), dtype=int)
-        return np.asarray(self.classes, dtype=object)[codes]
+        return cast(np.ndarray, np.asarray(self.classes, dtype=object)[codes])
 
     def predict_proba(self, frame: pd.DataFrame) -> np.ndarray | None:
         """Class probabilities, columns in ``classes`` order; None if the model has none."""
@@ -132,7 +132,7 @@ class TrainingOutcome:
     notes: tuple[str, ...]
 
 
-def _finite(values):
+def _finite(values: Any) -> np.ndarray:
     """inf -> missing, so the imputer handles both (module level: bundles pickle it).
 
     float32 halves the memory of every later step (2 M CIC rows: float64 needed more than
@@ -144,13 +144,14 @@ def _finite(values):
     return array
 
 
-def _signed_log(values):
+def _signed_log(values: Any) -> np.ndarray:
     """sign(x) * log1p(|x|): keeps the sign and order, squeezes heavy tails."""
     array = np.asarray(values)
-    return np.sign(array) * np.log1p(np.abs(array))
+    return cast(np.ndarray, np.sign(array) * np.log1p(np.abs(array)))
 
 
-def _prepare(numeric: Sequence[str], categorical: Sequence[str], spec: registry.ModelSpec):
+def _prepare(numeric: Sequence[str], categorical: Sequence[str],
+             spec: registry.ModelSpec) -> ColumnTransformer:
     parts = []
     if numeric:
         steps = [("finite", FunctionTransformer(_finite, feature_names_out="one-to-one")),

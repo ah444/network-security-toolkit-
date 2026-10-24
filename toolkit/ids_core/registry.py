@@ -88,13 +88,13 @@ class SelectorSpec:
     build: Callable[[BuildContext], Any | None]
 
 
-def _xgboost(ctx: BuildContext):
+def _xgboost(ctx: BuildContext) -> Any:
     from xgboost import XGBClassifier
 
     return XGBClassifier(n_estimators=100, random_state=ctx.seed, n_jobs=ctx.workers, verbosity=0)
 
 
-def _lightgbm(ctx: BuildContext):
+def _lightgbm(ctx: BuildContext) -> Any:
     from lightgbm import LGBMClassifier
 
     return LGBMClassifier(n_estimators=100, random_state=ctx.seed, n_jobs=ctx.workers, verbose=-1,
@@ -186,7 +186,7 @@ class _Scores:
         self.method = method
         self.seed = seed
 
-    def raw(self, X, y):
+    def raw(self, X: Any, y: Any) -> np.ndarray:
         """The scores as found: NaN for constant features, inf for a feature with one
         value per class (the F-test divides by a zero within-class spread)."""
         X = np.asarray(X, dtype=np.float64)
@@ -201,21 +201,23 @@ class _Scores:
             scores[varies] = np.nan_to_num(found, nan=0.0, posinf=np.inf)
         return scores
 
-    def __call__(self, X, y):
+    def __call__(self, X: Any, y: Any) -> np.ndarray:
         scores = self.raw(X, y)
         scores[np.isposinf(scores)] = np.finfo(np.float64).max
         return scores
 
 
-class _TopK(SelectKBest):
+# scikit-learn has no type information, so mypy sees SelectKBest as Any and refuses a
+# subclass of it; the class is needed (see its docstring), so this one check is switched off.
+class _TopK(SelectKBest):  # type: ignore[misc]
     """SelectKBest that quietly keeps every feature when k is larger than their number
     (one-hot encoding decides the number only at fit time)."""
 
-    def _check_params(self, X, y):
+    def _check_params(self, X: Any, y: Any) -> None:
         pass
 
 
-def _top_k(method: str):
+def _top_k(method: str) -> Callable[[BuildContext], Any]:
     return lambda ctx: _TopK(_Scores(method, ctx.seed), k=ctx.k_features)
 
 

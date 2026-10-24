@@ -26,6 +26,7 @@ import math
 import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from typing import cast
 
 import numpy as np
 import pandas as pd
@@ -116,10 +117,11 @@ def _as_number(column: pd.Series) -> np.ndarray:
         codes = column.astype("category").cat.codes.to_numpy(dtype=np.float64)
         values = np.where(codes < 0, np.nan, codes)
     values[~np.isfinite(values)] = np.nan
-    return values.reshape(-1, 1)
+    return cast(np.ndarray, values.reshape(-1, 1))
 
 
-def _sample(frame: pd.DataFrame, label: str, config: LeakageConfig):
+def _sample(frame: pd.DataFrame, label: str,
+            config: LeakageConfig) -> tuple[pd.DataFrame, tuple[str, ...]]:
     """Drop rows without a label and classes too rare for CV; stratified sample if large.
 
     Every remaining class keeps at least ``cv_folds`` rows in the sample, so the

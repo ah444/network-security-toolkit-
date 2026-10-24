@@ -49,7 +49,8 @@ def _size(rows: int) -> str:
     return "very_large"
 
 
-def _rule(severity, size, dimensionality, classes, rows, ratio, minority, features):
+def _rule(severity: str, size: str, dimensionality: str, classes: int, rows: int, ratio: float,
+          minority: int, features: int) -> tuple[str, str, str, tuple[str, ...]]:
     """(recommended, reason code, reason, alternatives), in v4's order of cases."""
     severe = severity in ("severe", "extreme")
     multiclass = classes > 2

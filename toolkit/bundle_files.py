@@ -15,8 +15,10 @@ import hashlib
 import os
 import re
 import secrets
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from .config import instance_dir
 from .ids_core.bundle import (
@@ -44,14 +46,14 @@ class SavedBundle:
 class BundleInfo:
     path: Path
     size: int  # bytes
-    manifest: dict  # read without checking the signature: for lists and messages only
+    manifest: dict[str, Any]  # read without checking the signature: for lists and messages only
 
 
-def key_path(environ=None) -> Path:
+def key_path(environ: Mapping[str, str] | None = None) -> Path:
     return instance_dir(environ) / "signing.key"
 
 
-def bundles_dir(environ=None) -> Path:
+def bundles_dir(environ: Mapping[str, str] | None = None) -> Path:
     return instance_dir(environ) / "bundles"
 
 
@@ -97,7 +99,7 @@ def save_bundle(run: TrainingRun, directory: str | Path | None = None, *,
     return SavedBundle(path, sha256, dataclasses.replace(run, bundle_sha256=sha256))
 
 
-def read_manifest_header(path: str | Path) -> dict | None:
+def read_manifest_header(path: str | Path) -> dict[str, Any] | None:
     """A bundle file's manifest, reading only the start of the file (never its models, so
     listing multi-GB bundles is instant). Unchecked: None if it isn't a bundle."""
     try:

@@ -25,7 +25,7 @@ import warnings
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, cast
 
 import joblib
 import numpy as np
@@ -74,15 +74,15 @@ class Bundle:
     @property
     def run(self) -> dict[str, Any]:
         """The embedded TrainingRun record (its ``bundle_sha256`` is None: it is inside)."""
-        return self.manifest["run"]
+        return cast(dict[str, Any], self.manifest["run"])
 
     @property
     def run_id(self) -> str:
-        return self.manifest["run_id"]
+        return cast(str, self.manifest["run_id"])
 
     @property
     def selected(self) -> str:
-        return self.manifest["selected"]
+        return cast(str, self.manifest["selected"])
 
     @property
     def features(self) -> tuple[str, ...]:
@@ -113,8 +113,8 @@ def pack(run: TrainingRun, key: bytes) -> bytes:
     payload = buffer.getvalue()
     selected = run.evaluation.selected if run.evaluation.selected in models else next(iter(models))
     libraries = set(ALWAYS_USED)
-    libraries.update(MODELS[name].requires for name in models
-                     if name in MODELS and MODELS[name].requires)
+    required = (MODELS[name].requires for name in models if name in MODELS)
+    libraries.update(package for package in required if package)
     manifest = {
         "format": FORMAT,
         "format_version": FORMAT_VERSION,

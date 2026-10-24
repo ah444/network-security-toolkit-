@@ -21,15 +21,16 @@ import argparse
 import json
 import sys
 import warnings
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from pathlib import Path
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
 
-from ..bundle_files import BundleStore
+from ..bundle_files import BundleInfo, BundleStore
 from ..ids_core.batch import prediction_csv, prediction_summary, prediction_table
-from ..ids_core.bundle import BundleError, BundleVersionWarning
+from ..ids_core.bundle import Bundle, BundleError, BundleVersionWarning
 from ..ids_core.datasets import DatasetError, load_dataset
 from ..ids_core.registry import MODELS
 from ..logging_setup import setup_logging
@@ -56,11 +57,11 @@ SPLIT_NOTES = {
 # Loading and predicting
 # ============================================================
 
-def size_text(size):
+def size_text(size: int) -> str:
     return f"{size / 2**30:.2f} GB" if size >= 2**30 else f"{size / 2**20:.1f} MB"
 
 
-def export_line(info):
+def export_line(info: BundleInfo) -> str:
     """One export, from its manifest header (read without loading the models)."""
     manifest = info.manifest
     dataset = ((manifest.get("run") or {}).get("dataset") or {}).get("name", "unknown data")
@@ -71,7 +72,7 @@ def export_line(info):
             + f"  ({size_text(info.size)})")
 
 
-def load_model(bundle_path=None):
+def load_model(bundle_path: str | Path | None = None) -> Bundle:
     """A bundle signed by this install: ``bundle_path``, else the newest export.
 
     Raises BundleError (with a message for the user) for anything else."""
@@ -89,7 +90,7 @@ def load_model(bundle_path=None):
         return MODEL_STORE.load(path)
 
 
-def choose_export():
+def choose_export() -> Path:
     """The export the user picks (newest first; Enter = the newest)."""
     exports = MODEL_STORE.list_bundles()
     if not exports:
@@ -102,7 +103,7 @@ def choose_export():
     return exports[picked - 1].path
 
 
-def list_exports():
+def list_exports() -> int:
     exports = MODEL_STORE.list_bundles()
     if not exports:
         print(NO_EXPORT)
@@ -111,19 +112,20 @@ def list_exports():
     return 0
 
 
-def label_column(bundle):
+def label_column(bundle: Bundle) -> str | None:
     record = bundle.run
-    return record["settings"].get("label") or (record.get("profile") or {}).get("label_column")
+    return cast(str | None, record["settings"].get("label")
+                or (record.get("profile") or {}).get("label_column"))
 
 
-def model_order(bundle):
+def model_order(bundle: Bundle) -> list[str]:
     """Model names, best first (the run's leaderboard order)."""
     ranked = [row["model"] for row in bundle.run["evaluation"]["leaderboard"]]
     return [name for name in ranked if name in bundle.models] + \
         [name for name in bundle.models if name not in ranked]
 
 
-def predict_rows(bundle, frame, model=None):
+def predict_rows(bundle: Bundle, frame: pd.DataFrame, model: str | None = None) -> pd.DataFrame:
     """Predictions (and confidence, when the model has probabilities) for every row."""
     missing = [f for f in bundle.features if f not in frame.columns]
     if missing:
@@ -135,13 +137,14 @@ def predict_rows(bundle, frame, model=None):
     return result
 
 
-def predict_values(bundle, values, model=None):
+def predict_values(bundle: Bundle, values: Mapping[str, Any],
+                   model: str | None = None) -> dict[str, Any]:
     """One row of feature values (text or numbers) -> {prediction, confidence, top}."""
     fitted = bundle.model(model)
     row = fitted.input_frame(values)
     proba = fitted.predict_proba(row)
-    result = {"prediction": str(fitted.predict(row)[0]), "model": fitted.name,
-              "confidence": None, "top": []}
+    result: dict[str, Any] = {"prediction": str(fitted.predict(row)[0]), "model": fitted.name,
+                              "confidence": None, "top": []}
     if proba is not None:
         order = np.argsort(proba[0])[::-1][:5]
         result["confidence"] = float(proba[0].max())
@@ -149,7 +152,7 @@ def predict_values(bundle, values, model=None):
     return result
 
 
-def model_card(bundle):
+def model_card(bundle: Bundle) -> str:
     """What the model is and how good it is, from the bundle's TrainingRun record."""
     run = bundle.run
     dataset = run.get("dataset") or {}
@@ -181,7 +184,8 @@ def model_card(bundle):
 # Batch modes: --csv and --json
 # ============================================================
 
-def run_csv(bundle, csv_path, output=None, model=None):
+def run_csv(bundle: Bundle, csv_path: str | Path, output: str | Path | None = None,
+            model: str | None = None) -> int:
     """Label every row of a CSV file; the result file is never overwritten."""
     csv_path = Path(csv_path)
     output = Path(output) if output else csv_path.with_name(csv_path.stem + ".predictions.csv")
@@ -204,7 +208,7 @@ def run_csv(bundle, csv_path, output=None, model=None):
     return 0
 
 
-def run_json(bundle, text, model=None):
+def run_json(bundle: Bundle, text: str, model: str | None = None) -> int:
     """Rows given as JSON (an object or a list, inline or a .json file) -> JSON results."""
     source = Path(text)
     if text.strip()[:1] not in "[{" and source.is_file():
@@ -221,7 +225,8 @@ def run_json(bundle, text, model=None):
 # Interactive CLI
 # ============================================================
 
-def display_prediction(result, true_label=None, classes=()):
+def display_prediction(result: Mapping[str, Any], true_label: str | None = None,
+                       classes: Sequence[str] = ()) -> None:
     """Display a prediction result (``classes``: the model's classes)."""
     print("\n" + "=" * 50)
     print("🎯 PREDICTION RESULT")
@@ -245,15 +250,15 @@ def display_prediction(result, true_label=None, classes=()):
     print("=" * 50)
 
 
-def example_name(bundle, example):
+def example_name(bundle: Bundle, example: Mapping[str, Any]) -> str:
     """An example's label, marked when the model never learned that class."""
-    label = example["label"]
+    label = cast(str, example["label"])
     if label in bundle.classes:
         return label
     return f"{label}  (not learned: this class is only in the test split)"
 
 
-def choose(prompt, count, default=None):
+def choose(prompt: str, count: int, default: int | None = None) -> int:
     """A number 1..count from the user (Enter gives ``default``)."""
     while True:
         answer = input(prompt).strip()
@@ -264,7 +269,7 @@ def choose(prompt, count, default=None):
         print("⚠️ Invalid selection, try again")
 
 
-def choose_model(bundle, current):
+def choose_model(bundle: Bundle, current: str) -> str:
     names = model_order(bundle)
     for i, name in enumerate(names, 1):
         marker = "⭐" if name == bundle.selected else "  "
@@ -274,10 +279,10 @@ def choose_model(bundle, current):
     return names[picked - 1]
 
 
-def manual_input(bundle, model):
+def manual_input(bundle: Bundle, model: str | None) -> dict[str, Any]:
     """Every feature, prefilled from a real example (Enter keeps a value)."""
     examples = bundle.manifest.get("examples", [])
-    start = {}
+    start: Mapping[str, Any] = {}
     if examples:
         for i, example in enumerate(examples, 1):
             print(f"  {i}. {example_name(bundle, example)}")
@@ -286,7 +291,7 @@ def manual_input(bundle, model):
             index = int(number) - 1 if number.isdigit() and 1 <= int(number) <= len(examples) else 0
             start = examples[index]["values"]
     print("\n📝 Enter feature values (Enter keeps the value in brackets):")
-    values = {}
+    values: dict[str, Any] = {}
     for i, info in enumerate(bundle.model(model).feature_schema(), 1):
         default = start.get(info.name)
         hint = f" ({'/'.join(info.categories[:6])})" if info.categories else ""
@@ -300,7 +305,7 @@ def manual_input(bundle, model):
     return values
 
 
-def interactive(bundle, model=None):
+def interactive(bundle: Bundle, model: str | None = None) -> int:
     print(model_card(bundle))
     model = choose_model(bundle, model or bundle.selected)
     print(f"\n🎯 Ready for predictions with {model}!")
@@ -346,7 +351,7 @@ def interactive(bundle, model=None):
 # Main
 # ============================================================
 
-def parse_args(argv, prog=None):
+def parse_args(argv: Sequence[str] | None, prog: str | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         prog=prog, description="Intrusion detection with a model bundle exported by the web trainer.")
     parser.add_argument("--bundle", help="a .bundle exported on this computer "
@@ -362,7 +367,7 @@ def parse_args(argv, prog=None):
     return parser.parse_args(argv)
 
 
-def main(argv=None, prog=None):
+def main(argv: Sequence[str] | None = None, prog: str | None = None) -> int:
     args = parse_args(argv, prog)
     if args.list:
         return list_exports()
@@ -395,11 +400,12 @@ def main(argv=None, prog=None):
         return 0
 
 
-def utf8_output():
+def utf8_output() -> None:
     """UTF-8 output even when redirected: Windows then defaults to cp1252, which can't
     print the emoji (or the JSON of non-ASCII class names) and would crash."""
     for stream in (sys.stdout, sys.stderr):
-        if hasattr(stream, "reconfigure") and                 (stream.encoding or "").lower().replace("-", "") != "utf8":
+        if hasattr(stream, "reconfigure") and \
+                (stream.encoding or "").lower().replace("-", "") != "utf8":
             stream.reconfigure(encoding="utf-8")
 
 

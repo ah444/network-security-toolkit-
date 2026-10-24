@@ -4,7 +4,7 @@
 pytest==9.1.1
 ruff==0.17.1
 pip-audit==2.10.1
-# Type checks (mypy --strict on the new toolkit modules, see [tool.mypy] in pyproject.toml)
+# Type checks (mypy --strict on the whole toolkit package, see [tool.mypy] in pyproject.toml)
 mypy==2.4.0
 types-requests==2.33.0.20261006
 ast-serialize==0.12.1  # mypy dependency; 0.13.x was only days old when mypy was added

@@ -7,7 +7,7 @@ model and rows.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -40,7 +40,7 @@ def prediction_table(fitted: FittedModel, frame: pd.DataFrame,
 def prediction_csv(table: pd.DataFrame) -> str:
     """The table as CSV text (written with ``newline=""`` by the CLI, sent as UTF-8 by
     the web trainer)."""
-    return table.to_csv(index=False)
+    return cast(str, table.to_csv(index=False))
 
 
 def prediction_summary(table: pd.DataFrame) -> dict[str, Any]:

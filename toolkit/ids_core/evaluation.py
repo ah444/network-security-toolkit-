@@ -18,8 +18,9 @@ from __future__ import annotations
 
 import time
 import warnings
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
+from typing import Any, TypedDict
 
 import numpy as np
 import pandas as pd
@@ -141,7 +142,7 @@ class EvaluationResult:
     workers: int
 
 
-def _quiet(func, *args, **kwargs):
+def _quiet(func: Callable[..., Any], *args: Any, **kwargs: Any) -> Any:
     """sklearn warns when a fold/test lacks a class the model predicts; that's expected."""
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", message="y_pred contains classes not in y_true")
@@ -186,7 +187,20 @@ def select_model(summaries: Mapping[str, CVSummary]) -> tuple[str, ...]:
     return tuple(sorted(summaries, key=lambda name: (-summaries[name].macro_f1_mean, name)))
 
 
-def _cross_validate(frame, label, features, names, train_options, config, notes, progress):
+class _TrainOptions(TypedDict):
+    """The ``pipeline.train_models`` options shared by the CV folds and the final fit."""
+
+    balancer: str
+    selector: str
+    k_features: int | None
+    config: PipelineConfig
+    workers: int
+
+
+def _cross_validate(frame: pd.DataFrame, label: str, features: Sequence[str],
+                    names: Sequence[str], train_options: _TrainOptions,
+                    config: EvaluationConfig, notes: list[str], progress: ProgressSink,
+                    ) -> tuple[dict[str, CVSummary], dict[str, pipeline.ModelFailure]]:
     labels = frame[label].astype(str).to_numpy()
     counts = pd.Series(labels).value_counts()
     if (counts < config.cv_folds).any():
@@ -218,7 +232,7 @@ def _cross_validate(frame, label, features, names, train_options, config, notes,
     return summaries, failed
 
 
-def _row(rank, evaluation, selected) -> LeaderboardRow:
+def _row(rank: int, evaluation: ModelEvaluation, selected: str | None) -> LeaderboardRow:
     present = [c for c in evaluation.test.per_class if c.support]
     recall = tuple((c.label, c.recall) for c in present)
     return LeaderboardRow(
@@ -271,8 +285,9 @@ def evaluate(
     if balancer == "recommended":
         recommendation = balancing.recommend_balancing(train[label], len(features))
         balancer = recommendation.recommended
-    options = {"balancer": balancer, "selector": selector, "k_features": k_features,
-               "config": pipeline_config, "workers": workers}
+    options: _TrainOptions = {"balancer": balancer, "selector": selector,
+                              "k_features": k_features, "config": pipeline_config,
+                              "workers": workers}
 
     cv_frame = train
     if len(train) > config.cv_max_rows:

@@ -8,6 +8,7 @@ schema version up to the current one and refuse newer ones.
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
@@ -15,7 +16,7 @@ from .config import instance_dir
 from .ids_core.runs import SCHEMA_VERSION, TrainingRun
 
 
-def runs_dir(environ=None) -> Path:
+def runs_dir(environ: Mapping[str, str] | None = None) -> Path:
     return instance_dir(environ) / "runs"
 
 
