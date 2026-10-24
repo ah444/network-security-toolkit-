@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import os
+import platform
 import re
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -48,18 +49,52 @@ class SplitConfig:
     official_dedupe: bool = False
 
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
+REPO_ROOT = Path(__file__).resolve().parent.parent  # the project folder, when run from it
+APP_NAME = "network-security-toolkit"
+
+
+def is_checkout() -> bool:
+    """True when ``toolkit/`` sits in the project folder (a clone, or ``pip install -e .``);
+    False for an installed copy (``pip install .``: site-packages has no pyproject.toml)."""
+    return (REPO_ROOT / "pyproject.toml").is_file()
+
+
+def user_data_dir(environ: Mapping[str, str] | None = None) -> Path:
+    """An installed copy's folder for ``instance/`` and ``.env``: ``%LOCALAPPDATA%`` on
+    Windows, ``~/Library/Application Support`` on macOS, ``$XDG_DATA_HOME`` (if absolute) or
+    ``~/.local/share`` elsewhere; then ``network-security-toolkit``."""
+    environ = os.environ if environ is None else environ
+    system = platform.system()
+    if system == "Windows":
+        local = environ.get("LOCALAPPDATA", "").strip()
+        base = Path(local) if local else Path.home() / "AppData" / "Local"
+    elif system == "Darwin":
+        base = Path.home() / "Library" / "Application Support"
+    else:
+        xdg = environ.get("XDG_DATA_HOME", "").strip()
+        base = Path(xdg) if xdg and Path(xdg).is_absolute() else Path.home() / ".local" / "share"
+    return base / APP_NAME
+
+
+def _data_root(environ: Mapping[str, str] | None = None) -> Path:
+    return REPO_ROOT if is_checkout() else user_data_dir(environ)
 
 
 def instance_dir(environ: Mapping[str, str] | None = None) -> Path:
-    """Local, gitignored data of this install (runs, signing key): ``TOOLKIT_INSTANCE_DIR``,
-    else ``instance/`` in the project folder."""
+    """Local, gitignored data of this install (runs, bundles, signing key, logs):
+    ``TOOLKIT_INSTANCE_DIR``, else ``instance/`` in the project folder (an installed copy:
+    in its ``user_data_dir``)."""
     environ = os.environ if environ is None else environ
     value = environ.get("TOOLKIT_INSTANCE_DIR", "").strip()
-    return Path(value) if value else REPO_ROOT / "instance"
+    return Path(value) if value else _data_root(environ) / "instance"
 
 
-ENV_FILE = REPO_ROOT / ".env"
+def env_file(environ: Mapping[str, str] | None = None) -> Path:
+    """The ``.env`` file: in the project folder (an installed copy: its ``user_data_dir``)."""
+    return _data_root(environ) / ".env"
+
+
+ENV_FILE = env_file()
 PLACEHOLDER = re.compile(r"^your_.*_here$", re.IGNORECASE)  # left from an example file
 
 

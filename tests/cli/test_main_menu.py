@@ -115,6 +115,12 @@ def test_menu_tools_run_as_child_processes(request, monkeypatch):
                        for name in ("scan", "ids", "web")]
     assert importlib.util.find_spec("toolkit.__main__") is not None
 
+    # an installed copy (no project folder, step 1.5b) starts them in the current folder
+    started.clear()
+    monkeypatch.setattr(cli, "is_checkout", lambda: False)
+    cli.run_child("scan")
+    assert started == [([sys.executable, "-m", "toolkit", "scan"], None)]
+
 
 def test_ctrl_c_in_a_tool_comes_back_to_the_menu(monkeypatch, capsys):
     def interrupted(args, cwd=None, check=None):
@@ -150,6 +156,8 @@ def test_help_lists_the_commands(capsys):
     assert "usage: python -m toolkit" in out
     for name in ("scan", "ids", "web"):
         assert f"    {name} " in out
+    # where the exports, runs, signing key and logs are, to find and back them up (step 1.5b)
+    assert f"Data (exports, runs, signing key, logs): {cli.instance_dir()}" in out
 
 
 @pytest.mark.parametrize("argv", [["bogus"], ["--bogus"], ["Scan"]])

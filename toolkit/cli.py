@@ -21,7 +21,7 @@ import sys
 from collections.abc import Callable, Sequence
 from typing import NamedTuple
 
-from .config import REPO_ROOT
+from .config import REPO_ROOT, instance_dir, is_checkout
 
 PROG = "python -m toolkit"
 
@@ -77,8 +77,10 @@ def build_parser() -> argparse.ArgumentParser:
     """For ``--help`` and errors only: a command's own arguments go to its own parser."""
     parser = argparse.ArgumentParser(
         prog=PROG, description="Network Security Toolkit: network recon and ML intrusion "
-                               "detection. Without a command: the menu.",
-        epilog=f"Help for one tool: {PROG} <command> --help")
+                               "detection.\nWithout a command: the menu.",
+        epilog=f"Help for one tool: {PROG} <command> --help\n"
+               f"Data (exports, runs, signing key, logs): {instance_dir()}",
+        formatter_class=argparse.RawDescriptionHelpFormatter)  # the epilog's two lines
     commands = parser.add_subparsers(dest="command", metavar="command")
     for name, command in COMMANDS.items():
         commands.add_parser(name, help=command.help, add_help=False)
@@ -86,10 +88,11 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def run_child(command: str) -> int:
-    """``python -m toolkit <command>`` as a child process from the project folder; its code."""
+    """``python -m toolkit <command>`` as a child process from the project folder (an
+    installed copy: the current folder); its code."""
     try:
-        return subprocess.run([sys.executable, "-m", "toolkit", command], cwd=REPO_ROOT,
-                              check=False).returncode
+        return subprocess.run([sys.executable, "-m", "toolkit", command],
+                              cwd=REPO_ROOT if is_checkout() else None, check=False).returncode
     except KeyboardInterrupt:
         print("\nStopped.")
         return 130

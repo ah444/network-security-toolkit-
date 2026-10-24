@@ -1,9 +1,56 @@
-# Tool configuration only (packaging comes in v5.1, see docs/IMPROVEMENT_PLAN.md D18).
+# Packaging (v5.1 step 1.5b, docs/IMPROVEMENT_PLAN.md D18) and the tools' configuration.
+#   pip install ".[boost]"      the toolkit, with XGBoost and LightGBM; then: toolkit
+#   pip install -e ".[dev]"     from the project folder, for development
+# The pins are the ones in requirements.txt and requirements-dev.txt
+# (tests/test_packaging.py keeps them equal).
+[build-system]
+# 78.1.1: the fix for CVE-2025-47273; 77 or later reads the SPDX licence field
+requires = ["setuptools>=78.1.1"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "network-security-toolkit"
-version = "5.0.1"
+version = "5.1.0.dev0"
 description = "Network reconnaissance + ML intrusion detection toolkit"
 requires-python = ">=3.11"
+dependencies = [
+    "flask==3.1.3",
+    "waitress==3.0.2",
+    "werkzeug==3.1.9",
+    "pandas==2.3.3",
+    "numpy==2.3.5",
+    "scikit-learn==1.8.0",
+    "imbalanced-learn==0.14.1",
+    "joblib==1.6.0",
+    "threadpoolctl==3.7.0",
+    "requests==2.33.0",
+]
+
+[project.optional-dependencies]
+# Two more models for the web trainer; without them it offers the others.
+boost = [
+    "xgboost==3.2.0",
+    "lightgbm==4.6.0",
+]
+dev = [
+    "pytest==9.1.1",
+    "ruff==0.17.1",
+    "pip-audit==2.10.1",
+    "mypy==2.4.0",
+    "types-requests==2.33.0.20261006",
+    "ast-serialize==0.12.1",
+]
+
+[project.scripts]
+toolkit = "toolkit.cli:main"
+
+# Only toolkit/ is the package (the project folder also holds data/, docs/, scripts/, tests/).
+[tool.setuptools.packages.find]
+include = ["toolkit*"]
+
+# The web trainer's page templates and static files.
+[tool.setuptools.package-data]
+"toolkit.web" = ["templates/*", "static/**/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -38,5 +85,5 @@ files = ["toolkit"]
 # Third-party libraries without type information: their names are Any for mypy.
 [[tool.mypy.overrides]]
 module = ["pandas", "pandas.*", "sklearn", "sklearn.*", "imblearn", "imblearn.*", "joblib",
-          "waitress", "threadpoolctl"]
+          "waitress", "threadpoolctl", "xgboost", "xgboost.*", "lightgbm", "lightgbm.*"]
 ignore_missing_imports = true
