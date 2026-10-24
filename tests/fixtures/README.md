@@ -18,6 +18,7 @@ The real-data samples are cut from the local datasets in `data/raw/`, which are 
 | `nvd_no_results.json` | Real NVD reply with no results (`keywordSearch=OpenSSH 8.9p1`), saved 2026-10-20 | Empty-result handling |
 | `label_leak.csv` | Synthetic (seed 42), 300 rows, 3 classes | Leakage-guard tests (D9): label copy / encoded / prefixed (block), strong continuous feature (warn), `row_id` (ID-like), `Idle Mean` (must **not** trip the `id` pattern) |
 | `xss_header.csv` | Synthetic | XSS tests (S5): HTML/JS payloads in the header and cells |
+| `legacy/old_names.bundle`, `legacy/old_names.expected.json` | Synthetic (seed 0), made by `legacy/make_legacy_bundle.py` with the code **before** the layered layout (v5.1 step 1.5d), signed with the test key `bytes(range(32))`; decision tree + logistic regression with signed log, scaling and the `f_classif` selector | `tests/ml/test_legacy_bundle.py`: a bundle whose pickle uses the old module names (`toolkit.ids_core.pipeline`, `toolkit.ids_core.registry`) still loads and predicts the same labels. `make_fixtures.py` doesn't rebuild it: newer code would write the new names (the script then stops) |
 
 ## Citations
 
