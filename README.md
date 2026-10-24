@@ -298,22 +298,24 @@ Project/
 ├── scripts/ml_report.py             # Re-runs it on the v5 ML core (docs/report/)
 ├── tests/                           # pytest suite + small fixtures
 │
-├── toolkit/                         # Shared package (printing and prompts only in web/, ids_cli/, recon/cli.py)
-│   ├── __main__.py, cli.py          # python -m toolkit: the menu and scan / ids / web
-│   ├── config.py                    # Settings, paths, .env reader
-│   ├── logging_setup.py             # Log files in instance/logs, secrets redacted
-│   ├── ports.py                     # ModelStore, IntelProvider, ProgressSink
-│   ├── bundle_files.py, run_files.py  # Signed model bundles, training records
-│   ├── ids_core/                    # Leakage-free ML core (see "ML core" below)
-│   ├── recon/                       # Scanner logic: targets, os_detect, probes registry,
-│   │   ├── intel/                   #   scanner, export; intel: NVD, OpenRouter, AbuseIPDB
-│   │   └── cli.py                   # The scanner's questions and printing (python -m toolkit scan)
-│   ├── ids_cli/                     # CLI IDS: predicts with your exports (python -m toolkit ids)
-│   └── web/                         # Web trainer: create_app(), blueprints, workspaces
-│       ├── __main__.py              #   python -m toolkit web (uploads: instance/uploads/, read and
-│       │                            #   deleted; exports: instance/bundles/; runs: instance/runs/)
-│       ├── templates/               # home.html, dynamic_ids.html
-│       └── static/                  # css/app.css, js/ (ES modules, main.js entry)
+├── toolkit/                         # The package, in four layers with a folder per tool (docs/architecture.md)
+│   ├── __main__.py                  # python -m toolkit (the menu, or scan / ids / web)
+│   ├── ui/                          # What the user sees; the only code that prints or asks
+│   │   ├── web/                     #   the web trainer's page: templates/, static/ (css/, js/ ES modules)
+│   │   └── cli/                     #   the menu, the scanner's and the IDS's prompts and printing
+│   ├── controllers/                 # Requests and flags in, answers and exit codes out
+│   │   ├── web/                     #   the Flask app, its routes, run_server (waitress on 127.0.0.1)
+│   │   └── cli/                     #   the toolkit command: main (menu), scan, ids, web
+│   ├── services/                    # What the tools do: no user interface, no files, no network
+│   │   ├── ids/                     #   the leakage-free ML core (see "ML core" below), bundles, predictions
+│   │   ├── recon/                   #   targets and limits, the scan, the lookups, report entries
+│   │   └── web/                     #   workspaces, the training job runner, the work behind the routes
+│   └── data/                        # Files, the network, the environment (no database)
+│       ├── settings.py, keys.py     #   TOOLKIT_* settings, the data folder, API keys from .env
+│       ├── logs.py                  #   log files in instance/logs, secrets redacted
+│       ├── ids/                     #   bundle and run files, dataset files
+│       ├── recon/                   #   sockets, ping, banners, NVD / OpenRouter / AbuseIPDB, scan reports
+│       └── web/                     #   uploads (read, then deleted), the listening socket, the browser
 │
 └── docs/ids_cli_models.md           # Where the CLI's models come from (your exports)
 ```
@@ -361,7 +363,7 @@ Project/
 11. **Export / Load** - signed `.bundle` (see Known limitations)
 
 ### ML core (v5.0)
-`toolkit/ids_core` is the new, leakage-free pipeline. It has no web or network code; the web trainer uses it since 5.0-rc1 and the CLI since step 0.5.
+`toolkit/services/ids` (named `toolkit/ids_core` until v5.1 step 1.5d) is the leakage-free pipeline. It has no web or network code; the web trainer uses it since 5.0-rc1 and the CLI since step 0.5.
 
 1. **Load** (`datasets.load_dataset`): encoding and separator sniffed, header spaces stripped, exact dtype downcast, SHA-256; the dataset family (CIC-IDS2017, NSL-KDD or generic) is recognised from the content, not the file name.
 2. **Split** (`split.split_dataset`): exact copies removed first, then the profile's split: `official` (NSL-KDD's own files, kept as published), `temporal` / `temporal_per_class` (validated time column), `group`, or `stratified` with an "optimistic" warning. Every fallback has a reason code.
@@ -370,10 +372,10 @@ Project/
 5. **Evaluate** (`evaluation.evaluate`): cross-validation on the training split, the model chosen by CV macro-F1 **before** the test split is used, then the test split scored once; macro-F1, balanced accuracy, per-class recall and a leaderboard.
 
 ```python
-from toolkit.ids_core.datasets import load_dataset
-from toolkit.ids_core.split import split_dataset
-from toolkit.ids_core.leakage import check_leakage
-from toolkit.ids_core.evaluation import evaluate, leaderboard_table
+from toolkit.services.ids.datasets import load_dataset
+from toolkit.services.ids.split import split_dataset
+from toolkit.services.ids.leakage import check_leakage
+from toolkit.services.ids.evaluation import evaluate, leaderboard_table
 
 data = load_dataset("data/raw/CIC-2017.csv")
 split = split_dataset(data.frame, "Label", profile=data.profile)

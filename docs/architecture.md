@@ -1,6 +1,7 @@
 # Architecture
 
-How the code of the Network Security Toolkit is organised **today** (v5.1). The reasons
+How the code of the Network Security Toolkit is organised **today** (v5.1, in layers since
+step 1.5d). The reasons
 behind each choice are in [IMPROVEMENT_PLAN.md](IMPROVEMENT_PLAN.md) §2 (architecture styles)
 and §3 (decisions D1–D23); this page describes what was built, and section 10 lists where it
 differs from the plan's target structure.
@@ -23,9 +24,13 @@ One installable Python package, `toolkit/`, with three tools that share its code
 
 The style is a hybrid, as plan §2 recommends:
 
+- **Layers:** `ui/` → `controllers/` → `services/` → `data/`, with one folder per tool
+  inside each (section 3). There is no database: the data layer is files, the network
+  and the environment.
 - **Modular monolith:** one package, one process per tool, no network between modules.
-- **Hexagonal core:** the ML core (`ids_core`) and the scanner core (`recon`) talk to the
-  outside only through three small interfaces, the ports (section 4).
+- **Hexagonal core:** the ML core (`services/ids`) and the scanner's logic
+  (`services/recon`) reach the outside only through the data layer and three small
+  interfaces, the ports (section 4).
 - **Plugin registries:** models, balancers, feature selectors, dataset profiles, banner
   probes and export formats are table entries, not `if/elif` chains (section 5).
 - **Pipe-and-filter ML:** every preprocessing step is inside one scikit-learn/imblearn
@@ -148,46 +153,69 @@ Data (files, the network and the environment; imports nothing above it):
 
 ## 3. Dependency rules
 
-Arrows point from a module to what it imports (the real imports, as of this page).
+Four layers; each one imports only the layers below it. Arrows point from a layer to what
+it imports (the real imports, checked by `tests/test_architecture.py`).
 
 ```
- +--------------------------------------------------------------------+
- |  presentation: cli, __main__, ids_cli, web, recon/cli              |
- |  (print, input, Flask, waitress only here; logging_setup.py too)   |
- +------+-------------------------+-------------------------+---------+
-        |                         |                         |
-        |                         v                         |
-        |      +-------------------------------------+      |
-        |      | edge code: bundle_files.py,         |      |
-        |      | run_files.py (files on disk)        |      |
-        |      +------------------+------------------+      |
-        |                         |                         |
-        v                         v                         v
- +-----------------------------------------+    +------------------------+
- |  ids_core  (ML core)                    |    |  recon (scanner core)  |
- |  no network, no print, no web,          |    |  no print, no web      |
- |  writes no files                        |    |  framework             |
- +--------------------+--------------------+    +-----------+------------+
-                      |   ids_core and recon never          |
-                      |   import each other                 |
-                      v                                     v
- +--------------------------------------------------------------------+
- |  ports.py (interfaces), config.py (settings, data folder)          |
- +--------------------------------------------------------------------+
+ +---------------------------------------------------------------------+
+ |  ui/            web/ (the page: templates, CSS, ES modules)          |
+ |                 cli/ (menu, scan, ids, web: prompts and printing)    |
+ |                 the only code that prints or asks                    |
+ +----------------------+----------------------------------------------+
+        ^ uses          | may import services' types, to show them
+        |               v
+ +------+--------------------------------------------------------------+
+ |  controllers/   web/ (Flask app, routes, run_server)                 |
+ |                 cli/ (the toolkit command: main, scan, ids, web)     |
+ |                 the only code that uses Flask (web) or argparse (cli)|
+ +----------------------+----------------------------------------------+
+                        | calls services; from data only settings, keys,
+                        | logs, and what starts things (socket, processes)
+                        v
+ +---------------------------------------------------------------------+
+ |  services/      ids/ (ML core, bundles, predictions)                 |
+ |                 recon/ (targets, the scan, lookups, report entries)  |
+ |                 web/ (workspaces, jobs, the work behind the routes)  |
+ |                 no print, no Flask, no files, no network             |
+ +----------------------+----------------------------------------------+
+                        |
+                        v
+ +---------------------------------------------------------------------+
+ |  data/          settings, keys, logs, files, processes               |
+ |                 ids/ (bundle, run, dataset files)                    |
+ |                 recon/ (sockets, ping, banners, NVD, OpenRouter,     |
+ |                         AbuseIPDB, scan reports)                     |
+ |                 web/ (uploads, the listening socket, the browser)    |
+ |                 the only code that opens files, sockets, HTTP or     |
+ |                 processes; imports nothing above it (no database)    |
+ +---------------------------------------------------------------------+
 ```
 
-`ports.py` names `Bundle`, `TrainingRun` and the bundle-file types for type checking only
-(`if TYPE_CHECKING`), so at run time the ports import no layer.
+In the web trainer the page (`ui/web`) calls the controllers over HTTP. A terminal tool
+starts in its command (`controllers/cli`), which asks `ui/cli` to show each screen; the
+scan reports what it does through a `ScanView` (`toolkit/services/recon/scan.py`), which
+`ConsoleScan` (`toolkit/ui/cli/scan.py`) prints.
 
-- No module outside presentation imports a presentation module, prints, or imports
-  `flask`, `werkzeug`, `jinja2` or `waitress`: `tests/test_architecture.py`.
-- `ids_core` and `recon` never import each other: `tests/test_architecture.py`.
-- `ids_core` imports no network library (`requests`, `socket`, `urllib`, `http`) and never
-  prints: `tests/ml/test_core_rules.py`.
-- `ids_core` writes no files. It reads datasets (`toolkit/services/ids/datasets.py`) and returns
-  results; saving runs and bundles is edge code (`toolkit/data/ids/run_files.py`,
-  `toolkit/data/ids/bundle_files.py`).
-- `mypy --strict` checks the whole package (`tests/test_type_check.py`).
+What `tests/test_architecture.py` checks, for every module of `toolkit/`:
+
+- Imports go only downward (the table above); `data/` imports nothing from the layers above.
+- Controllers use from `data/` only the settings, keys and logs, the web server's socket
+  and the menu's child processes; everything else goes through a service.
+- Only `ui/` calls `print()` or `input()`; only `controllers/web` imports Flask, Werkzeug,
+  Jinja2 or waitress; only `controllers/cli` imports argparse.
+- Only `data/` imports `socket`, `ssl`, `requests`, `urllib`, `http`, `subprocess` or
+  `webbrowser`, or opens, reads, writes or lists files.
+- Inside `services/` and `data/` the tools stay apart: `ids` and `recon` never import each
+  other, and the scanner never uses the web trainer's code.
+- No module imports an old name (`toolkit.ids_core`, `toolkit.web`, `toolkit.recon`, ...).
+  Bundles saved before step 1.5d name `toolkit.ids_core` inside them; while one is loaded,
+  `toolkit/services/ids/legacy_names.py` points those names to the new modules
+  (`tests/ml/test_legacy_bundle.py`).
+
+`toolkit/services/ports.py` names `Bundle`, `TrainingRun` and the bundle-file types for type
+checking only (`if TYPE_CHECKING`), so at run time the ports import no other module. The
+services rules again, from the ML core's side: `tests/ml/test_core_rules.py`. `mypy
+--strict` checks the whole package (`tests/test_type_check.py`).
 
 ## 4. The three ports
 
@@ -196,9 +224,9 @@ Interfaces exist only where an implementation really is swapped or faked in test
 
 | Port | Used by | Real implementation | In tests |
 |---|---|---|---|
-| `ModelStore` | web trainer, IDS command line | `BundleStore` (`toolkit/data/ids/bundle_files.py`): signed bundles in `instance/bundles/` | a scratch instance folder |
-| `IntelProvider` | `Intel` in the scanner | `NvdProvider`, `OpenRouterProvider`, `AbuseIpdbProvider` | fake providers; recorded NVD answers in `tests/fixtures/` |
-| `ProgressSink` | `train()`, `evaluate()`, `scan_ports()` | a web job (`toolkit/services/web/jobs.py`), the scanner's verbose line | `NullProgress` or a recorder |
+| `ModelStore` | web trainer, IDS command line | `BundleStore` (`toolkit/services/ids/exports.py`, over `toolkit/data/ids/bundle_files.py`): signed bundles in `instance/bundles/` | a scratch instance folder |
+| `IntelProvider` | `Intel` in the scanner | `NvdProvider`, `OpenRouterProvider`, `AbuseIpdbProvider` (`toolkit/data/recon/`) | fake providers; recorded NVD answers in `tests/fixtures/` |
+| `ProgressSink` | `train()`, `evaluate()`, `scan_ports()` | a web job (`toolkit/services/web/jobs.py`), the scanner's verbose line (`toolkit/ui/cli/scan.py`) | `NullProgress` or a recorder |
 
 Everything else is plain functions and dict registries.
 
@@ -248,7 +276,7 @@ loads the file; `train()` starts from the loaded table.
  TrainingRun (settings, profile, split, leakage, CV and test scores, versions)
      |   kept in the workspace; nothing is written until Export:
      +--> bundle.pack + sign     -> instance/bundles/<run id>.bundle
-     +--> run_files.write_run    -> instance/runs/<run id>.json
+     +--> exports.write_run      -> instance/runs/<run id>.json
 ```
 
 One pipeline per model, all fitted on the training rows only (`toolkit/services/ids/pipeline.py`):
@@ -268,57 +296,67 @@ The manifest embeds the TrainingRun. Nothing is unpickled until the size, layout
 ## 7. Web trainer flow
 
 ```
- browser (static/js, ES modules)
+ ui/web: the page (static/js, ES modules)
      |  GET /, /dynamic_ids               HTML; CSP, no inline script
      |  /api/v1/... with X-CSRF-Token     JSON in, JSON out
      v
- security.py:  CSRF token and cross-site check on every state-changing request
+ controllers/web/security.py:  CSRF token and cross-site check on every change
      v
- routes:  datasets.py | training.py | bundles.py | resume.py | workspace.py
-     |                         |
-     v                         | POST /api/v1/jobs/training
- workspace.py:                 v
-   one workspace per       jobs.py: one worker thread, one training at a time
-   session cookie            for the whole server; progress and cancel
-   (in memory: dataset,      through ProgressSink.advance(); a time limit
-   run, bundle, last         |
-   predictions)              v
-     ^                    ids_core.runs.train(...)
-     +------ result ---------+
+ controllers/web routes:  datasets | training | bundles | resume | workspace
+     |   request checked (schemas.py), the session's workspace found by its
+     |   cookie (workspace.py), JSON answers shaped here
+     v
+ services/web:  datasets.py (uploads read, files combined, the training split)
+     |          training.py (settings checked, the job queued) ----+
+     |          prediction.py (one row, a whole file)               |
+     |          workspace.py: one workspace per session, in memory  v
+     |            (dataset, run, bundle, last predictions)   jobs.py: one worker
+     |                                                       thread, one training
+     |                                                       at a time; progress
+     |                                                       and cancel through
+     v                                                       ProgressSink.advance()
+ services/ids:  runs.train(...), bundles, batch predictions <------+
+     v
+ data/:  uploads on disk only while read, bundle and run files, the signing key
 ```
 
 - Workspaces live in memory, are freed after `TOOLKIT_WORKSPACE_IDLE_MIN` minutes, and are
   capped by `TOOLKIT_MAX_WORKSPACES` and `TOOLKIT_MAX_DATA_MB`.
+- A refusal is a `ServiceError` with a code (`toolkit/services/web/errors.py`); the routes
+  answer it with the HTTP status it has always had (`toolkit/controllers/web/api.py`).
 - A cancelled or failed job leaves nothing behind: no run record, no bundle.
 - `GET /api/v1/workspace` repeats the earlier answers, so a reload resumes where it was.
-- The server listens on 127.0.0.1 only (waitress), and the page opens in the browser once
-  the port answers.
+- The server listens on 127.0.0.1 only (waitress, `toolkit/controllers/web/server.py`), and
+  the page opens in the browser once the port answers.
 
 ## 8. Scan flow
 
-`scan_target()` in `toolkit/services/recon/scan.py`, for each target:
+`scan_target()` in `toolkit/services/recon/scan.py`, for each target; every line on the
+screen and every question goes through the `ScanView` (`ConsoleScan` in
+`toolkit/ui/cli/scan.py`):
 
 ```
- target (IP, name or range) + ports + protocols      targets.py: limits checked first
+ target (IP, name or range) + ports + protocols   services/recon/targets.py: limits first
      |
-     +--> public IP, a key, and --abuseipdb (or yes)?  --> AbuseIPDB reputation
+     +--> public IP, a key, --abuseipdb (or yes)? --> AbuseIPDB    data/recon/abuseipdb.py
      v
- ping_host --> no answer: skipped unless --scan-unresponsive     os_detect.py
-     |
-     v
- OS guess from the TTL                                           os_detect.py
+ ping --> no answer: skipped unless --scan-unresponsive        data/recon/ping.py
      |
      v
- scan_ports: TCP connect / UDP probe per port                    scanner.py
-     |       banner read with the port's probe                   probes.py
+ OS guess from the TTL                                          services/recon/os_guess.py
+     |
+     v
+ scan_ports: TCP connect / UDP probe per port                   data/recon/scanner.py
+     |       banner read with the port's probe                  data/recon/probes.py
      v
  products from the banners, each one once
      |
      v
- Intel.lookup_many: up to INTEL_WORKERS at a time                intel/
+ Intel.lookup_many: up to INTEL_WORKERS at a time               services/recon/intel.py
      |   NVD (always; spaced as NVD asks), OpenRouter (--ai or yes, and a key)
      v
- report entries --> table on screen --> export (--export json|csv|txt)   export.py
+ report entries (network text cleaned)                          services/recon/report.py
+     --> table on screen --> export (--export json|csv|txt)     data/recon/scan_files.py
 ```
 
 A failed lookup is recorded in the report and the scan goes on. Ctrl+C stops the scan with
@@ -364,10 +402,11 @@ The plan's §2 "Target structure" was written before the code. What was built di
 
 | Plan | Built | Why |
 |---|---|---|
-| `services/` (TrainingService, ScanService, PredictionService) | no services layer: the web routes and CLIs call `ids_core` and `recon` directly | each service would have had one caller; `train()` and `scan_target()` already are the use cases |
+| `services/` with TrainingService, ScanService, PredictionService classes | `services/` (step 1.5d) with one folder per tool and plain functions: `services/web/training.py`, `services/recon/scan.py`, `services/ids/prediction.py` | a class with one method per use case would add nothing; the layer rules are what keep it clean |
+| presentation and core only | four layers (`ui/`, `controllers/`, `services/`, `data/`, step 1.5d) | each kind of code has one place: a new route, flag, rule or file format has an obvious home |
 | `ids_core/ports.py` | `toolkit/services/ports.py` | the ports serve the scanner too, not only the ML core |
 | `ids_core/explain.py` (feature importance, SHAP) | not built | explainability (F3) is planned for v5.2 |
 | `recon/probes/` with one file per service | one `toolkit/data/recon/probes.py` with a registry | each probe is a table entry plus a few shared readers |
-| `recon/report.py` with HTML/PDF | `toolkit/data/recon/scan_files.py` with JSON, CSV, TXT | HTML/PDF reports (F5) are later features |
+| `recon/report.py` with HTML/PDF | `toolkit/services/recon/report.py` (the entries) and `toolkit/data/recon/scan_files.py` (JSON, CSV, TXT) | HTML/PDF reports (F5) are later features |
 | `.github/workflows/ci.yml` | none | checks run locally (`python -m pytest`, ruff, mypy, the pre-commit hook), as plan D19 decided |
 | a `train` command in the CLI | none | models are trained in the web trainer (plan D12) |

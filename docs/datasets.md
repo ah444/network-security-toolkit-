@@ -81,7 +81,7 @@ Profiled on 2026-10-19 with a read-only streaming pass over each full file.
 
 ## Profile detection (step 0.4a)
 
-`toolkit/ids_core` recognises each file from its content (header names, or value patterns for headerless files), never from the file name. Checked on 2026-10-20 with a full load of every file above:
+`toolkit/services/ids` (`toolkit/ids_core` before v5.1 step 1.5d) recognises each file from its content (header names, or value patterns for headerless files), never from the file name. Checked on 2026-10-20 with a full load of every file above:
 
 | File | Profile / variant | Header | Label | Blocked as features | Split strategy | Warnings |
 |---|---|---|---|---|---|---|
@@ -98,7 +98,7 @@ The loader's SHA-256, row counts, empty-cell and `inf` counts match the tables a
 
 ## Dedupe and split (step 0.4b)
 
-`toolkit/ids_core/split.py` with the profile's split strategy, checked on 2026-10-20 (default `SplitConfig`: 20 % test, seed 42):
+`toolkit/services/ids/split.py` with the profile's split strategy, checked on 2026-10-20 (default `SplitConfig`: 20 % test, seed 42):
 
 | File | Copies removed | Conflicting rows¹ | Strategy | Train / test rows | Warnings |
 |---|---|---|---|---|---|

@@ -71,9 +71,10 @@ rows (16.6 %), and no classifier can predict a class it never saw. On the test r
 classes, about 86.5 % are correct. Details and the per-model table:
 [FINDINGS.md](report/FINDINGS.md) and [README.md](report/README.md).
 
-The numbers were measured with the 5.0 ML core. The v5.1 changes to `toolkit/ids_core/`
-(progress reporting, logging, batch prediction, type annotations) don't change how models
-are trained, and the report has not been re-run for them.
+The numbers were measured with the 5.0 ML core. The v5.1 changes to it (progress
+reporting, logging, batch prediction, type annotations, and its move from
+`toolkit/ids_core/` to `toolkit/services/ids/` in step 1.5d) don't change how models are
+trained, and the report has not been re-run for them.
 
 ## Limitations
 
