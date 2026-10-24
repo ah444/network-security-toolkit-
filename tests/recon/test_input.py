@@ -4,7 +4,7 @@ import builtins
 
 import pytest
 
-from toolkit.recon import targets
+from toolkit.services.recon import targets
 from toolkit.data.recon import scanner as recon_scanner
 
 

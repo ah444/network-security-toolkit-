@@ -2,35 +2,24 @@
 
 from __future__ import annotations
 
-import functools
 import logging
 from collections.abc import Mapping
-from dataclasses import asdict
 from typing import Any
 
 from flask import Blueprint, jsonify
 
-from ..data.settings import SplitConfig
-from ..ids_core import registry
-from ..ids_core.pipeline import FittedModel
-from ..ids_core.runs import TrainingRun, TrainSettings
-from ..ids_core.runs import train as train_run
-from .api import (
-    BUSY,
-    NOT_TRAINED,
-    TRAINING_FAILED,
-    UNKNOWN_COLUMN,
-    Answer,
-    ApiError,
-    error_response,
-    json_body,
-    query,
-)
-from .datasets import label_values, require_data
-from .jobs import FINISHED, Job, job_view
+from ..services.ids import registry
+from ..services.ids.pipeline import FittedModel
+from ..services.ids.runs import TrainingRun
+from ..services.web.datasets import require_data
+from ..services.web.errors import NOT_TRAINED, TRAINING_FAILED
+from .api import Answer, ApiError, error_response, json_body, query
+from ..services.web.jobs import FINISHED, QUEUED, RUNNING, Job, JobRunner
+from ..services.web.training import start_job, training_settings
 from .schemas import ConfusionRequest, TrainRequest, load
 from .state import state
-from .workspace import UploadedData, Workspace, with_workspace, workspace
+from ..services.web.workspace import Workspace
+from .workspace import with_workspace, workspace
 
 log = logging.getLogger(__name__)
 
@@ -60,22 +49,10 @@ def start_training() -> Answer:
     req = load(TrainRequest, json_body())
     with workspace() as ws:
         data = require_data(ws)
-        settings = _training_settings(data, req)
-        if not ws.training.acquire(blocking=False):
-            return error_response("A training run is already in progress in this workspace. "
-                                  "Wait for it to finish or cancel it.", 409, BUSY)
-        ws.acquire_lease()
-
-        def release() -> None:
-            ws.release_lease()
-            ws.training.release()
-
-        job = Job(work=functools.partial(_run_training, ws, data, settings), on_end=release,
-                  max_seconds=state().config.job_max_minutes * 60,
-                  models=len(settings.models or ()), folds=settings.evaluation.cv_folds)
-        ws.split = None  # free the preview split: training makes its own
-        ws.add_job(job)
-        state().jobs.submit(job)
+        settings = training_settings(data, req.target, req.features, req.models,
+                                     req.balancing, req.test_size)
+        job = start_job(ws, data, settings, state().jobs,
+                        state().config.job_max_minutes * 60, run_result)
         return jsonify(job_view(job, state().jobs)), 202
 
 
@@ -96,30 +73,30 @@ def cancel_job(ws: Workspace, job_id: str) -> Answer:
     return jsonify(job_view(job, state().jobs)), 202
 
 
-def _training_settings(data: UploadedData, req: TrainRequest) -> TrainSettings:
-    """TrainSettings from the request, checked here so errors read well (S8)."""
-    target = req.target
-    features = req.features
-    models = req.models or list(registry.default_models())
-    balancer = req.balancing or "none"
-    if not target or target not in data.frame.columns:
-        raise ApiError("Choose the target column.", UNKNOWN_COLUMN)
-    if not features:
-        raise ApiError("Choose at least one input feature.")
-    missing = [c for c in features if c not in data.frame.columns]
-    if missing:
-        raise ApiError(f"Unknown input feature(s): {', '.join(missing)}", UNKNOWN_COLUMN)
-    if target in features:
-        raise ApiError("The target can't also be an input feature.")
-    unknown = [m for m in models if m not in registry.available_models()]
-    if unknown:
-        raise ApiError(f"Unknown or unavailable model(s): {', '.join(unknown)}")
-    if balancer != "recommended" and balancer not in registry.BALANCERS:
-        raise ApiError(f"Unknown balancing method: {balancer}")
-    if label_values(data.frame, target).nunique() < 2:
-        raise ApiError("The target needs at least two classes.")
-    return TrainSettings(label=target, features=tuple(features), models=tuple(models),
-                         balancer=balancer, split=SplitConfig(test_size=req.test_size))
+def job_view(job: Job, runner: JobRunner) -> dict[str, Any]:
+    """What ``GET /api/v1/jobs/<id>`` answers."""
+    state = job.state
+    if state == RUNNING and job.cancel_requested.is_set():
+        state = "cancelling"
+    view: dict[str, Any] = {
+        "id": job.id,
+        "url": f"/api/v1/jobs/{job.id}",
+        "state": state,
+        "done": job.done,
+        "total": job.total,
+        "percent": round(100 * job.done / job.total) if job.total else 0,
+        "phase": job.phase(),
+        "elapsed_seconds": round(job.elapsed(), 1),
+    }
+    if job.state == QUEUED:
+        view["queue_position"] = runner.position(job)
+        if view["queue_position"] == 0:  # submitted, the worker has not picked it up yet
+            view["phase"] = "Starting"
+    if job.result is not None:
+        view["result"] = job.result
+    if job.error is not None:
+        view["error"] = job.error
+    return view
 
 
 def features_info(fitted: FittedModel) -> list[dict[str, Any]]:
@@ -135,36 +112,12 @@ def _blocked(leakage_record: Mapping[str, Any]) -> list[dict[str, Any]]:
     return [{"column": c, "reason": reasons.get(c, "BLOCKED")} for c in leakage_record["blocked"]]
 
 
-def _run_training(ws: Workspace, data: UploadedData, settings: TrainSettings,
-                  job: Job) -> dict[str, Any]:
-    """The job's work, in the worker thread. Without the workspace lock: dataset changes
-    are refused (409) while the training lock is held. Only a finished training is
-    stored; a cancel (JobCancelled from ``job.advance``) or a failure stores nothing."""
-    try:
-        run = train_run(data.frame, profile=data.profile, settings=settings,
-                        test_frame=data.test_frame, source=data.source,
-                        test_source=data.test_source, sources=data.sources, progress=job)
-    except ValueError:
-        log.exception("Training failed")
-        raise ApiError("Training could not run with these settings (for example: every chosen "
-                       "feature was blocked by the leakage guard, or a class is too small for "
-                       "the split). Details are in the server log.", TRAINING_FAILED) from None
-    evaluation = run.evaluation
-    if not evaluation.training.models or evaluation.selected is None:
-        raise ApiError("No model could be trained. Details are in the server log.",
-                       TRAINING_FAILED,
-                       details={"failures": [asdict(f) for f in evaluation.failures]})
-    with ws.lock:
-        ws.run, ws.export = run, None
-    return run_result(run)
-
-
 def run_result(run: TrainingRun) -> dict[str, Any]:
     """A finished training's result: the job's result, and the run part of
     GET /api/v1/workspace after a reload (step 1.3c)."""
     evaluation = run.evaluation
     if evaluation.selected is None:  # never stored: _run_training refuses such runs
-        raise ApiError("No model could be trained.", TRAINING_FAILED)
+        raise ApiError("No model could be trained.", TRAINING_FAILED)  # never stored
     record = run.to_dict()
     result = record["evaluation"]
     selected = evaluation.training.models[evaluation.selected]

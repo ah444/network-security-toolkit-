@@ -19,7 +19,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
-from .api import CANCELLED, INTERNAL, TIME_LIMIT, ApiError
+from .errors import CANCELLED, INTERNAL, TIME_LIMIT, ServiceError
 
 log = logging.getLogger(__name__)
 
@@ -146,7 +146,7 @@ class JobRunner:
                 job.error = {"code": stop.code, "message": stop.message}
                 job.state = STOPPED
                 log.info("Training job stopped (%s)", stop.code)
-            except ApiError as error:
+            except ServiceError as error:
                 job.error = {"code": error.code, "message": error.message}
                 if error.details:
                     job.error["details"] = error.details
@@ -164,29 +164,3 @@ class JobRunner:
                     job.on_end()
                 except Exception:
                     log.exception("Releasing a finished job's workspace failed")
-
-
-def job_view(job: Job, runner: JobRunner) -> dict[str, Any]:
-    """What ``GET /api/v1/jobs/<id>`` answers."""
-    state = job.state
-    if state == RUNNING and job.cancel_requested.is_set():
-        state = "cancelling"
-    view: dict[str, Any] = {
-        "id": job.id,
-        "url": f"/api/v1/jobs/{job.id}",
-        "state": state,
-        "done": job.done,
-        "total": job.total,
-        "percent": round(100 * job.done / job.total) if job.total else 0,
-        "phase": job.phase(),
-        "elapsed_seconds": round(job.elapsed(), 1),
-    }
-    if job.state == QUEUED:
-        view["queue_position"] = runner.position(job)
-        if view["queue_position"] == 0:  # submitted, the worker has not picked it up yet
-            view["phase"] = "Starting"
-    if job.result is not None:
-        view["result"] = job.result
-    if job.error is not None:
-        view["error"] = job.error
-    return view

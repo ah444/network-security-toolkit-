@@ -12,11 +12,11 @@ from typing import TYPE_CHECKING
 from flask import current_app
 
 from ..data.settings import WebConfig
-from ..ports import ModelStore
+from ..services.ports import ModelStore
 
 if TYPE_CHECKING:
-    from .jobs import JobRunner
-    from .workspace import WorkspaceStore
+    from ..services.web.jobs import JobRunner
+    from ..services.web.workspace import WorkspaceStore
 
 
 @dataclass

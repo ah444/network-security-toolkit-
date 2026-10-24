@@ -1,10 +1,13 @@
-"""v5.1 step 1.5d: a bundle saved before the layered layout still loads.
+"""v5.1 step 1.5d: a bundle saved before the layered layout still loads
+(toolkit.services.ids.legacy_names).
 
 Its pickle refers to classes and functions by their old module names
 (``toolkit.ids_core.pipeline``, ``toolkit.ids_core.registry``); the fixture was made by the
 old code (``tests/fixtures/legacy/make_legacy_bundle.py``) and is never rebuilt by newer code.
 """
 
+import importlib
+import importlib.util
 import json
 import subprocess
 import sys
@@ -14,7 +17,9 @@ import pandas as pd
 import pytest
 
 from toolkit.data.ids import bundle_files
-from toolkit.ids_core.bundle import _layout, unpack
+from toolkit.services.ids import legacy_names
+from toolkit.services.ids.bundle import _layout, unpack
+from toolkit.services.ids.pipeline import FittedModel
 
 KEY = bytes(range(32))  # the key the fixture was signed with
 OLD_NAMES = (b"toolkit.ids_core.pipeline", b"toolkit.ids_core.registry")
@@ -56,3 +61,19 @@ def test_old_bundle_through_the_ids_command(legacy, tmp_path):
                               capture_output=True, text=True, encoding="utf-8", check=False)
         assert done.returncode == 0, done.stdout + done.stderr
         assert [answer["prediction"] for answer in json.loads(done.stdout)] == labels, name
+
+
+def test_old_names_exist_only_while_a_bundle_loads(legacy):
+    path, _ = legacy
+    loaded = unpack(path.read_bytes(), key=KEY)
+    assert all(isinstance(m, FittedModel) for m in loaded.models.values())  # today's class
+    assert not [name for name in sys.modules if name.startswith("toolkit.ids_core")]
+    with pytest.raises(ModuleNotFoundError):
+        importlib.import_module("toolkit.ids_core.pipeline")
+
+
+def test_every_old_module_name_has_a_module(repo_root):
+    """The 14 modules of toolkit/ids_core (v5.1 step 1.4) are all still in services/ids."""
+    assert len(legacy_names.MODULES) == 14
+    for old, new in legacy_names.OLD_TO_NEW.items():
+        assert importlib.util.find_spec(new) is not None, (old, new)

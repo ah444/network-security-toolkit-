@@ -33,7 +33,7 @@ from sklearn.metrics import (
 )
 from sklearn.model_selection import StratifiedKFold
 
-from ..data.settings import EvaluationConfig, PipelineConfig, max_workers
+from ...data.settings import EvaluationConfig, PipelineConfig, max_workers
 from ..ports import NullProgress, ProgressSink
 from . import balancing, pipeline, registry
 from .sampling import stratified_positions

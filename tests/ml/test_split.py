@@ -8,8 +8,8 @@ import pandas as pd
 import pytest
 
 from toolkit.data.settings import SplitConfig
-from toolkit.ids_core.datasets import load_dataset
-from toolkit.ids_core.split import dedupe, split_dataset
+from toolkit.services.ids.datasets import load_dataset
+from toolkit.services.ids.split import dedupe, split_dataset
 
 TEMPORAL = ("temporal", "temporal_per_class")
 

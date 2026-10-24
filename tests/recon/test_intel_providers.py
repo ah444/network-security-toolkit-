@@ -3,8 +3,8 @@
 import requests
 
 from toolkit.data.recon.findings import IntelFinding
-from toolkit.ports import IntelProvider
-from toolkit.recon import intel as recon_intel
+from toolkit.services.ports import IntelProvider
+from toolkit.services.recon import intel as recon_intel
 from toolkit.data.recon import abuseipdb, openrouter as llm, nvd
 
 

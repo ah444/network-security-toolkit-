@@ -39,7 +39,7 @@ from sklearn.preprocessing import (
 from sklearn.utils.class_weight import compute_sample_weight
 from threadpoolctl import threadpool_limits
 
-from ..data.settings import PipelineConfig, max_workers
+from ...data.settings import PipelineConfig, max_workers
 from ..ports import NullProgress, ProgressSink
 from . import registry
 

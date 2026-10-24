@@ -1,5 +1,5 @@
 """v5.1 step 1.4f (plan F1): "Predict a CSV file" with the session's run or a loaded bundle;
-the labelled CSV is the CLI's (``toolkit.ids_core.batch``)."""
+the labelled CSV is the CLI's (``toolkit.services.ids.batch``)."""
 
 import io
 
@@ -7,8 +7,8 @@ import pandas as pd
 import pytest
 
 from toolkit.data.ids import bundle_files
-from toolkit.ids_core.batch import prediction_summary
-from toolkit.ids_core.datasets import load_dataset
+from toolkit.services.ids.batch import prediction_summary
+from toolkit.services.ids.datasets import load_dataset
 from web_jobs import train_and_wait
 
 CIC = "cic_ddos_sample.csv"

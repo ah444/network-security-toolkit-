@@ -16,7 +16,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ..data.ids.bundle_files import (
+from ...data.ids.bundle_files import (
     BundleError,
     new_bundle_path,
     read_all,
@@ -25,7 +25,7 @@ from ..data.ids.bundle_files import (
     stored_bundles,
     write_new,
 )
-from ..data.ids.run_files import read_record, write_record
+from ...data.ids.run_files import read_record, write_record
 from .bundle import (
     HEADER_BYTES,
     Bundle,
@@ -92,7 +92,7 @@ def load_bundle(path: str | Path, *, key_file: str | Path | None = None,
 
 
 class BundleStore:
-    """``toolkit.ports.ModelStore`` over this install's bundle files.
+    """``toolkit.services.ports.ModelStore`` over this install's bundle files.
 
     ``directory`` and ``key_file`` default to ``instance/bundles`` and
     ``instance/signing.key``, resolved at each call (so ``TOOLKIT_INSTANCE_DIR`` applies).

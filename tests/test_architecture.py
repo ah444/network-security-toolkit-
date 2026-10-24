@@ -1,20 +1,35 @@
-"""Module boundaries of the toolkit package (plan §2, v5.1 step 1.1a).
+"""The layers of the toolkit package (plan §2; layered since v5.1 step 1.5d).
 
-The package is a modular monolith: the ML core (``ids_core``) and the scanner (``recon``)
-never import each other, nothing in ``toolkit`` imports the old ``tools/`` scripts (gone
-since v5.1 step 1.4a) or a presentation module, and only presentation modules may print or
-use the web framework. Presentation is ``web``, ``ids_cli`` and any ``cli`` or ``__main__``
-module (``toolkit/recon/cli.py`` is the scanner's user side).
-The ML-core-only rules (no network) are in ``tests/ml/test_core_rules.py``.
+    ui/           what the user sees: the web page, the CLI's prompts and printing
+    controllers/  requests and flags in, a service called, answers and exit codes out
+    services/     what the tools do: no user interface, no files, no network
+    data/         files, the network, the environment (no database)
+
+Each layer imports only the layers below it: controllers use ui, services and, from data,
+only the settings, logs and the plumbing that starts things (the server's socket, child
+processes); ui may import services' types to show them, never data or controllers;
+services use data; data imports nothing above it. Inside services and data the tools stay
+apart (``ids`` and ``recon`` never import each other; the web trainer is the IDS's).
+Only ui prints or asks; only controllers use Flask or argparse; only data opens files,
+sockets, HTTP or child processes. The ML-core-only rules are in ``tests/ml/test_core_rules.py``.
 """
 
 import ast
 from pathlib import Path
 
-PRESENTATION = {"web", "ids_cli", "cli", "__main__"}  # first name under toolkit/
-USER_SIDE = {"cli", "__main__"}  # a module with this last name talks to the user
+LAYERS = ("ui", "controllers", "services", "data")
+# Until step 1.5d's controller and UI commit, these are the presentation code.
+TRANSITIONAL = ("toolkit.web", "toolkit.ids_cli", "toolkit.cli", "toolkit.__main__",
+                "toolkit.recon")
+CONTROLLER_DATA = ("toolkit.data.settings", "toolkit.data.logs", "toolkit.data.web.net",
+                   "toolkit.data.processes")
 WEB_FRAMEWORK = {"flask", "werkzeug", "jinja2", "waitress"}
-INDEPENDENT = ("ids_core", "recon")
+OUTSIDE = {"socket", "ssl", "requests", "urllib", "http", "subprocess", "webbrowser"}
+FILE_METHODS = {"read_text", "read_bytes", "write_text", "write_bytes", "unlink", "mkdir",
+                "rmdir", "iterdir", "glob", "rglob", "touch"}
+OLD_NAMES = ("toolkit.ids_core", "toolkit.config", "toolkit.logging_setup", "toolkit.ports",
+             "toolkit.bundle_files", "toolkit.run_files", "toolkit.recon.intel", "tools")
+TOOLS = ("ids", "recon")
 
 
 def _module_name(path: Path, root: Path) -> tuple[str, bool]:
@@ -24,99 +39,159 @@ def _module_name(path: Path, root: Path) -> tuple[str, bool]:
     return ".".join(parts[:-1] if is_package else parts), is_package
 
 
-def _imported(tree: ast.AST, module: str, is_package: bool) -> list[str]:
-    """Absolute names of everything a module imports (relative imports resolved)."""
+def _imported(tree: ast.AST, module: str, is_package: bool) -> list[tuple[str, int]]:
+    """Absolute names of everything a module imports (relative imports resolved); for
+    ``from x import y`` that is ``x.y`` (a module or a name in ``x``, both are inside ``x``)."""
     names = []
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
-            names += [alias.name for alias in node.names]
+            names += [(alias.name, node.lineno) for alias in node.names]
         elif isinstance(node, ast.ImportFrom):
-            if not node.level:
-                names.append(node.module or "")
-                continue
-            base = module.split(".") if is_package else module.split(".")[:-1]
-            base = base[:len(base) - (node.level - 1)]
-            if node.module:
-                names.append(".".join([*base, node.module]))
-            else:  # from . import x
-                names += [".".join([*base, alias.name]) for alias in node.names]
+            if node.level:
+                base = module.split(".") if is_package else module.split(".")[:-1]
+                base = base[:len(base) - (node.level - 1)]
+                source = ".".join([*base, node.module] if node.module else base)
+            else:
+                source = node.module or ""
+            names += [(f"{source}.{alias.name}", node.lineno) for alias in node.names]
     return names
 
 
-def _presentation(module: str) -> bool:
-    return _area(module) in PRESENTATION or module.split(".")[-1] in USER_SIDE
+def _within(name: str, prefixes) -> bool:
+    return any(name == p or name.startswith(p + ".") for p in prefixes)
 
 
-def _area(module: str) -> str:
-    """``toolkit.recon.scanner`` -> ``recon``; top-level modules give their own name."""
+def layer(module: str) -> str:
+    """``toolkit.services.ids.split`` -> ``services``; transitional presentation code ->
+    ``presentation``; the package itself and ``toolkit.__main__`` -> ``top``."""
     parts = module.split(".")
-    return parts[1] if len(parts) > 1 else ""
+    if len(parts) > 1 and parts[1] in LAYERS:
+        return parts[1]
+    if _within(module, TRANSITIONAL) and module != "toolkit.__main__":
+        return "presentation"
+    return "top"
 
 
-def boundary_violations(root: Path) -> list[str]:
-    """Every broken boundary rule in ``root/toolkit``, as readable messages."""
+def tool(module: str) -> str:
+    """``toolkit.data.recon.nvd`` -> ``recon``; ``toolkit.services.web.jobs`` -> ``web``."""
+    parts = module.split(".")
+    return parts[2] if len(parts) > 2 and parts[1] in LAYERS else ""
+
+
+ALLOWED = {  # layer -> the layers it may import
+    "data": {"data"},
+    "services": {"services", "data"},
+    "ui": {"ui", "services"},
+    "controllers": {"controllers", "ui", "services", "data"},
+    "presentation": {"presentation", "controllers", "ui", "services", "data", "top"},
+    "top": {"presentation", "controllers", "top"},
+}
+
+
+def layer_violations(root: Path) -> list[str]:
+    """Every broken layer rule in ``root/toolkit``, as readable messages."""
     found = []
     for path in sorted((root / "toolkit").rglob("*.py")):
         module, is_package = _module_name(path, root)
         tree = ast.parse(path.read_text(encoding="utf-8"))
-        area = _area(module)
-        presentation = _presentation(module)
-        for name in _imported(tree, module, is_package):
+        here, here_tool = layer(module), tool(module)
+        for name, line in _imported(tree, module, is_package):
             top = name.split(".")[0]
-            if top == "tools":
-                found.append(f"{module} imports the script package {name}")
-            if top == "toolkit" and area in INDEPENDENT:
-                other = _area(name)
-                if other in INDEPENDENT and other != area:
-                    found.append(f"{module} imports {name} ({area} and {other} are independent)")
-            if not presentation and top == "toolkit" and _presentation(name):
-                found.append(f"{module} imports the presentation module {name}")
-            if not presentation and top in WEB_FRAMEWORK:
-                found.append(f"{module} imports the web framework ({name})")
-        if not presentation:
-            prints = [n.lineno for n in ast.walk(tree) if isinstance(n, ast.Call)
-                      and isinstance(n.func, ast.Name) and n.func.id == "print"]
-            if prints:
-                found.append(f"{module} calls print() at lines {prints}; use logging")
+            if _within(name, OLD_NAMES):
+                found.append(f"{module}:{line} imports the old name {name}")
+                continue
+            if top == "toolkit":
+                there = layer(name)
+                if name != "toolkit" and there not in ALLOWED[here]:
+                    found.append(f"{module}:{line} ({here}) imports {name} ({there})")
+                if here == "controllers" and there == "data" and \
+                        not _within(name, CONTROLLER_DATA):
+                    found.append(f"{module}:{line} (controllers) imports {name}: use a service")
+                there_tool = tool(name)
+                if here in ("services", "data") and {here_tool, there_tool} == {"ids", "recon"}:
+                    found.append(f"{module}:{line} imports {name} ({here_tool} and "
+                                 f"{there_tool} are independent)")
+                if here in ("services", "data") and here_tool == "recon" and there_tool == "web":
+                    found.append(f"{module}:{line} imports {name} (the scanner doesn't use the "
+                                 "web trainer)")
+            if top in WEB_FRAMEWORK and here not in ("controllers", "presentation"):
+                found.append(f"{module}:{line} imports the web framework ({name})")
+            if top == "argparse" and here not in ("controllers", "presentation"):
+                found.append(f"{module}:{line} imports argparse")
+            if top in OUTSIDE and here not in ("data", "presentation"):
+                found.append(f"{module}:{line} imports {name}: only the data layer goes outside")
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
+                continue
+            func = node.func
+            if isinstance(func, ast.Name) and func.id in ("print", "input") and \
+                    here not in ("ui", "presentation"):
+                found.append(f"{module}:{node.lineno} calls {func.id}(): only the UI talks to "
+                             "the user")
+            if here not in ("data", "presentation") and (
+                    (isinstance(func, ast.Name) and func.id == "open")
+                    or (isinstance(func, ast.Attribute) and func.attr in FILE_METHODS)):
+                what = func.id if isinstance(func, ast.Name) else func.attr
+                found.append(f"{module}:{node.lineno} calls {what}(): only the data layer "
+                             "reads or writes files")
     return found
 
 
-def test_package_boundaries_hold(repo_root):
-    for area in INDEPENDENT:  # the rules must really see both packages
-        assert (repo_root / "toolkit" / area).is_dir(), f"toolkit/{area} is missing"
-    assert boundary_violations(repo_root) == []
+def test_layers_hold(repo_root):
+    for folder in ("services/ids", "services/recon", "services/web", "data/ids", "data/recon",
+                   "data/web"):  # the rules must really see every layer
+        assert (repo_root / "toolkit" / folder / "__init__.py").is_file(), folder
+    assert layer_violations(repo_root) == []
 
 
-def test_each_boundary_rule_is_detected(tmp_path):
+def test_each_layer_rule_is_detected(tmp_path):
     files = {
         "toolkit/__init__.py": "",
-        "toolkit/config.py": "from .web import app\n",
-        "toolkit/run_files.py": "import tools.Port_scan\n",
-        "toolkit/ids_core/__init__.py": "",
-        "toolkit/ids_core/split.py": "from ..recon import scanner\n",
-        "toolkit/recon/__init__.py": "",
-        "toolkit/recon/scanner.py": "import flask\nprint('scanning')\n",
-        "toolkit/recon/cli.py": "from .scanner import scan\nprint('ok')\n",
-        "toolkit/recon/export.py": "from .cli import main\n",
-        "toolkit/recon/nvd.py": "from toolkit.ids_core.runs import train\n",
-        "toolkit/web/__init__.py": "import flask\nfrom toolkit.recon import scanner\nprint('ok')\n",
+        "toolkit/data/__init__.py": "",
+        "toolkit/data/settings.py": "from ..services import ids\n",
+        "toolkit/data/recon/__init__.py": "",
+        "toolkit/data/recon/nvd.py": "from ..ids import bundle_files\n",
+        "toolkit/data/ids/__init__.py": "",
+        "toolkit/data/ids/bundle_files.py": "import socket\nprint('x')\n",
+        "toolkit/services/__init__.py": "",
+        "toolkit/services/ids/__init__.py": "",
+        "toolkit/services/ids/split.py": "import flask\nimport requests\nfrom ...ids_core import x\n",
+        "toolkit/services/ids/runs.py": "from pathlib import Path\nPath('a').write_text('b')\n"
+                                         "open('c')\ninput('?')\n",
+        "toolkit/services/recon/__init__.py": "",
+        "toolkit/services/recon/scan.py": "from ..ids import runs\nfrom ...controllers import x\n",
+        "toolkit/ui/__init__.py": "",
+        "toolkit/ui/cli.py": "from ..data import settings\nprint('fine')\n",
+        "toolkit/controllers/__init__.py": "",
+        "toolkit/controllers/scan.py": "import argparse\nfrom ..data.recon import nvd\n"
+                                        "from ..data import settings\nfrom ..ui import cli\n",
     }
     for name, text in files.items():
         (tmp_path / name).parent.mkdir(parents=True, exist_ok=True)
         (tmp_path / name).write_text(text, encoding="utf-8")
 
-    violations = boundary_violations(tmp_path)
-    found = "\n".join(violations)
+    found = "\n".join(layer_violations(tmp_path))
 
-    assert "toolkit.config imports the presentation module toolkit.web" in found
-    assert "toolkit.run_files imports the script package tools.Port_scan" in found
-    assert "toolkit.ids_core.split imports toolkit.recon " in found
-    assert "toolkit.recon.nvd imports toolkit.ids_core.runs " in found
-    assert "toolkit.recon.scanner imports the web framework (flask)" in found
-    assert "toolkit.recon.scanner calls print() at lines [2]" in found
-    assert "toolkit.recon.export imports the presentation module toolkit.recon.cli" in found
-    assert not [v for v in violations if v.startswith(("toolkit.web", "toolkit.recon.cli"))]
-    assert len(violations) == 7
+    expected = [
+        "toolkit.data.settings:1 (data) imports toolkit.services.ids (services)",
+        "toolkit.data.recon.nvd:1 imports toolkit.data.ids.bundle_files (recon and ids are",
+        "toolkit.data.ids.bundle_files:2 calls print()",
+        "toolkit.services.ids.split:1 imports the web framework (flask)",
+        "toolkit.services.ids.split:2 imports requests: only the data layer goes outside",
+        "toolkit.services.ids.split:3 imports the old name toolkit.ids_core",
+        "toolkit.services.ids.runs:2 calls write_text()",
+        "toolkit.services.ids.runs:3 calls open()",
+        "toolkit.services.ids.runs:4 calls input()",
+        "toolkit.services.recon.scan:1 imports toolkit.services.ids.runs (recon and ids are",
+        "toolkit.services.recon.scan:2 (services) imports toolkit.controllers.x (controllers)",
+        "toolkit.ui.cli:1 (ui) imports toolkit.data.settings (data)",
+        "toolkit.controllers.scan:2 (controllers) imports toolkit.data.recon.nvd: use a service",
+    ]
+    for line in expected:
+        assert line in found, line
+    assert len(found.splitlines()) == len(expected), found
+    assert "toolkit.data.ids.bundle_files:1 imports socket" not in found  # data may
+    assert "argparse" not in found and "toolkit.controllers.scan:3" not in found
 
 
 def test_no_tools_folder_in_git(repo_root):

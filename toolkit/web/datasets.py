@@ -7,7 +7,6 @@ changed by them.
 
 from __future__ import annotations
 
-import hashlib
 import logging
 from dataclasses import asdict
 from typing import Any
@@ -16,26 +15,24 @@ import numpy as np
 import pandas as pd
 from flask import Blueprint, jsonify, request
 
-from ..data.settings import SplitConfig
-from ..data.web import uploads
-from ..ids_core import registry
-from ..ids_core.balancing import recommend_balancing
+from ..services.ids import registry
+from ..services.ids.balancing import recommend_balancing
 from ..data.ids.dataset_files import DatasetError
-from ..ids_core.datasets import LoadedDataset, load_dataset
-from ..ids_core.preview import preview_balancing
-from ..ids_core.preview import recommend_features as score_features
-from ..ids_core.runs import DatasetRef
-from ..ids_core.split import SplitResult, split_dataset
-from .api import (
-    NO_DATASET,
-    UNKNOWN_COLUMN,
-    UNREADABLE_FILE,
-    Answer,
-    ApiError,
-    error_response,
-    json_body,
-    query,
+from ..services.ids.preview import preview_balancing
+from ..services.ids.preview import recommend_features as score_features
+from ..services.ids.split import SplitResult
+from ..services.web.datasets import (
+    candidate_features,
+    combine,
+    label_values,
+    read_upload,
+    remove_classes,
+    require_data,
+    require_target,
+    training_split,
 )
+from ..services.web.errors import UNREADABLE_FILE
+from .api import Answer, error_response, json_body, query
 from .schemas import (
     BalancingPreviewRequest,
     ClassesRequest,
@@ -47,15 +44,12 @@ from .schemas import (
 )
 from .security import display_name, safe_upload_name
 from .state import state
-from .workspace import UploadedData, Workspace, dataset_bytes, with_workspace
+from ..services.web.workspace import UploadedData, Workspace, dataset_bytes
+from .workspace import with_workspace
 
 log = logging.getLogger(__name__)
 
 bp = Blueprint("datasets", __name__, url_prefix="/api/v1")
-
-
-def label_values(frame: pd.DataFrame, target: str) -> pd.Series:
-    return frame[target].dropna().astype(str)
 
 
 def _json_records(frame: pd.DataFrame) -> list[dict[str, Any]]:
@@ -68,35 +62,6 @@ def _json_records(frame: pd.DataFrame) -> list[dict[str, Any]]:
                 values.loc[infinite, column] = np.where(frame[column][infinite] > 0, "inf", "-inf")
     records: list[dict[str, Any]] = values.to_dict(orient="records")
     return records
-
-
-def _combine(loaded: list[tuple[str, LoadedDataset]]) -> UploadedData:
-    """One UploadedData from the loaded files: an official train/test pair (NSL-KDD with a
-    file named '*test*'), or several files with the same columns stacked together."""
-    names = [name for name, _ in loaded]
-    first = loaded[0][1]
-    for name, dataset in loaded[1:]:
-        if dataset.profile.profile.name != first.profile.profile.name:
-            raise ValueError(f"{name} looks like a different dataset than {names[0]}.")
-        if list(dataset.frame.columns) != list(first.frame.columns):
-            raise ValueError(f"Column mismatch in {name}. All files must have identical columns.")
-    test_files = [i for i, name in enumerate(names) if "test" in name.lower()]
-    if len(loaded) == 2 and first.profile.split_strategy == "official" and len(test_files) == 1:
-        test_name, test = loaded[test_files[0]]
-        train_name, train = loaded[1 - test_files[0]]
-        return UploadedData(frame=train.frame, profile=train.profile, files=names,
-                            source=DatasetRef.from_loaded(train_name, train),
-                            test_frame=test.frame,
-                            test_source=DatasetRef.from_loaded(test_name, test))
-    if len(loaded) == 1:
-        return UploadedData(frame=first.frame, profile=first.profile, files=names,
-                            source=DatasetRef.from_loaded(names[0], first))
-    frame = pd.concat([dataset.frame for _, dataset in loaded], ignore_index=True)
-    combined = hashlib.sha256("\n".join(d.report.sha256 for _, d in loaded).encode()).hexdigest()
-    sources = pd.Series(np.repeat(names, [len(d.frame) for _, d in loaded]), index=frame.index)
-    return UploadedData(frame=frame, profile=first.profile, files=names, sources=sources,
-                        source=DatasetRef(" + ".join(names), combined, len(frame),
-                                          len(frame.columns)))
 
 
 def _dataset_summary(data: UploadedData, size: int) -> dict[str, Any]:
@@ -149,17 +114,14 @@ def upload(ws: Workspace) -> Answer:
         if save_path.resolve().parent != state().upload_dir.resolve():
             return error_response("Invalid file name.")
         try:
-            uploads.save(file.stream, save_path)
-            loaded.append((name, load_dataset(save_path)))
+            loaded.append((name, read_upload(file.stream, save_path)))
         except (DatasetError, ValueError, UnicodeError, OSError):
             log.exception("Could not read an uploaded file")
             return error_response(f"Could not read {name} as a CSV/TXT dataset. Check the file "
                                   "format.", code=UNREADABLE_FILE)
-        finally:
-            uploads.remove(save_path)
 
     try:
-        data = _combine(loaded)
+        data = combine(loaded)
     except ValueError:
         log.exception("Uploaded files don't fit together")
         return error_response("The files can't be combined: they must be parts of the same dataset "
@@ -169,18 +131,6 @@ def upload(ws: Workspace) -> Answer:
     state().workspaces.reserve_data(ws, size)  # may drop other idle workspaces, or refuse
     ws.data, ws.split = data, None
     return jsonify(dataset_answer(data, size))
-
-
-def require_data(ws: Workspace) -> UploadedData:
-    if ws.data is None:
-        raise ApiError("No dataset uploaded.", NO_DATASET)
-    return ws.data
-
-
-def _require_target(data: UploadedData, target: str) -> str:
-    if not target or target not in data.frame.columns:
-        raise ApiError("Target column not specified or not found.", UNKNOWN_COLUMN)
-    return target
 
 
 @bp.route("/dataset/preview", methods=["GET"])
@@ -207,30 +157,9 @@ def filter_classes(ws: Workspace) -> Answer:
     """Remove the rows of the selected classes (from the test file too)."""
     req = load(FilterRequest, json_body())
     data = require_data(ws)
-    target = _require_target(data, req.target)
+    target = require_target(data, req.target)
     to_remove = req.remove
-    if not to_remove:
-        return error_response("No values selected for removal.")
-    current = set(label_values(data.frame, target))
-    unknown = [v for v in to_remove if v not in current]
-    if unknown:
-        return error_response(f"Values not found in target: {', '.join(unknown)}")
-    remaining = sorted(current - set(to_remove))
-    if not remaining:
-        return error_response("Cannot remove all target values. At least 1 class must remain.")
-
-    before = len(data.frame)
-    keep = ~data.frame[target].astype(str).isin(to_remove)
-    data.frame = data.frame[keep].reset_index(drop=True)
-    if data.sources is not None:
-        data.sources = data.sources[keep].reset_index(drop=True)
-    if data.test_frame is not None and target in data.test_frame.columns:
-        test_keep = ~data.test_frame[target].astype(str).isin(to_remove)
-        data.test_frame = data.test_frame[test_keep].reset_index(drop=True)
-    ws.split = None
-    ws.data_bytes = dataset_bytes(data)  # smaller now: no room to reserve
-    removed = before - len(data.frame)
-    log.info("Removed %d target values (%d rows)", len(to_remove), removed)
+    removed, remaining = remove_classes(ws, data, target, to_remove)
     return jsonify({
         "success": True,
         "removed_values": to_remove,
@@ -251,22 +180,9 @@ def classes(ws: Workspace) -> Answer:
     """Values of the target column with their counts."""
     req = load(ClassesRequest, query())
     data = require_data(ws)
-    target = _require_target(data, req.target)
+    target = require_target(data, req.target)
     counts = {k: int(v) for k, v in label_values(data.frame, target).value_counts().items()}
     return jsonify({"values": list(counts), "value_counts": counts, "count": len(counts)})
-
-
-def _training_split(ws: Workspace, target: str, test_size: float) -> SplitResult:
-    """The split training will use (same profile, strategy, seed), cached for the previews."""
-    data = require_data(ws)
-    key = (id(data.frame), target, test_size)
-    if ws.split is None or ws.split[0] != key:
-        ws.split = None  # free the old split first (big datasets)
-        split = split_dataset(data.frame, target, profile=data.profile,
-                              test_frame=data.test_frame, sources=data.sources,
-                              config=SplitConfig(test_size=test_size))
-        ws.split = (key, split)
-    return ws.split[1]
 
 
 def _split_summary(split: SplitResult) -> dict[str, Any]:
@@ -275,30 +191,20 @@ def _split_summary(split: SplitResult) -> dict[str, Any]:
             "warnings": list(split.warnings)}
 
 
-def _candidate_features(data: UploadedData, target: str,
-                        chosen: list[str] | None = None) -> list[str]:
-    blocked = set(data.profile.blocked_columns)
-    if chosen:
-        if any(c not in data.frame.columns for c in chosen):
-            raise ApiError("Unknown input feature.", UNKNOWN_COLUMN)
-        return [c for c in chosen if c != target]
-    return [c for c in data.frame.columns if c != target and c not in blocked]
-
-
 @bp.route("/dataset/distribution", methods=["GET"])
 @with_workspace()
 def distribution(ws: Workspace) -> Answer:
     """Class counts of the dataset; the balancing recommendation uses the training split."""
     req = load(DistributionRequest, query())
     data = require_data(ws)
-    target = _require_target(data, req.target)
+    target = require_target(data, req.target)
     counts = label_values(data.frame, target).value_counts()
     total = int(counts.sum())
     percentages = {k: float(v) / total * 100 for k, v in counts.items()}
     try:
-        split = _training_split(ws, target, req.test_size)
+        split = training_split(ws, target, req.test_size)
         recommendation = recommend_balancing(split.train[target],
-                                             len(_candidate_features(data, target)))
+                                             len(candidate_features(data, target)))
     except ValueError:
         log.exception("Could not split the dataset for the recommendation")
         return error_response("Could not make a training split with this target (is there more "
@@ -327,13 +233,13 @@ def balancing_preview(ws: Workspace) -> Answer:
     """
     req = load(BalancingPreviewRequest, json_body())
     data = require_data(ws)
-    target = _require_target(data, req.target)
+    target = require_target(data, req.target)
     method = req.balancing or "smote"
     if method != "recommended" and method not in registry.BALANCERS:
         return error_response(f"Unknown balancing method: {method}")
-    features = _candidate_features(data, target, req.features)
+    features = candidate_features(data, target, req.features)
     try:
-        split = _training_split(ws, target, req.test_size)
+        split = training_split(ws, target, req.test_size)
         preview = preview_balancing(split.train, target, method, features=features)
     except ValueError:
         log.exception("Balancing preview failed")
@@ -360,9 +266,9 @@ def feature_scores(ws: Workspace) -> Answer:
     """Feature scores on the training split, after the leakage guard."""
     req = load(FeatureScoresRequest, json_body())  # k clamped to 1-10,000 (S9)
     data = require_data(ws)
-    target = _require_target(data, req.target)
+    target = require_target(data, req.target)
     try:
-        split = _training_split(ws, target, req.test_size)
+        split = training_split(ws, target, req.test_size)
         result = score_features(split.train, target,
                                 profile_blocked=data.profile.blocked_columns)
     except ValueError:

@@ -3,7 +3,7 @@ or faked in tests. There are exactly three; everything else is plain functions a
 registries.
 
 - ``ModelStore``: where trained models are kept (signed bundles on disk:
-  ``toolkit.ids_core.exports.BundleStore``).
+  ``toolkit.services.ids.exports.BundleStore``).
 - ``IntelProvider``: an online (or offline, or fake) source of facts about a detected
   product or an IP address (NVD, OpenRouter, AbuseIPDB).
 - ``ProgressSink``: where a long task reports progress (the console, a web job, a test).
@@ -17,10 +17,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 if TYPE_CHECKING:  # types only: the ports themselves import no layer
-    from .ids_core.exports import BundleInfo, SavedBundle
-    from .data.recon.findings import IntelFinding
-    from .ids_core.bundle import Bundle
-    from .ids_core.runs import TrainingRun
+    from .ids.exports import BundleInfo, SavedBundle
+    from ..data.recon.findings import IntelFinding
+    from .ids.bundle import Bundle
+    from .ids.runs import TrainingRun
 
 
 @runtime_checkable

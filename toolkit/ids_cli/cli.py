@@ -28,16 +28,16 @@ from typing import Any, cast
 import numpy as np
 import pandas as pd
 
-from ..ids_core.exports import BundleInfo, BundleStore
-from ..ids_core.batch import prediction_csv, prediction_summary, prediction_table
-from ..ids_core.bundle import Bundle, BundleVersionWarning
+from ..services.ids.exports import BundleInfo, BundleStore
+from ..services.ids.batch import prediction_csv, prediction_summary, prediction_table
+from ..services.ids.bundle import Bundle, BundleVersionWarning
 from ..data.ids.bundle_files import BundleError
 from ..data.ids.dataset_files import DatasetError
-from ..ids_core.datasets import load_dataset
-from ..ids_core.registry import MODELS
+from ..services.ids.datasets import load_dataset
+from ..services.ids.registry import MODELS
 from ..data.files import read_text, write_new_text
 from ..data.logs import setup_logging
-from ..ports import ModelStore
+from ..services.ports import ModelStore
 
 MODEL_STORE: ModelStore = BundleStore()  # this install's exports (instance/bundles)
 LARGE_BUNDLE = 500 * 2**20  # bytes: say that loading takes a while
@@ -196,7 +196,7 @@ def run_csv(bundle: Bundle, csv_path: str | Path, output: str | Path | None = No
         raise FileExistsError(f"{output} already exists; choose another --output")
     frame = load_dataset(csv_path).frame
     label = label_column(bundle)
-    # the same table as the web trainer's "Predict a CSV file" (ids_core.batch, step 1.4f)
+    # the same table as the web trainer's "Predict a CSV file" (services.ids.batch, step 1.4f)
     table = prediction_table(bundle.model(model), frame, label)
     write_new_text(output, prediction_csv(table))
     summary = prediction_summary(table)

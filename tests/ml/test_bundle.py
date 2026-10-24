@@ -12,11 +12,11 @@ import pandas as pd
 import pytest
 
 from toolkit.data.ids import bundle_files
-from toolkit.ids_core import exports as core_exports
-from toolkit.ids_core import bundle
+from toolkit.services.ids import exports as core_exports
+from toolkit.services.ids import bundle
 from toolkit.data.ids.bundle_files import BundleError
-from toolkit.ids_core.bundle import BundleVersionWarning, pack, unpack
-from toolkit.ids_core.runs import DatasetRef, TrainSettings, train
+from toolkit.services.ids.bundle import BundleVersionWarning, pack, unpack
+from toolkit.services.ids.runs import DatasetRef, TrainSettings, train
 
 KEY = bytes(range(32))
 OTHER_KEY = bytes(range(1, 33))

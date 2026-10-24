@@ -12,7 +12,8 @@ from uuid import uuid4
 from flask import Flask, Response, request, session
 from werkzeug.utils import secure_filename
 
-from .api import CROSS_SITE, CSRF_TOKEN, error_response
+from ..services.web.errors import CROSS_SITE, CSRF_TOKEN
+from .api import error_response
 
 CONTENT_SECURITY_POLICY = "; ".join([
     "default-src 'self'",

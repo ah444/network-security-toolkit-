@@ -2,8 +2,8 @@
 
 import ipaddress
 
-from ..data.settings import ScanConfig
-from ..data.recon.resolve import first_address
+from ...data.settings import ScanConfig
+from ...data.recon.resolve import first_address
 
 
 def parse_target(text: str, max_hosts: int) -> list[str]:

@@ -5,7 +5,7 @@ import json
 import pytest
 
 from toolkit.data.recon import probes
-from toolkit.recon import intel as recon_intel
+from toolkit.services.recon import intel as recon_intel
 from toolkit.data.recon import nvd
 
 # Real replies of the NVD CVE API 2.0, saved on 2026-10-20 (tests/fixtures/README.md).

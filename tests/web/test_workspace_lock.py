@@ -10,8 +10,8 @@ import threading
 
 import pytest
 
-from toolkit.web import training
-from toolkit.web.workspace import Workspace
+from toolkit.services.web import training
+from toolkit.services.web.workspace import Workspace
 from web_jobs import TRAIN_URL, wait_for
 
 TARGET = "Label"

@@ -43,16 +43,22 @@ from typing import Any
 from ..data.settings import ScanConfig, scan_limits
 from ..data.logs import add_secrets, setup_logging
 from ..data.recon.scan_files import EXPORT_FORMATS, ReportEntry, export_results
-from .report import make_entry
-from .intel import Intel, LookupResult
+from ..services.recon.report import make_entry
+from ..services.recon.intel import Intel, LookupResult
 from ..data.keys import KEY_VARIABLES, ai_model, legacy_key_file_notice, load_api_keys
 from ..data.recon.lookup import INTEL_WORKERS
-from .os_guess import guess_os
+from ..services.recon.os_guess import guess_os
 from ..data.recon.ping import ping_host
 from ..data.recon.probes import product_version
 from ..data.recon.scanner import PortResult, scan_ports
-from .targets import (check_limits, is_ip_literal, is_public_ip, parse_port_range, parse_ports,
-                      parse_target)
+from ..services.recon.targets import (
+    check_limits,
+    is_ip_literal,
+    is_public_ip,
+    parse_port_range,
+    parse_ports,
+    parse_target,
+)
 from ..data.recon.text import one_line
 
 # --- Authorization (S16) ----------------------------------------------------------------------

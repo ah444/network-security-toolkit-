@@ -16,9 +16,9 @@ import pandas as pd
 import pytest
 
 from toolkit.data.ids import bundle_files
-from toolkit.ids_core import exports as core_exports
-from toolkit.ids_core import bundle as core_bundle
-from toolkit.ids_core.datasets import load_dataset
+from toolkit.services.ids import exports as core_exports
+from toolkit.services.ids import bundle as core_bundle
+from toolkit.services.ids.datasets import load_dataset
 from web_jobs import train_and_wait
 
 CLI_DIR = "toolkit/ids_cli"

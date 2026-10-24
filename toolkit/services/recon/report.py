@@ -1,10 +1,10 @@
 """One report entry per open port (B12); every text from the network is cleaned here
 (S14). ``toolkit.data.recon.scan_files`` saves them."""
 
-from ..data.recon.scan_files import ReportEntry
+from ...data.recon.scan_files import ReportEntry
 from .intel import LookupResult
-from ..data.recon.scanner import PortResult
-from ..data.recon.text import clean_text, one_line
+from ...data.recon.scanner import PortResult
+from ...data.recon.text import clean_text, one_line
 
 
 def make_entry(target: str, result: PortResult, software: str | None,

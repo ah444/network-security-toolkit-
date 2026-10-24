@@ -7,8 +7,8 @@ import json
 import pytest
 
 from toolkit.data.recon import scan_files as export, probes
-from toolkit.recon import report
-from toolkit.recon import intel as recon_intel
+from toolkit.services.recon import report
+from toolkit.services.recon import intel as recon_intel
 from toolkit.data.recon import scanner as recon_scanner
 from toolkit.data.recon import text as recon_text
 from toolkit.data.recon import openrouter as llm, nvd

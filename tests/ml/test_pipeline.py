@@ -14,9 +14,9 @@ from sklearn.feature_selection import SelectKBest, f_classif
 from sklearn.utils.validation import check_is_fitted
 
 from toolkit.data.settings import PipelineConfig, max_workers
-from toolkit.ids_core import registry
-from toolkit.ids_core.pipeline import STEPS, train_models
-from toolkit.ids_core.split import split_dataset
+from toolkit.services.ids import registry
+from toolkit.services.ids.pipeline import STEPS, train_models
+from toolkit.services.ids.split import split_dataset
 
 CLASSES = ("BENIGN", "DoS", "PortScan")
 

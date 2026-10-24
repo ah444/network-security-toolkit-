@@ -8,7 +8,7 @@ import pytest
 import requests
 
 from toolkit.data.recon.findings import IntelFinding
-from toolkit.recon import intel as recon_intel
+from toolkit.services.recon import intel as recon_intel
 from toolkit.data.recon import lookup, nvd
 from toolkit.data.recon.scanner import PortResult
 

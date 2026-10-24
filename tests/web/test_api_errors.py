@@ -2,6 +2,7 @@
 
 import io
 
+from toolkit.services.web import errors
 from toolkit.web import api
 
 
@@ -13,15 +14,15 @@ def _error(response):
 
 
 def test_error_codes_are_distinct():
-    codes = [value for name, value in vars(api).items() if name.isupper() and isinstance(value, str)]
+    codes = [value for name, value in vars(errors).items() if name.isupper() and isinstance(value, str)]
     assert len(codes) == len(set(codes)) >= 13
     assert all(code == code.upper() for code in codes)
 
 
 def test_details_only_when_given(web_app):
     with web_app.test_request_context():
-        plain, status = api.error_response("Nope.", 400, api.BAD_REQUEST)
-        detailed, _ = api.error_response("Nope.", 400, api.TRAINING_FAILED, failures=[1])
+        plain, status = api.error_response("Nope.", 400, errors.BAD_REQUEST)
+        detailed, _ = api.error_response("Nope.", 400, errors.TRAINING_FAILED, failures=[1])
     assert status == 400 and plain.get_json() == {"error": {"code": "BAD_REQUEST",
                                                              "message": "Nope."}}
     assert detailed.get_json()["error"]["details"] == {"failures": [1]}

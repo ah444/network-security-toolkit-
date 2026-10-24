@@ -7,8 +7,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from toolkit.ids_core import registry
-from toolkit.ids_core.preview import preview_balancing, recommend_features
+from toolkit.services.ids import registry
+from toolkit.services.ids.preview import preview_balancing, recommend_features
 
 CLASSES = ("BENIGN", "DoS", "PortScan")
 

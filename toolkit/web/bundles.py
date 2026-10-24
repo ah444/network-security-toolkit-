@@ -7,57 +7,34 @@ import io
 import logging
 import warnings
 from collections.abc import Mapping
-from pathlib import PurePath
 from typing import Any
 
-import pandas as pd
 from flask import Blueprint, jsonify, request, send_file
 
-from ..ids_core.exports import write_run
-from ..ids_core import registry
-from ..ids_core.batch import (missing_features, prediction_csv, prediction_summary,
-                              prediction_table)
-from ..ids_core.bundle import Bundle, BundleVersionWarning
+from ..services.ids.exports import write_run
+from ..services.ids import registry
+from ..services.ids.bundle import Bundle, BundleVersionWarning
 from ..data.ids.bundle_files import BundleError
-from ..data.ids.dataset_files import DatasetError
-from ..data.web import uploads
-from ..ids_core.datasets import load_dataset
-from ..ids_core.pipeline import FittedModel
-from ..ids_core.runs import TrainingRun
-from .api import (NO_MODEL_LOADED, NOT_FOUND, NOT_TRAINED, TOO_LARGE, UNKNOWN_COLUMN,
-                  UNREADABLE_FILE, Answer, error_response, json_body)
+from ..services.ids.pipeline import FittedModel
+from ..services.ids.runs import TrainingRun
+from ..services.web.errors import (
+    NO_MODEL_LOADED,
+    NOT_FOUND,
+    NOT_TRAINED,
+    TOO_LARGE,
+)
+from ..services.web import prediction
+from .api import Answer, error_response, json_body
 from .schemas import ExportRequest, PredictRequest, load
 from .security import display_name, safe_model_basename, safe_upload_name
 from .state import state
 from .training import features_info
-from .workspace import BatchPredictions, ExportedBundle, Workspace, with_workspace
+from ..services.web.workspace import ExportedBundle, Workspace
+from .workspace import with_workspace
 
 log = logging.getLogger(__name__)
 
 bp = Blueprint("bundles", __name__, url_prefix="/api/v1")
-
-
-def _predict(models: Mapping[str, FittedModel], default: str | None,
-             req: PredictRequest) -> Answer:
-    """Predict one row with ``models[model]`` through its saved pipeline (B2)."""
-    values = req.values
-    if not values:
-        return error_response("No input values provided.")
-    algorithm = req.model or default or ""
-    if algorithm not in models:
-        return error_response(f"Invalid algorithm selection. Available models: {', '.join(models)}")
-    fitted = models[algorithm]
-    try:
-        row = fitted.input_frame(values)
-    except ValueError as error:
-        message = str(error)  # written by FittedModel.input_frame for the user (no internals)
-        return error_response(message)
-    try:
-        prediction = fitted.predict(row)[0]
-    except Exception:
-        log.exception("Prediction error")
-        return error_response("Prediction failed for these input values.", 500)
-    return jsonify({"prediction": str(prediction), "model": algorithm})
 
 
 @bp.route("/run/predict", methods=["POST"])
@@ -66,7 +43,8 @@ def predict(ws: Workspace) -> Answer:
     req = load(PredictRequest, json_body())
     if ws.run is None:
         return error_response("Models not trained yet. Train a model first.", code=NOT_TRAINED)
-    return _predict(ws.run.evaluation.training.models, ws.run.evaluation.selected, req)
+    return jsonify(prediction.predict_one(ws.run.evaluation.training.models, ws.run.evaluation.selected,
+                               req.values, req.model))
 
 
 @bp.route("/bundle/predict", methods=["POST"])
@@ -76,23 +54,21 @@ def predict_loaded(ws: Workspace) -> Answer:
     if ws.loaded is None:
         return error_response("No model loaded. Load a bundle exported by this toolkit first.",
                               code=NO_MODEL_LOADED)
-    return _predict(ws.loaded.models, ws.loaded.selected, req)
+    return jsonify(prediction.predict_one(ws.loaded.models, ws.loaded.selected,
+                               req.values, req.model))
 
 
 # --- Batch prediction: a whole CSV file (plan F1, step 1.4f) ---------------------------------
 
-def _model_title(name: str) -> str:
-    return registry.MODELS[name].title if name in registry.MODELS else name
-
-
-def _too_large() -> Answer:
-    return error_response(f"File too large to predict (limit: {state().config.max_predict_mb} "
-                          "MB, TOOLKIT_MAX_PREDICT_MB).", 413, TOO_LARGE)
-
-
-def _read_prediction_file() -> pd.DataFrame | Answer:
-    """The uploaded ``file`` as a table, read like a dataset upload: a unique sanitised
-    name in uploads/, deleted as soon as it is read (S2, S3, S11); or an error answer."""
+def _predict_file(ws: Workspace, source: str, models: Mapping[str, FittedModel],
+                  default: str | None, label: str | None) -> Answer:
+    """Label every row of the uploaded file; keeps the labelled CSV for GET /predictions."""
+    if (request.content_length or 0) > state().config.max_predict_mb * 2**20:
+        return error_response(prediction.too_large(state().config.max_predict_mb), 413, TOO_LARGE)  # before request.form reads the body
+    algorithm = request.form.get("model") or default or ""
+    if algorithm not in models:
+        return error_response(f"Invalid algorithm selection. Available models: {', '.join(models)}")
+    fitted = models[algorithm]
     file = request.files.get("file")
     if file is None or not file.filename:
         return error_response("Choose a .csv or .txt file to predict.")
@@ -102,56 +78,8 @@ def _read_prediction_file() -> pd.DataFrame | Answer:
     save_path = state().upload_dir / safe_upload_name(file.filename)
     if save_path.resolve().parent != state().upload_dir.resolve():
         return error_response("Invalid file name.")
-    try:
-        if uploads.save(file.stream, save_path) > state().config.max_predict_mb * 2**20:
-            return _too_large()
-        return load_dataset(save_path).frame
-    except (DatasetError, ValueError, UnicodeError, OSError):
-        log.exception("Could not read a file to predict")
-        return error_response(f"Could not read {name} as a CSV/TXT file. Check the file "
-                              "format.", code=UNREADABLE_FILE)
-    finally:
-        uploads.remove(save_path)
-
-
-def _predict_file(ws: Workspace, source: str, models: Mapping[str, FittedModel],
-                  default: str | None, label: str | None) -> Answer:
-    """Label every row of the uploaded file; keeps the labelled CSV for GET /predictions."""
-    if (request.content_length or 0) > state().config.max_predict_mb * 2**20:
-        return _too_large()  # before request.form reads the body
-    algorithm = request.form.get("model") or default or ""
-    if algorithm not in models:
-        return error_response(f"Invalid algorithm selection. Available models: {', '.join(models)}")
-    fitted = models[algorithm]
-    frame = _read_prediction_file()
-    if not isinstance(frame, pd.DataFrame):
-        return frame
-    missing = missing_features(fitted, frame)
-    if missing:
-        shown = ", ".join(missing[:20]) + (f" and {len(missing) - 20} more" if len(missing) > 20
-                                           else "")
-        return error_response(f"The file is missing feature column(s) of this model: {shown}.",
-                              code=UNKNOWN_COLUMN)
-    try:
-        table = prediction_table(fitted, frame, label)
-    except Exception:
-        log.exception("Batch prediction failed")
-        return error_response("Prediction failed for this file: check that its columns hold "
-                              "the same kinds of values as the training data.")
-    summary = prediction_summary(table)
-    file_name = display_name(request.files["file"].filename or "")
-    answer: dict[str, Any] = {
-        "message": f"{summary['rows']:,} rows predicted with {_model_title(algorithm)}.",
-        "source": source,
-        "model": algorithm,
-        "file": file_name,
-        **summary,
-        "label_column": label if summary["matches"] else None,
-        "download_url": "/api/v1/predictions",
-        "download_name": f"{PurePath(file_name).stem or 'predictions'}.predictions.csv",
-    }
-    ws.predictions = BatchPredictions(prediction_csv(table).encode("utf-8"), answer)
-    return jsonify(answer)
+    frame = prediction.read_prediction_file(file.stream, save_path, name, state().config.max_predict_mb)
+    return jsonify(prediction.predict_file(ws, source, fitted, frame, name, label))
 
 
 def _run_label(run: TrainingRun) -> str | None:

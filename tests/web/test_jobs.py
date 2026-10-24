@@ -10,7 +10,9 @@ import threading
 import pytest
 
 from toolkit.data.settings import WebConfig
-from toolkit.web import jobs, training
+from toolkit.services.web import jobs
+from toolkit.services.web import training
+from toolkit.web import training as web_training
 from web_jobs import TRAIN_URL, train_and_wait, wait_for
 from web_js import js_sources
 
@@ -102,7 +104,7 @@ def test_a_job_with_nothing_ahead_is_starting():
     runner = jobs.JobRunner()
     job = jobs.Job(work=lambda job: {}, on_end=lambda: None, max_seconds=60, models=1, folds=3)
     runner._waiting.append(job)  # what submit() does before the worker takes it
-    view = jobs.job_view(job, runner)
+    view = web_training.job_view(job, runner)
     assert (view["state"], view["queue_position"], view["phase"]) == ("queued", 0, "Starting")
     train_js = js_sources()["train.js"]
     assert '"Starting..."' in train_js and "ahead of this one" not in train_js

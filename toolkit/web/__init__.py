@@ -1,6 +1,6 @@
 """Web trainer: the Flask app (presentation layer, plan §2; moved here in v5.1 step 1.2a).
 
-Since v5.0 (step 0.4g) the routes are a thin layer over ``toolkit.ids_core``: the loader
+Since v5.0 (step 0.4g) the routes are a thin layer over ``toolkit.services.ids``: the loader
 reads uploads, the split, leakage guard, training pipeline and evaluation run in
 ``train(...)``, and models are saved as signed bundles. Nothing here preprocesses data
 itself, so the web trainer, a saved bundle and the CLI all use the same pipeline.
@@ -24,16 +24,16 @@ from collections.abc import Sequence
 
 from flask import Flask
 
-from ..ids_core.exports import BundleStore
+from ..services.ids.exports import BundleStore
 from ..data.web import net, uploads
 from ..data.settings import WebConfig, instance_dir, port_number, web_config
 from ..data.logs import setup_logging
 from . import bundles, datasets, pages, resume, training, workspace
 from .api import register_error_handlers
-from .jobs import JobRunner
+from ..services.web.jobs import JobRunner
 from .security import register_security
 from .state import WebState
-from .workspace import WorkspaceStore, start_idle_sweep
+from ..services.web.workspace import WorkspaceStore, start_idle_sweep
 
 BLUEPRINTS = (pages.bp, datasets.bp, training.bp, bundles.bp, workspace.bp, resume.bp)
 

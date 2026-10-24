@@ -24,7 +24,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from ..data.settings import (
+from ...data.settings import (
     EvaluationConfig,
     LeakageConfig,
     PipelineConfig,

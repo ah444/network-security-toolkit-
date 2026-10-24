@@ -1,5 +1,5 @@
 """Online lookups for open ports (B10, S12, S13, R3): the ``Intel`` façade over the
-IntelProviders (``toolkit.ports.IntelProvider``): NVD, OpenRouter, AbuseIPDB.
+IntelProviders (``toolkit.services.ports.IntelProvider``): NVD, OpenRouter, AbuseIPDB.
 """
 
 import threading
@@ -8,7 +8,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any, TypedDict
 
 from ...data.recon.findings import CveEntry, IntelFinding
-from ...ports import IntelProvider
+from ..ports import IntelProvider
 from ...data.recon.abuseipdb import AbuseIpdbProvider
 from ...data.keys import ai_model
 from ...data.recon.openrouter import OpenRouterProvider

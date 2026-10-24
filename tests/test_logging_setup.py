@@ -51,9 +51,9 @@ def test_log_file_in_instance_logs_utf8_and_rotates(tmp_path, monkeypatch, clean
 def test_line_format(tmp_path, monkeypatch, clean_logging):
     monkeypatch.setenv("TOOLKIT_INSTANCE_DIR", str(tmp_path))
     path = data_logs.setup_logging("web")
-    logging.getLogger("toolkit.ids_core.split").warning("Split %s", "stratified")
+    logging.getLogger("toolkit.services.ids.split").warning("Split %s", "stratified")
     line = _read_logs(path).strip()
-    assert line.endswith(" WARNING toolkit.ids_core.split: Split stratified")
+    assert line.endswith(" WARNING toolkit.services.ids.split: Split stratified")
     assert line[4] == "-" and line[10] == "T"  # ISO date and time first
 
 
@@ -129,8 +129,8 @@ def test_library_warnings_reach_the_log(tmp_path, monkeypatch, clean_logging):
 
 def test_no_dataset_values_in_logs(tmp_path, monkeypatch, fixtures_dir, clean_logging):
     """A cell value planted in the data must never reach the log, even at DEBUG."""
-    from toolkit.ids_core.datasets import load_dataset
-    from toolkit.ids_core.runs import TrainSettings, train
+    from toolkit.services.ids.datasets import load_dataset
+    from toolkit.services.ids.runs import TrainSettings, train
 
     marker = "zqmarkerzq"
     lines = (fixtures_dir / "nslkdd_train_sample.txt").read_text(encoding="utf-8").splitlines()

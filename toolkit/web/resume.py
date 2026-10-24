@@ -9,10 +9,12 @@ from flask import Blueprint, jsonify
 from .api import Answer
 from .bundles import bundle_answer, export_answer
 from .datasets import dataset_answer
-from .jobs import FINISHED, job_view
+from ..services.web.jobs import FINISHED
+from .training import job_view
 from .state import state
 from .training import run_result
-from .workspace import Workspace, with_workspace
+from ..services.web.workspace import Workspace
+from .workspace import with_workspace
 
 bp = Blueprint("resume", __name__, url_prefix="/api/v1")
 

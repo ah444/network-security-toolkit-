@@ -1,7 +1,7 @@
 """Dataset files: their first bytes, their SHA-256, their rows as table chunks.
 
 What the bytes mean (encoding, separator, profile, column types) is decided by
-``toolkit.ids_core.datasets``; this module only reads.
+``toolkit.services.ids.datasets``; this module only reads.
 """
 
 from __future__ import annotations

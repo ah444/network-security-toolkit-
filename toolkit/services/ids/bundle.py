@@ -31,7 +31,8 @@ from typing import Any, cast
 import joblib
 import numpy as np
 
-from ..data.ids.bundle_files import KEY_BYTES, BundleError
+from ...data.ids.bundle_files import KEY_BYTES, BundleError
+from .legacy_names import old_module_names
 from .pipeline import FittedModel
 from .registry import MODELS
 from .runs import TrainingRun, package_versions
@@ -185,7 +186,8 @@ def unpack(data: bytes, *, key: bytes | None = None, pinned_sha256: str | None =
     for note in notes:
         warnings.warn(note, BundleVersionWarning, stacklevel=2)
 
-    models = joblib.load(io.BytesIO(payload))  # trusted and version-checked from here on
+    with old_module_names():  # bundles saved before step 1.5d name toolkit.ids_core
+        models = joblib.load(io.BytesIO(payload))  # trusted and version-checked from here on
     if (not isinstance(models, dict) or list(models) != list(manifest.get("models", ()))
             or not all(isinstance(m, FittedModel) for m in models.values())):
         raise BundleError("BAD_PAYLOAD", "The bundle's model data is not what its manifest lists")

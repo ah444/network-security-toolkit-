@@ -12,9 +12,10 @@ import pandas as pd
 import pytest
 
 from toolkit.data.ids import bundle_files
-from toolkit.ids_core.bundle import pack
-from toolkit.ids_core.datasets import load_dataset
-from toolkit.web import datasets, training
+from toolkit.services.ids.bundle import pack
+from toolkit.services.ids.datasets import load_dataset
+from toolkit.services.web import training
+from toolkit.web import datasets
 from web_jobs import train_and_wait
 from web_js import all_js, js_sources
 

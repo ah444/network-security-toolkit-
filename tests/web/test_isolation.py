@@ -8,8 +8,10 @@ import toolkit.web as web
 from web_jobs import train_and_wait
 
 TARGET = "Label"  # stripped by the v5 loader (B17)
-WEB_MODULES = ("api", "bundles", "datasets", "jobs", "pages", "schemas", "security", "state",
-               "training", "workspace")
+WEB_MODULES = (*(f"toolkit.web.{name}" for name in (
+    "api", "bundles", "datasets", "pages", "schemas", "security", "state", "training",
+    "workspace")), *(f"toolkit.services.web.{name}" for name in (
+    "datasets", "errors", "jobs", "prediction", "training", "workspace")))
 
 
 def _upload(test_client, path):
@@ -33,7 +35,7 @@ def two_clients(web_app):
 
 
 def test_no_shared_globals_left():
-    for module in (web, *(importlib.import_module(f"toolkit.web.{name}") for name in WEB_MODULES)):
+    for module in (web, *(importlib.import_module(name) for name in WEB_MODULES)):
         for name in ("data_store", "model_config", "loaded_model_config", "_workspaces"):
             assert not hasattr(module, name), f"module-level '{name}' is shared by every user"
 

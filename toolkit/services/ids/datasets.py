@@ -28,12 +28,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from ..data.ids.dataset_files import (
-    DatasetError,
-    file_sha256,
-    read_chunks,
-    read_sample,
-)
+from ...data.ids.dataset_files import DatasetError, file_sha256, read_chunks, read_sample
 from .profiles import ProfileMatch, detect_profile
 
 log = logging.getLogger(__name__)

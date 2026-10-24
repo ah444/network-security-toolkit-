@@ -5,8 +5,8 @@ import pandas as pd
 import pytest
 
 from toolkit.data.settings import LeakageConfig
-from toolkit.ids_core.datasets import load_dataset
-from toolkit.ids_core.leakage import check_leakage, name_pattern
+from toolkit.services.ids.datasets import load_dataset
+from toolkit.services.ids.leakage import check_leakage, name_pattern
 
 
 @pytest.fixture(scope="module")

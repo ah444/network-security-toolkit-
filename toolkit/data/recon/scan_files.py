@@ -1,7 +1,7 @@
 """Scan report files: one entry per open port, saved as UTF-8 JSON, CSV or TXT in
 ``instance/scans/`` without ever overwriting a file (B12). CSV cells that look like
 formulas are written as text (S14); the entries are made (and their network text
-cleaned) by ``toolkit.recon.report``.
+cleaned) by ``toolkit.services.recon.report``.
 """
 
 import csv

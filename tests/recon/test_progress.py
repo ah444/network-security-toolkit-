@@ -2,7 +2,7 @@
 
 import threading
 
-from toolkit.ports import NullProgress, ProgressSink
+from toolkit.services.ports import NullProgress, ProgressSink
 from toolkit.data.recon import scanner as recon_scanner
 
 

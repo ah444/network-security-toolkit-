@@ -3,8 +3,8 @@
 The key is created once, on the first save, in ``instance/signing.key`` (gitignored;
 ``TOOLKIT_INSTANCE_DIR`` moves ``instance/``). Loading never creates a key. Bundles live in
 ``instance/bundles/<run id>.bundle`` and are never overwritten. What the bytes mean (format,
-signature, models) is ``toolkit.ids_core.bundle``; saving, listing and loading runs is
-``toolkit.ids_core.exports``.
+signature, models) is ``toolkit.services.ids.bundle``; saving, listing and loading runs is
+``toolkit.services.ids.exports``.
 """
 
 from __future__ import annotations
