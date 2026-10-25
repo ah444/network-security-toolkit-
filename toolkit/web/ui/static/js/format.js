@@ -56,7 +56,7 @@ export const BALANCING_HINTS = {
   "smote_tomek": "SMOTE + Tomek Links. Creates synthetic samples then cleans boundaries."
 };
 
-// Plain-language text for the split's reason and warning codes (toolkit/ids_core/split.py)
+// Plain-language text for the split's reason and warning codes (toolkit/core/services/ids/split.py)
 const SPLIT_MESSAGES = {
   "STRATIFIED_SCORES_MAY_BE_OPTIMISTIC": "Rows were split at random (stratified by class), so flows of the same attack can be on both sides: the scores may be optimistic.",
   "CLASS_MISSING_FROM_TEST": "Some classes have no rows in the test split, so they are not tested.",
