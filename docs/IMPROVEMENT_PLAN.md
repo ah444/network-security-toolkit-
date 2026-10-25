@@ -777,6 +777,7 @@ A checkpoint that fails any of these isn't tagged.
 ### v5.2+ — Impressive features (only after the v5.0 + v5.1 checks pass)
 | Order | Features |
 |---|---|
+| Before (asked by the user, 2026-10-25) | 2.1 theme button (Auto / Light / Dark), 2.2 the code arranged by interface (`cli/`, `web/`, `core/`), 2.3 the port scan in the web app; see [V5.2_CHECKLIST.md](V5.2_CHECKLIST.md) |
 | First | F2 full leaderboard UI (charts, run-to-run comparison; the basic table already ships in 0.4d), F3 explainability, F5 scan reports, F6 history (built on TrainingRun) |
 | Next | F7 recon→IDS dashboard, F9 tuning UI, F10 dashboard home |
 | Stretch | F8 PCAP/live detection, F11 scheduled scans, F12 Arabic/RTL, F13 offline CVE, D13-B asyncio scanner |
