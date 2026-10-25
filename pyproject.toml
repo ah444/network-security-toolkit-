@@ -52,8 +52,12 @@ toolkit = "toolkit.start:main"
 [tool.setuptools.packages.find]
 include = ["toolkit*"]
 
-# The web trainer's page templates and static files.
+# The web trainer's page templates and static files; the folders' READMEs (v5.2 step 2.3e).
 [tool.setuptools.package-data]
+"toolkit" = ["README.md"]
+"toolkit.core" = ["README.md"]
+"toolkit.cli" = ["README.md"]
+"toolkit.web" = ["README.md"]
 "toolkit.web.ui" = ["templates/*", "static/**/*"]
 
 [tool.pytest.ini_options]
