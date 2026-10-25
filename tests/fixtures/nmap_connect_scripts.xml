@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE nmaprun>
+<?xml-stylesheet href="file:///C:/Program Files (x86)/Nmap/nmap.xsl" type="text/xsl"?>
+<!-- Nmap 7.992 scan initiated Sun Oct 25 22:12:49 2026 as: &quot;C:\\Program Files (x86)\\Nmap\\nmap.exe&quot; -n -Pn -oX - -&#45;reason -sT -&#45;unprivileged -sV -&#45;version-intensity 7 -T3 -&#45;script banner,http-title,http-server-header,ssl-cert,ssh-hostkey,smb-protocols,smb2-time,rdp-ntlm-info -&#45;stats-every 1s -&#45;host-timeout 60m -p T:1,135,445,2222,3306,5357,11211 127.0.0.1 -->
+<nmaprun scanner="nmap" args="&quot;C:\\Program Files (x86)\\Nmap\\nmap.exe&quot; -n -Pn -oX - -&#45;reason -sT -&#45;unprivileged -sV -&#45;version-intensity 7 -T3 -&#45;script banner,http-title,http-server-header,ssl-cert,ssh-hostkey,smb-protocols,smb2-time,rdp-ntlm-info -&#45;stats-every 1s -&#45;host-timeout 60m -p T:1,135,445,2222,3306,5357,11211 127.0.0.1" start="1792955569" startstr="Sun Oct 25 22:12:49 2026" version="7.992" xmloutputversion="1.05">
+<scaninfo type="connect" protocol="tcp" numservices="7" services="1,135,445,2222,3306,5357,11211"/>
+<verbose level="0"/>
+<debugging level="0"/>
+<taskprogress task="Service scan" time="1792955573" percent="33.33" remaining="6" etc="1792955579"/>
+<taskprogress task="Service scan" time="1792955574" percent="33.33" remaining="5" etc="1792955579"/>
+<taskprogress task="Service scan" time="1792955575" percent="33.33" remaining="4" etc="1792955579"/>
+<taskprogress task="Service scan" time="1792955576" percent="33.33" remaining="3" etc="1792955579"/>
+<taskprogress task="Service scan" time="1792955577" percent="66.67" remaining="2" etc="1792955579"/>
+<taskprogress task="Service scan" time="1792955577" percent="66.67" remaining="1" etc="1792955578"/>
+<taskprogress task="Service scan" time="1792955578" percent="66.67" remaining="3" etc="1792955581"/>
+<taskprogress task="Service scan" time="1792955581" percent="83.33" remaining="0" etc="1792955581"/>
+<taskprogress task="NSE" time="1792955581" percent="97.68" remaining="0" etc="1792955581"/>
+<taskprogress task="NSE" time="1792955582" percent="98.01" remaining="0" etc="1792955582"/>
+<taskprogress task="NSE" time="1792955583" percent="98.68" remaining="0" etc="1792955583"/>
+<taskprogress task="NSE" time="1792955584" percent="99.01" remaining="0" etc="1792955584"/>
+<taskprogress task="NSE" time="1792955585" percent="99.01" remaining="0" etc="1792955585"/>
+<taskprogress task="NSE" time="1792955586" percent="99.01" remaining="0" etc="1792955586"/>
+<taskprogress task="NSE" time="1792955587" percent="99.01" remaining="0" etc="1792955587"/>
+<taskprogress task="NSE" time="1792955588" percent="99.01" remaining="0" etc="1792955588"/>
+<taskprogress task="NSE" time="1792955589" percent="99.01" remaining="0" etc="1792955589"/>
+<taskprogress task="NSE" time="1792955590" percent="99.01" remaining="0" etc="1792955590"/>
+<host starttime="1792955570" endtime="1792955591"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="127.0.0.1" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<ports><port protocol="tcp" portid="1"><state state="closed" reason="conn-refused" reason_ttl="0"/><service name="tcpmux" method="table" conf="3"/></port>
+<port protocol="tcp" portid="135"><state state="open" reason="syn-ack" reason_ttl="0"/><service name="msrpc" product="Microsoft Windows RPC" ostype="Windows" method="probed" conf="10"><cpe>cpe:/o:microsoft:windows</cpe></service><script id="vmware-version" output="ERROR: Script execution failed (use -d to debug)"/><script id="rpcinfo" output="ERROR: Script execution failed (use -d to debug)"/></port>
+<port protocol="tcp" portid="445"><state state="open" reason="syn-ack" reason_ttl="0"/><service name="microsoft-ds" method="table" conf="3"/><script id="vmware-version" output="ERROR: Script execution failed (use -d to debug)"/><script id="rpcinfo" output="ERROR: Script execution failed (use -d to debug)"/><script id="rpc-grind" output="ERROR: Script execution failed (use -d to debug)"/></port>
+<port protocol="tcp" portid="2222"><state state="open" reason="syn-ack" reason_ttl="0"/><service name="ssh" product="OpenSSH" version="for_Windows_8.1" extrainfo="protocol 2.0" method="probed" conf="10"><cpe>cpe:/a:openbsd:openssh:for_windows_8.1</cpe></service><script id="banner" output="SSH-2.0-OpenSSH_for_Windows_8.1"/><script id="rpcinfo" output="ERROR: Script execution failed (use -d to debug)"/><script id="vmware-version" output="ERROR: Script execution failed (use -d to debug)"/></port>
+<port protocol="tcp" portid="3306"><state state="open" reason="syn-ack" reason_ttl="0"/><service name="mysql" product="MariaDB" version="5.5.5-10.6.12" method="probed" conf="10"><cpe>cpe:/a:mariadb:mariadb:5.5.5-10.6.12</cpe></service><script id="ssl-cert" output="ERROR: Script execution failed (use -d to debug)"/><script id="vmware-version" output="ERROR: Script execution failed (use -d to debug)"/><script id="banner" output="&lt;\x00\x00\x00\x0A5.5.5-10.6.12-MariaDB-0ubuntu0.22.04.1\x00\x00&#xa;\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00...&#xa;"/><script id="rpcinfo" output="ERROR: Script execution failed (use -d to debug)"/></port>
+<port protocol="tcp" portid="5357"><state state="open" reason="syn-ack" reason_ttl="0"/><service name="http" product="Microsoft HTTPAPI httpd" version="2.0" extrainfo="SSDP/UPnP" ostype="Windows" method="probed" conf="10"><cpe>cpe:/o:microsoft:windows</cpe></service><script id="hnap-info" output="ERROR: Script execution failed (use -d to debug)"/><script id="https-redirect" output="ERROR: Script execution failed (use -d to debug)"/><script id="http-trane-info" output="ERROR: Script execution failed (use -d to debug)"/><script id="vmware-version" output="ERROR: Script execution failed (use -d to debug)"/><script id="rpcinfo" output="ERROR: Script execution failed (use -d to debug)"/><script id="http-title" output="Service Unavailable"><elem key="title">Service Unavailable</elem>
+</script><script id="http-server-header" output="Microsoft-HTTPAPI/2.0"><elem>Microsoft-HTTPAPI/2.0</elem>
+</script></port>
+<port protocol="tcp" portid="11211"><state state="open" reason="syn-ack" reason_ttl="0"/><service name="memcache" servicefp="SF-Port11211-TCP:V=7.992%I=7%D=10/25%Time=6ADE54B5%P=i686-pc-windows-windows%r(Memcache,10,&quot;VERSION\x201\.6\.21\r\n&quot;)%r(GenericLines,10,&quot;VERSION\x201\.6\.21\r\n&quot;)%r(GetRequest,10,&quot;VERSION\x201\.6\.21\r\n&quot;)%r(HTTPOptions,10,&quot;VERSION\x201\.6\.21\r\n&quot;)%r(RTSPRequest,10,&quot;VERSION\x201\.6\.21\r\n&quot;)%r(RPCCheck,10,&quot;VERSION\x201\.6\.21\r\n&quot;)%r(DNSVersionBindReqTCP,10,&quot;VERSION\x201\.6\.21\r\n&quot;)%r(DNSStatusRequestTCP,10,&quot;VERSION\x201\.6\.21\r\n&quot;)%r(Help,10,&quot;VERSION\x201\.6\.21\r\n&quot;)%r(SSLSessionReq,10,&quot;VERSION\x201\.6\.21\r\n&quot;)%r(TerminalServerCookie,10,&quot;VERSION\x201\.6\.21\r\n&quot;)%r(X11Probe,10,&quot;VERSION\x201\.6\.21\r\n&quot;)%r(FourOhFourRequest,10,&quot;VERSION\x201\.6\.21\r\n&quot;)%r(LPDString,10,&quot;VERSION\x201\.6\.21\r\n&quot;)%r(LDAPSearchReq,10,&quot;VERSION\x201\.6\.21\r\n&quot;)%r(LDAPBindReq,10,&quot;VERSION\x201\.6\.21\r\n&quot;)%r(LANDesk-RC,10,&quot;VERSION\x201\.6\.21\r\n&quot;)%r(TerminalServer,10,&quot;VERSION\x201\.6\.21\r\n&quot;)%r(NCP,10,&quot;VERSION\x201\.6\.21\r\n&quot;)%r(NotesRPC,10,&quot;VERSION\x201\.6\.21\r\n&quot;)%r(JavaRMI,10,&quot;VERSION\x201\.6\.21\r\n&quot;)%r(oracle-tns,10,&quot;VERSION\x201\.6\.21\r\n&quot;)%r(ms-sql-s,10,&quot;VERSION\x201\.6\.21\r\n&quot;)%r(afp,10,&quot;VERSION\x201\.6\.21\r\n&quot;)%r(giop,10,&quot;VERSION\x201\.6\.21\r\n&quot;);" method="table" conf="3"/><script id="fingerprint-strings" output="&#xa;  DNSStatusRequestTCP, DNSVersionBindReqTCP, FourOhFourRequest, GenericLines, GetRequest, HTTPOptions, Help, JavaRMI, LANDesk-RC, LDAPBindReq, LDAPSearchReq, LPDString, Memcache, NCP, NotesRPC, RPCCheck, RTSPRequest, SSLSessionReq, TerminalServer, TerminalServerCookie, X11Probe, afp, giop, ms-sql-s, oracle-tns: &#xa;    VERSION 1.6.21"><elem key="DNSStatusRequestTCP, DNSVersionBindReqTCP, FourOhFourRequest, GenericLines, GetRequest, HTTPOptions, Help, JavaRMI, LANDesk-RC, LDAPBindReq, LDAPSearchReq, LPDString, Memcache, NCP, NotesRPC, RPCCheck, RTSPRequest, SSLSessionReq, TerminalServer, TerminalServerCookie, X11Probe, afp, giop, ms-sql-s, oracle-tns">&#xa;    VERSION 1.6.21</elem>
+</script><script id="vmware-version" output="ERROR: Script execution failed (use -d to debug)"/><script id="rpcinfo" output="ERROR: Script execution failed (use -d to debug)"/><script id="rpc-grind" output="ERROR: Script execution failed (use -d to debug)"/></port>
+</ports>
+<hostscript><script id="smb2-time" output="&#xa;  date: 2026-10-25T19:13:01&#xa;  start_date: N/A"><elem key="date">2026-10-25T19:13:01</elem>
+<elem key="start_date">N/A</elem>
+</script><script id="smb-protocols" output="&#xa;  dialects: &#xa;    2.0.2&#xa;    2.1&#xa;    3.0&#xa;    3.0.2&#xa;    3.1.1"><table key="dialects">
+<elem>2.0.2</elem>
+<elem>2.1</elem>
+<elem>3.0</elem>
+<elem>3.0.2</elem>
+<elem>3.1.1</elem>
+</table>
+</script></hostscript><times srtt="669" rttvar="1385" to="100000"/>
+</host>
+<runstats><finished time="1792955591" timestr="Sun Oct 25 22:13:11 2026" summary="Nmap done at Sun Oct 25 22:13:11 2026; 1 IP address (1 host up) scanned in 21.60 seconds" elapsed="21.60" exit="success"/><hosts up="1" down="0" total="1"/>
+</runstats>
+</nmaprun>

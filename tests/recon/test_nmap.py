@@ -184,7 +184,8 @@ def _command(host="192.168.56.10", ports=(22, 80), protocols=("tcp",), options=D
 
 
 def test_the_default_command():
-    assert _command() == [str(NMAP), "-n", "-Pn", "-oX", "-", "--reason", "-sT",
+    assert _command() == [str(NMAP), "-n", "-Pn", "-oX", "-", "--reason", "--stats-every", "1s",
+                          "-sT",
                           "--unprivileged", "-sV", "--version-intensity", "7", "-T3",
                           "--host-timeout", "60m", "-p", "T:22,80", "192.168.56.10"]
 
@@ -194,7 +195,8 @@ def test_every_choice():
                           os_detect=True)
     assert _command("::1", [53, 22, 23, 24, 80], ("tcp", "udp"), options, privileged=True,
                     minutes=5) == [
-        str(NMAP), "-n", "-Pn", "-oX", "-", "--reason", "-6", "-sS", "-sU", "-sV",
+        str(NMAP), "-n", "-Pn", "-oX", "-", "--reason", "--stats-every", "1s", "-6", "-sS",
+        "-sU", "-sV",
         "--version-intensity", "9", "-T4", "-O", "--script",
         "banner,http-title,http-server-header,ssl-cert,ssh-hostkey,smb-protocols,smb2-time,"
         "rdp-ntlm-info", "--host-timeout", "5m", "-p", "T:22-24,53,80,U:22-24,53,80", "::1"]
@@ -249,7 +251,7 @@ def test_addresses_as_nmap_gets_them():
     (("tcp",), NmapOptions(os_detect=True)),
 ])
 def test_udp_and_os_detection_need_privileges(protocols, options):
-    with pytest.raises(ValueError, match="need it to run as administrator"):
+    with pytest.raises(ValueError, match="send raw packets: on Windows they need Npcap"):
         _command(protocols=protocols, options=options)
     assert _command(protocols=protocols, options=options, privileged=True)
 
@@ -272,7 +274,7 @@ def test_unknown_choices_are_refused(kwargs, message):
 def test_no_choice_ever_gives_a_forbidden_option():
     """Every combination: the fixed options are there, the address is last, the scripts are
     the allow-listed ones only, and no option outside the allow-list appears."""
-    allowed = {*nmap.ALWAYS, "-6", "-sS", "-sT", "--unprivileged", "-sU", "-sV",
+    allowed = {*nmap.ALWAYS, *nmap.PROGRESS, "-6", "-sS", "-sT", "--unprivileged", "-sU", "-sV",
                "--version-intensity", *map(str, nmap.INTENSITIES.values()),
                *nmap.TIMINGS.values(), "-O", "--script", ",".join(nmap.SCRIPTS),
                "--host-timeout", "-p"}
@@ -287,7 +289,7 @@ def test_no_choice_ever_gives_a_forbidden_option():
             assert not privileged and ("udp" in protocols or os_detect)
             continue
         count += 1
-        assert command[0] == str(NMAP) and command[1:6] == list(nmap.ALWAYS)
+        assert command[0] == str(NMAP) and command[1:8] == [*nmap.ALWAYS, *nmap.PROGRESS]
         assert command[-1] == host and command[-4:-1] == ["30m", "-p", command[-2]]
         rest = command[1:-4]
         assert set(rest) <= allowed, set(rest) - allowed
@@ -311,3 +313,48 @@ def test_the_time_limit_setting():
         settings.scan_limits({"TOOLKIT_SCAN_MAX_MIN": "0"})
     assert settings.check_settings("scan", {"TOOLKIT_SCAN_MAX_MIN": "abc"}) == [
         "TOOLKIT_SCAN_MAX_MIN must be a whole number >= 1, not 'abc'"]
+
+
+# Step N3: whether nmap can send raw packets
+
+@pytest.fixture
+def windows(tmp_path, on, monkeypatch):
+    """Windows with its folder in ``tmp_path``: ``npcap=True`` puts Npcap's wpcap.dll there."""
+    on("windows")
+
+    def make(npcap=True, admin_only=False, admin=False):
+        if npcap:
+            (tmp_path / "System32" / "Npcap").mkdir(parents=True, exist_ok=True)
+            (tmp_path / "System32" / "Npcap" / "wpcap.dll").write_bytes(b"")
+        monkeypatch.setattr(nmap, "_npcap_admin_only", lambda: admin_only)
+        monkeypatch.setattr(nmap, "_is_admin", lambda: admin)
+        return {"SystemRoot": str(tmp_path)}
+    return make
+
+
+@pytest.mark.parametrize(("npcap", "admin_only", "admin", "privileged"), [
+    (False, False, True, False),  # no Npcap: no raw packets, even for an administrator
+    (True, False, False, True),  # Npcap for every user (as on this PC)
+    (True, True, False, False),  # Npcap for administrators only
+    (True, True, True, True),
+])
+def test_privileges_on_windows(windows, npcap, admin_only, admin, privileged):
+    assert nmap.has_privileges(windows(npcap, admin_only, admin)) is privileged
+
+
+def test_privileges_without_systemroot(windows):
+    windows()
+    assert nmap.has_privileges({"SystemRoot": ""}) is False
+
+
+@pytest.mark.parametrize("root", [True, False])
+def test_privileges_on_linux_and_macos_are_root(on, monkeypatch, root):
+    monkeypatch.setattr(nmap, "_is_admin", lambda: root)
+    for system in ("linux", "darwin"):
+        on(system)
+        assert nmap.has_privileges({}) is root
+
+
+def test_npcap_admin_only_is_read_only_on_windows(monkeypatch):
+    monkeypatch.setattr(nmap.sys, "platform", "linux")
+    assert nmap._npcap_admin_only() is True, "elsewhere: a doubt is no raw packets"

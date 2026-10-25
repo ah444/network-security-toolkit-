@@ -95,7 +95,7 @@ no Flask, no argparse. Read by `cli/` and `web/`, it imports neither
 | `toolkit/core/services/recon/targets.py` | services | targets, port lists and scan limits |
 | `toolkit/core/services/recon/scan.py` | services | a scan, start to end, through a `ScanView` (what it shows and asks) |
 | `toolkit/core/services/recon/intel.py` | services | `Intel`: the lookups for open ports, in parallel, each product once |
-| `toolkit/core/services/recon/engines.py` | services | the scan engines by name: the built-in one (the toolkit's own scanner) |
+| `toolkit/core/services/recon/engines.py` | services | the scan engines by name: the built-in one (the toolkit's own scanner) and nmap (`NmapEngine`; `NmapProgress`: nmap's phases as one bar) |
 | `toolkit/core/services/recon/os_guess.py` | services | the OS guess from the TTL, the banners and the open ports, with its evidence; this computer said |
 | `toolkit/core/services/recon/report.py` | services | one report entry per open port, its network text cleaned |
 | `toolkit/core/data/__init__.py` | data | the shared data: files, the network, the environment |
@@ -114,7 +114,9 @@ no Flask, no argparse. Read by `cli/` and `web/`, it imports neither
 | `toolkit/core/data/recon/software.py` | data | the product and version in a banner (the only part of it looked up online) |
 | `toolkit/core/data/recon/ping.py` | data | ping (per-OS flags) and the TTL of the reply |
 | `toolkit/core/data/recon/resolve.py` | data | host names to addresses |
-| `toolkit/core/data/recon/nmap.py` | data | the optional nmap engine's program: found by its full path (`TOOLKIT_NMAP_PATH`, `PATH`, its install folder; never the current folder), its version (7.80 or newer), its command from an allow-list only |
+| `toolkit/core/data/recon/nmap.py` | data | the optional nmap engine's program: found by its full path (`TOOLKIT_NMAP_PATH`, `PATH`, its install folder; never the current folder), its version (7.80 or newer), its command from an allow-list only; whether it can send raw packets (`has_privileges`: Npcap usable on Windows, root elsewhere) |
+| `toolkit/core/data/recon/nmap_run.py` | data | running nmap: its XML read as it comes, the progress from `<taskprogress>`, a stop, Ctrl+C or a limit ends it (asked, killed 5 s later), its failures in plain words |
+| `toolkit/core/data/recon/nmap_xml.py` | data | nmap's XML as the scanner's `PortResult`s (the built-in scanner's states, nmap's own in `reason`), the OS matches and host scripts; every text from the network cleaned and cut |
 | `toolkit/core/data/recon/local.py` | data | whether an address is this computer's own (nothing sent), and its OS |
 | `toolkit/core/data/recon/text.py` | data | makes text from the network safe to show and export |
 | `toolkit/core/data/recon/scan_files.py` | data | scan report files as JSON, CSV or TXT in `instance/scans/` |
@@ -286,7 +288,7 @@ Interfaces exist only where an implementation really is swapped or faked in test
 | `ModelStore` | web trainer, IDS command line | `BundleStore` (`toolkit/core/services/ids/exports.py`, over `toolkit/core/data/ids/bundle_files.py`): signed bundles in `instance/bundles/` | a scratch instance folder |
 | `IntelProvider` | `Intel` in the scanner | `NvdProvider`, `OpenRouterProvider`, `AbuseIpdbProvider` (`toolkit/core/data/recon/`) | fake providers; recorded NVD answers in `tests/fixtures/` |
 | `ProgressSink` | `train()`, `evaluate()`, `scan_ports()` | a web job (`toolkit/web/services/jobs.py`), the scanner's verbose line (`toolkit/cli/ui/scan.py`) | `NullProgress` or a recorder |
-| `ScanEngine` | `scan_target` in the scanner, by the request's `engine` name | `BuiltinEngine` (`toolkit/core/services/recon/engines.py`, over `scan_ports` in `toolkit/core/data/recon/scanner.py`); nmap when installed (steps N2-N4) | the `fake_ports` fixture (`tests/recon/conftest.py`), an engine put in `ENGINES` |
+| `ScanEngine` | `scan_target` in the scanner, by the request's `engine` name | `BuiltinEngine` (`toolkit/core/services/recon/engines.py`, over `scan_ports` in `toolkit/core/data/recon/scanner.py`); `NmapEngine` (the same module, over `toolkit/core/data/recon/nmap.py`, `nmap_run.py`, `nmap_xml.py`) when nmap is installed | the `fake_ports` fixture (`tests/recon/conftest.py`), an engine put in `ENGINES` |
 
 Everything else is plain functions and dict registries.
 
@@ -417,6 +419,7 @@ screen and every question goes through the `ScanView` (`ConsoleScan` in
      v
  the engine (ScanRequest.engine)                                core/services/recon/engines.py
  builtin: TCP connect / UDP probe per port                      core/data/recon/scanner.py
+ nmap: its command, its run, its XML              core/data/recon/nmap.py, nmap_run.py, nmap_xml.py
      |       banner read with the port's probe                  core/data/recon/probes.py
      |       the service from the answer, else "usual?"         core/data/recon/services.py
      v

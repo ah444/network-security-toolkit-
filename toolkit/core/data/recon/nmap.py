@@ -9,7 +9,12 @@ The command is built from an allow-list only: every option comes from the tables
 text the user typed reaches it, and the target is an address checked here. It always has
 ``-n -Pn -oX - --reason`` (``ALWAYS``): no DNS (the names were resolved before, after the
 authorisation), no ping (the toolkit pings first), the XML on standard output, and why
-nmap gave each state. Running it and reading its XML is step N3.
+nmap gave each state; and ``--stats-every 1s`` (``PROGRESS``) for the progress. Running it
+is ``nmap_run``, reading its XML ``nmap_xml`` (step N3).
+
+Service detection (``-sV``) also runs nmap's own "version" scripts, which no option turns
+off (``VERSION_SCRIPTS_NOTE``, agreed with the user 2026-10-25); ``SCRIPTS`` is what
+``--scripts`` adds.
 """
 
 from __future__ import annotations
@@ -19,6 +24,7 @@ import os
 import platform
 import re
 import subprocess
+import sys
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from itertools import pairwise
@@ -43,6 +49,7 @@ INSTALL = {
 }
 
 ALWAYS = ("-n", "-Pn", "-oX", "-", "--reason")
+PROGRESS = ("--stats-every", "1s")  # a <taskprogress> element in the XML every second
 INTENSITIES = {"light": 2, "normal": 7, "all": 9}  # --service-detection -> --version-intensity
 TIMINGS = {"polite": "-T2", "normal": "-T3", "aggressive": "-T4"}  # --timing
 # The only scripts that ever run, each talking to the target only: seven in nmap's "safe"
@@ -52,11 +59,18 @@ TIMINGS = {"polite": "-T2", "normal": "-T3", "aggressive": "-T4"}  # --timing
 SCRIPTS = ("banner", "http-title", "http-server-header", "ssl-cert", "ssh-hostkey",
            "smb-protocols", "smb2-time", "rdp-ntlm-info")
 SCRIPT_SETS = {"safe": SCRIPTS}  # --scripts
+VERSION_SCRIPTS_NOTE = (
+    "nmap's service detection also runs nmap's own version scripts (48 in nmap 7.992, such as "
+    "rpcinfo and rpc-grind), each only on a service it recognised; nmap can't turn them off. "
+    "One, iec61850-mms, is in nmap's 'intrusive' category: it talks to IEC 61850 industrial "
+    "devices on port 102. --scripts safe adds only the 8 scripts the toolkit allows.")
 PROTOCOLS = {"tcp": "T", "udp": "U"}
 SCOPE_PATTERN = re.compile(r"[A-Za-z0-9_.-]{1,64}")  # an IPv6 zone: an interface name or number
-NEEDS_PRIVILEGES = ("nmap's UDP scan and OS detection need it to run as administrator (root on "
-                    "Linux and macOS), with Npcap on Windows; run the scan that way, or scan "
-                    "TCP only without OS detection.")
+NEEDS_PRIVILEGES = ("nmap's UDP scan and OS detection send raw packets: on Windows they need "
+                    "Npcap (it comes with nmap's installer) and, if Npcap is set to "
+                    "administrators only, an administrator's prompt; on Linux and macOS root. "
+                    "Run the scan that way, or scan TCP only without OS detection.")
+NPCAP_KEY = "\\".join(("SYSTEM", "CurrentControlSet", "Services", "npcap", "Parameters"))
 
 
 class NmapMissing(Exception):
@@ -206,6 +220,44 @@ def find_nmap(environ: Mapping[str, str] | None = None) -> Nmap:
     return Nmap(path, check_version(path))
 
 
+def _is_admin() -> bool:
+    """This process runs as an administrator (Windows) or root (other OSes)."""
+    if _system() == "windows":
+        import ctypes
+        windll = getattr(ctypes, "windll", None)  # only Windows' ctypes has it
+        try:
+            return bool(windll.shell32.IsUserAnAdmin()) if windll else False
+        except (AttributeError, OSError):
+            return False
+    return getattr(os, "geteuid", lambda: -1)() == 0
+
+
+def _npcap_admin_only() -> bool:
+    """Npcap is set to work for administrators only (its ``AdminOnly`` value; read only).
+    True when it can't be read, so a doubt means no raw packets."""
+    if sys.platform != "win32":
+        return True
+    import winreg
+    try:
+        with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, NPCAP_KEY) as key:
+            return bool(winreg.QueryValueEx(key, "AdminOnly")[0])
+    except OSError:
+        return True
+
+
+def has_privileges(environ: Mapping[str, str] | None = None) -> bool:
+    """nmap can send raw packets here (``-sS``, ``-sU``, ``-O``): on Windows Npcap is installed
+    (``System32/Npcap/wpcap.dll``) and works for this user (not administrators only, or this
+    is an administrator); on Linux and macOS this is root."""
+    if _system() != "windows":
+        return _is_admin()
+    environ = os.environ if environ is None else environ
+    root = Path(_variable(environ, "SystemRoot"))
+    if not root.is_absolute() or not (root / "System32" / "Npcap" / "wpcap.dll").is_file():
+        return False
+    return not _npcap_admin_only() or _is_admin()
+
+
 def target_address(host: str) -> str:
     """``host`` as nmap gets it: an IP address only (no name, network or option), an IPv6
     zone only if it is a plain interface name or number. ValueError for anything else."""
@@ -244,10 +296,10 @@ def _choice(table: Mapping[str, object], value: str, what: str) -> None:
 
 def nmap_command(nmap: Path, host: str, ports: Iterable[int], protocols: Sequence[str],
                  options: NmapOptions, *, privileged: bool, max_minutes: int) -> list[str]:
-    """The arguments to run nmap with (no shell): ``ALWAYS``, ``-6`` for IPv6, the scan types
-    (TCP: ``-sS`` with privileges, else ``-sT --unprivileged``; UDP: ``-sU``), ``-sV`` at the
-    chosen intensity, the timing, ``-O`` and the scripts if chosen, ``--host-timeout``
-    (``max_minutes``), the ports as ``T:``/``U:`` lists and the address last.
+    """The arguments to run nmap with (no shell): ``ALWAYS``, ``PROGRESS``, ``-6`` for IPv6,
+    the scan types (TCP: ``-sS`` with privileges, else ``-sT --unprivileged``; UDP: ``-sU``),
+    ``-sV`` at the chosen intensity, the timing, ``-O`` and the scripts if chosen,
+    ``--host-timeout`` (``max_minutes``), the ports as ``T:``/``U:`` lists and the address last.
 
     ValueError for an unknown choice, a bad address or port, or UDP or OS detection without
     privileges (``NEEDS_PRIVILEGES``)."""
@@ -263,7 +315,7 @@ def nmap_command(nmap: Path, host: str, ports: Iterable[int], protocols: Sequenc
     if not privileged and ("udp" in protocols or options.os_detect):
         raise ValueError(NEEDS_PRIVILEGES)
     port_list = port_ranges(ports)
-    command = [str(nmap), *ALWAYS]
+    command = [str(nmap), *ALWAYS, *PROGRESS]
     if ipaddress.ip_address(address).version == 6:
         command.append("-6")
     if "tcp" in protocols:
