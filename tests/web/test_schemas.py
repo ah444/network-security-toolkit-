@@ -4,8 +4,8 @@ import dataclasses
 
 import pytest
 
-from toolkit.controllers.web.api import ApiError
-from toolkit.controllers.web.schemas import (
+from toolkit.web.controllers.api import ApiError
+from toolkit.web.controllers.schemas import (
     MAX_ITEMS,
     MAX_TEXT,
     PredictRequest,

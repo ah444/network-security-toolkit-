@@ -14,8 +14,8 @@ import pytest
 from toolkit.core.data.ids import bundle_files
 from toolkit.core.services.ids.bundle import pack
 from toolkit.core.services.ids.datasets import load_dataset
-from toolkit.services.web import training
-from toolkit.controllers.web import datasets
+from toolkit.web.services import training
+from toolkit.web.controllers import datasets
 from web_jobs import train_and_wait
 from web_js import all_js, found, js_sources
 
@@ -92,8 +92,8 @@ def test_end_to_end_training_uses_pipeline(client, cic, monkeypatch):
 def test_old_preprocessing_code_deleted(repo_root):
     """The web app's Python (until v5.2 step 2.3a this read ``toolkit/web``, a folder that
     v5.1 step 1.5d had removed, so it checked nothing)."""
-    folders = ("toolkit/controllers/web", "toolkit/services/web", "toolkit/data/web",
-               "toolkit/ui/web")
+    folders = ("toolkit/web/controllers", "toolkit/web/services", "toolkit/web/data",
+               "toolkit/web/ui")
     for path in found((p for f in folders for p in (repo_root / f).rglob("*.py")), "web code"):
         source = path.read_text(encoding="utf-8")
         for name in ("train_test_split", "RobustScaler", "LabelEncoder", "SMOTE(", "SelectKBest",

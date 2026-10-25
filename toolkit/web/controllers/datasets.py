@@ -21,7 +21,7 @@ from ...core.services.ids.datasets import DatasetError
 from ...core.services.ids.preview import preview_balancing
 from ...core.services.ids.preview import recommend_features as score_features
 from ...core.services.ids.split import SplitResult
-from ...services.web.datasets import (
+from ..services.datasets import (
     candidate_features,
     combine,
     label_values,
@@ -31,7 +31,7 @@ from ...services.web.datasets import (
     require_target,
     training_split,
 )
-from ...services.web.errors import UNREADABLE_FILE
+from ..services.errors import UNREADABLE_FILE
 from .api import Answer, error_response, json_body, query
 from .schemas import (
     BalancingPreviewRequest,
@@ -44,7 +44,7 @@ from .schemas import (
 )
 from .security import display_name, safe_upload_name
 from .state import state
-from ...services.web.workspace import UploadedData, Workspace, dataset_bytes
+from ..services.workspace import UploadedData, Workspace, dataset_bytes
 from .workspace import with_workspace
 
 log = logging.getLogger(__name__)

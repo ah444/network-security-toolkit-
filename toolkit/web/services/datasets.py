@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 
 from ...core.data.settings import SplitConfig
-from ...data.web import uploads
+from ..data import uploads
 from ...core.services.ids.datasets import LoadedDataset, load_dataset
 from ...core.services.ids.runs import DatasetRef
 from ...core.services.ids.split import SplitResult, split_dataset

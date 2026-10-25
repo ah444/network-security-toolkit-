@@ -9,7 +9,7 @@ from contextlib import contextmanager
 
 from flask import Blueprint, jsonify, session
 
-from ...services.web.workspace import Workspace
+from ..services.workspace import Workspace
 from .api import Answer
 from .state import state
 

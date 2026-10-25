@@ -14,7 +14,7 @@ from typing import Any
 from flask import Flask, Response, jsonify, request
 from werkzeug.exceptions import HTTPException
 
-from ...services.web.errors import (
+from ..services.errors import (
     BAD_REQUEST,
     BUSY,
     DATA_LIMIT,

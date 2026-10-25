@@ -6,7 +6,7 @@ import threading
 
 import pytest
 
-from toolkit.services.web import training
+from toolkit.web.services import training
 from web_jobs import TRAIN_URL, train_and_wait, wait_for
 
 URL = "/api/v1/workspace"

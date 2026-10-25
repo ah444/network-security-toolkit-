@@ -11,14 +11,14 @@ from flask import Blueprint, jsonify
 from ...core.services.ids import registry
 from ...core.services.ids.pipeline import FittedModel
 from ...core.services.ids.runs import TrainingRun
-from ...services.web.datasets import require_data
-from ...services.web.errors import NOT_TRAINED, TRAINING_FAILED
+from ..services.datasets import require_data
+from ..services.errors import NOT_TRAINED, TRAINING_FAILED
 from .api import Answer, ApiError, error_response, json_body, query
-from ...services.web.jobs import FINISHED, QUEUED, RUNNING, Job, JobRunner
-from ...services.web.training import start_job, training_settings
+from ..services.jobs import FINISHED, QUEUED, RUNNING, Job, JobRunner
+from ..services.training import start_job, training_settings
 from .schemas import ConfusionRequest, TrainRequest, load
 from .state import state
-from ...services.web.workspace import Workspace
+from ..services.workspace import Workspace
 from .workspace import with_workspace, workspace
 
 log = logging.getLogger(__name__)

@@ -46,7 +46,7 @@ def usable_exports():
 def make_export():
     """Train 2 models on the 15-class fixture and export them, as the page does (token
     included)."""
-    from toolkit.controllers.web import create_app
+    from toolkit.web.controllers import create_app
 
     client = create_app().test_client()
     page = client.get("/dynamic_ids").get_data(as_text=True)

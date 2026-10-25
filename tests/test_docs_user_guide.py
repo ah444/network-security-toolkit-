@@ -7,7 +7,7 @@ import re
 import pytest
 
 from toolkit.cli.controllers import ids, scan
-from toolkit.controllers.cli import web
+from toolkit.web.controllers import command as web
 from toolkit.cli.controllers.main import COMMANDS as CLI_COMMANDS
 from toolkit.cli.controllers.main import OTHER_COMMANDS
 

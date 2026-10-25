@@ -7,7 +7,7 @@ import pytest
 
 from web_js import js_sources
 
-TEMPLATES = "toolkit/ui/web/templates"
+TEMPLATES = "toolkit/web/ui/templates"
 
 
 class _FormScanner(HTMLParser):

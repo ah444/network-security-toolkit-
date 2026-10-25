@@ -8,9 +8,9 @@ import threading
 
 from ...core.data.logs import setup_logging
 from ...core.data.settings import WebConfig, web_config
-from ...data.web import net
-from ...services.web.workspace import start_idle_sweep
-from ...ui.cli import web as messages
+from ..data import net
+from ..services.workspace import start_idle_sweep
+from ..ui import console as messages
 from . import create_app
 
 HOST = "127.0.0.1"  # this computer only (S6)

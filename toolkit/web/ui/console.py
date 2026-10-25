@@ -1,4 +1,4 @@
-"""What the web trainer's command prints."""
+"""What the web trainer's command prints (``toolkit/ui/cli/web.py`` until v5.2 step 2.3d)."""
 
 PORT_IN_USE = ("Port {port} is already in use on this computer: the web trainer may already be "
                "running (open {url}), or another program uses it.\nStart on another port: "

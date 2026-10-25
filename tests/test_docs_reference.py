@@ -6,7 +6,7 @@ import re
 import pytest
 
 from toolkit.cli.controllers import ids, scan
-from toolkit.controllers.cli import web
+from toolkit.web.controllers import command as web
 from toolkit.core.data.keys import DEFAULT_AI_MODEL, KEY_VARIABLES
 from toolkit.core.data.settings import COMMAND_SETTINGS, SHARED_SETTINGS, ScanConfig, WebConfig
 

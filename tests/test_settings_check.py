@@ -91,7 +91,7 @@ def test_every_setting_with_rules_is_checked(repo_root):
 
 @pytest.mark.parametrize("command, module", [("scan", "toolkit.cli.controllers.scan"),
                                              ("ids", "toolkit.cli.controllers.ids"),
-                                             ("web", "toolkit.controllers.cli.web")])
+                                             ("web", "toolkit.web.controllers.command")])
 def test_a_bad_setting_stops_the_command_with_exit_code_2(command, module, monkeypatch, capsys):
     started = []
     monkeypatch.setattr(f"{module}.run",
@@ -105,7 +105,7 @@ def test_a_bad_setting_stops_the_command_with_exit_code_2(command, module, monke
 
 def test_help_works_with_a_bad_setting(monkeypatch, capsys):
     monkeypatch.setenv("TOOLKIT_MAX_WORKSPACES", "0")
-    monkeypatch.setattr("toolkit.controllers.cli.web.run_server",
+    monkeypatch.setattr("toolkit.web.controllers.command.run_server",
                         lambda config=None: pytest.fail("--help must not start the server"))
     with pytest.raises(SystemExit) as stop:
         start.main(["web", "--help"])

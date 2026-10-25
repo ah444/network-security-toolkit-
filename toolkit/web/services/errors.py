@@ -1,6 +1,6 @@
 """What the web trainer's services refuse or fail with: a code and a message written for
 the user (S8). The routes answer each with the HTTP status it has always had
-(``toolkit.controllers.web.api.status_of``)."""
+(``toolkit.web.controllers.api.status_of``)."""
 
 from __future__ import annotations
 

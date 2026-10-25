@@ -19,7 +19,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     """Run the command in ``argv`` (default: this process's arguments); its exit code."""
     args = list(sys.argv[1:] if argv is None else argv)
     if args[:1] == ["web"]:
-        from .controllers.cli.web import main as web  # the web command (until step 2.3d)
+        from .web.controllers.command import main as web
 
         return web(args[1:], f"{PROG} web")
     from .cli.controllers.main import main as command_line

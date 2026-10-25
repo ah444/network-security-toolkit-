@@ -14,9 +14,9 @@ import pytest
 from imblearn.pipeline import Pipeline
 
 from toolkit.core.data.settings import WebConfig
-from toolkit.services.web import jobs
-from toolkit.services.web import training
-from toolkit.controllers.web import training as web_training
+from toolkit.web.services import jobs
+from toolkit.web.services import training
+from toolkit.web.controllers import training as web_training
 from web_jobs import TRAIN_URL, train_and_wait, wait_for
 from web_js import js_sources
 

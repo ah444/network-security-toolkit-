@@ -11,7 +11,7 @@ from typing import IO, Any
 import pandas as pd
 
 from ...core.data.ids.dataset_files import DatasetError
-from ...data.web import uploads
+from ..data import uploads
 from ...core.services.ids import registry
 from ...core.services.ids.batch import missing_features, prediction_csv, prediction_summary, prediction_table
 from ...core.services.ids.datasets import load_dataset

@@ -22,7 +22,7 @@ SUPPRESSIONS = [
      "the import follows the line that puts the project and tests folders on sys.path"),
     ("tests/fixtures/legacy/make_legacy_bundle.py", "noqa[E402]", 2,
      "the old code's imports follow the line that puts the project folder on sys.path"),
-    ("toolkit/controllers/web/schemas.py", "type: ignore[arg-type]", 1,
+    ("toolkit/web/controllers/schemas.py", "type: ignore[arg-type]", 1,
      "load() takes any schema class (a TypeVar); mypy cannot know it is a dataclass"),
     ("toolkit/core/services/ids/profiles.py", "pragma: no cover", 1,
      "unreachable: the generic profile matches every file, the line only documents that"),

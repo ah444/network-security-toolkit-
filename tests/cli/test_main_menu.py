@@ -134,7 +134,7 @@ def test_ctrl_c_in_a_tool_comes_back_to_the_menu(monkeypatch, capsys):
 
 @pytest.mark.parametrize("name, module", [("scan", "toolkit.cli.controllers.scan"),
                                           ("ids", "toolkit.cli.controllers.ids"),
-                                          ("web", "toolkit.controllers.cli.web")])
+                                          ("web", "toolkit.web.controllers.command")])
 def test_subcommand_arguments_and_exit_code_reach_the_tool(monkeypatch, name, module):
     received = []
 
@@ -179,7 +179,7 @@ def test_tool_help_names_the_command(monkeypatch, capsys, name, module):
     def no_server():
         raise AssertionError("--help must not start the server")
 
-    monkeypatch.setattr("toolkit.controllers.cli.web.run_server", no_server)
+    monkeypatch.setattr("toolkit.web.controllers.command.run_server", no_server)
     with pytest.raises(SystemExit) as stop:
         start.main([name, "--help"])
     assert stop.value.code == 0
@@ -188,7 +188,7 @@ def test_tool_help_names_the_command(monkeypatch, capsys, name, module):
 
 def test_web_command_starts_the_server(monkeypatch):
     started = []
-    monkeypatch.setattr("toolkit.controllers.cli.web.run_server",
+    monkeypatch.setattr("toolkit.web.controllers.command.run_server",
                         lambda config=None: started.append(True))
     assert start.main(["web"]) == 0
     assert started == [True]

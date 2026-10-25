@@ -8,8 +8,8 @@ import time
 import pytest
 
 from toolkit.core.data.settings import WebConfig
-from toolkit.data.web.uploads import remove_stale_uploads
-from toolkit.services.web.workspace import Workspace, WorkspaceStore, start_idle_sweep
+from toolkit.web.data.uploads import remove_stale_uploads
+from toolkit.web.services.workspace import Workspace, WorkspaceStore, start_idle_sweep
 
 CSV = b"a,b,Label\n" + b"".join(b"%d,%d,%s\n" % (i, i * 2, b"XY"[i % 2:i % 2 + 1])
                                  for i in range(60))

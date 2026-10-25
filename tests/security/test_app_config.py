@@ -6,7 +6,7 @@ import socket
 import flask
 import pytest
 
-from toolkit.controllers.web import server as web
+from toolkit.web.controllers import server as web
 
 
 @pytest.fixture
@@ -47,9 +47,9 @@ def test_port_from_environment(calls, monkeypatch):
 
 
 def test_the_command_uses_run_server(repo_root):
-    server = (repo_root / "toolkit/controllers/web/server.py").read_text(encoding="utf-8")
+    server = (repo_root / "toolkit/web/controllers/server.py").read_text(encoding="utf-8")
     assert "debug=True" not in server.split("def run_server", 1)[0], "debug hard-coded"
-    source = (repo_root / "toolkit/controllers/cli/web.py").read_text(encoding="utf-8")
+    source = (repo_root / "toolkit/web/controllers/command.py").read_text(encoding="utf-8")
     assert "debug=" not in source and ".run(" not in source, "the command only calls run_server"
     calls = {ast.unparse(n.func) for n in ast.walk(ast.parse(source))
              if isinstance(n, ast.Call)}

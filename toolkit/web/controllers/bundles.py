@@ -16,14 +16,14 @@ from ...core.services.ids import registry
 from ...core.services.ids.bundle import Bundle, BundleError, BundleVersionWarning
 from ...core.services.ids.pipeline import FittedModel
 from ...core.services.ids.runs import TrainingRun
-from ...services.web.errors import NO_MODEL_LOADED, NOT_FOUND, NOT_TRAINED, TOO_LARGE
-from ...services.web import prediction
+from ..services.errors import NO_MODEL_LOADED, NOT_FOUND, NOT_TRAINED, TOO_LARGE
+from ..services import prediction
 from .api import Answer, error_response, json_body
 from .schemas import ExportRequest, PredictRequest, load
 from .security import display_name, safe_model_basename, safe_upload_name
 from .state import state
 from .training import features_info
-from ...services.web.workspace import ExportedBundle, Workspace
+from ..services.workspace import ExportedBundle, Workspace
 from .workspace import with_workspace
 
 log = logging.getLogger(__name__)

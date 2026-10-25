@@ -42,24 +42,24 @@ The style is a hybrid, as plan §2 recommends:
 
 ## 2. Module map
 
-The package is in four layers, each with one folder per tool inside it (v5.1 step 1.5d):
-`ui/` what the user sees, `controllers/` requests and flags in and answers out,
-`services/` what the tools do, `data/` files, the network and the environment. There is
-no database.
+The package is arranged by interface (v5.2 step 2.3): `core/` what both tools share,
+`cli/` the command line, `web/` the web trainer; `cli` and `web` use `core` and never each
+other. Inside each are the same layers (v5.1 step 1.5d): `ui/` what the user sees,
+`controllers/` requests and flags in and answers out, `services/` what the tools do, `data/`
+files, the network and the environment. There is no database. The tables below go by layer.
 
 UI (the only code that prints or asks):
 
 | Module | Role |
 |---|---|
-| `toolkit/ui/__init__.py` | the UI layer |
-| `toolkit/ui/web/__init__.py` | the web trainer's page: `templates/` and `static/` (one CSS file, ES modules; `api.js` holds the only `fetch`) |
+| `toolkit/web/__init__.py` | the web trainer (v5.2 step 2.3d): `ui/`, `controllers/`, `services/`, `data/`; it never imports the command line |
+| `toolkit/web/ui/__init__.py` | the web trainer's page: `templates/` and `static/` (one CSS file, ES modules; `api.js` holds the only `fetch`) |
 | `toolkit/cli/__init__.py` | the command line (v5.2 step 2.3c): the menu, `scan`, `ids`; it never imports the web trainer |
 | `toolkit/cli/ui/__init__.py` | the command line's prompts and printing |
-| `toolkit/ui/cli/__init__.py` | the web command's console messages (`web.py`, until step 2.3d) |
 | `toolkit/cli/ui/menu.py` | the banner, the menu and its prompt |
 | `toolkit/cli/ui/scan.py` | the scanner's questions, authorization, progress line, tables and report; `ConsoleScan` is the scan's `ScanView` |
 | `toolkit/cli/ui/ids.py` | the IDS command's export list, model card, predictions, interactive menu and prompts |
-| `toolkit/ui/cli/web.py` | what the web trainer's command prints |
+| `toolkit/web/ui/console.py` | what the web trainer's command prints |
 
 Controllers (the only code that uses Flask or argparse):
 
@@ -68,25 +68,23 @@ Controllers (the only code that uses Flask or argparse):
 | `toolkit/__init__.py` | the package |
 | `toolkit/__main__.py` | `python -m toolkit` |
 | `toolkit/start.py` | the one entry point (`python -m toolkit`, `main.py`, the `toolkit` command): `web` to the web trainer's command, the rest to the command line |
-| `toolkit/controllers/__init__.py` | the controllers layer |
 | `toolkit/cli/controllers/__init__.py` | the command line's commands |
-| `toolkit/controllers/cli/__init__.py` | the web trainer's command (`web.py`, until step 2.3d) |
 | `toolkit/cli/controllers/main.py` | the command line: the menu, or `scan`, `ids` with the rest of the line; the toolkit's `--help` (it lists `web` too) |
 | `toolkit/cli/controllers/scan.py` | the scanner's flags or questions, a `ScanRequest`, the exit codes |
 | `toolkit/cli/controllers/ids.py` | the IDS command: choose an export, predict, `--csv`, `--json`, `--info`, the exit codes |
-| `toolkit/controllers/cli/web.py` | the web trainer's command (from `toolkit.start`): its settings checked, `--port` and `--no-browser`, then the server |
-| `toolkit/controllers/web/__init__.py` | `create_app()`: the Flask app with its own state, serving `toolkit/ui/web` |
-| `toolkit/controllers/web/server.py` | `run_server()`: waitress on 127.0.0.1, the port bound exclusively, the browser opened |
-| `toolkit/controllers/web/pages.py` | the two HTML pages |
-| `toolkit/controllers/web/datasets.py` | upload, preview, class filter and the analyses before training |
-| `toolkit/controllers/web/training.py` | the model list, training jobs and their results |
-| `toolkit/controllers/web/bundles.py` | export, download and load bundles; predictions, one row or a CSV file |
-| `toolkit/controllers/web/resume.py` | `GET /api/v1/workspace`, so the page resumes after a reload |
-| `toolkit/controllers/web/workspace.py` | the calling session's workspace (the cookie holds its ID), locked for the request |
-| `toolkit/controllers/web/state.py` | what one app keeps between requests (no module globals) |
-| `toolkit/controllers/web/security.py` | security headers, the CSRF token, the cross-site check, safe file names |
-| `toolkit/controllers/web/schemas.py` | one small request schema per route |
-| `toolkit/controllers/web/api.py` | request and error helpers; the HTTP status of each `ServiceError` |
+| `toolkit/web/controllers/command.py` | the web trainer's command (from `toolkit.start`): its settings checked, `--port` and `--no-browser`, then the server |
+| `toolkit/web/controllers/__init__.py` | `create_app()`: the Flask app with its own state, serving `toolkit/web/ui` |
+| `toolkit/web/controllers/server.py` | `run_server()`: waitress on 127.0.0.1, the port bound exclusively, the browser opened |
+| `toolkit/web/controllers/pages.py` | the two HTML pages |
+| `toolkit/web/controllers/datasets.py` | upload, preview, class filter and the analyses before training |
+| `toolkit/web/controllers/training.py` | the model list, training jobs and their results |
+| `toolkit/web/controllers/bundles.py` | export, download and load bundles; predictions, one row or a CSV file |
+| `toolkit/web/controllers/resume.py` | `GET /api/v1/workspace`, so the page resumes after a reload |
+| `toolkit/web/controllers/workspace.py` | the calling session's workspace (the cookie holds its ID), locked for the request |
+| `toolkit/web/controllers/state.py` | what one app keeps between requests (no module globals) |
+| `toolkit/web/controllers/security.py` | security headers, the CSRF token, the cross-site check, safe file names |
+| `toolkit/web/controllers/schemas.py` | one small request schema per route |
+| `toolkit/web/controllers/api.py` | request and error helpers; the HTTP status of each `ServiceError` |
 
 Services (what the tools do; no user interface, no I/O):
 
@@ -94,7 +92,6 @@ Services (what the tools do; no user interface, no I/O):
 |---|---|
 | `toolkit/core/__init__.py` | what both tools share (v5.2 step 2.3b): `core/services/` and `core/data/` |
 | `toolkit/core/services/__init__.py` | the shared services |
-| `toolkit/services/__init__.py` | the web trainer's services (until they move to `toolkit/web/` in step 2.3d) |
 | `toolkit/core/services/ports.py` | the three ports: `ModelStore`, `IntelProvider`, `ProgressSink` |
 | `toolkit/core/services/ids/__init__.py` | the ML core: no web framework, no `print()`, no network |
 | `toolkit/core/services/ids/datasets.py` | a CSV/TXT dataset understood: encoding, separator, profile, header, dtypes, a load report |
@@ -119,20 +116,19 @@ Services (what the tools do; no user interface, no I/O):
 | `toolkit/core/services/recon/intel.py` | `Intel`: the lookups for open ports, in parallel, each product once |
 | `toolkit/core/services/recon/os_guess.py` | the OS guess from a ping reply's TTL |
 | `toolkit/core/services/recon/report.py` | one report entry per open port, its network text cleaned |
-| `toolkit/services/web/__init__.py` | the web trainer's services |
-| `toolkit/services/web/workspace.py` | one in-memory workspace per browser session, with memory caps |
-| `toolkit/services/web/jobs.py` | the background job runner: one training at a time, progress, cancel |
-| `toolkit/services/web/errors.py` | the error codes and `ServiceError` |
-| `toolkit/services/web/datasets.py` | uploads read, files combined, the class filter, the training split |
-| `toolkit/services/web/training.py` | training settings checked, the job queued, the run kept |
-| `toolkit/services/web/prediction.py` | one row or a whole file predicted |
+| `toolkit/web/services/__init__.py` | the web trainer's services |
+| `toolkit/web/services/workspace.py` | one in-memory workspace per browser session, with memory caps |
+| `toolkit/web/services/jobs.py` | the background job runner: one training at a time, progress, cancel |
+| `toolkit/web/services/errors.py` | the error codes and `ServiceError` |
+| `toolkit/web/services/datasets.py` | uploads read, files combined, the class filter, the training split |
+| `toolkit/web/services/training.py` | training settings checked, the job queued, the run kept |
+| `toolkit/web/services/prediction.py` | one row or a whole file predicted |
 
 Data (files, the network and the environment; imports nothing above it):
 
 | Module | Role |
 |---|---|
 | `toolkit/core/data/__init__.py` | the shared data: files, the network, the environment |
-| `toolkit/data/__init__.py` | the web trainer's uploads and socket (until step 2.3d) |
 | `toolkit/core/data/settings.py` | every tunable setting, the `TOOLKIT_*` variables, the data folder, `.env` reading |
 | `toolkit/core/data/logs.py` | one rotating log file per tool, secrets redacted |
 | `toolkit/core/data/keys.py` | API keys and the AI model setting, from the environment or `.env` |
@@ -155,9 +151,9 @@ Data (files, the network and the environment; imports nothing above it):
 | `toolkit/core/data/recon/openrouter.py` | the optional AI explanation through OpenRouter (an `IntelProvider`) |
 | `toolkit/core/data/recon/abuseipdb.py` | the optional IP reputation from AbuseIPDB (an `IntelProvider`) |
 | `toolkit/core/data/recon/lookup.py` | the HTTP session, lookup time limits, expected failures and their names |
-| `toolkit/data/web/__init__.py` | the web trainer's files and sockets |
-| `toolkit/data/web/uploads.py` | uploads on disk, only while they are read |
-| `toolkit/data/web/net.py` | the listening socket, and opening the page in the browser |
+| `toolkit/web/data/__init__.py` | the web trainer's files and sockets |
+| `toolkit/web/data/uploads.py` | uploads on disk, only while they are read |
+| `toolkit/web/data/net.py` | the listening socket, and opening the page in the browser |
 
 ## 3. Dependency rules
 
@@ -234,7 +230,7 @@ Interfaces exist only where an implementation really is swapped or faked in test
 |---|---|---|---|
 | `ModelStore` | web trainer, IDS command line | `BundleStore` (`toolkit/core/services/ids/exports.py`, over `toolkit/core/data/ids/bundle_files.py`): signed bundles in `instance/bundles/` | a scratch instance folder |
 | `IntelProvider` | `Intel` in the scanner | `NvdProvider`, `OpenRouterProvider`, `AbuseIpdbProvider` (`toolkit/core/data/recon/`) | fake providers; recorded NVD answers in `tests/fixtures/` |
-| `ProgressSink` | `train()`, `evaluate()`, `scan_ports()` | a web job (`toolkit/services/web/jobs.py`), the scanner's verbose line (`toolkit/cli/ui/scan.py`) | `NullProgress` or a recorder |
+| `ProgressSink` | `train()`, `evaluate()`, `scan_ports()` | a web job (`toolkit/web/services/jobs.py`), the scanner's verbose line (`toolkit/cli/ui/scan.py`) | `NullProgress` or a recorder |
 
 Everything else is plain functions and dict registries.
 
@@ -330,11 +326,11 @@ The manifest embeds the TrainingRun. Nothing is unpickled until the size, layout
 
 - Workspaces live in memory, are freed after `TOOLKIT_WORKSPACE_IDLE_MIN` minutes, and are
   capped by `TOOLKIT_MAX_WORKSPACES` and `TOOLKIT_MAX_DATA_MB`.
-- A refusal is a `ServiceError` with a code (`toolkit/services/web/errors.py`); the routes
-  answer it with the HTTP status it has always had (`toolkit/controllers/web/api.py`).
+- A refusal is a `ServiceError` with a code (`toolkit/web/services/errors.py`); the routes
+  answer it with the HTTP status it has always had (`toolkit/web/controllers/api.py`).
 - A cancelled or failed job leaves nothing behind: no run record, no bundle.
 - `GET /api/v1/workspace` repeats the earlier answers, so a reload resumes where it was.
-- The server listens on 127.0.0.1 only (waitress, `toolkit/controllers/web/server.py`), and
+- The server listens on 127.0.0.1 only (waitress, `toolkit/web/controllers/server.py`), and
   the page opens in the browser once the port answers.
 
 ## 8. Scan flow

@@ -13,7 +13,7 @@ from toolkit import start
 
 def test_web_goes_to_the_web_command(monkeypatch):
     received = []
-    monkeypatch.setattr("toolkit.controllers.cli.web.main",
+    monkeypatch.setattr("toolkit.web.controllers.command.main",
                         lambda argv, prog: received.append((argv, prog)) or 5)
     assert start.main(["web", "--port", "5001"]) == 5
     assert received == [(["--port", "5001"], "python -m toolkit web")]
@@ -55,5 +55,5 @@ def test_the_command_line_loads_nothing_of_the_web_trainer(repo_root):
 
 def test_the_web_command_loads_nothing_of_the_command_line(repo_root):
     loaded = _loaded(repo_root, ["web", "--help"])
-    assert "toolkit.controllers.cli.web" in loaded["modules"]
+    assert "toolkit.web.controllers.command" in loaded["modules"]
     assert [m for m in loaded["modules"] if m.startswith("toolkit.cli")] == []

@@ -6,7 +6,7 @@ reads uploads, the split, leakage guard, training pipeline and evaluation run in
 itself, so the web trainer, a saved bundle and the CLI all use the same pipeline.
 
 ``create_app(config)`` builds an app with its own state (``app.extensions["toolkit"]``);
-``server.run_server()`` serves one on this computer only. The page is ``toolkit.ui.web``. Library warnings are deliberately
+``server.run_server()`` serves one on this computer only. The page is ``toolkit.web.ui``. Library warnings are deliberately
 NOT silenced (B19): they flag problems such as a model saved with a different
 scikit-learn version.
 """
@@ -22,12 +22,12 @@ from ...core.services.ids.exports import BundleStore
 from ...core.data.settings import WebConfig, instance_dir, web_config
 from . import bundles, datasets, pages, resume, training, workspace
 from .api import register_error_handlers
-from ...services.web.datasets import prepare_uploads
-from ...services.web.jobs import JobRunner
+from ..services.datasets import prepare_uploads
+from ..services.jobs import JobRunner
 from .security import register_security
 from .state import WebState
-from ...services.web.workspace import WorkspaceStore
-from ...ui import web as page
+from ..services.workspace import WorkspaceStore
+from .. import ui as page
 
 BLUEPRINTS = (pages.bp, datasets.bp, training.bp, bundles.bp, workspace.bp, resume.bp)
 

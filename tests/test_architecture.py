@@ -23,9 +23,8 @@ use Flask, only the CLI's controllers and the ``web`` command use argparse; only
 files, sockets, HTTP or child processes. The ML-core-only rules are in
 ``tests/ml/test_core_rules.py``.
 
-Until v5.2 step 2.3d moves them, the packages of the v5.1 layout that are not moved yet are
-placed by ``NOT_MOVED_YET``; it names only what is still there, and is removed with the last
-move.
+The folders of the v5.1 layout (``toolkit/ui``, ``controllers``, ``services``, ``data``) are
+gone since v5.2 step 2.3d and must stay empty; their module names are old names.
 """
 
 import ast
@@ -33,19 +32,10 @@ from pathlib import Path
 
 INTERFACES = ("core", "cli", "web")
 LAYERS = ("ui", "controllers", "services", "data")
-# Temporary (v5.2 steps 2.3b-2.3d): v5.1-layout package -> (interface, layer); the longest
-# prefix wins. Only packages that have not moved yet.
-NOT_MOVED_YET = {
-    "toolkit.ui.cli.web": ("web", "ui"),  # the web command's console messages
-    "toolkit.ui.web": ("web", "ui"),
-    "toolkit.controllers.cli.web": ("web", "controllers"),  # the web command
-    "toolkit.controllers.web": ("web", "controllers"),
-    "toolkit.services.web": ("web", "services"),
-    "toolkit.data.web": ("web", "data"),
-}
+V51_FOLDERS = ("ui", "controllers", "services", "data")  # toolkit/<folder>, gone since 2.3d
 CONTROLLER_DATA = ("toolkit.core.data.settings", "toolkit.core.data.keys",
-                   "toolkit.core.data.logs", "toolkit.data.web.net", "toolkit.cli.data.processes")
-ARGPARSE_OUTSIDE_CLI = ("toolkit.web.controllers.command", "toolkit.controllers.cli.web")
+                   "toolkit.core.data.logs", "toolkit.web.data.net", "toolkit.cli.data.processes")
+ARGPARSE_OUTSIDE_CLI = ("toolkit.web.controllers.command",)  # the web command's flags
 WEB_FRAMEWORK = {"flask", "werkzeug", "jinja2", "waitress"}
 OUTSIDE = {"socket", "ssl", "requests", "urllib", "http", "subprocess", "webbrowser"}
 FILE_METHODS = {"read_text", "read_bytes", "write_text", "write_bytes", "unlink", "mkdir",
@@ -54,14 +44,8 @@ FILE_METHODS = {"read_text", "read_bytes", "write_text", "write_bytes", "unlink"
 OLD_NAMES = ("toolkit.ids_core", "toolkit.config", "toolkit.logging_setup", "toolkit.ports",
              "toolkit.bundle_files", "toolkit.run_files", "toolkit.recon", "toolkit.ids_cli",
              "tools",
-             # moved into toolkit.core in v5.2 step 2.3b
-             "toolkit.services.ids", "toolkit.services.recon", "toolkit.services.ports",
-             "toolkit.data.settings", "toolkit.data.keys", "toolkit.data.logs",
-             "toolkit.data.files", "toolkit.data.ids", "toolkit.data.recon",
-             # moved into toolkit.cli in step 2.3c
-             "toolkit.ui.cli.menu", "toolkit.ui.cli.ids", "toolkit.ui.cli.scan",
-             "toolkit.controllers.cli.main", "toolkit.controllers.cli.ids",
-             "toolkit.controllers.cli.scan", "toolkit.data.processes")
+             # the v5.1 layers, arranged by interface in v5.2 step 2.3
+             *(f"toolkit.{folder}" for folder in V51_FOLDERS))
 TOOLS = ("ids", "recon")
 
 
@@ -101,10 +85,6 @@ def place(module: str) -> tuple[str, str, str]:
     folder of an interface (``toolkit.core``, ``toolkit.core.services``) -> its own layer
     or ``"top"``."""
     parts = module.split(".")
-    old = [p for p in NOT_MOVED_YET if module == p or module.startswith(p + ".")]
-    if old:
-        interface, layer = NOT_MOVED_YET[max(old, key=len)]
-        return interface, layer, ""
     if len(parts) > 1 and parts[1] in INTERFACES:
         layer = parts[2] if len(parts) > 2 and parts[2] in LAYERS else "top"
         tool = parts[3] if layer != "top" and len(parts) > 3 and parts[3] in TOOLS else ""
@@ -186,18 +166,33 @@ def layer_violations(root: Path) -> list[str]:
 
 def test_layers_hold(repo_root):
     for folder in ("core/services/ids", "core/services/recon", "core/data/ids",
-                   "core/data/recon", "cli/ui", "cli/controllers", "cli/data", "ui/web",
-                   "ui/cli", "controllers/web", "controllers/cli", "services/web", "data/web"):
+                   "core/data/recon", "cli/ui", "cli/controllers", "cli/data", "web/ui",
+                   "web/controllers", "web/services", "web/data"):
         # the rules must really see every interface, layer and tool
         assert (repo_root / "toolkit" / folder / "__init__.py").is_file(), folder
     assert layer_violations(repo_root) == []
 
 
-def test_the_temporary_rules_name_only_what_is_still_there(repo_root):
-    """NOT_MOVED_YET shrinks with each move; a stale entry fails."""
-    for prefix in NOT_MOVED_YET:
-        path = repo_root / Path(*prefix.split("."))
-        assert path.is_dir() or path.with_suffix(".py").is_file(), prefix
+def test_the_v51_folders_hold_no_file(repo_root):
+    """v5.2 step 2.3d: nothing is left in, or added to, toolkit/ui, controllers, services or
+    data. A ``__pycache__`` that git doesn't track may stay on a computer after the move."""
+    left = [path.relative_to(repo_root).as_posix()
+            for folder in V51_FOLDERS for path in (repo_root / "toolkit" / folder).rglob("*")
+            if path.is_file() and "__pycache__" not in path.parts]
+    assert left == []
+
+
+def test_the_folder_check_sees_a_file(tmp_path):
+    (tmp_path / "toolkit" / "ui" / "__pycache__").mkdir(parents=True)
+    (tmp_path / "toolkit" / "ui" / "__pycache__" / "x.pyc").write_bytes(b"")
+    test_the_v51_folders_hold_no_file(tmp_path)  # a cache only: fine
+    (tmp_path / "toolkit" / "data" / "web").mkdir(parents=True)
+    (tmp_path / "toolkit" / "data" / "web" / "net.py").write_text("", encoding="utf-8")
+    try:
+        test_the_v51_folders_hold_no_file(tmp_path)
+    except AssertionError:
+        return
+    raise AssertionError("a file left in toolkit/data was not found")
 
 
 def test_each_rule_is_detected(tmp_path):

@@ -54,7 +54,7 @@ include = ["toolkit*"]
 
 # The web trainer's page templates and static files.
 [tool.setuptools.package-data]
-"toolkit.ui.web" = ["templates/*", "static/**/*"]
+"toolkit.web.ui" = ["templates/*", "static/**/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -67,7 +67,7 @@ addopts = "-ra"
 # Pythons without installing them (plan D19, Python policy B).
 target-version = "py311"
 line-length = 100
-extend-exclude = [".venv", "./data"]  # the local datasets, not toolkit/data/
+extend-exclude = [".venv", "./data"]  # the local datasets, not the toolkit's data/ layers
 
 [tool.ruff.lint]
 # RUF100: a noqa that no longer suppresses anything fails (v5.2 step 2.3a); every

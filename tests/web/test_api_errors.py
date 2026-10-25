@@ -2,8 +2,8 @@
 
 import io
 
-from toolkit.services.web import errors
-from toolkit.controllers.web import api
+from toolkit.web.services import errors
+from toolkit.web.controllers import api
 
 
 def _error(response):

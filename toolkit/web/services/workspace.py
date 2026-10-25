@@ -1,6 +1,6 @@
 """Workspaces: one per browser session (S7, R4), by a random ID.
 
-The session cookie only holds that ID (``toolkit.controllers.web.workspace``); the data
+The session cookie only holds that ID (``toolkit.web.controllers.workspace``); the data
 stays in this process's memory, so workspaces don't survive a restart.
 """
 

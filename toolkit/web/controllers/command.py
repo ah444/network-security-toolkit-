@@ -1,7 +1,7 @@
 """``toolkit web``: the web trainer's flags (``--port``, ``--no-browser``), then the server.
 
-Started by ``toolkit.start`` (v5.2 step 2.3c), never by the command line; it moves to
-``toolkit/web/controllers/command.py`` in step 2.3d."""
+Started by ``toolkit.start`` (v5.2 step 2.3c), never by the command line; here, among the
+web trainer's controllers, since step 2.3d (it was ``toolkit/controllers/cli/web.py``)."""
 
 from __future__ import annotations
 
@@ -11,8 +11,8 @@ import sys
 from collections.abc import Sequence
 
 from ...core.data.settings import check_settings, port_number, web_config
-from ...ui.cli import web as messages
-from ..web.server import run_server
+from ..ui import console as messages
+from .server import run_server
 
 HELP_FLAGS = {"-h", "--help"}
 

@@ -3,7 +3,7 @@
 import pytest
 
 from toolkit.core.data.ids import bundle_files
-from toolkit.controllers.web.security import safe_model_basename
+from toolkit.web.controllers.security import safe_model_basename
 from web_jobs import train_and_wait
 
 TARGET = "Label"

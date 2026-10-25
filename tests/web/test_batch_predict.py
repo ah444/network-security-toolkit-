@@ -215,7 +215,7 @@ def test_summary_order_and_matches():
 
 
 def test_page_has_the_forms(repo_root):
-    page = (repo_root / "toolkit/ui/web/templates/dynamic_ids.html").read_text(encoding="utf-8")
+    page = (repo_root / "toolkit/web/ui/templates/dynamic_ids.html").read_text(encoding="utf-8")
     for prefix in ("predict", "loadedPredict"):
         assert f'id="{prefix}FileForm"' in page and f'for="{prefix}File"' in page
         assert f'id="{prefix}FileResult" class="message" role="status"' in page

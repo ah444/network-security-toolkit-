@@ -15,8 +15,8 @@ from ...core.data.settings import WebConfig
 from ...core.services.ports import ModelStore
 
 if TYPE_CHECKING:
-    from ...services.web.jobs import JobRunner
-    from ...services.web.workspace import WorkspaceStore
+    from ..services.jobs import JobRunner
+    from ..services.workspace import WorkspaceStore
 
 
 @dataclass
