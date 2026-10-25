@@ -217,13 +217,13 @@
             <div id="modelSelection" class="checkbox-list" role="group" aria-labelledby="modelSelectionLabel"></div>
           </div>
           <button type="submit" class="btn">Train Model</button>
-          <div id="trainingProgress" class="training-progress" hidden aria-live="polite">
+          <div id="trainingProgress" class="training-progress" hidden aria-live="polite" tabindex="-1">
             <progress id="trainingProgressBar" max="100" value="0" aria-label="Training progress"></progress>
             <span id="trainingProgressText"></span>
             <button type="button" id="cancelTrainingBtn" class="btn" disabled>Cancel training</button>
           </div>
         </form>
-        <div id="configResult" class="message" role="status"></div>
+        <div id="configResult" class="message" role="status" tabindex="-1"></div>
 
         <div id="confusionMatrixSection" class="subsection" hidden>
           <h3>Confusion Matrix (test split)</h3>

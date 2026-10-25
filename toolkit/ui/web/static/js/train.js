@@ -154,10 +154,21 @@ function showJob(job) {
   }
 }
 
+// Keyboard focus never falls to the page body when a button it is on gets disabled or
+// hidden: Train → Cancel when the job starts, Cancel → the progress, then the result.
+function focusLost(region) {
+  const active = document.activeElement;
+  return !active || active === document.body || region.contains(active);
+}
+
 function endJob() {
+  const refocus = focusLost(byId("trainingProgress"));
   byId("configForm").querySelector('button[type="submit"]').disabled = false;
   byId("cancelTrainingBtn").disabled = true;
   show(byId("trainingProgress"), false);
+  if (refocus) {
+    byId("configResult").focus();
+  }
 }
 
 async function poll() {
@@ -195,6 +206,7 @@ async function cancelJob() {
   if (!jobUrl) {
     return;
   }
+  byId("trainingProgress").focus();
   byId("cancelTrainingBtn").disabled = true;
   try {
     showJob(await send(jobUrl, "DELETE"));
@@ -218,6 +230,7 @@ async function train(event) {
     return;
   }
   setContent(configResult, TRAINING_MESSAGE);
+  configResult.focus();
   byId("configForm").querySelector('button[type="submit"]').disabled = true;
   jobUrl = null;
   try {
@@ -227,6 +240,7 @@ async function train(event) {
     jobUrl = job.url;
     show(byId("trainingProgress"));
     byId("cancelTrainingBtn").disabled = false;
+    byId("cancelTrainingBtn").focus();
     showJob(job);
     setTimeout(poll, 1000);
   } catch (error) {
