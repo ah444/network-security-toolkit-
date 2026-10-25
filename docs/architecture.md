@@ -160,7 +160,8 @@ The page, its routes and jobs, and the `web` command; it never imports the comma
 | `toolkit/web/controllers/server.py` | controllers | `run_server()`: waitress on 127.0.0.1, the port bound exclusively, the browser opened |
 | `toolkit/web/controllers/pages.py` | controllers | the two HTML pages |
 | `toolkit/web/controllers/datasets.py` | controllers | upload, preview, class filter and the analyses before training |
-| `toolkit/web/controllers/training.py` | controllers | the model list, training jobs and their results |
+| `toolkit/web/controllers/training.py` | controllers | the model list, a training job started, its results |
+| `toolkit/web/controllers/jobs.py` | controllers | any job's state, progress and cancel (`GET`/`DELETE /api/v1/jobs/<id>`) |
 | `toolkit/web/controllers/bundles.py` | controllers | export, download and load bundles; predictions, one row or a CSV file |
 | `toolkit/web/controllers/resume.py` | controllers | `GET /api/v1/workspace`, so the page resumes after a reload |
 | `toolkit/web/controllers/workspace.py` | controllers | the calling session's workspace (the cookie holds its ID), locked for the request |
@@ -170,7 +171,7 @@ The page, its routes and jobs, and the `web` command; it never imports the comma
 | `toolkit/web/controllers/api.py` | controllers | request and error helpers; the HTTP status of each `ServiceError` |
 | `toolkit/web/services/__init__.py` | services | the web trainer's services |
 | `toolkit/web/services/workspace.py` | services | one in-memory workspace per browser session, with memory caps |
-| `toolkit/web/services/jobs.py` | services | the background job runner: one training at a time, progress, cancel |
+| `toolkit/web/services/jobs.py` | services | the background jobs: a queue per kind (training, scan), one job of a kind at a time, progress, cancel |
 | `toolkit/web/services/errors.py` | services | the error codes and `ServiceError` |
 | `toolkit/web/services/datasets.py` | services | uploads read, files combined, the class filter, the training split |
 | `toolkit/web/services/training.py` | services | training settings checked, the job queued, the run kept |
@@ -381,8 +382,9 @@ The manifest embeds the TrainingRun. Nothing is unpickled until the size, layout
      |          training.py (settings checked, the job queued) ----+
      |          prediction.py (one row, a whole file)               |
      |          workspace.py: one workspace per session, in memory  v
-     |            (dataset, run, bundle, last predictions)   jobs.py: one worker
-     |                                                       thread, one training
+     |            (dataset, run, bundle, last predictions)   jobs.py: a worker
+     |                                                       thread per kind, one
+     |                                                       training and one scan
      |                                                       at a time; progress
      |                                                       and cancel through
      v                                                       ProgressSink.advance()

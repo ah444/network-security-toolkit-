@@ -15,19 +15,27 @@ from ...core.data.settings import WebConfig
 from ...core.services.ports import ModelStore
 
 if TYPE_CHECKING:
-    from ..services.jobs import JobRunner
+    from ..services.jobs import JobKind, JobRunner
     from ..services.workspace import WorkspaceStore
 
 
 @dataclass
 class WebState:
     """What one app keeps between requests: its settings, the workspaces, the model store, the
-    upload folder and the job runner."""
+    upload folder and a job runner for each kind of job."""
     config: WebConfig
     workspaces: WorkspaceStore
     model_store: ModelStore  # exports and loads: signed bundles in instance/bundles
     upload_dir: Path  # uploads are written here only while the loader reads them (S11)
-    jobs: JobRunner  # one training at a time for the whole server, others queued
+    training_jobs: JobRunner  # one training at a time for the whole server, others queued
+    scan_jobs: JobRunner  # one scan at a time for the whole server, next to a training
+
+    def runner(self, kind: JobKind) -> JobRunner:
+        """The runner whose queue holds the jobs of ``kind``."""
+        for runner in (self.training_jobs, self.scan_jobs):
+            if runner.kind == kind:
+                return runner
+        raise LookupError(f"no runner for {kind.name} jobs")
 
 
 def state() -> WebState:

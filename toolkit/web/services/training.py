@@ -14,7 +14,7 @@ from ...core.services.ids.runs import TrainingRun, TrainSettings
 from ...core.services.ids.runs import train as train_run
 from .datasets import label_values
 from .errors import BUSY, TRAINING_FAILED, UNKNOWN_COLUMN, ServiceError
-from .jobs import Job, JobRunner
+from .jobs import TRAINING, Job, JobRunner
 from .workspace import UploadedData, Workspace
 
 log = logging.getLogger(__name__)
@@ -37,13 +37,29 @@ def start_job(ws: Workspace, data: UploadedData, settings: TrainSettings, jobs: 
         ws.release_lease()
         ws.training.release()
 
-    job = Job(work=lambda job: answer(run_training(ws, data, settings, job)), on_end=release,
-              max_seconds=max_seconds, models=len(settings.models or ()),
-              folds=settings.evaluation.cv_folds)
+    job = Job(kind=TRAINING, work=lambda job: answer(run_training(ws, data, settings, job)),
+              on_end=release, max_seconds=max_seconds,
+              steps=training_steps(len(settings.models or ()), settings.evaluation.cv_folds))
     ws.split = None  # free the preview split: training makes its own
     ws.add_job(job)
     jobs.submit(job)
     return job
+
+
+def training_steps(models: int, folds: int) -> Callable[[int, int], str]:
+    """A running training's phase text from its step count: steps = 2 (split, leakage
+    check) + models x (folds + the final fit)."""
+    def phase(done: int, total: int) -> str:
+        cv_end = 2 + models * folds
+        if done < 2:
+            return "Preparing the split and the leakage check"
+        if done < cv_end:
+            fold = (done - 2) // max(1, models) + 1
+            return f"Cross-validation, fold {fold} of {folds}"
+        if done < total:
+            return "Final training on the whole training split"
+        return "Scoring the test split"
+    return phase
 
 
 def training_settings(data: UploadedData, target: str, features: list[str] | None,

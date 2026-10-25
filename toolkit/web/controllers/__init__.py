@@ -20,16 +20,16 @@ from flask import Flask
 
 from ...core.services.ids.exports import BundleStore
 from ...core.data.settings import WebConfig, instance_dir, web_config
-from . import bundles, datasets, pages, resume, training, workspace
+from . import bundles, datasets, jobs, pages, resume, training, workspace
 from .api import register_error_handlers
 from ..services.datasets import prepare_uploads
-from ..services.jobs import JobRunner
+from ..services.jobs import SCAN, TRAINING, JobRunner
 from .security import register_security
 from .state import WebState
 from ..services.workspace import WorkspaceStore
 from .. import ui as page
 
-BLUEPRINTS = (pages.bp, datasets.bp, training.bp, bundles.bp, workspace.bp, resume.bp)
+BLUEPRINTS = (pages.bp, datasets.bp, training.bp, jobs.bp, bundles.bp, workspace.bp, resume.bp)
 
 
 def create_app(config: WebConfig | None = None) -> Flask:
@@ -58,7 +58,8 @@ def create_app(config: WebConfig | None = None) -> Flask:
                                   max_data_bytes=config.max_data_mb * 2**20),
         model_store=BundleStore(),
         upload_dir=upload_dir,
-        jobs=JobRunner(),
+        training_jobs=JobRunner(TRAINING),
+        scan_jobs=JobRunner(SCAN),
     )
     register_error_handlers(app)
     register_security(app, config.port)

@@ -9,8 +9,8 @@ from flask import Blueprint, jsonify
 from .api import Answer
 from .bundles import bundle_answer, export_answer
 from .datasets import dataset_answer
-from ..services.jobs import FINISHED
-from .training import job_view
+from ..services.jobs import TRAINING
+from .jobs import job_view
 from .state import state
 from .training import run_result
 from ..services.workspace import Workspace
@@ -24,11 +24,11 @@ bp = Blueprint("resume", __name__, url_prefix="/api/v1")
 def workspace_contents(ws: Workspace) -> Answer:
     """Each part is null when the session has none; a session without a workspace gets
     all nulls, and nothing is created (no cookie is set)."""
-    active = [job for job in ws.jobs.values() if job.state not in FINISHED]
+    active = ws.active_job(TRAINING)  # queued or running; a scan is never this page's job
     return jsonify({
         "dataset": dataset_answer(ws.data, ws.data_bytes) if ws.data is not None else None,
         "run": run_result(ws.run) if ws.run is not None else None,
-        "job": job_view(active[-1], state().jobs) if active else None,  # queued or running
+        "job": job_view(active, state().training_jobs) if active else None,
         "export": export_answer(ws.export) if ws.export is not None else None,
         "bundle": bundle_answer(ws.loaded) if ws.loaded is not None else None,
         "predictions": ws.predictions.answer if ws.predictions is not None else None,

@@ -1,4 +1,5 @@
-"""Training routes: the models that can be trained, training jobs, and their results."""
+"""Training routes: the models that can be trained, a training job started, and its results
+(the job's state and cancel: ``jobs.py``)."""
 
 from __future__ import annotations
 
@@ -14,7 +15,7 @@ from ...core.services.ids.runs import TrainingRun
 from ..services.datasets import require_data
 from ..services.errors import NOT_TRAINED, TRAINING_FAILED
 from .api import Answer, ApiError, error_response, json_body, query
-from ..services.jobs import FINISHED, QUEUED, RUNNING, Job, JobRunner
+from .jobs import job_view
 from ..services.training import start_job, training_settings
 from .schemas import ConfusionRequest, TrainRequest, load
 from .state import state
@@ -51,52 +52,9 @@ def start_training() -> Answer:
         data = require_data(ws)
         settings = training_settings(data, req.target, req.features, req.models,
                                      req.balancing, req.test_size)
-        job = start_job(ws, data, settings, state().jobs,
+        job = start_job(ws, data, settings, state().training_jobs,
                         state().config.job_max_minutes * 60, run_result)
-        return jsonify(job_view(job, state().jobs)), 202
-
-
-@bp.route("/jobs/<job_id>", methods=["GET"])
-@with_workspace()
-def job_status(ws: Workspace, job_id: str) -> Answer:
-    """State, progress and, at the end, the result (or the error) of this session's job."""
-    return jsonify(job_view(ws.job(job_id), state().jobs))
-
-
-@bp.route("/jobs/<job_id>", methods=["DELETE"])
-@with_workspace()
-def cancel_job(ws: Workspace, job_id: str) -> Answer:
-    """Cancel this session's job: a queued one at once, a running one at its next step."""
-    job = ws.job(job_id)
-    if job.state not in FINISHED:
-        state().jobs.cancel(job)
-    return jsonify(job_view(job, state().jobs)), 202
-
-
-def job_view(job: Job, runner: JobRunner) -> dict[str, Any]:
-    """What ``GET /api/v1/jobs/<id>`` answers."""
-    state = job.state
-    if state == RUNNING and job.cancel_requested.is_set():
-        state = "cancelling"
-    view: dict[str, Any] = {
-        "id": job.id,
-        "url": f"/api/v1/jobs/{job.id}",
-        "state": state,
-        "done": job.done,
-        "total": job.total,
-        "percent": round(100 * job.done / job.total) if job.total else 0,
-        "phase": job.phase(),
-        "elapsed_seconds": round(job.elapsed(), 1),
-    }
-    if job.state == QUEUED:
-        view["queue_position"] = runner.position(job)
-        if view["queue_position"] == 0:  # submitted, the worker has not picked it up yet
-            view["phase"] = "Starting"
-    if job.result is not None:
-        view["result"] = job.result
-    if job.error is not None:
-        view["error"] = job.error
-    return view
+        return jsonify(job_view(job, state().training_jobs)), 202
 
 
 def features_info(fitted: FittedModel) -> list[dict[str, Any]]:

@@ -153,18 +153,21 @@ not kept and are asked for again.
 
 ## Training jobs
 
-A training runs in the background as a **job**. The server runs one job at a time (each
-uses `TOOLKIT_MAX_WORKERS` cores); others wait in a queue. While a session's job waits or
-runs, that session can read and predict, but not change its dataset or start a second
-job (`BUSY`). A job is visible only to its own session (another session's job id answers
-`NOT_FOUND`); each session keeps its last 5 jobs.
+A training runs in the background as a **job**. The server runs one training at a time
+(each uses `TOOLKIT_MAX_WORKERS` cores); others wait in a queue. Each kind of job has its
+own queue, so a port scan (a job of the kind `scan`, from the web scan to come) waits only
+for another scan, never for a training. While a session's training waits or runs, that
+session can read and predict, but not change its dataset or start a second training
+(`BUSY`). A job is visible only to its own session (another session's job id answers
+`NOT_FOUND`); each session keeps its last 5 jobs of each kind.
 
 ```json
-{"id": "...", "url": "/api/v1/jobs/...", "state": "running", "done": 7, "total": 22,
- "percent": 32, "phase": "Cross-validation, fold 2 of 3", "elapsed_seconds": 72.4}
+{"id": "...", "url": "/api/v1/jobs/...", "kind": "training", "state": "running", "done": 7,
+ "total": 22, "percent": 32, "phase": "Cross-validation, fold 2 of 3", "elapsed_seconds": 72.4}
 ```
 
-- `state`: `queued` (with `queue_position`: jobs that run first; at 0 the phase is
+- `kind`: `training` (or `scan`); the job routes answer for either kind.
+- `state`: `queued` (with `queue_position`: jobs of its kind that run first; at 0 the phase is
   `Starting`, as the worker is about to pick it up), `running`, `cancelling`
   (cancel asked, waiting for the current model's fit to end), `done` (with `result`),
   `failed` or `cancelled` (with `error`: `{"code", "message"}`).
@@ -198,7 +201,7 @@ Every error answer has the same shape; `details` is present only when there is m
 | `BAD_HOST` | 400 | the `Host` header isn't the app's address (an IP address or `localhost`, on its port) |
 | `CROSS_SITE` | 403 | the request came from another site |
 | `CSRF_TOKEN` | 403 | the `X-CSRF-Token` header is missing or isn't this session's token (reload the page) |
-| `NOT_FOUND` | 404 | no such API route |
+| `NOT_FOUND` | 404 | no such API route, or no such job in this session |
 | `METHOD_NOT_ALLOWED` | 405 | the route exists, the method doesn't |
 | `BUSY` | 409 | a training run is in progress in this workspace: a second training, an upload, a class filter or clearing the workspace has to wait for it |
 | `TOO_LARGE` | 413 | the upload is above `TOOLKIT_MAX_UPLOAD_MB` |

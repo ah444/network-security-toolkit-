@@ -1,11 +1,14 @@
-"""Background jobs (D8, D22): a training runs outside the request, with progress and cancel.
+"""Background jobs (D8, D22): a training or a scan runs outside the request, with progress
+and cancel.
 
-One worker thread per app runs **one job at a time for the whole server**; the others wait
-in a queue, so a laptop never trains twice at full load (each training already uses
-``TOOLKIT_MAX_WORKERS`` cores). A job is its own ``ProgressSink``: every ``advance()``
-updates the step count and is the point where a cancel or the time limit
-(``TOOLKIT_JOB_MAX_MIN``) takes effect, so the current model's fit always finishes
-first (cooperative cancel). A job that doesn't end in ``done`` leaves nothing behind.
+Each kind of job has its own queue (v5.2 step 2.4b): one worker thread per kind runs **one
+job of that kind at a time for the whole server**; the others wait, so a laptop never
+trains twice at full load (each training already uses ``TOOLKIT_MAX_WORKERS`` cores) nor
+scans twice at once, while a scan doesn't wait for a training. A job is its own
+``ProgressSink``: every ``advance()`` updates the step count and is the point where a
+cancel or the time limit takes effect, so the current step (a model's fit) always
+finishes first (cooperative cancel). A job that doesn't end in ``done`` leaves nothing
+behind.
 """
 
 from __future__ import annotations
@@ -27,6 +30,20 @@ QUEUED, RUNNING, DONE, FAILED, STOPPED = "queued", "running", "done", "failed", 
 FINISHED = (DONE, FAILED, STOPPED)
 
 
+@dataclass(frozen=True)
+class JobKind:
+    """What differs between kinds of job: the name the page and the worker thread use, the
+    word that starts its messages and the setting behind its time limit."""
+
+    name: str  # "Waiting for another <name> to finish"; the thread "<name>-jobs"
+    title: str  # "<title> cancelled. ..."
+    time_limit: str  # the environment variable the job's max_seconds comes from
+
+
+TRAINING = JobKind("training", "Training", "TOOLKIT_JOB_MAX_MIN")
+SCAN = JobKind("scan", "Scan", "TOOLKIT_SCAN_MAX_MIN")
+
+
 class JobCancelled(Exception):
     """Raised from ``advance()`` when a job was cancelled or ran out of time."""
 
@@ -38,13 +55,14 @@ class JobCancelled(Exception):
 
 @dataclass(eq=False)
 class Job:
-    """One training: its state, its progress (it is the ProgressSink) and its outcome."""
+    """One training or scan: its state, its progress (it is the ProgressSink) and its
+    outcome."""
 
+    kind: JobKind
     work: Callable[[Job], dict[str, Any]]  # runs in the worker thread; returns the result
     on_end: Callable[[], None]  # always called once at the end (releases lock and lease)
     max_seconds: float
-    models: int  # for the phase text: steps = 2 + models x (folds + 1)
-    folds: int
+    steps: Callable[[int, int], str]  # the phase text while it runs, from (done, total)
     id: str = field(default_factory=lambda: secrets.token_urlsafe(9))
     state: str = QUEUED
     done: int = 0
@@ -58,18 +76,20 @@ class Job:
 
     # --- ProgressSink -------------------------------------------------------------------
     def start(self, total: int) -> None:
-        """The training's step count; nothing done yet."""
+        """The job's step count; nothing done yet."""
         self.total, self.done = total, 0
 
     def advance(self, done: int = 1) -> None:
         """Counts finished steps, then raises JobCancelled if the job was cancelled or ran past
-        ``max_seconds``: the training stops between steps, never inside a fit."""
+        ``max_seconds``: the job stops between steps, never inside one (a training's fit)."""
         self.done = min(self.total, self.done + done) if self.total else self.done + done
         if self.cancel_requested.is_set():
-            raise JobCancelled(CANCELLED, "Training cancelled. Nothing was kept from it.")
+            raise JobCancelled(CANCELLED, f"{self.kind.title} cancelled. Nothing was kept "
+                                          "from it.")
         if self.started is not None and time.monotonic() - self.started > self.max_seconds:
-            raise JobCancelled(TIME_LIMIT, f"Training stopped after {self.max_seconds / 60:,.0f} "
-                                           "minutes (TOOLKIT_JOB_MAX_MIN). Nothing was kept.")
+            raise JobCancelled(TIME_LIMIT, f"{self.kind.title} stopped after "
+                                           f"{self.max_seconds / 60:,.0f} minutes "
+                                           f"({self.kind.time_limit}). Nothing was kept.")
 
     def finish(self) -> None:
         """Nothing: the worker records how the job ended."""
@@ -77,20 +97,13 @@ class Job:
 
     # --- What the page shows ------------------------------------------------------------
     def phase(self) -> str:
-        """The page's text for where the job is, from its state and step count."""
+        """The page's text for where the job is: its state, or while it runs its kind's
+        text for its step count (``steps``)."""
         if self.state == QUEUED:
-            return "Waiting for another training to finish"
+            return f"Waiting for another {self.kind.name} to finish"
         if self.state in FINISHED:
             return {DONE: "Finished", FAILED: "Failed", STOPPED: "Cancelled"}[self.state]
-        cv_end = 2 + self.models * self.folds
-        if self.done < 2:
-            return "Preparing the split and the leakage check"
-        if self.done < cv_end:
-            fold = (self.done - 2) // max(1, self.models) + 1
-            return f"Cross-validation, fold {fold} of {self.folds}"
-        if self.done < self.total:
-            return "Final training on the whole training split"
-        return "Scoring the test split"
+        return self.steps(self.done, self.total)
 
     def elapsed(self) -> float:
         """Seconds since the job started running (0 while it waits); final once it ended."""
@@ -100,9 +113,10 @@ class Job:
 
 
 class JobRunner:
-    """The app's job queue and its one worker thread (started with the first job)."""
+    """One kind's job queue and its one worker thread (started with the first job)."""
 
-    def __init__(self) -> None:
+    def __init__(self, kind: JobKind) -> None:
+        self.kind = kind
         self._queue: queue.Queue[Job] = queue.Queue()
         self._lock = threading.Lock()
         self._waiting: list[Job] = []
@@ -110,12 +124,15 @@ class JobRunner:
         self._thread: threading.Thread | None = None
 
     def submit(self, job: Job) -> None:
-        """Queues ``job``; the worker thread is started with the first job."""
+        """Queues ``job``, which must be of this runner's kind; the worker thread is started
+        with the first job."""
+        if job.kind != self.kind:
+            raise ValueError(f"a {job.kind.name} job can't wait in the {self.kind.name} queue")
         with self._lock:
             self._waiting.append(job)
             if self._thread is None:
-                self._thread = threading.Thread(target=self._work, name="training-jobs",
-                                                daemon=True)
+                self._thread = threading.Thread(target=self._work,
+                                                name=f"{self.kind.name}-jobs", daemon=True)
                 self._thread.start()
         self._queue.put(job)
 
@@ -134,7 +151,8 @@ class JobRunner:
                 return
             self._waiting.remove(job)
             job.state, job.ended = STOPPED, time.monotonic()
-            job.error = {"code": CANCELLED, "message": "Training cancelled before it started."}
+            job.error = {"code": CANCELLED,
+                         "message": f"{job.kind.title} cancelled before it started."}
         job.on_end()
 
     def _work(self) -> None:
@@ -155,14 +173,14 @@ class JobRunner:
             except JobCancelled as stop:
                 job.error = {"code": stop.code, "message": stop.message}
                 job.state = STOPPED
-                log.info("Training job stopped (%s)", stop.code)
+                log.info("%s job stopped (%s)", job.kind.title, stop.code)
             except ServiceError as error:
                 job.error = {"code": error.code, "message": error.message}
                 if error.details:
                     job.error["details"] = error.details
                 job.state = FAILED
             except Exception:  # the worker must survive anything a job does
-                log.exception("Training job failed")
+                log.exception("%s job failed", job.kind.title)
                 job.error = {"code": INTERNAL, "message": "Something went wrong on the server. "
                                                           "Details are in the server log."}
                 job.state = FAILED

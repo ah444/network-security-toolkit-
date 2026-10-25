@@ -23,7 +23,7 @@ from ...core.services.ids.profiles import ProfileMatch
 from ...core.services.ids.runs import DatasetRef, TrainingRun
 from ...core.services.ids.split import SplitResult
 from .errors import BUSY, DATA_LIMIT, NOT_FOUND, ServiceError, Unavailable
-from .jobs import FINISHED, Job
+from .jobs import FINISHED, Job, JobKind
 
 log = logging.getLogger(__name__)
 
@@ -82,14 +82,14 @@ class Workspace:
         self.training = threading.Lock()  # held while a training runs (one at a time)
         self.last_used = time.monotonic()
         self.data_bytes = 0  # memory of the loaded dataset (counted by the store's cap)
-        self.jobs: dict[str, Job] = {}  # this session's last JOBS_KEPT training jobs
+        self.jobs: dict[str, Job] = {}  # this session's last JOBS_KEPT jobs of each kind
         self._leases = 0
         self._lease_lock = threading.Lock()
 
     @property
     def leased(self) -> bool:
-        """True while a training job still needs this workspace (a lease, or the training
-        lock held): the store never drops it then."""
+        """True while a job still needs this workspace (a lease, or the training lock held):
+        the store never drops it then."""
         return self._leases > 0 or self.training.locked()
 
     def acquire_lease(self) -> None:
@@ -113,18 +113,26 @@ class Workspace:
             self.release_lease()
 
     def add_job(self, job: Job) -> None:
-        """Remember a job; only the last JOBS_KEPT finished ones are kept."""
+        """Remember a job; of its kind only the last JOBS_KEPT finished ones are kept, so
+        scans never push out a training job, nor trainings a scan."""
         self.jobs[job.id] = job
-        finished = [j for j in self.jobs.values() if j.state in FINISHED]
-        for old in finished[:max(0, len(self.jobs) - JOBS_KEPT)]:
+        same = [j for j in self.jobs.values() if j.kind == job.kind]
+        finished = [j for j in same if j.state in FINISHED]
+        for old in finished[:max(0, len(same) - JOBS_KEPT)]:
             del self.jobs[old.id]
 
     def job(self, job_id: str) -> Job:
-        """This session's job, else 404 (another session's job id answers the same)."""
+        """This session's job of any kind, else 404 (another session's job id answers the
+        same)."""
         job = self.jobs.get(job_id)
         if job is None:
-            raise ServiceError("No such training job in this session.", NOT_FOUND)
+            raise ServiceError("No such job in this session.", NOT_FOUND)
         return job
+
+    def active_job(self, kind: JobKind) -> Job | None:
+        """This session's last job of ``kind`` that is still queued or running."""
+        active = [j for j in self.jobs.values() if j.kind == kind and j.state not in FINISHED]
+        return active[-1] if active else None
 
     def require_no_training(self) -> None:
         """Refuse a dataset change while a training reads the dataset (409 BUSY)."""
