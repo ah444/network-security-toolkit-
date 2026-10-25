@@ -21,8 +21,8 @@ from toolkit.core.services.ids import bundle as core_bundle
 from toolkit.core.services.ids.datasets import load_dataset
 from web_jobs import train_and_wait
 
-CLI_DIRS = ("toolkit/controllers/cli", "toolkit/ui/cli")
-CLI_FILES = ("toolkit/controllers/cli/ids.py", "toolkit/ui/cli/ids.py",
+CLI_DIRS = ("toolkit/cli/controllers", "toolkit/cli/ui")
+CLI_FILES = ("toolkit/cli/controllers/ids.py", "toolkit/cli/ui/ids.py",
              "toolkit/core/services/ids/prediction.py")
 MODELS_README = "docs/ids_cli_models.md"
 CIC = "cic_ddos_sample.csv"

@@ -12,7 +12,7 @@ project: train one in the web trainer and click Export (saved in instance/bundle
 
 (from the project folder; ``toolkit ids`` once installed; moved from
 tools/IDS/IDS_CLI - CIC-2017/ in v5.1 step 1.4a; the predictions are
-``toolkit.core.services.ids.prediction``, what the user sees ``toolkit.ui.cli.ids``)
+``toolkit.core.services.ids.prediction``, what the user sees ``toolkit.cli.ui.ids``)
 
 Trust (D11): a bundle is opened only if it is signed by this install's key
 (instance/signing.key). Nothing else is ever opened.
@@ -36,7 +36,7 @@ from ...core.services.ids.prediction import (
 )
 from ...core.data.logs import setup_logging
 from ...core.services.ports import ModelStore
-from ...ui.cli import ids as screen
+from ..ui import ids as screen
 
 MODEL_STORE: ModelStore = BundleStore()  # this install's exports (instance/bundles)
 LARGE_BUNDLE = 500 * 2**20  # bytes: say that loading takes a while

@@ -46,7 +46,7 @@ dev = [
 ]
 
 [project.scripts]
-toolkit = "toolkit.controllers.cli.main:main"
+toolkit = "toolkit.start:main"
 
 # Only toolkit/ is the package (the project folder also holds data/, docs/, scripts/, tests/).
 [tool.setuptools.packages.find]

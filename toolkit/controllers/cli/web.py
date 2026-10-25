@@ -1,4 +1,7 @@
-"""``toolkit web``: the web trainer's flags (``--port``, ``--no-browser``), then the server."""
+"""``toolkit web``: the web trainer's flags (``--port``, ``--no-browser``), then the server.
+
+Started by ``toolkit.start`` (v5.2 step 2.3c), never by the command line; it moves to
+``toolkit/web/controllers/command.py`` in step 2.3d."""
 
 from __future__ import annotations
 
@@ -7,9 +10,11 @@ import dataclasses
 import sys
 from collections.abc import Sequence
 
-from ...core.data.settings import port_number, web_config
+from ...core.data.settings import check_settings, port_number, web_config
 from ...ui.cli import web as messages
 from ..web.server import run_server
+
+HELP_FLAGS = {"-h", "--help"}
 
 
 def _port_argument(text: str) -> int:
@@ -31,6 +36,18 @@ def build_parser(prog: str | None = None) -> argparse.ArgumentParser:
     parser.add_argument("--no-browser", action="store_true",
                         help="don't open the browser (also TOOLKIT_NO_BROWSER=1)")
     return parser
+
+
+def main(argv: Sequence[str], prog: str) -> int:
+    """From ``toolkit.start``: a bad ``TOOLKIT_*`` setting of the web trainer stops it, one
+    line each and exit code 2, before its log starts (as the command line does for its
+    tools, v5.1 step 1.5e; ``--help`` always works); else ``run``; 0 once the server stops."""
+    problems = [] if HELP_FLAGS.intersection(argv) else check_settings("web")
+    if problems:
+        messages.bad_settings(problems)
+        return 2
+    run(argv, prog)
+    return 0
 
 
 def run(argv: Sequence[str] | None = None, prog: str | None = None) -> None:

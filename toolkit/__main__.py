@@ -1,5 +1,5 @@
-"""``python -m toolkit``: the menu, or ``scan``, ``ids``, ``web`` (see ``toolkit.controllers.cli.main``)."""
+"""``python -m toolkit``: the menu, or ``scan``, ``ids``, ``web`` (see ``toolkit.start``)."""
 
-from .controllers.cli.main import run
+from .start import run
 
 run()

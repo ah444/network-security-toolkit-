@@ -1,7 +1,7 @@
 """A scan, start to end (B11, S16, step 1.4e): each target pinged, its ports checked, the
 open ones looked up online (each product once, in parallel), the report entries made and,
 if asked, saved. What the user sees and answers on the way goes through a ``ScanView``
-(``toolkit.ui.cli.scan.ConsoleScan``), so this module never prints or asks.
+(``toolkit.cli.ui.scan.ConsoleScan``), so this module never prints or asks.
 """
 
 from __future__ import annotations
@@ -49,7 +49,7 @@ class ScanRequest:
 
 
 class ScanView(Protocol):
-    """What a scan shows and asks on its way (the console: ``toolkit.ui.cli.scan``)."""
+    """What a scan shows and asks on its way (the console: ``toolkit.cli.ui.scan``)."""
 
     def resolved(self, text: str, address: str) -> None: ...
 

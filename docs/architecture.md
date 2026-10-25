@@ -53,10 +53,12 @@ UI (the only code that prints or asks):
 |---|---|
 | `toolkit/ui/__init__.py` | the UI layer |
 | `toolkit/ui/web/__init__.py` | the web trainer's page: `templates/` and `static/` (one CSS file, ES modules; `api.js` holds the only `fetch`) |
-| `toolkit/ui/cli/__init__.py` | the terminal tools' prompts and printing |
-| `toolkit/ui/cli/menu.py` | the banner, the menu and its prompt |
-| `toolkit/ui/cli/scan.py` | the scanner's questions, authorization, progress line, tables and report; `ConsoleScan` is the scan's `ScanView` |
-| `toolkit/ui/cli/ids.py` | the IDS command's export list, model card, predictions, interactive menu and prompts |
+| `toolkit/cli/__init__.py` | the command line (v5.2 step 2.3c): the menu, `scan`, `ids`; it never imports the web trainer |
+| `toolkit/cli/ui/__init__.py` | the command line's prompts and printing |
+| `toolkit/ui/cli/__init__.py` | the web command's console messages (`web.py`, until step 2.3d) |
+| `toolkit/cli/ui/menu.py` | the banner, the menu and its prompt |
+| `toolkit/cli/ui/scan.py` | the scanner's questions, authorization, progress line, tables and report; `ConsoleScan` is the scan's `ScanView` |
+| `toolkit/cli/ui/ids.py` | the IDS command's export list, model card, predictions, interactive menu and prompts |
 | `toolkit/ui/cli/web.py` | what the web trainer's command prints |
 
 Controllers (the only code that uses Flask or argparse):
@@ -65,12 +67,14 @@ Controllers (the only code that uses Flask or argparse):
 |---|---|
 | `toolkit/__init__.py` | the package |
 | `toolkit/__main__.py` | `python -m toolkit` |
+| `toolkit/start.py` | the one entry point (`python -m toolkit`, `main.py`, the `toolkit` command): `web` to the web trainer's command, the rest to the command line |
 | `toolkit/controllers/__init__.py` | the controllers layer |
-| `toolkit/controllers/cli/__init__.py` | the `toolkit` command |
-| `toolkit/controllers/cli/main.py` | the entry point: the menu, or `scan`, `ids`, `web` with the rest of the line |
-| `toolkit/controllers/cli/scan.py` | the scanner's flags or questions, a `ScanRequest`, the exit codes |
-| `toolkit/controllers/cli/ids.py` | the IDS command: choose an export, predict, `--csv`, `--json`, `--info`, the exit codes |
-| `toolkit/controllers/cli/web.py` | the web trainer's `--port` and `--no-browser`, then the server |
+| `toolkit/cli/controllers/__init__.py` | the command line's commands |
+| `toolkit/controllers/cli/__init__.py` | the web trainer's command (`web.py`, until step 2.3d) |
+| `toolkit/cli/controllers/main.py` | the command line: the menu, or `scan`, `ids` with the rest of the line; the toolkit's `--help` (it lists `web` too) |
+| `toolkit/cli/controllers/scan.py` | the scanner's flags or questions, a `ScanRequest`, the exit codes |
+| `toolkit/cli/controllers/ids.py` | the IDS command: choose an export, predict, `--csv`, `--json`, `--info`, the exit codes |
+| `toolkit/controllers/cli/web.py` | the web trainer's command (from `toolkit.start`): its settings checked, `--port` and `--no-browser`, then the server |
 | `toolkit/controllers/web/__init__.py` | `create_app()`: the Flask app with its own state, serving `toolkit/ui/web` |
 | `toolkit/controllers/web/server.py` | `run_server()`: waitress on 127.0.0.1, the port bound exclusively, the browser opened |
 | `toolkit/controllers/web/pages.py` | the two HTML pages |
@@ -128,12 +132,13 @@ Data (files, the network and the environment; imports nothing above it):
 | Module | Role |
 |---|---|
 | `toolkit/core/data/__init__.py` | the shared data: files, the network, the environment |
-| `toolkit/data/__init__.py` | the web trainer's uploads and socket and the menu's child processes (until steps 2.3c-2.3d) |
+| `toolkit/data/__init__.py` | the web trainer's uploads and socket (until step 2.3d) |
 | `toolkit/core/data/settings.py` | every tunable setting, the `TOOLKIT_*` variables, the data folder, `.env` reading |
 | `toolkit/core/data/logs.py` | one rotating log file per tool, secrets redacted |
 | `toolkit/core/data/keys.py` | API keys and the AI model setting, from the environment or `.env` |
 | `toolkit/core/data/files.py` | the text files the commands read and write |
-| `toolkit/data/processes.py` | the menu's child processes (`python -m toolkit <command>`) |
+| `toolkit/cli/data/__init__.py` | the command line's own data |
+| `toolkit/cli/data/processes.py` | the menu's child processes (`python -m toolkit <command>`) |
 | `toolkit/core/data/ids/__init__.py` | the IDS's files |
 | `toolkit/core/data/ids/bundle_files.py` | the signing key and the bundle files, as bytes |
 | `toolkit/core/data/ids/run_files.py` | `TrainingRun` records on disk, as dicts (`instance/runs/`) |
@@ -197,7 +202,7 @@ it imports (the real imports, checked by `tests/test_architecture.py`).
 In the web trainer the page (`ui/web`) calls the controllers over HTTP. A terminal tool
 starts in its command (`controllers/cli`), which asks `ui/cli` to show each screen; the
 scan reports what it does through a `ScanView` (`toolkit/core/services/recon/scan.py`), which
-`ConsoleScan` (`toolkit/ui/cli/scan.py`) prints.
+`ConsoleScan` (`toolkit/cli/ui/scan.py`) prints.
 
 What `tests/test_architecture.py` checks, for every module of `toolkit/`:
 
@@ -229,7 +234,7 @@ Interfaces exist only where an implementation really is swapped or faked in test
 |---|---|---|---|
 | `ModelStore` | web trainer, IDS command line | `BundleStore` (`toolkit/core/services/ids/exports.py`, over `toolkit/core/data/ids/bundle_files.py`): signed bundles in `instance/bundles/` | a scratch instance folder |
 | `IntelProvider` | `Intel` in the scanner | `NvdProvider`, `OpenRouterProvider`, `AbuseIpdbProvider` (`toolkit/core/data/recon/`) | fake providers; recorded NVD answers in `tests/fixtures/` |
-| `ProgressSink` | `train()`, `evaluate()`, `scan_ports()` | a web job (`toolkit/services/web/jobs.py`), the scanner's verbose line (`toolkit/ui/cli/scan.py`) | `NullProgress` or a recorder |
+| `ProgressSink` | `train()`, `evaluate()`, `scan_ports()` | a web job (`toolkit/services/web/jobs.py`), the scanner's verbose line (`toolkit/cli/ui/scan.py`) | `NullProgress` or a recorder |
 
 Everything else is plain functions and dict registries.
 
@@ -336,7 +341,7 @@ The manifest embeds the TrainingRun. Nothing is unpickled until the size, layout
 
 `scan_target()` in `toolkit/core/services/recon/scan.py`, for each target; every line on the
 screen and every question goes through the `ScanView` (`ConsoleScan` in
-`toolkit/ui/cli/scan.py`):
+`toolkit/cli/ui/scan.py`):
 
 ```
  target (IP, name or range) + ports + protocols   core/services/recon/targets.py: limits first

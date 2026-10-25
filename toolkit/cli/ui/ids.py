@@ -1,5 +1,5 @@
 """What the IDS command shows and asks: the exports, the model card, predictions, the
-interactive menu and its prompts (``toolkit.controllers.cli.ids`` runs them)."""
+interactive menu and its prompts (``toolkit.cli.controllers.ids`` runs them)."""
 
 from __future__ import annotations
 

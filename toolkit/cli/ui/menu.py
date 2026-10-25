@@ -1,4 +1,4 @@
-"""What the menu shows and asks (``toolkit.controllers.cli.main`` runs it)."""
+"""What the menu shows and asks (``toolkit.cli.controllers.main`` runs it)."""
 
 BANNER = r"""
  _       __       __

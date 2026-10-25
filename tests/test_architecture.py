@@ -24,8 +24,8 @@ files, sockets, HTTP or child processes. The ML-core-only rules are in
 ``tests/ml/test_core_rules.py``.
 
 Until v5.2 step 2.3d moves them, the packages of the v5.1 layout that are not moved yet are
-placed by ``NOT_MOVED_YET`` (and the CLI's ``web`` command by ``CROSSING_UNTIL_STEP_23C``);
-both lists name only what is still there, and are removed with the last move.
+placed by ``NOT_MOVED_YET``; it names only what is still there, and is removed with the last
+move.
 """
 
 import ast
@@ -36,21 +36,15 @@ LAYERS = ("ui", "controllers", "services", "data")
 # Temporary (v5.2 steps 2.3b-2.3d): v5.1-layout package -> (interface, layer); the longest
 # prefix wins. Only packages that have not moved yet.
 NOT_MOVED_YET = {
-    "toolkit.ui.cli": ("cli", "ui"),
     "toolkit.ui.cli.web": ("web", "ui"),  # the web command's console messages
     "toolkit.ui.web": ("web", "ui"),
-    "toolkit.controllers.cli": ("cli", "controllers"),
     "toolkit.controllers.cli.web": ("web", "controllers"),  # the web command
     "toolkit.controllers.web": ("web", "controllers"),
     "toolkit.services.web": ("web", "services"),
     "toolkit.data.web": ("web", "data"),
-    "toolkit.data.processes": ("cli", "data"),
 }
-# Temporary until step 2.3c: the CLI's dispatcher still imports the web command (then
-# toolkit.start picks the interface).
-CROSSING_UNTIL_STEP_23C = {("toolkit.controllers.cli.main", "toolkit.controllers.cli.web")}
 CONTROLLER_DATA = ("toolkit.core.data.settings", "toolkit.core.data.keys",
-                   "toolkit.core.data.logs", "toolkit.data.web.net", "toolkit.data.processes")
+                   "toolkit.core.data.logs", "toolkit.data.web.net", "toolkit.cli.data.processes")
 ARGPARSE_OUTSIDE_CLI = ("toolkit.web.controllers.command", "toolkit.controllers.cli.web")
 WEB_FRAMEWORK = {"flask", "werkzeug", "jinja2", "waitress"}
 OUTSIDE = {"socket", "ssl", "requests", "urllib", "http", "subprocess", "webbrowser"}
@@ -63,7 +57,11 @@ OLD_NAMES = ("toolkit.ids_core", "toolkit.config", "toolkit.logging_setup", "too
              # moved into toolkit.core in v5.2 step 2.3b
              "toolkit.services.ids", "toolkit.services.recon", "toolkit.services.ports",
              "toolkit.data.settings", "toolkit.data.keys", "toolkit.data.logs",
-             "toolkit.data.files", "toolkit.data.ids", "toolkit.data.recon")
+             "toolkit.data.files", "toolkit.data.ids", "toolkit.data.recon",
+             # moved into toolkit.cli in step 2.3c
+             "toolkit.ui.cli.menu", "toolkit.ui.cli.ids", "toolkit.ui.cli.scan",
+             "toolkit.controllers.cli.main", "toolkit.controllers.cli.ids",
+             "toolkit.controllers.cli.scan", "toolkit.data.processes")
 TOOLS = ("ids", "recon")
 
 
@@ -133,8 +131,7 @@ def _import_problems(module, here, name):
     """What is wrong with ``module`` (at ``here``) importing the toolkit name ``name``."""
     (interface, layer, tool), (there_interface, there_layer, there_tool) = here, place(name)
     problems = []
-    if name == "toolkit" or (module, name.rsplit(".", 1)[0]) in CROSSING_UNTIL_STEP_23C \
-            or (module, name) in CROSSING_UNTIL_STEP_23C:
+    if name == "toolkit":
         return problems
     if there_interface not in ALLOWED_INTERFACES[interface]:
         problems.append(f"({interface}) imports {name} ({there_interface}): cli and web share "
@@ -189,21 +186,18 @@ def layer_violations(root: Path) -> list[str]:
 
 def test_layers_hold(repo_root):
     for folder in ("core/services/ids", "core/services/recon", "core/data/ids",
-                   "core/data/recon", "ui/web", "ui/cli", "controllers/web", "controllers/cli",
-                   "services/web", "data/web"):
+                   "core/data/recon", "cli/ui", "cli/controllers", "cli/data", "ui/web",
+                   "ui/cli", "controllers/web", "controllers/cli", "services/web", "data/web"):
         # the rules must really see every interface, layer and tool
         assert (repo_root / "toolkit" / folder / "__init__.py").is_file(), folder
     assert layer_violations(repo_root) == []
 
 
 def test_the_temporary_rules_name_only_what_is_still_there(repo_root):
-    """NOT_MOVED_YET and CROSSING_UNTIL_STEP_23C shrink with each move; a stale entry fails."""
+    """NOT_MOVED_YET shrinks with each move; a stale entry fails."""
     for prefix in NOT_MOVED_YET:
         path = repo_root / Path(*prefix.split("."))
         assert path.is_dir() or path.with_suffix(".py").is_file(), prefix
-    for module, name in CROSSING_UNTIL_STEP_23C:
-        for dotted in (module, name):
-            assert (repo_root / Path(*dotted.split("."))).with_suffix(".py").is_file(), dotted
 
 
 def test_each_rule_is_detected(tmp_path):

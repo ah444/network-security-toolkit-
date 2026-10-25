@@ -12,7 +12,8 @@ import time
 
 import pytest
 
-from toolkit.controllers.cli import main as cli
+from toolkit import start
+from toolkit.cli.controllers import main as cli
 
 
 @pytest.fixture
@@ -131,8 +132,8 @@ def test_ctrl_c_in_a_tool_comes_back_to_the_menu(monkeypatch, capsys):
     assert "Stopped." in capsys.readouterr().out
 
 
-@pytest.mark.parametrize("name, module", [("scan", "toolkit.controllers.cli.scan"),
-                                          ("ids", "toolkit.controllers.cli.ids"),
+@pytest.mark.parametrize("name, module", [("scan", "toolkit.cli.controllers.scan"),
+                                          ("ids", "toolkit.cli.controllers.ids"),
                                           ("web", "toolkit.controllers.cli.web")])
 def test_subcommand_arguments_and_exit_code_reach_the_tool(monkeypatch, name, module):
     received = []
@@ -143,14 +144,14 @@ def test_subcommand_arguments_and_exit_code_reach_the_tool(monkeypatch, name, mo
 
     monkeypatch.setattr(f"{module}.run", fake_run)
     with pytest.raises(SystemExit) as stop:
-        cli.main([name, "--list", "a b", "-x"])
+        start.main([name, "--list", "a b", "-x"])
     assert stop.value.code == 7
     assert received == [(["--list", "a b", "-x"], f"python -m toolkit {name}")]
 
 
 def test_help_lists_the_commands(capsys):
     with pytest.raises(SystemExit) as stop:
-        cli.main(["--help"])
+        start.main(["--help"])
     assert stop.value.code == 0
     out = capsys.readouterr().out
     assert "usage: python -m toolkit" in out
@@ -163,13 +164,13 @@ def test_help_lists_the_commands(capsys):
 @pytest.mark.parametrize("argv", [["bogus"], ["--bogus"], ["Scan"]])
 def test_unknown_command_exits_2(capsys, argv):
     with pytest.raises(SystemExit) as stop:
-        cli.main(argv)
+        start.main(argv)
     assert stop.value.code == 2
     assert "usage: python -m toolkit" in capsys.readouterr().err
 
 
-@pytest.mark.parametrize("name, module", [("scan", "toolkit.controllers.cli.scan"),
-                                          ("ids", "toolkit.controllers.cli.ids"),
+@pytest.mark.parametrize("name, module", [("scan", "toolkit.cli.controllers.scan"),
+                                          ("ids", "toolkit.cli.controllers.ids"),
                                           ("web", None)])
 def test_tool_help_names_the_command(monkeypatch, capsys, name, module):
     if module:  # the tool's log would go to the test instance; not needed for --help
@@ -180,7 +181,7 @@ def test_tool_help_names_the_command(monkeypatch, capsys, name, module):
 
     monkeypatch.setattr("toolkit.controllers.cli.web.run_server", no_server)
     with pytest.raises(SystemExit) as stop:
-        cli.main([name, "--help"])
+        start.main([name, "--help"])
     assert stop.value.code == 0
     assert capsys.readouterr().out.startswith(f"usage: python -m toolkit {name} ")
 
@@ -189,10 +190,10 @@ def test_web_command_starts_the_server(monkeypatch):
     started = []
     monkeypatch.setattr("toolkit.controllers.cli.web.run_server",
                         lambda config=None: started.append(True))
-    assert cli.main(["web"]) == 0
+    assert start.main(["web"]) == 0
     assert started == [True]
     with pytest.raises(SystemExit) as stop:
-        cli.main(["web", "--no-such-flag"])
+        start.main(["web", "--no-such-flag"])
     assert stop.value.code == 2
     assert started == [True], "a wrong flag must not start the server"
 
@@ -201,7 +202,7 @@ def test_main_py_is_a_shim_for_the_entry_point(repo_root):
     source = (repo_root / "main.py").read_text(encoding="utf-8")
     assert len(source.splitlines()) == 3
     body = ast.parse(source).body
-    assert ast.unparse(body[1]) == "from toolkit.controllers.cli.main import run"
+    assert ast.unparse(body[1]) == "from toolkit.start import run"
     assert ast.unparse(body[2]) == "run()"
 
 

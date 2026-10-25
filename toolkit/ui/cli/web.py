@@ -27,3 +27,9 @@ def stopped() -> None:
 
 def bad_setting(error: Exception) -> None:
     print(error)
+
+
+def bad_settings(problems: list[str]) -> None:
+    """Each bad TOOLKIT_* setting, one line each (as the command line prints them)."""
+    for problem in problems:
+        print(problem)

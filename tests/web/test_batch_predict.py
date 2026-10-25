@@ -126,7 +126,7 @@ def test_bundle_predict_file_same_as_run(client, trained, fixtures_dir):
 
 def test_web_file_is_the_cli_file(client, trained, fixtures_dir, tmp_path, capsys):
     """The same bundle and rows give the same bytes from the web and from --csv."""
-    from toolkit.controllers.cli import ids as cli
+    from toolkit.cli.controllers import ids as cli
 
     exported = client.post("/api/v1/run/export", json={"name": "m"}).get_json()
     bundle_path = bundle_files.bundles_dir() / exported["file"]

@@ -27,7 +27,7 @@ folder (S15). Results are saved as UTF-8 in instance/scans/, never overwriting a
 (B12, S14).
 
 This module is the command: its flags or questions make a ``ScanRequest``; the scan is
-``toolkit.core.services.recon.scan``, what the user sees ``toolkit.ui.cli.scan`` (v5.1 step
+``toolkit.core.services.recon.scan``, what the user sees ``toolkit.cli.ui.scan`` (v5.1 step
 1.5d).
 """
 
@@ -50,7 +50,7 @@ from ...core.services.recon.scan import (
     run_scan,
 )
 from ...core.services.recon.targets import parse_port_range, parse_ports
-from ...ui.cli import scan as screen
+from ..ui import scan as screen
 
 DEFAULT_PORTS = "1-1024"  # the well-known ports
 NOT_AUTHORIZED = "Scan cancelled: only scan systems you are authorised to scan."
