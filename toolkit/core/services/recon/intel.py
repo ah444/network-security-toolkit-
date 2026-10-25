@@ -21,6 +21,7 @@ from ...data.recon.lookup import (
     host_of,
 )
 from ...data.recon.nvd import NVD_URL, NvdProvider
+from ...data.recon.scanner import ScanStopped
 
 # The online services a scan may ask, by host, and their names in its totals (step A5)
 SERVICES = {host_of(url): name for url, name in (
@@ -45,19 +46,25 @@ class Intel:
 
     The sources are IntelProviders: by default NVD, plus OpenRouter after consent and
     AbuseIPDB when there is a key; ``providers`` replaces them (offline sources, tests).
+
+    Once ``stop`` is set (v5.2 step 2.4c: the web scan's Cancel) no provider is asked again
+    and NVD stops waiting for its slot: ScanStopped. A request already sent ends within its
+    timeout.
     """
 
     def __init__(self, keys: Mapping[str, str], use_ai: bool = False,
                  session: Session | None = None, timeout: float = INTEL_TIMEOUT,
-                 providers: Iterable[IntelProvider] | None = None) -> None:
+                 providers: Iterable[IntelProvider] | None = None,
+                 stop: threading.Event | None = None) -> None:
         self.keys = keys
         self.use_ai = bool(use_ai and keys.get("openrouter"))
         self.session = session or Session()
         self.timeout = timeout
+        self.stop = stop or threading.Event()
         self.model = ai_model()
         if providers is None:
             defaults: list[IntelProvider] = [
-                NvdProvider(self.session, keys.get("nvd", ""), timeout)]
+                NvdProvider(self.session, keys.get("nvd", ""), timeout, self.stop)]
             if self.use_ai:
                 defaults.append(OpenRouterProvider(self.session, keys["openrouter"],
                                                    self.model, timeout))
@@ -69,9 +76,12 @@ class Intel:
         self._lock = threading.Lock()
 
     def _ask(self, kind: str, subject: str, errors: list[str]) -> list[IntelFinding]:
-        """Findings of every provider of ``kind``; failures go to ``errors``."""
+        """Findings of every provider of ``kind``; failures go to ``errors``. ScanStopped
+        before a provider is asked once ``stop`` is set."""
         found = []
         for provider in (p for p in self.providers if p.kind == kind):
+            if self.stop.is_set():
+                raise ScanStopped("the scan was stopped before its lookups ended")
             try:
                 found.append(provider.lookup(subject))
             except LOOKUP_ERRORS as error:
@@ -104,8 +114,8 @@ class Intel:
     def lookup_many(self, products: Iterable[str],
                     workers: int = INTEL_WORKERS) -> dict[str, LookupResult]:
         """``lookup`` of each distinct product, up to ``workers`` at a time; in the order
-        given. On Ctrl+C the queued lookups are cancelled (running ones end within their
-        timeout)."""
+        given. On Ctrl+C or a stop (ScanStopped) the queued lookups are cancelled (running ones
+        end within their timeout)."""
         distinct = list(dict.fromkeys(products))
         if not distinct:
             return {}

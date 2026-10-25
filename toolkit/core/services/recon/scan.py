@@ -2,10 +2,15 @@
 open ones looked up online (each product once, in parallel), the report entries made and,
 if asked, saved. What the user sees and answers on the way goes through a ``ScanView``
 (``toolkit.cli.ui.scan.ConsoleScan``), so this module never prints or asks.
+
+A scan can be stopped (v5.2 step 2.4c, the web scan's Cancel): once its ``stop`` event is
+set, nothing more is sent, to the targets or online, and ``run_scan`` raises ScanStopped
+without a summary or a file.
 """
 
 from __future__ import annotations
 
+import threading
 import time
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
@@ -23,7 +28,9 @@ from ...data.recon.software import nmap_software, product_version
 from ...data.recon.scan_files import EXPORT_FORMATS as EXPORT_FORMATS
 from ...data.recon.scan_files import ReportEntry as ReportEntry  # what the UI shows
 from ...data.recon.scan_files import export_results
+from ...data.recon.scan_files import report_text as report_text  # a download's text
 from ...data.recon.scanner import PortResult as PortResult
+from ...data.recon.scanner import ScanStopped as ScanStopped  # raised once a scan is stopped
 from ...data.recon.scanner import Progress
 from ...data.recon.text import one_line as one_line  # network text, shown on one line
 from ...data.settings import ScanConfig
@@ -272,19 +279,30 @@ def _entries(target: str, open_ports: list[PortResult], intel: Intel, view: Scan
     return entries
 
 
-def scan_target(target: str, request: ScanRequest, intel: Intel,
-                view: ScanView) -> list[ReportEntry]:
+def check_stop(stop: threading.Event | None) -> None:
+    """ScanStopped once ``stop`` is set (None: a scan nobody stops, the command line's)."""
+    if stop is not None and stop.is_set():
+        raise ScanStopped("the scan was stopped")
+
+
+def scan_target(target: str, request: ScanRequest, intel: Intel, view: ScanView,
+                stop: threading.Event | None = None) -> list[ReportEntry]:
     """Scan one host and look up its open ports; returns the report entries. NmapMissing or
-    NmapFailed when nmap can't scan it (``run_scan`` shows it and goes on)."""
+    NmapFailed when nmap can't scan it (``run_scan`` shows it and goes on); ScanStopped once
+    ``stop`` is set, before AbuseIPDB, the ping and the port checks, during the checks (the
+    engine) and the lookups (``Intel``)."""
+    check_stop(stop)
     _reputation(target, request, intel, view)
+    check_stop(stop)
     scan, ttl = _ping_decision(target, request, view)
     if not scan:
         return []
+    check_stop(stop)
     view.scanning(target, ttl, guess_os(ttl))
 
     engine = engine_named(request.engine, request.nmap_options)
     results = engine.scan(target, request.ports, request.protocols,
-                          view.progress() if request.verbose else None)
+                          view.progress() if request.verbose else None, stop)
     open_ports = [r for r in results if r.state == "open"]
     silent_udp = [r.port for r in results if r.state == "open|filtered"]
     if silent_udp:
@@ -302,10 +320,11 @@ def scan_target(target: str, request: ScanRequest, intel: Intel,
 
 
 def run_scan(request: ScanRequest, keys: Mapping[str, str], start_time: float,
-             view: ScanView) -> int:
+             view: ScanView, stop: threading.Event | None = None) -> int:
     """Scan every target, show the summary, export (asked, or ``--export``); the exit code:
-    1 when the engine could not scan a target (the others are still scanned), else 0."""
-    intel = Intel(keys, request.use_ai)
+    1 when the engine could not scan a target (the others are still scanned), else 0.
+    ScanStopped once ``stop`` is set (``scan_target``), with no summary and no file."""
+    intel = Intel(keys, request.use_ai, stop=stop)
     view.engine_notice(describe(request.engine, request.nmap_options))
     view.lookups_notice(online_plan(request, keys))
 
@@ -313,13 +332,14 @@ def run_scan(request: ScanRequest, keys: Mapping[str, str], start_time: float,
     code = 0
     for target in request.targets:
         try:
-            entries.extend(scan_target(target, request, intel, view))
+            entries.extend(scan_target(target, request, intel, view, stop))
         except (NmapMissing, NmapFailed) as error:
             view.scan_failed(target, str(error))
             code = 1
         view.target_done()
+    check_stop(stop)
 
-    failed = [f"{e['port']}/{e['protocol']} {error}" for e in entries
+    failed =[f"{e['port']}/{e['protocol']} {error}" for e in entries
               for error in e["lookup_errors"]]
     view.summary(len(request.targets), len(entries), failed, time.time() - start_time,
                  intel.sent())

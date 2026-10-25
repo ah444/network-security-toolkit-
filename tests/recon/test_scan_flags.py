@@ -21,8 +21,8 @@ class FakeIntel:
 
     made = []
 
-    def __init__(self, keys, use_ai=False):
-        self.keys, self.use_ai = keys, use_ai
+    def __init__(self, keys, use_ai=False, stop=None):
+        self.keys, self.use_ai, self.stop = keys, use_ai, stop
         self.looked_up, self.abuse_checked = [], []
         FakeIntel.made.append(self)
 

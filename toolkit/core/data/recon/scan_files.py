@@ -5,6 +5,7 @@ cleaned) by ``toolkit.core.services.recon.report``.
 """
 
 import csv
+import io
 import json
 from collections.abc import Callable, Sequence
 from datetime import datetime, timezone
@@ -89,11 +90,22 @@ def scans_dir() -> Path:
     return instance_dir() / "scans"
 
 
-def export_results(entries: Sequence[ReportEntry], fmt: str,
-                   directory: str | Path | None = None) -> Path:
-    """Write the report as UTF-8 to a new file in instance/scans/ (never overwrites)."""
+def report_text(entries: Sequence[ReportEntry], fmt: str) -> str:
+    """The report in ``fmt`` (one of EXPORT_FORMATS) as text, written nowhere: the web scan's
+    download (v5.2 step 2.4c) and what ``export_results`` saves. Lines end in ``\\n``, CSV rows
+    in ``\\r\\n`` (the csv module's own); ValueError for any other format."""
     if fmt not in WRITERS:
         raise ValueError(f"Unknown format {fmt!r}; use one of {', '.join(EXPORT_FORMATS)}.")
+    text = io.StringIO()
+    WRITERS[fmt](entries, text)
+    return text.getvalue()
+
+
+def export_results(entries: Sequence[ReportEntry], fmt: str,
+                   directory: str | Path | None = None) -> Path:
+    """Write the report (``report_text``) as UTF-8 to a new file in instance/scans/ (never
+    overwrites); TXT and JSON lines end the system's way, CSV rows in ``\\r\\n``."""
+    text = report_text(entries, fmt)
     directory = Path(directory) if directory else scans_dir()
     directory.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
@@ -104,6 +116,6 @@ def export_results(entries: Sequence[ReportEntry], fmt: str,
         except FileExistsError:
             continue
         with handle:
-            WRITERS[fmt](entries, handle)
+            handle.write(text)
         return path
     raise FileExistsError(f"Too many reports named scan-{stamp} in {directory}")

@@ -166,8 +166,8 @@ def test_scan_prints_entries_in_port_order(fake_ports, scan_service, scanner, mo
 
     source = Uneven()
     real_intel = recon_intel.Intel
-    monkeypatch.setattr(scan_service, "Intel", lambda keys, use_ai=False:
-                        real_intel(keys, use_ai, providers=[source]))
+    monkeypatch.setattr(scan_service, "Intel", lambda keys, use_ai=False, stop=None:
+                        real_intel(keys, use_ai, providers=[source], stop=stop))
     open_ports = [PortResult(21, "tcp", "open", "ftp", "220 (vsFTPd 3.0.3)"),
                   PortResult(22, "tcp", "open", "ssh", "SSH-2.0-OpenSSH_8.9p1"),
                   PortResult(80, "tcp", "open", "http", "Apache/2.4.49 (Unix)"),

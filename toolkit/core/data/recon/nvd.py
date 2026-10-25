@@ -18,6 +18,7 @@ import requests
 
 from .findings import CveEntry, IntelFinding
 from .lookup import INTEL_TIMEOUT
+from .scanner import ScanStopped
 
 NVD_URL = "https://services.nvd.nist.gov/rest/json/cves/2.0"
 NVD_RESULTS = 20  # a keyword search's CVEs
@@ -109,16 +110,18 @@ class NvdProvider:
     of ``CPE_PRODUCTS``, else by keyword; keeps NVD's request spacing and caches each product's
     answer. Thread-safe (step 1.4e): each request takes the next start slot, NVD_INTERVAL
     after the previous request's start, so parallel lookups never start more than NVD's limit
-    in any 30 s."""
+    in any 30 s. A set ``stop`` ends the wait for a slot at once (ScanStopped, v5.2 step
+    2.4c): without a key a slot can be a minute away."""
 
     name = "NVD"
     kind = "cves"
 
     def __init__(self, session: requests.Session, key: str = "",
-                 timeout: float = INTEL_TIMEOUT) -> None:
+                 timeout: float = INTEL_TIMEOUT, stop: threading.Event | None = None) -> None:
         self.session = session
         self.key = key
         self.timeout = timeout
+        self.stop = stop or threading.Event()
         self._cache: dict[str, IntelFinding] = {}
         self._next = 0.0  # the earliest start of the next request (time.monotonic)
         self._lock = threading.Lock()
@@ -164,13 +167,13 @@ class NvdProvider:
         return _worst_first(list(found.values()))
 
     def _get(self, params: Mapping[str, str | int]) -> Mapping[str, Any]:
-        """One NVD request (rejected CVEs left out), in its start slot: it waits for it first."""
+        """One NVD request (rejected CVEs left out), in its start slot: it waits for it first,
+        and sends nothing once ``stop`` is set (ScanStopped)."""
         with self._lock:
             start = max(time.monotonic(), self._next)
             self._next = start + NVD_INTERVAL[bool(self.key)]
-        wait = start - time.monotonic()
-        if wait > 0:
-            time.sleep(wait)
+        if self.stop.wait(max(0.0, start - time.monotonic())):
+            raise ScanStopped("the scan was stopped before this NVD request")
         response = self.session.get(NVD_URL, params={**params, "noRejected": ""},
                                     headers={"apiKey": self.key} if self.key else {},
                                     timeout=self.timeout)

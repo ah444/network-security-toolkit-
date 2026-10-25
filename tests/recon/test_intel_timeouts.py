@@ -17,7 +17,8 @@ def test_scan_finishes_when_intel_times_out(fake_ports, scan_service, scanner, f
                            post=requests.Timeout("read timed out"))
     real_intel = recon_intel.Intel
     monkeypatch.setattr(scan_service, "Intel",
-                        lambda keys, use_ai=False: real_intel(keys, use_ai, session=session))
+                        lambda keys, use_ai=False, stop=None:
+                        real_intel(keys, use_ai, session=session, stop=stop))
     open_ports = [recon_scanner.PortResult(22, "tcp", "open", "ssh", "SSH-2.0-OpenSSH_8.9p1"),
                   recon_scanner.PortResult(80, "tcp", "open", "http", "Apache/2.4.49 (Unix)")]
     fake_ports(lambda *args, **kwargs: open_ports)

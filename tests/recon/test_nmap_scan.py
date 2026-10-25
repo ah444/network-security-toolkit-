@@ -188,7 +188,7 @@ def test_a_target_nmap_cant_scan_is_said_and_the_next_is_scanned(nmap_here, monk
                                                                  scan_service):
     scanned = []
 
-    def scan_target(target, request, intel, view):
+    def scan_target(target, request, intel, view, stop=None):
         scanned.append(target)
         if target == "10.0.0.1":
             raise NmapFailed("nmap stopped with exit code 1: x")

@@ -2,6 +2,7 @@
 the products NVD names (``CPE_PRODUCTS``), else by keyword; each answer says which."""
 
 import json
+import threading
 
 import pytest
 
@@ -181,10 +182,19 @@ def test_a_reply_that_is_not_an_object_is_a_lookup_error(fake_session, no_nvd_wa
     assert found["errors"] == ["NVD: ValueError"] and found["severity"] == "UNKNOWN"
 
 
-def test_requests_are_spaced_without_a_key(nvd_reply, fake_session, monkeypatch):
+def test_requests_are_spaced_without_a_key(nvd_reply, fake_session):
     sleeps = []
-    monkeypatch.setattr(nvd.time, "sleep", sleeps.append)
-    intel = recon_intel.Intel({}, session=fake_session(get=nvd_reply(EMPTY)))
+
+    class Waits(threading.Event):
+        """The scan's stop event (v5.2 step 2.4c: NVD waits for its slot on it): records each
+        wait instead of waiting, never set."""
+
+        def wait(self, timeout=None):
+            if timeout:
+                sleeps.append(timeout)
+            return False
+
+    intel = recon_intel.Intel({}, session=fake_session(get=nvd_reply(EMPTY)), stop=Waits())
     intel.lookup("Jetty 9.4.1")
     intel.lookup("Tomcat 9.0.1")
     assert len(sleeps) == 1 and 5 < sleeps[0] <= 6

@@ -58,9 +58,9 @@ def net(fake_ports, scan_service, scanner, fake_session, no_nvd_wait, monkeypatc
             events.append(("http", url, json.dumps(kwargs, default=str)))
             return super()._answer(method, url, **kwargs)
 
-    def intel(keys, use_ai=False):
+    def intel(keys, use_ai=False, stop=None):
         state["session"] = Recorded(get={}, post={"choices": [{"message": {"content": "x"}}]})
-        return Intel(keys, use_ai, session=state["session"])
+        return Intel(keys, use_ai, session=state["session"], stop=stop)
 
     monkeypatch.setattr(socket, "getaddrinfo", getaddrinfo)
     monkeypatch.setattr(builtins, "input", ask)
