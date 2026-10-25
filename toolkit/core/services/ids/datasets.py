@@ -168,33 +168,38 @@ def _read_frame(path: Path, info: DatasetInfo, encoding: str, chunk_rows: int) -
     return pd.concat(parts, ignore_index=True)
 
 
-def load_dataset(path: str | Path, *, chunk_rows: int = DEFAULT_CHUNK_ROWS) -> LoadedDataset:
-    """Read a CSV/TXT dataset; see the module docstring for the steps."""
-    path = Path(path)
-    info = inspect_dataset(path)
-    match = info.profile
-    warnings: list[str] = []
-
+def _read_table(path: Path, info: DatasetInfo, chunk_rows: int,
+                warnings: list[str]) -> tuple[pd.DataFrame, str]:
+    """Step 3: the whole file, and the encoding it was read with. A file that is valid UTF-8
+    in the sample but not after it is read again as cp1252 (recorded in ``warnings``); a
+    file pandas can't read as a table is a ``DatasetError``."""
     encoding = info.encoding
     try:
         try:
-            frame = _read_frame(path, info, encoding, chunk_rows)
+            return _read_frame(path, info, encoding, chunk_rows), encoding
         except UnicodeDecodeError:
             if encoding != "utf-8":
                 raise
-            encoding = "cp1252"  # invalid UTF-8 after the sample
-            warnings.append("ENCODING_FALLBACK_CP1252")
-            frame = _read_frame(path, info, encoding, chunk_rows)
+            warnings.append("ENCODING_FALLBACK_CP1252")  # invalid UTF-8 after the sample
+            return _read_frame(path, info, "cp1252", chunk_rows), "cp1252"
     except (pd.errors.ParserError, UnicodeDecodeError, ValueError) as error:
         if isinstance(error, DatasetError):
             raise
         raise DatasetError(f"Could not read the file as a table: {error}") from None
 
+
+def _unify_columns(frame: pd.DataFrame) -> None:
+    """Step 3, after the chunks: one type per text column, then the dtypes narrowed again
+    (chunks may have narrowed differently). Changes ``frame`` in place."""
     for name in frame.columns:
         if frame[name].dtype == object:
             frame[name] = _unify_text(frame[name])
-    frame = _narrow(frame)  # again: chunks may have narrowed differently
+    _narrow(frame)
 
+
+def _drop_duplicate_columns(frame: pd.DataFrame, warnings: list[str]) -> list[str]:
+    """Step 4: drop each ``X.1`` column equal to ``X`` (pandas' name for a repeated header)
+    in place; one that differs is kept and recorded in ``warnings``. Returns the dropped."""
     dropped: list[str] = []
     for name in list(frame.columns):
         found = _SUFFIXED.match(name)
@@ -205,18 +210,27 @@ def load_dataset(path: str | Path, *, chunk_rows: int = DEFAULT_CHUNK_ROWS) -> L
                 warnings.append("SUFFIXED_COLUMN_DIFFERS")
     if dropped:
         log.info("Dropped duplicate columns: %s", dropped)
-        frame = frame.drop(columns=dropped)
+        frame.drop(columns=dropped, inplace=True)
+    return dropped
 
-    normalised = 0
+
+def _normalise_labels(frame: pd.DataFrame, match: ProfileMatch) -> int:
+    """Step 4: the label text fixes the profile asks for, in place; how many rows changed."""
     label = match.label_column
-    if label in frame.columns and match.label_replacements and frame[label].dtype == object:
-        before = frame[label]
-        after = before
-        for old, new in match.label_replacements:
-            after = after.str.replace(old, new, regex=False)
-        normalised = int(((before != after) & before.notna()).sum())
-        frame[label] = after
+    if label not in frame.columns or not match.label_replacements or frame[label].dtype != object:
+        return 0
+    before = frame[label]
+    after = before
+    for old, new in match.label_replacements:
+        after = after.str.replace(old, new, regex=False)
+    normalised = int(((before != after) & before.notna()).sum())
+    frame[label] = after
+    return normalised
 
+
+def _categories(frame: pd.DataFrame, label: str | None) -> dict[str, str]:
+    """Step 4: the label and text columns with few distinct values become ``category`` in
+    place; returns every column now narrower than 64 bits, with its dtype."""
     downcast: dict[str, str] = {}
     for name in frame.columns:
         column = frame[name]
@@ -227,13 +241,31 @@ def load_dataset(path: str | Path, *, chunk_rows: int = DEFAULT_CHUNK_ROWS) -> L
                 downcast[name] = "category"
         elif column.dtype.kind in "iuf" and column.dtype.itemsize < 8:
             downcast[name] = str(column.dtype)
+    return downcast
 
+
+def _renamed(info: DatasetInfo) -> dict[str, str]:
+    """The header names that stripping changed, as written -> stripped."""
+    if info.raw_header is None:
+        return {}
+    # the names come from the header, so the lengths match
+    return {raw: clean for raw, clean in zip(info.raw_header, info.profile.column_names,
+                                             strict=True) if raw != clean}
+
+
+def load_dataset(path: str | Path, *, chunk_rows: int = DEFAULT_CHUNK_ROWS) -> LoadedDataset:
+    """Read a CSV/TXT dataset; see the module docstring for the steps."""
+    path = Path(path)
+    info = inspect_dataset(path)
+    match = info.profile
+    warnings: list[str] = []
+    frame, encoding = _read_table(path, info, chunk_rows, warnings)
+    _unify_columns(frame)
+    dropped = _drop_duplicate_columns(frame, warnings)
+    normalised = _normalise_labels(frame, match)
+    downcast = _categories(frame, match.label_column)
     infinite = sum(int(np.isinf(frame[name].to_numpy()).sum())
                    for name in frame.columns if frame[name].dtype.kind == "f")
-    renamed = {}
-    if info.raw_header is not None:  # names come from the header, so lengths match
-        renamed = {raw: clean for raw, clean in zip(info.raw_header, match.column_names,
-                                                    strict=True) if raw != clean}
     report = LoadReport(
         sha256=file_sha256(path),
         encoding=encoding,
@@ -241,7 +273,7 @@ def load_dataset(path: str | Path, *, chunk_rows: int = DEFAULT_CHUNK_ROWS) -> L
         has_header=match.has_header,
         rows=len(frame),
         columns=frame.shape[1],
-        renamed_columns=renamed,
+        renamed_columns=_renamed(info),
         dropped_duplicate_columns=tuple(dropped),
         downcast=downcast,
         missing_values=int(frame.isna().sum().sum()),
