@@ -1,78 +1,118 @@
-"""Step 0.7 (U1, U2, U3, D2): CSS that keeps both themes readable."""
+"""CSS that keeps both themes readable (step 0.7: U1, U2, U3, D2) and, since v5.1 step 1.3b,
+one stylesheet with colour tokens for both pages (no inline styles, CSP style-src 'self')."""
 
 import re
 
 import pytest
 
-CSS_DIR = "tools/IDS/IDS_Web_CIC_Dynamic/static/css"
-FILES = ["style.css", "style2.css"]
+from web_js import JS_DIR, TEMPLATE, js_sources
 
-
-@pytest.fixture(params=FILES)
-def css(request, repo_root):
-    return request.param, (repo_root / CSS_DIR / request.param).read_text(encoding="utf-8")
+CSS_DIR = JS_DIR.parent / "css"
+APP_CSS = CSS_DIR / "app.css"
+TEMPLATES = sorted(TEMPLATE.parent.glob("*.html"))
+DARK = "@media (prefers-color-scheme: dark)"
+COLOUR = re.compile(r"#[0-9a-fA-F]{3,8}\b|\brgba?\(|\bhsla?\(|(?<![\w-])(?:white|black)(?![\w-])")
+# class names the modules build at runtime: "status-" + kind, "severity-" + level, ...
+BUILT_PREFIXES = ("status-", "severity-", "cm-correct-", "cm-wrong-")
 
 
 def _without_comments(text):
     return re.sub(r"/\*.*?\*/", "", text, flags=re.S)
 
 
+@pytest.fixture(scope="module")
+def css():
+    return _without_comments(APP_CSS.read_text(encoding="utf-8"))
+
+
+def _block(text, start):
+    """The body of the block whose opening brace ends at `start`."""
+    depth = 1
+    for index in range(start, len(text)):
+        depth += {"{": 1, "}": -1}.get(text[index], 0)
+        if depth == 0:
+            return text[start:index]
+    raise AssertionError("unclosed block")
+
+
+def _token_blocks(css):
+    light = re.search(r"^:root\s*\{", css, re.M)
+    dark = re.search(re.escape(DARK) + r"\s*\{\s*:root\s*\{", css)
+    assert light and dark
+    return _block(css, light.end()), _block(css, dark.end())
+
+
+def test_one_stylesheet_for_both_pages():
+    assert sorted(path.name for path in CSS_DIR.iterdir()) == ["app.css"]
+    for template in TEMPLATES:
+        links = re.findall(r"<link[^>]*>", template.read_text(encoding="utf-8"))
+        assert len(links) == 1 and "filename='css/app.css'" in links[0], template.name
+
+
+def test_no_inline_styles_in_templates():
+    for template in TEMPLATES:
+        text = template.read_text(encoding="utf-8")
+        assert not re.search(r"\sstyle\s*=", text), template.name
+        assert "<style" not in text, template.name
+
+
+def test_colours_only_in_tokens(css):
+    light, dark = _token_blocks(css)
+    rest = css.replace(light, "").replace(dark, "")
+    assert COLOUR.findall(rest) == []
+
+
+def test_dark_theme_only_changes_tokens(css):
+    """One dark block, and it only sets custom properties: no rule is written twice."""
+    assert css.count(DARK) == 1
+    media = re.search(re.escape(DARK) + r"\s*\{", css)
+    _, dark = _token_blocks(css)
+    assert re.sub(r"\s", "", _block(css, media.end()).replace(dark, "")) == ":root{}"
+    declarations = [part.strip() for part in dark.split(";") if part.strip()]
+    assert declarations and all(part.startswith("--") for part in declarations)
+
+
+def test_every_token_is_defined(css):
+    defined = set(re.findall(r"(--[\w-]+)\s*:", css))
+    assert set(re.findall(r"var\((--[\w-]+)\)", css)) <= defined
+
+
+def test_important_only_on_hidden(css):
+    selectors = re.findall(r"([^{};]+)\{[^{}]*!important", css)
+    assert [selector.strip() for selector in selectors] == ["[hidden]"]
+    assert css.count("!important") == 1
+
+
+def test_every_class_is_used(css):
+    """No rules for markup that no longer exists (.workflow-steps, .model-checkbox-*, .alert ...)."""
+    used = " ".join([path.read_text(encoding="utf-8") for path in TEMPLATES]
+                    + list(js_sources().values()))
+    classes = set(re.findall(r"\.([a-zA-Z][\w-]*)", re.sub(r"\{[^{}]*\}", "{}", css)))
+    unused = [name for name in sorted(classes)
+              if name not in used and not name.startswith(BUILT_PREFIXES)]
+    assert unused == []
+
+
 def test_no_global_white_text_override(css):
     """U1: `*:not(h1):not(h2) { color: white !important }` made light mode white-on-white."""
-    name, text = css
-    assert "*:not(h1)" not in _without_comments(text), name
-
-
-def test_sections_do_not_force_white_text(css):
-    name, text = css
-    for selector in (".container", ".section"):
-        for block in re.findall(re.escape(selector) + r"(?::hover)?\s*\{([^}]*)\}",
-                                _without_comments(text)):
-            assert not re.search(r"(^|;|\s)color\s*:\s*white", block), f"{name} {selector}"
+    assert "*:not(h1)" not in css
 
 
 def test_braces_balanced(css):
-    """U2: an unclosed @media block made half of style2.css dark-mode-only."""
-    name, text = css
+    """U2: an unclosed @media block once made half of style2.css dark-mode-only."""
     depth = 0
-    for char in _without_comments(text):
+    for char in css:
         depth += {"{": 1, "}": -1}.get(char, 0)
-        assert depth >= 0, f"{name}: extra closing brace"
-    assert depth == 0, f"{name}: {depth} unclosed block(s)"
-
-
-def test_dark_media_block_ends_before_shared_rules(repo_root):
-    """Rules after the dark-mode block (tables, confusion matrix, messages) apply in both themes."""
-    text = _without_comments((repo_root / CSS_DIR / "style2.css").read_text(encoding="utf-8"))
-    media = re.search(r"@media \(prefers-color-scheme: dark\)\s*\{", text)
-    depth, end = 1, None
-    for index in range(media.end(), len(text)):
-        depth += {"{": 1, "}": -1}.get(text[index], 0)
-        if depth == 0:
-            end = index
-            break
-    assert end is not None
-    inside = text[media.end():end]
-    for selector in (".preview-table", ".confusion-matrix", ".success-message", ".stats-grid"):
-        assert selector not in inside, f"{selector} must not be dark-mode-only"
+        assert depth >= 0, "extra closing brace"
+    assert depth == 0, f"{depth} unclosed block(s)"
 
 
 def test_no_web_font_dependency(css):
     """U3: 'Inter' was named but never loaded; use the system font stack (works offline)."""
-    name, text = css
-    assert "Inter" not in text, name
-    assert "@import" not in text and "fonts.googleapis" not in text, name
+    assert "Inter" not in css
+    assert "@import" not in css and "url(" not in css
 
 
 def test_focus_is_visible(css):
-    name, text = css
-    clean = _without_comments(text)
-    assert ":focus-visible" in clean, f"{name}: no visible focus style"
-    assert not re.search(r"outline\s*:\s*none", clean), f"{name}: focus outline removed"
-
-
-def test_stat_values_not_forced_dark(repo_root):
-    """Seen in the 0.3 browser check: #2d3748 !important made them invisible in dark mode."""
-    text = (repo_root / CSS_DIR / "style2.css").read_text(encoding="utf-8")
-    block = re.search(r"\.stat-item\s*\{([^}]*)\}", text).group(1)
-    assert "!important" not in block
+    assert ":focus-visible" in css
+    assert not re.search(r"outline\s*:\s*none", css)

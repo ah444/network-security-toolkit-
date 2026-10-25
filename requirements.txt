@@ -2,10 +2,13 @@
 # (Windows, Python 3.14). Supported Python: >= 3.11 (see docs/IMPROVEMENT_PLAN.md D19).
 # Install:  python -m pip install -r requirements.txt
 # Full, exact environment (incl. sub-dependencies): requirements.lock
+# The same pins are in pyproject.toml (pip install .), xgboost and lightgbm as its [boost]
+# extra; tests/test_packaging.py keeps the two equal.
 
 # Web framework + production-grade local server (pure Python, all OSes)
 flask==3.1.3
 waitress==3.0.2
+werkzeug==3.1.9  # imported directly (also comes with flask)
 
 # Data processing
 pandas==2.3.3
@@ -14,6 +17,8 @@ numpy==2.3.5
 # Machine learning
 scikit-learn==1.8.0
 imbalanced-learn==0.14.1
+joblib==1.6.0  # imported directly (also comes with scikit-learn)
+threadpoolctl==3.7.0  # imported directly (also comes with scikit-learn)
 xgboost==3.2.0
 lightgbm==4.6.0
 

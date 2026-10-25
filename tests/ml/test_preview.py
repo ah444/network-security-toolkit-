@@ -1,10 +1,14 @@
 """Step 0.4g: train-only previews for the web trainer (feature scores, balancing) [L2, L3]."""
 
+import math
+import warnings
+
 import numpy as np
 import pandas as pd
 import pytest
 
-from toolkit.ids_core.preview import preview_balancing, recommend_features
+from toolkit.services.ids import registry
+from toolkit.services.ids.preview import preview_balancing, recommend_features
 
 CLASSES = ("BENIGN", "DoS", "PortScan")
 
@@ -51,6 +55,23 @@ def test_recommend_features_respects_candidates_and_profile(train):
                                 profile_blocked=("weak",))
     assert [name for name, _ in result.scores] == ["strong"]
     assert dict(result.blocked) == {"Flow ID": "NAME_PATTERN", "weak": "PROFILE_BLOCKED"}
+
+
+def test_one_value_per_class_scores_inf_without_warnings(train):
+    """Step 1.3d: the F-test divides by a zero within-class spread; the preview keeps inf
+    (shown as ∞), SelectKBest ranks it with the largest float, and nothing warns."""
+    data = train.assign(port_flag=(train["Label"] == "PortScan").astype(float))
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        result = recommend_features(data, "Label")
+        X = data[["strong", "port_flag", "constant"]].to_numpy()
+        y = data["Label"].to_numpy()
+        scores = registry._Scores("f_classif", 0)
+        ranked = scores(X, y)
+        support = registry._TopK(scores, k=1).fit(X, y).get_support()
+    assert result.scores[0] == ("port_flag", math.inf)
+    assert ranked[1] == np.finfo(np.float64).max and np.isnan(ranked[2])
+    assert support.tolist() == [False, True, False]
 
 
 def test_recommend_features_samples_big_training_splits(train):

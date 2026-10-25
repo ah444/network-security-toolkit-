@@ -3,7 +3,7 @@
 import ast
 import io
 
-APP = "tools/IDS/IDS_Web_CIC_Dynamic/app.py"
+WEB = "toolkit/controllers/web"
 
 
 def _leaks(tree):
@@ -22,8 +22,10 @@ def _leaks(tree):
 
 
 def test_no_exception_text_in_json_responses(repo_root):
-    tree = ast.parse((repo_root / APP).read_text(encoding="utf-8"))
-    assert _leaks(tree) == []
+    modules = sorted((repo_root / WEB).glob("*.py"))
+    assert len(modules) > 5, "the web package moved?"
+    for path in modules:
+        assert _leaks(ast.parse(path.read_text(encoding="utf-8"))) == [], path.name
 
 
 def test_scanner_detects_a_leak():
@@ -33,10 +35,12 @@ def test_scanner_detects_a_leak():
 
 def test_no_paths_or_tracebacks_in_errors(client):
     garbage = b"\x00\xff\xfe" * 2000
-    response = client.post("/upload", data={"dataset": (io.BytesIO(garbage), "broken.csv")},
+    response = client.post("/api/v1/dataset", data={"dataset": (io.BytesIO(garbage), "broken.csv")},
                            content_type="multipart/form-data")
     assert response.status_code in (400, 500)
-    message = response.get_json()["error"]
+    error = response.get_json()["error"]
+    assert error["code"] == "UNREADABLE_FILE"
+    message = error["message"]
     for leak in ("Traceback", "Error tokenizing", "codec", ":\\", "/tools/", "uploads"):
         assert leak not in message, f"error message leaks internals: {message!r}"
     assert "broken.csv" in message  # still tells the user which file failed

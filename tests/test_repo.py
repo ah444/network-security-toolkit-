@@ -7,7 +7,7 @@ import pytest
 
 DATA_EXTENSIONS = (".csv", ".txt", ".parquet", ".pcap", ".arff")
 # Text files that are legitimately tracked.
-ALLOWED_TEXT_FILES = {"requirements.txt", "requirements-dev.txt", "api_keys.example.txt"}
+ALLOWED_TEXT_FILES = {"requirements.txt", "requirements-dev.txt"}
 
 pytestmark = pytest.mark.skipif(shutil.which("git") is None, reason="git not installed")
 

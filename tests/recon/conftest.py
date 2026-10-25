@@ -1,35 +1,45 @@
 """Fixtures for the port scanner tests (step 0.6). No test reaches the internet."""
 
-import importlib.util
 import socket
-import sys
 import threading
 
 import pytest
 
-SCANNER_FILE = "tools/Port_scan/Port_Scan.py"
+from toolkit.controllers.cli import scan as scan_command
+from toolkit.services.recon import scan as scan_service_module
+from toolkit.ui.cli import scan as scan_ui
+from toolkit.data.recon import nvd
+from toolkit.data import keys as intel_keys
 
 
 @pytest.fixture(scope="module")
-def scanner(request):
-    """Import the scanner script as a module."""
-    path = request.config.rootpath / SCANNER_FILE
-    spec = importlib.util.spec_from_file_location("port_scan_under_test", path)
-    module = importlib.util.module_from_spec(spec)
-    sys.modules["port_scan_under_test"] = module
-    spec.loader.exec_module(module)
-    return module
+def scanner():
+    """The scan command (``toolkit/controllers/cli/scan.py`` since v5.1 step 1.5d)."""
+    return scan_command
+
+
+@pytest.fixture(scope="module")
+def scan_service():
+    """The scan itself (``toolkit/services/recon/scan.py``): ping, ports, lookups, export."""
+    return scan_service_module
+
+
+@pytest.fixture(scope="module")
+def scan_screen():
+    """What the scanner shows and asks (``toolkit/ui/cli/scan.py``)."""
+    return scan_ui
 
 
 @pytest.fixture(autouse=True)
 def _no_real_keys(scanner, monkeypatch, tmp_path):
-    """The user's own API keys (environment, .env, api_keys.txt) are never used in tests."""
-    for variable in (*scanner.KEY_VARIABLES.values(), "OPENROUTER_MODEL"):
+    """The user's own API keys (environment, .env) are never used in tests, and an old
+    tools/Port_scan/api_keys.txt on this computer doesn't change what they print."""
+    for variable in (*intel_keys.KEY_VARIABLES.values(), "OPENROUTER_MODEL"):
         monkeypatch.delenv(variable, raising=False)
-    monkeypatch.setattr(scanner, "API_KEYS_PATH", tmp_path / "no_api_keys.txt")
-    monkeypatch.setattr(scanner, "ENV_PATH", tmp_path / "no.env")
-    monkeypatch.setattr(scanner.load_api_keys, "__defaults__",
-                        (None, tmp_path / "no_api_keys.txt", tmp_path / "no.env"))
+    monkeypatch.setattr(intel_keys, "ENV_PATH", tmp_path / "no.env")
+    monkeypatch.setattr(intel_keys.load_api_keys, "__defaults__", (None, tmp_path / "no.env"))
+    monkeypatch.setattr(intel_keys.legacy_key_file_notice, "__defaults__",
+                        (tmp_path / "no_api_keys.txt",))
 
 
 @pytest.fixture
@@ -130,4 +140,4 @@ def fake_response():
 
 @pytest.fixture
 def no_nvd_wait(scanner, monkeypatch):
-    monkeypatch.setattr(scanner, "NVD_INTERVAL", {False: 0.0, True: 0.0})
+    monkeypatch.setattr(nvd, "NVD_INTERVAL", {False: 0.0, True: 0.0})

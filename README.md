@@ -11,23 +11,23 @@ A comprehensive network security tool combining **Network Reconnaissance** and *
 
 ## ⚠️ Project status — read first
 
-This project is being reworked into **v5.0 ("correct & safe")**; see [docs/IMPROVEMENT_PLAN.md](docs/IMPROVEMENT_PLAN.md) and the day-to-day [docs/V5.0_CHECKLIST.md](docs/V5.0_CHECKLIST.md). A measured baseline of the current version ([docs/baseline/FINDINGS.md](docs/baseline/FINDINGS.md)) showed that **earlier accuracy claims were not valid**:
+**v5.1 ("clean architecture")** is released (tag `5.1`), after **v5.0 ("correct & safe")** (tags `5.0` and `5.0.1`). See [docs/IMPROVEMENT_PLAN.md](docs/IMPROVEMENT_PLAN.md), the day-to-day [docs/V5.1_CHECKLIST.md](docs/V5.1_CHECKLIST.md) (and [docs/V5.0_CHECKLIST.md](docs/V5.0_CHECKLIST.md) for v5.0), and what changed in each version in the [CHANGELOG](CHANGELOG.md). A measured baseline of the original version, v4 ([docs/baseline/FINDINGS.md](docs/baseline/FINDINGS.md)), showed that **earlier accuracy claims were not valid**:
 
-- **IDS CLI model (v4):** it uses `Attempted Category`, a feature derived from the attack label itself. Changing only that value flips the prediction (e.g. `-1` turns every sample into BENIGN), and none of the CLI's 4 built-in sample flows is classified as intended. **The previously stated ~97–98 % accuracy is withdrawn.** Its files were deleted in v5.0 step 0.5: the CLI now uses the models you train and export in the fixed web trainer, and shows each one's real metrics from its training record (see the CLI's [model card](<tools/IDS/IDS_CLI - CIC-2017/models/README.md>)).
+- **IDS CLI model (v4):** it uses `Attempted Category`, a feature derived from the attack label itself. Changing only that value flips the prediction (e.g. `-1` turns every sample into BENIGN), and none of the CLI's 4 built-in sample flows is classified as intended. **The previously stated ~97–98 % accuracy is withdrawn.** Its files were deleted in v5.0 step 0.5: the CLI now uses the models you train and export in the fixed web trainer, and shows each one's real metrics from its training record (see the CLI's [model card](docs/ids_cli_models.md)).
 - **Web IDS trainer (v4):** its results were **optimistic**. "Apply SMOTE" and "Recommend Features" ran on the *whole* dataset before the train/test split, duplicate rows could land in both train and test, and label-derived columns (e.g. NSL-KDD `level`) were not blocked. The recommender even ranked `level` among the top 10 features. The app reported accuracy and weighted F1 only, which hide weak minority classes: on NSL-KDD, random forest showed 99.8 % accuracy but 76.6 % macro-F1. **Since 5.0-rc1 (step 0.4g) the web trainer runs on the leakage-free ML core** described under "ML core" below. The same datasets and scenarios re-run on that core, before vs after, are in the **ML report**: [docs/report/FINDINGS.md](docs/report/FINDINGS.md).
 
 ### Known limitations (current version)
 - Web trainer scores on CIC-IDS2017 come from a stratified (random) split, because the file has no time column: flows of the same attack can be on both sides, so the scores may still be optimistic (the app says so). NSL-KDD uses its official test file.
-- Exported models are signed **`.bundle`** files that load only on the toolkit install that made them. The signing key is created in `instance/signing.key` on the first export: back up the `instance/` folder. If the key is lost, the bundles can't be loaded any more; retrain from the run's record in `instance/runs/`. Loading bundles from another computer comes in v5.1.
-- Training runs inside the request: the page waits without a progress bar or cancel button (background jobs come in v5.1). On the full CIC file this takes many minutes and about 6 GB of memory.
-- Web trainer data lives in memory, one workspace per browser session (tabs of the same browser share it). It is lost when the app restarts, removed after 240 minutes without use (`TOOLKIT_WORKSPACE_IDLE_MIN`), or with the **Clear workspace** button. Only one training runs at a time per workspace. If you serve the app over HTTPS, set `TOOLKIT_HTTPS=1` so the session cookie is marked `Secure`.
-- Port scanner, what leaves your computer: CVE lookups send the detected software name and version (for example `OpenSSH 8.9`) to the public NVD API. The optional AI explanation (OpenRouter) and the AbuseIPDB check run only after you agree in that scan, and the AI gets the same software name only, never the raw banner.
-- CVEs come from an NVD **keyword search** on that name and version, so the list can include CVEs that don't affect the exact build, or miss some. Severity comes from the CVSS scores only. Lookups run one at a time with a 15 s timeout each; without an NVD key, NVD allows about one request every 6 seconds, so scans with many open ports are slow (parallel lookups come in v5.1).
+- Exported models are signed **`.bundle`** files that load only on the toolkit install that made them. The signing key is created in `instance/signing.key` on the first export: back up the `instance/` folder. If the key is lost, the bundles can't be loaded any more; retrain from the run's record in `instance/runs/`. Loading bundles from another computer is not part of v5.1.
+- Training runs as a background job with a progress bar and a **Cancel training** button. The server trains one job at a time; others wait in a queue. Cancel takes effect after the model being fitted at that moment, so on the full CIC file it can take a while; a job is also stopped after 180 minutes (`TOOLKIT_JOB_MAX_MIN`). A cancelled or failed job keeps nothing. On the full CIC file training takes many minutes and about 6 GB of memory.
+- Web trainer data lives in memory, one workspace per browser session (tabs of the same browser share it). It is lost when the app restarts, removed after 240 minutes without use (`TOOLKIT_WORKSPACE_IDLE_MIN`), or with the **Clear workspace** button. Only one training runs at a time per workspace, and the dataset can't be changed while it runs. At most 4 workspaces (`TOOLKIT_MAX_WORKSPACES`) and 4,096 MB of loaded datasets (`TOOLKIT_MAX_DATA_MB`; trained models not counted) are kept: the least recently used other session's workspace makes room first. The upload message reports how much memory the dataset takes. If you serve the app over HTTPS, set `TOOLKIT_HTTPS=1` so the session cookie is marked `Secure`. The page sends a per-session security token with every change (CSRF protection); after the app restarts, reload the page before going on.
+- Port scanner, what leaves your computer: CVE lookups send the detected software name and version (for example `OpenSSH 8.9`) to the public NVD API. The optional AI explanation (OpenRouter) and the AbuseIPDB check run only after you agree in that scan (or pass `--ai` / `--abuseipdb`), and the AI gets the same software name only, never the raw banner.
+- CVEs come from an NVD **keyword search** on that name and version, so the list can include CVEs that don't affect the exact build, or miss some. Severity comes from the CVSS scores only. Lookups run up to 4 at a time with a 15 s timeout each, and each product is looked up once per scan (a failed lookup is tried again on the next host). Without an NVD key, NVD allows about one request every 6 seconds and that spacing is kept, so CVE lookups for many different products stay slow; with a key (`NVD_API_KEY`) the limit is one every 0.6 s, and the AI explanations always run in parallel.
 - The OS guess comes from the ping TTL, so it is only a rough family guess (Windows, Linux/macOS/BSD, network device). Hosts that don't answer ping, and IPv6 targets on Windows (no TTL shown), get no guess. On Windows, closed and firewalled TCP ports look the same, so both are reported as closed. A UDP port that doesn't answer is reported as `open|filtered`.
 - Scans are limited to 256 hosts and 65,536 host×port checks (`TOOLKIT_SCAN_MAX_HOSTS`, `TOOLKIT_SCAN_MAX_PROBES`), and each one asks you to confirm you are authorised (`--i-am-authorized` in scripts).
 - No model is shipped with the project: train and export one in the web trainer first. The CLI lists the exports in `instance/bundles` and opens only bundles exported on this install. Large models (for example Random Forest on the full CIC file, about 2 GB) take minutes to load and need several times their size in memory. A bundle made with a different scikit-learn, imbalanced-learn, XGBoost or LightGBM minor version is refused (retrain it); smaller version differences are shown as a warning.
-- Starting the web trainer from the launcher menu prints its address (`http://127.0.0.1:5000/`) but doesn't open a browser; stop it with Ctrl+C to get back to the menu.
-- Tested on Windows with Python 3.14 (419 automated tests, a fresh install followed by a scripted walk-through of every menu path, `scripts/menu_walkthrough.py`, and a browser session through the whole web trainer on real CIC-IDS2017 and NSL-KDD data, see `docs/release/`). **Linux and macOS are not tested on real machines:** the OS-specific logic (ping options, paths, file encodings) is unit-tested only.
+- The web trainer opens in your default browser once it is ready and prints its address (`http://127.0.0.1:5000/`; `--no-browser` or `TOOLKIT_NO_BROWSER=1` to not open it); stop it with Ctrl+C (from the launcher menu, that brings the menu back).
+- Tested on Windows with Python 3.14 (803 automated tests at 5.1, a fresh install followed by a scripted walk-through of every menu path, `scripts/menu_walkthrough.py`, and a browser session through the whole web trainer on real CIC-IDS2017 and NSL-KDD data, see `docs/release/`); an install on Python 3.11 was checked too. **Linux and macOS are not tested on real machines:** the OS-specific logic (ping options, paths, file encodings) is unit-tested only.
 - Only scan systems you are authorised to scan.
 
 ---
@@ -37,6 +37,7 @@ This project is being reworked into **v5.0 ("correct & safe")**; see [docs/IMPRO
 - [Features](#-features)
 - [Installation](#-installation)
 - [Usage](#-usage)
+- [Documentation](#-documentation)
 - [Web IDS Features](#-web-ids-features-detailed)
 - [Project Structure](#-project-structure)
 - [Machine Learning Models](#-machine-learning-models)
@@ -63,10 +64,11 @@ This project is being reworked into **v5.0 ("correct & safe")**; see [docs/IMPRO
 - 🧠 Predicts with any model bundle exported by the web trainer (features, classes and best model come from the bundle)
 - 📊 Uses the models you export from the web trainer: it lists them (newest first) and you pick one; each shows its real metrics from its training record
 - ⌨️ Manual input (prefilled from a real example), real test-split examples, model switching
-- 📄 `--csv` batch prediction (writes `<file>.predictions.csv`, never overwritten), `--json` input, `--info` model card
+- 📄 `--csv` batch prediction (writes `<file>.predictions.csv`, never overwritten; the web trainer's "Predict a CSV file" gives the same file), `--json` input, `--info` model card
 
 ### 3. Intrusion Detection System (Web) ⭐ NEW FEATURES
 - 🌐 Web-based UI with Flask
+- 🧭 **Step by step** - Data → Explore → Clean → Features → Train → Use, one step at a time (a loaded bundle: Data → Use); after a reload the page shows the session's dataset, results, a running training and the export link again
 - 📤 Upload custom datasets (CSV/TXT)
 - 📊 **Data Preview** - View first N rows with statistics
 - 🎛️ **Dynamic model training** - Train on any dataset
@@ -77,6 +79,7 @@ This project is being reworked into **v5.0 ("correct & safe")**; see [docs/IMPRO
 - 📉 **Confusion Matrix** - Visual model evaluation
 - 🔀 **Train/Test Split Slider** - Customize data splits
 - 💾 **Export / Load Models** - signed `.bundle` files (all models of a run plus its training record)
+- 📄 **Predict a CSV file** - label every row of a file with the session's model or a loaded bundle: rows per class with bars, how many match the file's label column, and the labelled CSV to download (the same file as the CLI's `--csv`; files up to 512 MB, `TOOLKIT_MAX_PREDICT_MB`)
 
 ---
 
@@ -100,14 +103,27 @@ python -m venv .venv
 #    Windows (cmd):         .venv\Scripts\activate.bat
 #    Linux / macOS:         source .venv/bin/activate
 
-# 4. Install the pinned dependencies
+# 4. Upgrade pip (a new venv starts with the pip its Python came with)
+python -m pip install --upgrade pip
+#    Python 3.11 also puts an old setuptools (65.5.0, with known advisories) in a new venv:
+#    python -m pip install --upgrade pip setuptools
+
+# 5. Install the pinned dependencies
 python -m pip install -r requirements.txt
+```
+
+If PowerShell refuses `Activate.ps1` ("running scripts is disabled on this system", the Windows default), activate in cmd with `.venv\Scripts\activate.bat`, or allow local scripts for your user once: `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`.
+
+Or install the toolkit as a package, which also gives you the `toolkit` command (`toolkit scan`, `toolkit ids`, `toolkit web`). An installed copy keeps its data in a per-user folder ([docs/reference.md](docs/reference.md#73-where-the-data-folder-is)):
+
+```bash
+python -m pip install ".[boost]"
 ```
 
 ### Dependencies
 Versions are **pinned** so results are reproducible and the bundled models load:
 - `requirements.txt`: runtime libraries (Flask, waitress, pandas, numpy, scikit-learn, imbalanced-learn, XGBoost, LightGBM, requests)
-- `requirements-dev.txt`: adds the development tools (pytest, ruff, pip-audit)
+- `requirements-dev.txt`: adds the development tools (pytest, ruff, mypy, pip-audit)
 - `requirements.lock`: the complete environment, for an exact rebuild (`python -m pip install -r requirements.lock`)
 
 ### Datasets
@@ -118,8 +134,9 @@ Datasets are **not** part of the repository. Put them in `data/raw/`; see [docs/
 python -m pip install -r requirements-dev.txt
 python -m pytest              # run the test suite
 python -m ruff check .        # lint
+python -m mypy                # strict type check of the whole toolkit package
 python -m pip_audit -r requirements.lock   # check dependencies for known vulnerabilities
-git config core.hooksPath .githooks         # once per clone: run lint + tests before every commit
+git config core.hooksPath .githooks         # once per clone: lint, types + tests before every commit
 ```
 
 ---
@@ -128,19 +145,35 @@ git config core.hooksPath .githooks         # once per clone: run lint + tests b
 
 ### Main Menu
 ```bash
-python main.py
+# From the project folder (python main.py does the same)
+python -m toolkit
 ```
 
 This launches an interactive menu with options:
 1. **Network Reconnaissance** - Port scanning and vulnerability detection
 2. **Intrusion Detection (CLI)** - Command-line ML-based IDS
 3. **Intrusion Detection (Web)** - Web-based IDS trainer
-4. **Exit**
+4. **Exit** (or `q`)
+
+Each tool runs on its own and the menu comes back when it ends (Ctrl+C stops a tool).
+Every tool can also be started directly with a command:
+
+| Command | Tool |
+|---|---|
+| `python -m toolkit scan` | Network reconnaissance |
+| `python -m toolkit ids` | IDS CLI |
+| `python -m toolkit web` | IDS web interface |
+
+`python -m toolkit --help` lists them and `python -m toolkit <command> --help` shows a tool's options.
 
 ### Network Reconnaissance
 ```bash
-# Run directly
-python tools/Port_scan/Port_Scan.py
+# Interactive: asks for the target, ports, protocol and the rest (from the project folder)
+python -m toolkit scan
+# With a target: asks nothing but "are you authorised?"
+python -m toolkit scan 192.168.1.10 -p 1-1024 --protocol both --export csv
+# Scripts: not even that (you confirm you are authorised to scan the target)
+python -m toolkit scan 192.168.1.10 -p 22,80,443 --i-am-authorized
 ```
 
 Features:
@@ -150,26 +183,60 @@ Features:
 - Confirm you are authorised to scan the target (or pass `--i-am-authorized`)
 - View vulnerability reports
 - Export results
+- Ctrl+C cancels a scan ("Scan cancelled.", exit code 130)
+
+With a target, every choice is a flag (`python -m toolkit scan --help`), and nothing but the CVE lookups leaves your computer unless a flag says so:
+
+| Flag | Default |
+|---|---|
+| `-p`, `--ports` `80`, `1-1024` or `22,80,8000-8100` | `1-1024` |
+| `--protocol tcp\|udp\|both` | `tcp` |
+| `-v`, `--verbose` (progress while scanning) | off |
+| `--ai` (software names to OpenRouter, needs `OPENROUTER_API_KEY`) | off |
+| `--abuseipdb` (public target IPs to AbuseIPDB, needs `ABUSEIPDB_API_KEY`) | off |
+| `--scan-unresponsive` (hosts that don't answer ping) | skipped |
+| `--export txt\|json\|csv` (to `instance/scans/`, never overwrites) | no export |
+| `--i-am-authorized` | asks |
 
 ### IDS CLI
 ```bash
 # Interactive: lists your exports from the web trainer, you pick one
-python "tools/IDS/IDS_CLI - CIC-2017/IDS_with_Machine_Learning.py"
+python -m toolkit ids
 # Label every row of a CSV file (with the newest export)
-python "tools/IDS/IDS_CLI - CIC-2017/IDS_with_Machine_Learning.py" --csv flows.csv
+python -m toolkit ids --csv flows.csv
 # A specific export
-python "tools/IDS/IDS_CLI - CIC-2017/IDS_with_Machine_Learning.py" --bundle "instance/bundles/<run id>.bundle"
+python -m toolkit ids --bundle "instance/bundles/<run id>.bundle"
 ```
 
 Train and export a model in the web trainer first; `--list` shows your exports and `--info` the chosen model's card.
 
 ### IDS Web Interface
 ```bash
-# Run Flask server
-python tools/IDS/IDS_Web_CIC_Dynamic/app.py
+# Run the web server (from the project folder); the page opens in your default browser
+python -m toolkit web
+# Another port, without opening the browser
+python -m toolkit web --port 5001 --no-browser
 ```
 
-Then open `http://localhost:5000` in your browser.
+The page is `http://127.0.0.1:5000/` (the address is always printed); Ctrl+C stops the server.
+If the port is already in use (for example, the trainer is already running), it says so and
+stops: start it on another port with `--port`. `TOOLKIT_NO_BROWSER=1` never opens the browser.
+
+---
+
+## 📚 Documentation
+
+| Document | What's in it |
+|---|---|
+| [User guide](docs/user_guide.md) | Every tool step by step, with screenshots of the web trainer |
+| [Reference](docs/reference.md) | Every command, flag, exit code and `TOOLKIT_*` setting; the data folder on each OS |
+| [Web API](docs/web_api.md) | The web trainer's `/api/v1` routes, its security token and error codes |
+| [Architecture](docs/architecture.md) | The layers, a map of every module and the main flows, with text diagrams |
+| [Model card](docs/model_card.md) | What the IDS models are for, their training data, measured results and limits |
+| [Datasets](docs/datasets.md) | The expected files, their fingerprints, licences and citations |
+| [ML report](docs/report/FINDINGS.md) | v4 against the fixed ML core, measured on the same data |
+| [CHANGELOG](CHANGELOG.md) | What changed in each version, and how to upgrade |
+| [LICENSE](LICENSE) | The MIT licence of the code |
 
 ---
 
@@ -234,6 +301,7 @@ Visual evaluation of model performance:
 
 ### 🔀 Train/Test Split Slider
 Customize data splits:
+- In the Explore step, next to the target column: the class analysis, balancing preview, feature scores and training all use this split
 - Slider range: 10% to 50% for the test split (default 20% → Train: 80% | Test: 20%)
 - Datasets with an official test file (NSL-KDD) use that file instead
 - Real-time label update
@@ -244,46 +312,44 @@ Customize data splits:
 
 ```
 Project/
-├── main.py                          # Main entry point
+├── main.py                          # Same as python -m toolkit
 ├── requirements.txt                 # Pinned runtime dependencies
-├── requirements-dev.txt             # + pytest, ruff, pip-audit
+├── requirements-dev.txt             # + pytest, ruff, mypy, pip-audit
 ├── requirements.lock                # Exact environment
-├── pyproject.toml                   # pytest / ruff configuration
+├── pyproject.toml                   # Packaging, pytest / ruff / mypy configuration
 ├── .gitignore                       # Git ignore rules
-├── .githooks/pre-commit             # Lint + tests before every commit
+├── .env.example                     # Optional API keys template (copy to .env)
+├── .githooks/pre-commit             # Lint, types + tests before every commit
 ├── README.md                        # This file
+├── CHANGELOG.md                     # What changed in each version
+├── LICENSE                          # MIT
 │
 ├── data/raw/                        # Local datasets (gitignored, see docs/datasets.md)
-├── docs/                            # Improvement plan, v5.0 checklist, datasets, baseline, ML report
+├── docs/                            # Improvement plan, checklists, datasets, web API, baseline, ML report
 ├── scripts/baseline_v4.py           # Reproduces the "before" baseline (docs/baseline/)
 ├── scripts/ml_report.py             # Re-runs it on the v5 ML core (docs/report/)
 ├── tests/                           # pytest suite + small fixtures
 │
-└── tools/
-    ├── Port_scan/                   # Network Reconnaissance
-    │   ├── Port_Scan.py             # Port scanner
-    │   └── api_keys.example.txt     # API keys template
-    │
-    └── IDS/
-        ├── IDS_CLI - CIC-2017/      # CLI-based IDS
-        │   ├── IDS_with_Machine_Learning.py
-        │   └── models/
-        │       └── README.md        # Where its models come from (your exports)
-        │
-        └── IDS_Web_CIC_Dynamic/     # Web-based IDS
-            ├── app.py               # Flask application
-            ├── templates/           # HTML templates
-            │   ├── home.html
-            │   └── dynamic_ids.html
-            ├── static/
-            │   ├── css/
-            │   │   ├── style.css
-            │   │   └── style2.css
-            │   └── js/
-            │       └── main.js
-            ├── uploads/             # Uploaded datasets
-            ├── dataset/             # Sample datasets
-            └── (exports: instance/bundles/, run records: instance/runs/)
+├── toolkit/                         # The package, in four layers with a folder per tool (docs/architecture.md)
+│   ├── __main__.py                  # python -m toolkit (the menu, or scan / ids / web)
+│   ├── ui/                          # What the user sees; the only code that prints or asks
+│   │   ├── web/                     #   the web trainer's page: templates/, static/ (css/, js/ ES modules)
+│   │   └── cli/                     #   the menu, the scanner's and the IDS's prompts and printing
+│   ├── controllers/                 # Requests and flags in, answers and exit codes out
+│   │   ├── web/                     #   the Flask app, its routes, run_server (waitress on 127.0.0.1)
+│   │   └── cli/                     #   the toolkit command: main (menu), scan, ids, web
+│   ├── services/                    # What the tools do: no user interface, no files, no network
+│   │   ├── ids/                     #   the leakage-free ML core (see "ML core" below), bundles, predictions
+│   │   ├── recon/                   #   targets and limits, the scan, the lookups, report entries
+│   │   └── web/                     #   workspaces, the training job runner, the work behind the routes
+│   └── data/                        # Files, the network, the environment (no database)
+│       ├── settings.py, keys.py     #   TOOLKIT_* settings, the data folder, API keys from .env
+│       ├── logs.py                  #   log files in instance/logs, secrets redacted
+│       ├── ids/                     #   bundle and run files, dataset files
+│       ├── recon/                   #   sockets, ping, banners, NVD / OpenRouter / AbuseIPDB, scan reports
+│       └── web/                     #   uploads (read, then deleted), the listening socket, the browser
+│
+└── docs/ids_cli_models.md           # Where the CLI's models come from (your exports)
 ```
 
 ---
@@ -329,7 +395,7 @@ Project/
 11. **Export / Load** - signed `.bundle` (see Known limitations)
 
 ### ML core (v5.0)
-`toolkit/ids_core` is the new, leakage-free pipeline. It has no web or network code; the web trainer uses it since 5.0-rc1 and the CLI since step 0.5.
+`toolkit/services/ids` (named `toolkit/ids_core` until v5.1 step 1.5d) is the leakage-free pipeline. It has no web or network code; the web trainer uses it since 5.0-rc1 and the CLI since step 0.5.
 
 1. **Load** (`datasets.load_dataset`): encoding and separator sniffed, header spaces stripped, exact dtype downcast, SHA-256; the dataset family (CIC-IDS2017, NSL-KDD or generic) is recognised from the content, not the file name.
 2. **Split** (`split.split_dataset`): exact copies removed first, then the profile's split: `official` (NSL-KDD's own files, kept as published), `temporal` / `temporal_per_class` (validated time column), `group`, or `stratified` with an "optimistic" warning. Every fallback has a reason code.
@@ -338,10 +404,10 @@ Project/
 5. **Evaluate** (`evaluation.evaluate`): cross-validation on the training split, the model chosen by CV macro-F1 **before** the test split is used, then the test split scored once; macro-F1, balanced accuracy, per-class recall and a leaderboard.
 
 ```python
-from toolkit.ids_core.datasets import load_dataset
-from toolkit.ids_core.split import split_dataset
-from toolkit.ids_core.leakage import check_leakage
-from toolkit.ids_core.evaluation import evaluate, leaderboard_table
+from toolkit.services.ids.datasets import load_dataset
+from toolkit.services.ids.split import split_dataset
+from toolkit.services.ids.leakage import check_leakage
+from toolkit.services.ids.evaluation import evaluate, leaderboard_table
 
 data = load_dataset("data/raw/CIC-2017.csv")
 split = split_dataset(data.frame, "Label", profile=data.profile)
@@ -370,88 +436,74 @@ The scanner works without any key. CVE lookups use the NVD API, which works with
    - Request a key: https://nvd.nist.gov/developers/request-an-api-key
 
 ### Configuration
-Set environment variables (`OPENROUTER_API_KEY`, `ABUSEIPDB_API_KEY`, `NVD_API_KEY`, optionally `OPENROUTER_MODEL`), or put the same `NAME=value` lines in a `.env` file in the project folder. The older key file still works as a fallback:
+Set environment variables (`OPENROUTER_API_KEY`, `ABUSEIPDB_API_KEY`, `NVD_API_KEY`, optionally `OPENROUTER_MODEL`), or put the same `NAME=value` lines in a `.env` file in the project folder: copy `.env.example` to `.env` and fill in what you use. An environment variable wins over `.env`. The older `tools/Port_scan/api_keys.txt` is no longer read (v5.1): if it is still on disk, the scanner says so once; move its keys into `.env`. Every setting, with its default and allowed values, every flag and every exit code: [docs/reference.md](docs/reference.md).
 
-```bash
-# Copy the example file
-cp tools/Port_scan/api_keys.example.txt tools/Port_scan/api_keys.txt
+⚠️ **Never commit `.env` to Git!** (It is in .gitignore)
 
-# Edit with your keys
-notepad tools/Port_scan/api_keys.txt
-```
-
-Format:
-```
-openrouter=your_openrouter_api_key_here
-abuseipdb=your_abuseipdb_api_key_here
-nvd=your_nvd_api_key_here
-```
-
-⚠️ **Never commit `api_keys.txt` or `.env` to Git!** (Both are in .gitignore)
+### Log files
+Each tool writes a log file in `instance/logs/` (`web.log`, `scanner.log`, `ids_cli.log`), UTF-8, rotated at 1 MB with 3 old files kept. Set `TOOLKIT_LOG_LEVEL` (`DEBUG`, `INFO`, `WARNING`, `ERROR`; default `INFO`) as an environment variable to change how much is written. API keys and `Authorization` / `Bearer` values are replaced by `[REDACTED]`, and dataset values are never logged. Library warnings (for example a scikit-learn version mismatch) appear on the console and in the log. A bad value (any `TOOLKIT_*` setting) is a one-line message and exit code 2 ([docs/reference.md](docs/reference.md#71-toolkit_-settings)).
 
 ---
 
 ## 📸 Screenshots
 
+Real captures of v5.1 (Windows, 2026-10-24). The [user guide](docs/user_guide.md) walks
+through every tool step by step, with a picture of each step of the web trainer. The model
+numbers come from a small NSL-KDD sample and are not results; those are in the
+[model card](docs/model_card.md).
+
 ### Main Menu
 ```
- _       __       __                            
-| |     / /___   / /_____ ____   ____ ___   ___ 
+ _       __       __
+| |     / /___   / /_____ ____   ____ ___   ___
 | | /| / // _ \ / // ___// __ \ / __ `__ \ / _ \
 | |/ |/ //  __// // /__ / /_/ // / / / / //  __/
-|__/|__/ \___//_/ \___/ \____//_/ /_/ /_/ \___/ 
+|__/|__/ \___//_/ \___/ \____//_/ /_/ /_/ \___/
 
 Network Recon and Detection Tool
+Your one-stop solution for network recon and intrusion detection using Machine Learning.
+Let's secure your network with these tools.
 
 1. Network Recon
 2. Intrusion Detection (CLI)
 3. Intrusion Detection (Web)
 4. Exit
+Enter your choice [1-4]: 4
 ```
 
 ### Port Scan Results
+A scan of this computer, on a test port that answers like an OpenSSH 8.9 server:
 ```
-+----------------------------------------------------------+
-| PORT      | STATE   | SERVICE    | BANNER                 |
-+----------------------------------------------------------+
-| 22/tcp    | open    | ssh        | OpenSSH 8.2            |
-| 80/tcp    | open    | http       | nginx/1.18.0           |
-| 443/tcp   | open    | https      | nginx/1.18.0           |
-+----------------------------------------------------------+
-```
-
-### Web IDS - Data Analysis
-```
-📊 Data Analysis
-┌────────────────────┬─────────────────────────┐
-│ Imbalance Ratio    │ 2.2%                    │
-│ Severity           │ SEVERE                  │
-│ Dataset Size       │ 122,859 (very_large)    │
-│ Features           │ 41 (medium)             │
-│ Classes            │ 7 (multi-class)         │
-│ Smallest Class     │ 2,754 samples           │
-└────────────────────┴─────────────────────────┘
-
-✅ Recommended Method: SMOTE-ENN
-Large multi-class dataset with severe imbalance. 
-SMOTE-ENN cleans noisy synthetic samples.
-
-Alternatives: Class Weights, SMOTE + Tomek, ADASYN
+OPEN PORTS
++-----------------------------------------------------------------------------+
+|   PORT    |  STATE  |  SERVICE   |                  BANNER                  |
++-----------------------------------------------------------------------------+
+| 47822/tcp |  open   |            | SSH-2.0-OpenSSH_8.9p1 Ubuntu-3ubuntu0.10 |
++-----------------------------------------------------------------------------+
 ```
 
-### IDS Prediction (output format only, not a real result)
+### Web Trainer
+![The leaderboard after training](docs/user-guide/12-leaderboard.jpg)
+
+![Predictions for a CSV file](docs/user-guide/15-predict-file.jpg)
+
+### IDS Prediction
+A real `neptune` row from the model's test split (`python -m toolkit ids`, option 2):
 ```
-================================================================
+==================================================
 🎯 PREDICTION RESULT
-================================================================
-   Status: ✅ BENIGN
-   Confidence: 98.50%
+==================================================
+   Status: 🚨 ATTACK DETECTED - neptune
+   True label: neptune
+   Confidence: 96.00%
 
    📊 Top Probabilities:
-      BENIGN                    98.50% ████████████████████
-      Portscan                   0.80%
-      DDoS                       0.35%
-================================================================
+      neptune                   96.00% ███████████████████
+      portsweep                  2.00%
+      satan                      2.00%
+      teardrop                   0.00%
+      spy                        0.00%
+==================================================
 ```
 
 ---
@@ -465,7 +517,7 @@ Alternatives: Class Weights, SMOTE + Tomek, ADASYN
 | `ModuleNotFoundError` | Run `pip install -r requirements.txt` |
 | Port Scanner timeout | Check firewall settings |
 | SMOTE fails | Minority class needs ≥6 samples |
-| Web app not starting | Check port 5000 is free |
+| Web app says the port is in use | It may already be running (open the address it prints), or start it with `python -m toolkit web --port 5001` |
 
 ### Memory Issues with Large Datasets
 For datasets >500K rows:
@@ -479,14 +531,14 @@ For datasets >500K rows:
 
 1. Create a branch (`git checkout -b fix/short-name`)
 2. Write a test for the correct behaviour first, then make the fix
-3. Make sure `python -m pytest` and `python -m ruff check .` pass (the pre-commit hook runs both)
+3. Make sure `python -m pytest`, `python -m ruff check .` and `python -m mypy` pass (the pre-commit hook runs all three)
 4. Commit with a clear message
 
 ---
 
 ## 📄 License
 
-Intended licence: **MIT**. The `LICENSE` file has not been added yet (planned in v5.1, see [docs/IMPROVEMENT_PLAN.md](docs/IMPROVEMENT_PLAN.md) D20). Datasets keep their own terms and must be cited when used; see "Licences and citations" in [docs/datasets.md](docs/datasets.md). UNSW-NB15 is free for academic research only.
+The code is licensed under the **MIT** licence, see [LICENSE](LICENSE) (copyright 2025-2026 Ahmed Mohamed Abdalrazek). The licence covers the code only: datasets keep their own terms and must be cited when used; see "Licences and citations" in [docs/datasets.md](docs/datasets.md). UNSW-NB15 is free for academic research only.
 
 ---
 

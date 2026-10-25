@@ -4,6 +4,7 @@
 api_keys.txt
 *.env
 .env.*
+!.env.example
 secrets.txt
 credentials.txt
 
@@ -58,13 +59,13 @@ env/
 !dataset/*.csv
 !tests/fixtures/*.csv
 
-# Local datasets (never committed; see docs/datasets.md)
-data/
+# Local datasets (never committed; see docs/datasets.md). Only the project folder's data/:
+# toolkit/data/ is the data layer (code).
+/data/
 
 # Web IDS: uploaded files and exported models are runtime data
 **/uploads/*
 !**/uploads/.gitkeep
-tools/IDS/IDS_Web_CIC_Dynamic/models/
 
 # ==============================
 # IDE and Editor
@@ -117,6 +118,7 @@ instance/
 # ==============================
 .pytest_cache/
 .ruff_cache/
+.mypy_cache/
 *.zip
 
 # ==============================

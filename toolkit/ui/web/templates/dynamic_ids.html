@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  <title>Dynamic IDS Model Trainer</title>
+  <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/app.css') }}">
+
+</head>
+<body class="dynamic">
+  <!-- Nav Bar -->
+  <nav class="navbar">
+    <a href="/" class="nav-logo">Intrusion Detection System</a>
+    <ul class="nav-menu">
+      <li class="nav-item"><a href="/" class="nav-link">Home</a></li>
+      <li class="nav-item"><a href="/dynamic_ids" class="nav-link">Dynamic Intrusion Detection System</a></li>
+    </ul>
+  </nav>
+
+  <div class="container">
+    <h1>Dynamic IDS Model Trainer</h1>
+
+    <!-- Steps (v5.1 step 1.3c): one step is shown at a time; later steps unlock when the
+         dataset or a trained run is ready. The bundle path uses Data and Use only. -->
+    <nav class="stepper" aria-label="Training steps">
+      <ol class="stepper-list">
+        <li><button type="button" class="step-link" data-step="data">1. Data</button></li>
+        <li><button type="button" class="step-link" data-step="explore" disabled>2. Explore</button></li>
+        <li><button type="button" class="step-link" data-step="clean" disabled>3. Clean</button></li>
+        <li><button type="button" class="step-link" data-step="features" disabled>4. Features</button></li>
+        <li><button type="button" class="step-link" data-step="train" disabled>5. Train</button></li>
+        <li><button type="button" class="step-link" data-step="use" disabled>6. Use</button></li>
+      </ol>
+    </nav>
+
+    <!-- Step 1: Data -->
+    <section class="step" id="step-data" data-step="data" aria-labelledby="step-data-title">
+      <h2 class="step-title" id="step-data-title" tabindex="-1">Step 1: Data</h2>
+
+      <div class="section" id="optionSelectionSection">
+        <h3>Do you have a trained model?</h3>
+        <label class="label choice">
+          <input type="radio" name="modelOption" id="optionTrained" value="trained">
+          Yes, I have a trained model.
+        </label>
+        <label class="label choice">
+          <input type="radio" name="modelOption" id="optionNotTrained" value="not_trained" checked>
+          No, I need to train a model.
+        </label>
+        <div class="workspace-bar">
+          <button type="button" id="clearWorkspaceBtn" class="btn btn-secondary btn-sm">Clear workspace</button>
+          <span class="section-description">Your dataset and models stay in memory for this browser session only, and are removed after {{ idle_minutes }} minutes without use.</span>
+        </div>
+        <div id="clearWorkspaceResult" class="message" role="status"></div>
+      </div>
+
+      <div class="section" id="uploadDatasetSection">
+        <h3>Upload Dataset</h3>
+        <p class="section-description">One CSV/TXT file, several parts of the same dataset, or an official train file plus its test file (a file name containing "test", e.g. NSL-KDD's KDDTest+.txt).</p>
+        <form id="uploadForm" enctype="multipart/form-data">
+          <div class="form-group">
+            <label for="dataset" class="label">Select CSV or TXT File:</label>
+            <div class="file-input-wrapper">
+              <input type="file" id="dataset" name="dataset" accept=".csv,.txt" multiple required>
+              <div class="file-input-placeholder">Choose file(s)...</div>
+            </div>
+          </div>
+          <button type="submit" class="btn">Upload File</button>
+        </form>
+        <div id="uploadResult" class="message" role="status"></div>
+      </div>
+
+      <div class="section" id="dataPreviewSection" hidden>
+        <h3>Data Preview</h3>
+        <div class="form-group">
+          <label for="previewRows" class="label">Rows to preview:</label>
+          <input type="number" id="previewRows" name="previewRows" value="10" min="1" max="100">
+          <button id="refreshPreviewBtn" class="btn btn-sm">Refresh Preview</button>
+        </div>
+        <div id="dataStats" class="stats-box"></div>
+        <div id="dataPreviewTable" class="table-container"></div>
+      </div>
+
+      <div class="section" id="loadModelSection" hidden>
+        <h3>Load Exported Model</h3>
+        <p class="section-description">Load a <strong>.bundle</strong> file exported by this toolkit on this computer. Bundles are signed with this install's key; any other file is refused before it is opened.</p>
+        <form id="loadModelForm" enctype="multipart/form-data">
+          <div class="form-group">
+            <label for="modelFile" class="label">Select Model File (.bundle):</label>
+            <div class="file-input-wrapper">
+              <input type="file" id="modelFile" name="file" accept=".bundle" required>
+              <div class="file-input-placeholder" id="modelFilePlaceholder">Choose file...</div>
+            </div>
+          </div>
+          <button type="submit" class="btn">Load Model</button>
+        </form>
+        <div id="loadModelResult" class="message" role="status"></div>
+      </div>
+      <div class="step-actions">
+        <button type="button" class="btn btn-sm step-next" disabled>Next</button>
+      </div>
+    </section>
+
+    <!-- Step 2: Explore -->
+    <section class="step" id="step-explore" data-step="explore" aria-labelledby="step-explore-title" hidden>
+      <h2 class="step-title" id="step-explore-title" tabindex="-1">Step 2: Explore</h2>
+      <div class="section" id="classImbalanceSection">
+        <h3>Class Distribution Analysis</h3>
+        <div class="form-group">
+          <label for="targetForDist" class="label">Target column:</label>
+          <select id="targetForDist" name="targetForDist" required></select>
+          <p class="section-description">Used by every step from here; you can still change it in Features and Train.</p>
+        </div>
+        <div class="form-group">
+          <label for="trainTestSlider" class="label">Test split size:</label>
+          <div class="slider-container">
+            <input type="range" id="trainTestSlider" name="trainTestSlider" min="10" max="50" value="20" step="5">
+            <span id="splitLabel" class="slider-label">Train: 80% | Test: 20%</span>
+          </div>
+          <p class="section-description">Models are compared by 3-fold cross-validation on the training rows; the test rows are scored once, at the end. Datasets with an official test file (NSL-KDD) use it instead.</p>
+        </div>
+        <button id="analyzeClassBtn" class="btn">Analyze Class Distribution</button>
+        <div id="classDistributionResult" class="message" role="status"></div>
+      </div>
+      <div class="step-actions">
+        <button type="button" class="btn btn-sm btn-secondary step-back">Back</button>
+        <button type="button" class="btn btn-sm step-next">Next</button>
+      </div>
+    </section>
+
+    <!-- Step 3: Clean -->
+    <section class="step" id="step-clean" data-step="clean" aria-labelledby="step-clean-title" hidden>
+      <h2 class="step-title" id="step-clean-title" tabindex="-1">Step 3: Clean</h2>
+      <div class="section" id="targetValueFilterSection">
+        <h3>Filter Target Values</h3>
+        <p class="section-description">Remove unwanted classes/labels from your dataset. Tick the values you want to <strong>remove</strong>.</p>
+        <div id="targetValuesToRemove" class="checkbox-list" role="group" aria-label="Values to remove"></div>
+        <div class="button-group">
+          <button id="removeTargetValuesBtn" class="btn btn-danger">Remove Selected Values</button>
+          <button id="skipTargetFilterBtn" class="btn btn-secondary">Skip (Keep All Values)</button>
+        </div>
+        <div id="targetFilterResult" class="message" role="status"></div>
+      </div>
+
+      <div class="section" id="smoteOption">
+        <h3>Balancing</h3>
+        <div class="form-group">
+          <label for="balancingMethod" class="label">Select Balancing Method:</label>
+          <select id="balancingMethod" name="balancingMethod">
+            <option value="none">None (Use Original Data)</option>
+            <option value="recommended">Recommended (chosen from the training split)</option>
+            <option value="class_weight">Class Weights (Fast)</option>
+            <option value="smote">SMOTE (Synthetic Minority Oversampling)</option>
+            <option value="smote_enn">SMOTE-ENN (SMOTE + Edited Nearest Neighbors)</option>
+            <option value="adasyn">ADASYN (Adaptive Synthetic Sampling)</option>
+            <option value="borderline_smote">Borderline-SMOTE (Focus on Boundary)</option>
+            <option value="random_undersample">Random Undersampling (Fast)</option>
+            <option value="tomek">Tomek Links (Clean Boundaries)</option>
+            <option value="smote_tomek">SMOTE + Tomek Links (Combined)</option>
+          </select>
+          <p class="balancing-hint" id="balancingHint">Select a method to handle class imbalance in your dataset.</p>
+        </div>
+        <button type="button" id="previewBalancingBtn" class="btn btn-sm">Preview on training split</button>
+        <div id="balancingPreviewResult" class="message" role="status"></div>
+      </div>
+      <div class="step-actions">
+        <button type="button" class="btn btn-sm btn-secondary step-back">Back</button>
+        <button type="button" class="btn btn-sm step-next">Next</button>
+      </div>
+    </section>
+
+    <!-- Step 4: Features -->
+    <section class="step" id="step-features" data-step="features" aria-labelledby="step-features-title" hidden>
+      <h2 class="step-title" id="step-features-title" tabindex="-1">Step 4: Features</h2>
+      <div class="section" id="recommendationSection">
+        <h3>Feature Recommendation</h3>
+        <p class="section-description">Scores are computed on the training split only, after the leakage guard has removed label copies and ID columns.</p>
+        <div class="form-group">
+          <label for="kValue" class="label">Enter k value for top features:</label>
+          <input type="number" id="kValue" name="kValue" value="10" min="1" required>
+        </div>
+        <div class="form-group">
+          <label for="targetForRec" class="label">Select Target for Recommendation:</label>
+          <select id="targetForRec" name="targetForRec" required></select>
+        </div>
+        <button id="recommendBtn" class="btn">Recommend Features</button>
+        <div id="recommendationResult" class="message" role="status"></div>
+      </div>
+
+      <div class="section" id="featureListSection">
+        <h3 id="inputFeaturesLabel">Input Features</h3>
+        <div class="list-actions">
+          <button type="button" class="btn btn-sm" data-list="inputFeatures" data-check="all">Select all</button>
+          <button type="button" class="btn btn-sm btn-secondary" data-list="inputFeatures" data-check="none">Clear</button>
+        </div>
+        <div id="inputFeatures" class="checkbox-list" role="group" aria-labelledby="inputFeaturesLabel"></div>
+      </div>
+      <div class="step-actions">
+        <button type="button" class="btn btn-sm btn-secondary step-back">Back</button>
+        <button type="button" class="btn btn-sm step-next">Next</button>
+      </div>
+    </section>
+
+    <!-- Step 5: Train -->
+    <section class="step" id="step-train" data-step="train" aria-labelledby="step-train-title" hidden>
+      <h2 class="step-title" id="step-train-title" tabindex="-1">Step 5: Train</h2>
+      <div class="section" id="configSection">
+        <h3>Target and Models</h3>
+        <form id="configForm" enctype="multipart/form-data">
+          <div class="form-group">
+            <label for="targetColumn" class="label">Select Target:</label>
+            <select id="targetColumn" name="targetColumn" required></select>
+          </div>
+          <div class="form-group">
+            <span class="label" id="modelSelectionLabel">Select Models to Train:</span>
+            <div id="modelSelection" class="checkbox-list" role="group" aria-labelledby="modelSelectionLabel"></div>
+          </div>
+          <button type="submit" class="btn">Train Model</button>
+          <div id="trainingProgress" class="training-progress" hidden aria-live="polite" tabindex="-1">
+            <progress id="trainingProgressBar" max="100" value="0" aria-label="Training progress"></progress>
+            <span id="trainingProgressText"></span>
+            <button type="button" id="cancelTrainingBtn" class="btn" disabled>Cancel training</button>
+          </div>
+        </form>
+        <div id="configResult" class="message" role="status" tabindex="-1"></div>
+
+        <div id="confusionMatrixSection" class="subsection" hidden>
+          <h3>Confusion Matrix (test split)</h3>
+          <div class="form-group">
+            <label for="cmModelSelect" class="label">Select Model:</label>
+            <select id="cmModelSelect" name="cmModelSelect"></select>
+            <button id="showConfusionMatrixBtn" class="btn btn-sm">Show Matrix</button>
+          </div>
+          <div id="confusionMatrixDisplay" class="confusion-matrix-container"></div>
+        </div>
+      </div>
+      <div class="step-actions">
+        <button type="button" class="btn btn-sm btn-secondary step-back">Back</button>
+        <button type="button" class="btn btn-sm step-next">Next</button>
+      </div>
+    </section>
+
+    <!-- Step 6: Use -->
+    <section class="step" id="step-use" data-step="use" aria-labelledby="step-use-title" hidden>
+      <h2 class="step-title" id="step-use-title" tabindex="-1">Step 6: Use</h2>
+      <div class="section" id="predictionSection" hidden>
+        <h3>Make a Prediction (Current Session Model)</h3>
+        <form id="predictionForm" enctype="multipart/form-data">
+          <div class="form-group">
+            <label for="algorithmSelect" class="label">Choose The Algorithm:</label>
+            <select id="algorithmSelect" name="algorithmSelect" required></select>
+          </div>
+          <div id="dynamicInputs"></div>
+          <button type="submit" class="btn">Predict</button>
+        </form>
+        <div id="predictionResult" class="message" role="status"></div>
+        <div class="predict-file">
+          <h4>Predict a CSV File</h4>
+          <p class="section-description">Labels every row of a .csv or .txt file with the algorithm chosen above. The file needs the model's feature columns; if it also has the label column, the predictions are compared with it.</p>
+          <form id="predictFileForm" enctype="multipart/form-data">
+            <div class="form-group">
+              <label for="predictFile" class="label">Select CSV or TXT File:</label>
+              <div class="file-input-wrapper">
+                <input type="file" id="predictFile" name="file" accept=".csv,.txt" required>
+                <div class="file-input-placeholder">Choose file...</div>
+              </div>
+            </div>
+            <button type="submit" class="btn">Predict File</button>
+          </form>
+          <div id="predictFileResult" class="message" role="status"></div>
+          <div id="predictFileOutput" class="batch-output"></div>
+        </div>
+      </div>
+
+      <div class="section" id="exportSection" hidden>
+        <h3>Export Model</h3>
+        <p class="section-description">Saves all trained models of this run as one signed bundle (with its training record) and lets you download it. Load it later with "Yes, I have a trained model".</p>
+        <form id="exportForm" enctype="multipart/form-data">
+          <div class="form-group">
+            <label for="modelName" class="label">Model Base Name:</label>
+            <input type="text" id="modelName" name="modelName" placeholder="Enter model name" required>
+          </div>
+          <button type="submit" class="btn">Export Models</button>
+        </form>
+        <div id="exportResult" class="message" role="status"></div>
+      </div>
+
+      <div class="section" id="loadedFeaturesSection" hidden>
+        <h3>Make a Prediction (Loaded Model)</h3>
+        <form id="predictLoadedForm" enctype="multipart/form-data">
+          <div class="form-group">
+            <label for="loadedAlgorithmSelect" class="label">Choose The Algorithm:</label>
+            <select id="loadedAlgorithmSelect" name="loadedAlgorithmSelect" required></select>
+          </div>
+          <div id="loadedDynamicInputs"></div>
+          <button type="submit" class="btn">Predict</button>
+        </form>
+        <div id="loadedPredictionResult" class="message" role="status"></div>
+        <div class="predict-file">
+          <h4>Predict a CSV File</h4>
+          <p class="section-description">Labels every row of a .csv or .txt file with the algorithm chosen above (loaded bundle). The file needs the model's feature columns; if it also has the label column, the predictions are compared with it.</p>
+          <form id="loadedPredictFileForm" enctype="multipart/form-data">
+            <div class="form-group">
+              <label for="loadedPredictFile" class="label">Select CSV or TXT File:</label>
+              <div class="file-input-wrapper">
+                <input type="file" id="loadedPredictFile" name="file" accept=".csv,.txt" required>
+                <div class="file-input-placeholder">Choose file...</div>
+              </div>
+            </div>
+            <button type="submit" class="btn">Predict File</button>
+          </form>
+          <div id="loadedPredictFileResult" class="message" role="status"></div>
+          <div id="loadedPredictFileOutput" class="batch-output"></div>
+        </div>
+      </div>
+      <div class="step-actions">
+        <button type="button" class="btn btn-sm btn-secondary step-back">Back</button>
+      </div>
+    </section>
+  </div>
+  <script type="module" src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

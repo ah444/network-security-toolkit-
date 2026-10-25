@@ -2,7 +2,131 @@
 
 All notable changes to this project. Versions follow the roadmap in
 [docs/IMPROVEMENT_PLAN.md](docs/IMPROVEMENT_PLAN.md); day-to-day progress is in
-[docs/V5.0_CHECKLIST.md](docs/V5.0_CHECKLIST.md).
+[docs/V5.1_CHECKLIST.md](docs/V5.1_CHECKLIST.md) (v5.1) and
+[docs/V5.0_CHECKLIST.md](docs/V5.0_CHECKLIST.md) (v5.0).
+
+## [5.1] — 2026-10-25
+
+v5.1 "clean architecture": the same three tools as one package with one command, a
+versioned web API, training jobs you can follow and cancel, and the documentation
+(steps 1.1–1.5 of the [checklist](docs/V5.1_CHECKLIST.md)). Project version: `5.1.0`.
+
+**Test result:** 803 automated tests pass; `ruff`, `mypy` and `pip-audit` are clean. The v5.1
+checks of the plan's §8 pass: a cancelled training on the full NSL-KDD files stops, frees its
+memory and keeps nothing; the progress bar, Cancel and a reload during training work; the whole
+flow works with the keyboard only; a fresh install on Windows passes every menu path ([gate
+record](docs/release/5.1-gate.md), every §8 check mapped to its tests in the
+[audit](docs/release/5.1-section8-audit.md)). The web and the CLI label the full `KDDTest+`
+file the same, byte for byte. The ML report on the v5.1 code gives the 5.0 numbers: one run of
+each of the six cases, all 1,246 values equal.
+Windows 10 Enterprise LTSC 2021, Python 3.14.3 (an install on Python 3.11.0 checked too),
+scikit-learn 1.8.0.
+
+### Added
+- **One command** (1.4b): `python -m toolkit` opens a flat menu (the banner once, the
+  menu again after every tool, `q` to quit); `python -m toolkit scan`, `ids` and `web`
+  start a tool directly, with its own flags, help and exit codes. Installed with
+  `pip install ".[boost]"`, the same is the `toolkit` command (1.5b).
+- **Scanner flags** (1.4c): `scan TARGET` asks only "are you authorised?"
+  (`--i-am-authorized` skips it); `-p/--ports`, `--protocol`, `-v`, `--ai`, `--abuseipdb`,
+  `--scan-unresponsive`, `--export`. Nothing but the CVE lookups leaves the computer
+  unless a flag says so. Ctrl+C or the end of input cancels a scan ("Scan cancelled.",
+  exit 130, no traceback).
+- **Parallel CVE lookups** (1.4e): up to 4 products at a time, each product once per
+  scan; NVD's request spacing is kept.
+- **Training jobs** (1.2d): training runs in the background with a progress bar and a
+  **Cancel training** button; one training at a time per server, others wait in a queue;
+  a cancelled or failed job keeps nothing; `TOOLKIT_JOB_MAX_MIN` (default 180).
+- **Resume after a reload** (1.3c): the page shows the session's dataset, results, a
+  running training and the export link again (`GET /api/v1/workspace`).
+- **Predict a CSV file** in the web trainer (1.4f): rows per class, matches with the
+  file's label column, and the labelled CSV, the same file as `python -m toolkit ids --csv`;
+  `TOOLKIT_MAX_PREDICT_MB` (default 512).
+- **The web trainer opens the browser** once it is ready (1.4d); `--port`, `--no-browser`
+  (`TOOLKIT_NO_BROWSER=1`).
+- **Log files** (1.1b): one per tool in `instance/logs/`, rotated at 1 MB; API keys and
+  `Authorization` / `Bearer` values redacted, no dataset values; `TOOLKIT_LOG_LEVEL`.
+- **Packaging** (1.5b): `pyproject.toml` with the pins of `requirements.txt`, the extras
+  `[boost]` (XGBoost, LightGBM) and `[dev]`; an installed copy keeps its data in a
+  per-user folder.
+- **Documentation**: the [user guide](docs/user_guide.md) with screenshots (1.5f), the
+  [reference](docs/reference.md) of every flag, exit code and setting (1.5e), the
+  [architecture](docs/architecture.md) with text diagrams and the
+  [model card](docs/model_card.md) (1.5c); [`LICENSE`](LICENSE) (MIT, 1.5g).
+
+### Changed
+- **The web trainer in six steps** (1.3c): Data, Explore, Clean, Features, Train, Use,
+  one at a time (a loaded bundle: Data → Use); 44 px touch targets and a usable 375 px
+  layout; the page script as ES modules (1.3a); one stylesheet with light and dark tokens,
+  contrast AA in both themes (1.3b); status messages announced to screen readers (1.3e);
+  an infinite feature score shown as ∞ (1.3d).
+- **Web API under `/api/v1`** (1.2b) with one error format,
+  `{"error": {"code", "message"}}`; see [docs/web_api.md](docs/web_api.md).
+- **Workspaces** (1.2c): a lock per workspace; at most 4 workspaces
+  (`TOOLKIT_MAX_WORKSPACES`) and 4,096 MB of loaded datasets (`TOOLKIT_MAX_DATA_MB`), the
+  least recently used other session's workspace dropped first; idle workspaces swept every
+  5 minutes; leftover uploads removed at startup.
+- **Layered package** (1.5d): `toolkit/ui`, `controllers`, `services` and `data`, one
+  folder per tool in each; tests keep every import pointing down a layer.
+- **Type checks** (1.5a): `mypy --strict` on the whole package, in the pre-commit hook.
+
+### Security
+- A CSRF token on every change (1.2e), with the `Origin` check and `SameSite=Strict` kept.
+- `Cross-Origin-Opener-Policy`, `Cross-Origin-Resource-Policy: same-origin` and a
+  `Permissions-Policy` on every answer; `Cache-Control: no-store` on API answers and the
+  trainer page (1.2e).
+- CSP `style-src 'self'`: no inline styles in the page (1.3b).
+- The web trainer's port is never shared (1.4d): on Windows a second server could bind a
+  port already in use without an error; it is now bound exclusively, and a port in use is
+  a message and exit code 2.
+- A bad `TOOLKIT_*` setting is refused before the tool starts (1.5e): a one-line message
+  and exit code 2. Before, a limit of `0` or less was accepted (`TOOLKIT_MAX_WORKSPACES=0`
+  refused every workspace) and on/off settings silently meant off for anything but `1`.
+
+### Fixed
+- When every chosen model failed in cross-validation, the final fit trained the default
+  models that nobody chose (1.2d).
+- `OPENROUTER_MODEL` was not read from `.env` as documented (1.1b).
+- A bad `TOOLKIT_LOG_LEVEL` crashed `scan`, `ids` and `web` with a traceback (1.5e).
+- Keyboard focus fell to the page when Train and then Cancel were disabled during a
+  training; it now moves to the status, Cancel, the progress and the result (5.1 gate).
+- `scripts/menu_walkthrough.py` counted a page from another server when its own web trainer
+  couldn't take the port, and crashed when no page answered (5.1 gate).
+- The README's install steps now say what to do when PowerShell refuses `Activate.ps1`, and
+  to upgrade setuptools on Python 3.11 (5.1 gate).
+
+### Removed
+- The `tools/` folder (1.4a): the tools live in `toolkit/`.
+- `tools/Port_scan/api_keys.txt` is no longer read (1.4a): keys come from environment
+  variables or `.env`; the scanner says so once while the old file is on disk.
+- The web routes outside `/api/v1` (1.2b) and `POST /api/v1/run` (1.2d, now a job).
+- The module entry forms `python -m toolkit.web`, `toolkit.ids_cli` and
+  `toolkit.recon.cli` (1.5d), and the menu's "Proceed to Intrusion Detection?" and
+  "another detection?" questions (1.4b).
+
+### Upgrading from 5.0
+- Start the toolkit with `python -m toolkit` (`python main.py` does the same).
+- Move the keys of `tools/Port_scan/api_keys.txt` into `.env` (copy `.env.example`).
+- Scripts that call the web trainer use the `/api/v1` routes and send the page's token in
+  `X-CSRF-Token` with every change ([docs/web_api.md](docs/web_api.md#security-token)).
+- On/off settings (`TOOLKIT_HTTPS`, `TOOLKIT_DEBUG`, `TOOLKIT_NO_BROWSER`) take only `1`
+  (on) or `0` (off), and every number setting must be 1 or more
+  ([docs/reference.md](docs/reference.md#71-toolkit_-settings)).
+- Bundles exported with 5.0 still load on the install that made them (1.5d: a test bundle
+  with the old module names, and two real exports made before 5.0).
+
+### Known limitations
+See **Known limitations** in the [README](README.md). New in this release:
+- Bundles still load only on the install that made them; importing them on another
+  computer is not part of 5.1.
+- A bundle is held in memory two to three times while it loads, so the 1.98 GB random
+  forest export of 5.0 doesn't load on a PC with 8 GB of memory.
+- Open, recorded in the [checklist](docs/V5.1_CHECKLIST.md): long checkbox lists take one
+  Tab stop per item; a native `confirm()` before Clear workspace; after a reload a session
+  with a dataset and a loaded bundle shows the dataset path; the navbar takes about a
+  quarter of the screen at 375 px; `--json` prints every digit of the confidence; `ids` with a missing file
+  shows Python's own `[Errno 2]` message.
+- Linux and macOS are not tested on real machines.
 
 ## [5.0.1] — 2026-10-21
 

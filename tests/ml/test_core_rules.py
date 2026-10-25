@@ -1,4 +1,4 @@
-"""Architecture rules for the ML core (plan §2): no web framework, no print, no network."""
+"""Rules for the services layer (plan §2, step 1.5d): no web framework, no print, no network."""
 
 import ast
 
@@ -8,14 +8,15 @@ FORBIDDEN_IMPORTS = {"flask", "werkzeug", "requests", "socket", "urllib", "http"
 
 
 def _core_files(repo_root):
-    files = sorted((repo_root / "toolkit" / "ids_core").rglob("*.py"))
-    assert files, "toolkit/ids_core is missing"
+    files = sorted((repo_root / "toolkit" / "services").rglob("*.py"))
+    assert files, "toolkit/services is missing"
     return files
 
 
 @pytest.fixture
 def core_trees(repo_root):
-    return {path.name: ast.parse(path.read_text(encoding="utf-8")) for path in _core_files(repo_root)}
+    return {path.relative_to(repo_root).as_posix(): ast.parse(path.read_text(encoding="utf-8"))
+            for path in _core_files(repo_root)}
 
 
 def test_core_has_no_print(core_trees):

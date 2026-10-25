@@ -5,8 +5,9 @@ from html.parser import HTMLParser
 
 import pytest
 
-TEMPLATES = "tools/IDS/IDS_Web_CIC_Dynamic/templates"
-MAIN_JS = "tools/IDS/IDS_Web_CIC_Dynamic/static/js/main.js"
+from web_js import js_sources
+
+TEMPLATES = "toolkit/ui/web/templates"
 
 
 class _FormScanner(HTMLParser):
@@ -59,11 +60,29 @@ def test_home_page_does_not_load_trainer_script(repo_root):
     assert "main.js" not in html
 
 
-def test_dynamic_form_labels_are_linked(repo_root):
-    """Labels created by JS for the prediction form must point at their input."""
-    js = (repo_root / MAIN_JS).read_text(encoding="utf-8")
-    builders = re.findall(r"function build\w*PredictionForm\(featuresInfo\) \{.*?\n    \}", js,
-                          flags=re.S)
-    assert len(builders) == 2
-    for body in builders:
-        assert "label.htmlFor = input.id" in body
+def test_dynamic_form_labels_are_linked():
+    """Labels created by JS for the prediction forms must point at their input (one builder
+    for both forms since step 1.3a, with a different id prefix for each)."""
+    predict = js_sources()["predict.js"]
+    builder = re.search(r"function buildPredictionForm\(.*?\n\}", predict, flags=re.S).group(0)
+    assert 'el("label", { htmlFor: input.id }' in builder
+    assert "input.id = idPrefix + index" in builder
+    prefixes = re.findall(r'buildPredictionForm\("\w+", "([\w-]+)"', predict)
+    assert sorted(prefixes) == ["loaded-feature-", "session-feature-"]
+
+
+def test_home_page_describes_signed_bundles(repo_root):
+    """Step 1.3d: export and load are signed bundles; nothing loads PKL files or retrains."""
+    html = (repo_root / TEMPLATES / "home.html").read_text(encoding="utf-8")
+    assert "PKL" not in html.upper() and "continue training" not in html
+    assert "signed .bundle file" in html
+    assert "exported by this toolkit on this computer" in html
+
+
+def test_status_messages_are_announced(repo_root):
+    """Step 1.3e (plan §8, accessibility): every message area is a polite live region."""
+    html = (repo_root / TEMPLATES / "dynamic_ids.html").read_text(encoding="utf-8")
+    areas = re.findall(r'<div id="(\w+)" class="message"([^>]*)>', html)
+    assert len(areas) == 13  # + the two "Predict a CSV file" results (step 1.4f)
+    assert [name for name, attrs in areas if 'role="status"' not in attrs] == []
+    assert re.search(r'id="trainingProgress"[^>]*aria-live="polite"', html)

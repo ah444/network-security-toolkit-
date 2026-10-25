@@ -1,6 +1,8 @@
 """Step 0.2: published claims must match the measured baseline (docs/baseline/)."""
 
-MODELS_README = "tools/IDS/IDS_CLI - CIC-2017/models/README.md"
+import pytest
+
+MODELS_README = "docs/ids_cli_models.md"
 
 
 def _read(repo_root, rel):
@@ -12,7 +14,8 @@ def test_readme_has_no_withdrawn_claims_or_placeholders(repo_root):
     assert "High accuracy (~97%)" not in text
     assert "yourusername" not in text
     assert '"# network-security-toolkit-"' not in text
-    assert "](LICENSE)" not in text  # no link to a file that doesn't exist
+    # 5.0: no link to the missing LICENSE; since step 1.5g it exists and is linked
+    assert "](LICENSE)" in text and (repo_root / "LICENSE").is_file()
 
 
 def test_readme_states_leakage_and_limitations(repo_root):
@@ -47,11 +50,13 @@ def test_dataset_licences_recorded(repo_root):
     assert "UNSW" not in fixtures, "UNSW-NB15 rows may not be redistributed"
 
 
-def test_section8_audit_names_real_tests(repo_root):
-    """5.0 final: every test the §8 audit points to exists (no stale references)."""
+@pytest.mark.parametrize("audit_path", ["docs/release/5.0-section8-audit.md",
+                                        "docs/release/5.1-section8-audit.md"])
+def test_section8_audit_names_real_tests(repo_root, audit_path):
+    """5.0 final and 5.1: every test the §8 audit points to exists (no stale references)."""
     import re
 
-    audit = _read(repo_root, "docs/release/5.0-section8-audit.md")
+    audit = _read(repo_root, audit_path)
     missing = []
     for line in audit.splitlines():
         current = None

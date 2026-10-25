@@ -4,7 +4,7 @@ import ast
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-SCAN = [REPO_ROOT / "main.py", *sorted((REPO_ROOT / "tools").rglob("*.py"))]
+SCAN = [REPO_ROOT / "main.py", *sorted((REPO_ROOT / "toolkit").rglob("*.py"))]
 
 
 def _global_ignores(tree: ast.Module) -> list[int]:

@@ -8,7 +8,7 @@ import pytest
 IMPORT_NAMES = {"scikit-learn": "sklearn", "imbalanced-learn": "imblearn"}
 # dask[dataframe] and the packages only it needed (nothing else installed requires them)
 REMOVED = {"dask", "pyarrow", "fsspec", "partd", "locket", "toolz", "pyyaml"}
-CODE_DIRS = ("toolkit", "tools", "scripts")
+CODE_DIRS = ("toolkit", "scripts")
 
 
 def _requirements(path):

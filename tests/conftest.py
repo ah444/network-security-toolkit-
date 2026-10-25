@@ -1,7 +1,7 @@
 """Shared pytest fixtures for the whole test suite."""
 
-import importlib.util
 import platform
+import re
 import sys
 from pathlib import Path
 
@@ -26,6 +26,7 @@ def fixtures_dir() -> Path:
 def _scratch_instance_dir(tmp_path_factory, monkeypatch):
     """Runs, bundles and the signing key go to a temporary instance/ in every test."""
     monkeypatch.setenv("TOOLKIT_INSTANCE_DIR", str(tmp_path_factory.mktemp("instance")))
+    monkeypatch.setenv("TOOLKIT_NO_BROWSER", "1")  # no test ever opens a real browser
 
 
 @pytest.fixture
@@ -46,44 +47,73 @@ def fake_platform(monkeypatch):
     return _set
 
 
-# ---- Web IDS app fixtures (tools/IDS/IDS_Web_CIC_Dynamic/app.py) ----
+# ---- Web IDS app fixtures (toolkit.web, v5.1 step 1.2a) ----
 
-WEB_APP_FILE = "tools/IDS/IDS_Web_CIC_Dynamic/app.py"
+STATE_CHANGING = {"POST", "PUT", "PATCH", "DELETE"}
+
+
+def _token_client_class():
+    from flask.testing import FlaskClient
+    from werkzeug.datastructures import Headers
+
+    class TokenClient(FlaskClient):
+        """Sends the session's CSRF token on POST/PUT/PATCH/DELETE like the page does
+        (step 1.2e): the token is read from the real page's <meta name="csrf-token"> the
+        first time the session needs one. A test that passes its own X-CSRF-Token header
+        keeps it; ``send_token = False`` sends none."""
+
+        send_token = True
+
+        def csrf_token(self):
+            with self.session_transaction() as session:
+                token = session.get("csrf")
+            if token is None:
+                page = super().open("/dynamic_ids").get_data(as_text=True)
+                token = re.search(r'<meta name="csrf-token" content="([^"]+)">', page).group(1)
+            return token
+
+        def open(self, *args, **kwargs):
+            if self.send_token and kwargs.get("method", "GET").upper() in STATE_CHANGING:
+                headers = Headers(kwargs.get("headers"))
+                if "X-CSRF-Token" not in headers:
+                    headers["X-CSRF-Token"] = self.csrf_token()
+                kwargs["headers"] = headers
+            return super().open(*args, **kwargs)
+
+    return TokenClient
 
 
 @pytest.fixture
-def load_app_module(request):
-    """Import a fresh copy of the app module (call it after setting env variables)."""
-    path = request.config.rootpath / WEB_APP_FILE
+def make_app():
+    """Build a fresh web app (call it after setting env variables): its own workspaces,
+    model store and upload folder, so state never leaks between apps or tests. Its test
+    clients send the CSRF token (see ``_token_client_class``)."""
+    from toolkit.controllers.web import create_app
 
-    def _load():
-        spec = importlib.util.spec_from_file_location("ids_web_app_under_test", path)
-        module = importlib.util.module_from_spec(spec)
-        sys.modules["ids_web_app_under_test"] = module
-        spec.loader.exec_module(module)
-        module.app.config["TESTING"] = True
-        return module
+    def _make(config=None):
+        app = create_app(config)
+        app.config["TESTING"] = True
+        app.test_client_class = _token_client_class()
+        return app
 
-    yield _load
-    for leftover in (path.parent / "uploads").glob("*"):
-        if leftover.name != ".gitkeep":
-            leftover.unlink()
+    return _make
 
 
 @pytest.fixture
-def app_module(request, load_app_module):
-    """A freshly imported app module, so global state never leaks between tests."""
-    path = request.config.rootpath / WEB_APP_FILE
-    yield load_app_module()
-    for leftover in (path.parent / "uploads").glob("*"):
-        if leftover.name != ".gitkeep":
-            leftover.unlink()
+def web_app(make_app):
+    return make_app()
 
 
 @pytest.fixture
-def client(app_module):
-    with app_module.app.test_client() as test_client:
+def client(web_app):
+    with web_app.test_client() as test_client:
         yield test_client
+
+
+@pytest.fixture
+def workspaces(web_app):
+    """The app's WorkspaceStore: ``len()``, ``values()``, ``idle_seconds``."""
+    return web_app.extensions["toolkit"].workspaces
 
 
 @pytest.fixture
@@ -92,7 +122,7 @@ def upload(client):
 
     def _upload(path, name=None):
         with path.open("rb") as handle:
-            response = client.post("/upload", data={"dataset": (handle, name or path.name)},
+            response = client.post("/api/v1/dataset", data={"dataset": (handle, name or path.name)},
                                    content_type="multipart/form-data")
         return response
 

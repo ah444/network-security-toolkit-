@@ -16,5 +16,8 @@ fi
 echo "pre-commit: ruff check"
 "$PY" -m ruff check . || exit 1
 
+echo "pre-commit: mypy"
+"$PY" -m mypy || exit 1
+
 echo "pre-commit: pytest"
 "$PY" -m pytest -q || exit 1

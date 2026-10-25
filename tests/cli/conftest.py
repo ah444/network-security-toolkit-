@@ -1,19 +1,25 @@
 """Fixtures for the IDS CLI tests."""
 
-import importlib.util
-import sys
-
 import pytest
 
-CLI_FILE = "tools/IDS/IDS_CLI - CIC-2017/IDS_with_Machine_Learning.py"
+from toolkit.controllers.cli import ids
+from toolkit.services.ids import prediction
+from toolkit.ui.cli import ids as ids_ui
 
 
 @pytest.fixture(scope="module")
-def cli_module(request):
-    """Import the CLI script as a module (its folder name contains spaces)."""
-    path = request.config.rootpath / CLI_FILE
-    spec = importlib.util.spec_from_file_location("ids_cli_under_test", path)
-    module = importlib.util.module_from_spec(spec)
-    sys.modules["ids_cli_under_test"] = module
-    spec.loader.exec_module(module)
-    return module
+def cli_module():
+    """The IDS command (``toolkit/controllers/cli/ids.py`` since v5.1 step 1.5d)."""
+    return ids
+
+
+@pytest.fixture(scope="module")
+def ids_screen():
+    """What the IDS command shows and asks (``toolkit/ui/cli/ids.py``)."""
+    return ids_ui
+
+
+@pytest.fixture(scope="module")
+def ids_prediction():
+    """The predictions behind it (``toolkit/services/ids/prediction.py``)."""
+    return prediction

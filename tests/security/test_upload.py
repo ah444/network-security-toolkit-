@@ -2,22 +2,30 @@
 
 import io
 
-UPLOADS = "tools/IDS/IDS_Web_CIC_Dynamic/uploads"
+import pytest
+
+from toolkit.controllers.web.security import safe_upload_name
 CSV_A = b"f1,f2,Label\n1,2,A\n3,4,B\n"
 CSV_B = b"f1,f2,Label\n5,6,A\n7,8,B\n9,9,A\n1,1,B\n"
 
 
 def _post(client, payload: bytes, filename: str):
-    return client.post("/upload", data={"dataset": (io.BytesIO(payload), filename)},
+    return client.post("/api/v1/dataset", data={"dataset": (io.BytesIO(payload), filename)},
                        content_type="multipart/form-data")
+
+
+@pytest.fixture
+def upload_dir(web_app):
+    """The app's upload folder (instance/uploads/ since v5.1 step 1.2a)."""
+    return web_app.extensions["toolkit"].upload_dir
 
 
 def _rows(response):
     return int(response.get_json()["message"].split("Total rows: ")[1].split(".")[0])
 
 
-def test_path_traversal_contained(client, repo_root):
-    uploads = repo_root / UPLOADS
+def test_path_traversal_contained(client, repo_root, upload_dir):
+    uploads = upload_dir
     escape_targets = [uploads.parent / "evil.csv", uploads.parent.parent / "evil.csv",
                       repo_root / "evil.csv"]
     try:
@@ -36,17 +44,17 @@ def test_same_name_upload_not_stale(client):
     assert _rows(second) == 4, "second upload with the same name must use the new content"
 
 
-def test_uploaded_file_not_kept_on_disk(client, repo_root):
+def test_uploaded_file_not_kept_on_disk(client, upload_dir):
     _post(client, CSV_A, "data.csv")
-    leftovers = [p.name for p in (repo_root / UPLOADS).iterdir() if p.name != ".gitkeep"]
+    leftovers = [p.name for p in upload_dir.iterdir()]
     assert leftovers == [], f"uploaded data stayed on disk: {leftovers}"
 
 
-def test_saved_name_is_sanitised(app_module):
-    name = app_module.safe_upload_name("../../we ird<name>.csv")
+def test_saved_name_is_sanitised():
+    name = safe_upload_name("../../we ird<name>.csv")
     assert "/" not in name and "\\" not in name and ".." not in name
     assert name.endswith(".csv")
-    assert name != app_module.safe_upload_name("../../we ird<name>.csv"), "names must be unique"
+    assert name != safe_upload_name("../../we ird<name>.csv"), "names must be unique"
 
 
 def test_display_name_keeps_the_file_name_without_paths(client):
