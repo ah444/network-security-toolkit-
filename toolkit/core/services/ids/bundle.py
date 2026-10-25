@@ -60,6 +60,9 @@ class BundleVersionWarning(UserWarning):
 
 @dataclass(frozen=True, eq=False)
 class Bundle:
+    """A bundle that passed every check, its models loaded. ``trust`` says how it was trusted
+    (``signature`` or ``pinned``), ``warnings`` the small library-version differences found; the
+    manifest's other fields are read through the properties."""
     sha256: str  # of the whole file
     trust: str  # "signature" (this install's key) or "pinned" (SHA-256 pinned in the repo)
     manifest: dict[str, Any]
@@ -73,25 +76,32 @@ class Bundle:
 
     @property
     def run_id(self) -> str:
+        """The run the models came from (``instance/runs/<run id>.json``)."""
         return cast(str, self.manifest["run_id"])
 
     @property
     def selected(self) -> str:
+        """The best model's name, used when no model is named."""
         return cast(str, self.manifest["selected"])
 
     @property
     def features(self) -> tuple[str, ...]:
+        """The input columns every model expects, in order."""
         return tuple(self.manifest["features"])
 
     @property
     def classes(self) -> tuple[str, ...]:
+        """The labels the selected model can predict."""
         return tuple(self.manifest["classes"])
 
     def model(self, name: str | None = None) -> FittedModel:
+        """The fitted model ``name``, or the selected one; KeyError for an unknown name."""
         return self.models[name or self.selected]
 
 
 def installed_versions() -> dict[str, str | None]:
+    """The versions of Python and the libraries installed now, compared with the ones a bundle
+    recorded."""
     return package_versions()
 
 
@@ -221,6 +231,9 @@ def parse_manifest(body: bytes) -> dict[str, Any] | None:
 
 
 def _layout(data: bytes) -> tuple[bytes, bytes]:
+    """The manifest and payload bytes of ``data``, after checking its shape: the magic, both
+    lengths, the signature's room, no byte after it. BundleError with the reason (``EMPTY``,
+    ``NOT_A_BUNDLE``, ``TRUNCATED``, ``EXTRA_DATA``); nothing is decoded here."""
     if not data:
         raise BundleError("EMPTY", "The file is empty")
     if len(data) < len(MAGIC) or not data.startswith(MAGIC):
@@ -247,6 +260,8 @@ def _layout(data: bytes) -> tuple[bytes, bytes]:
 
 
 def _manifest(body: bytes) -> dict[str, Any]:
+    """The manifest as a dict: valid JSON, this toolkit's format, a format version it understands;
+    BundleError otherwise. Only JSON is parsed: no model is deserialized."""
     try:
         manifest = json.loads(body.decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError) as error:
@@ -261,6 +276,7 @@ def _manifest(body: bytes) -> dict[str, Any]:
 
 
 def _check_key(key: bytes) -> None:
+    """BundleError(``BAD_KEY``) unless ``key`` is bytes, at least ``KEY_BYTES`` long."""
     if not isinstance(key, bytes) or len(key) < KEY_BYTES:
         raise BundleError("BAD_KEY", f"A signing key is {KEY_BYTES} random bytes")
 
@@ -268,6 +284,7 @@ def _check_key(key: bytes) -> None:
 # --- version policy [B18] -------------------------------------------------------------------
 
 def _major_minor(version: str) -> tuple[int, int] | None:
+    """(major, minor) from the start of a version text (minor 0 if absent), or None."""
     match = re.match(r"(\d+)(?:\.(\d+))?", version or "")
     return (int(match[1]), int(match[2] or 0)) if match else None
 

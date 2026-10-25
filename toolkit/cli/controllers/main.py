@@ -39,16 +39,19 @@ HELP_FLAGS = {"-h", "--help"}
 # (the IDS loads pandas and scikit-learn, the web trainer Flask).
 
 def _scan(argv: list[str], prog: str) -> None:
+    """Starts the port scanner (imported only now); exits with its code."""
     from .scan import run
     run(argv, prog)
 
 
 def _ids(argv: list[str], prog: str) -> None:
+    """Starts the IDS command (imported only now: it loads pandas); exits with its code."""
     from .ids import run
     run(argv, prog)
 
 
 class Command(NamedTuple):
+    """A command the toolkit runs itself: its line in ``--help`` and how to start it."""
     help: str
     start: Callable[[list[str], str], None]  # (arguments after the command, prog); exits
 

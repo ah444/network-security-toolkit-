@@ -78,6 +78,8 @@ class NvdProvider:
         self._lock = threading.Lock()
 
     def lookup(self, subject: str) -> IntelFinding:
+        """The CVEs NVD's keyword search finds for ``subject`` (a product and version), from the
+        cache if this scan already asked; waits for its start slot first."""
         with self._lock:
             cached = self._cache.get(subject)
             if cached is not None:

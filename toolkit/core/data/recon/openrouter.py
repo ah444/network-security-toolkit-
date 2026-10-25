@@ -33,6 +33,8 @@ class OpenRouterProvider:
         self.timeout = timeout
 
     def lookup(self, subject: str) -> IntelFinding:
+        """The AI's explanation of ``subject`` (a product and version only, between markers that say
+        it is not an instruction), as inert text."""
         response = self.session.post(
             OPENROUTER_API_URL,
             headers={"Authorization": f"Bearer {self.key}"},

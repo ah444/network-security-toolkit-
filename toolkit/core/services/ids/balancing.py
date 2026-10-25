@@ -14,6 +14,8 @@ import pandas as pd
 
 @dataclass(frozen=True)
 class BalancingRecommendation:
+    """The recommended balancing method with its reason and alternatives, and the training-split
+    figures the rule table used."""
     recommended: str  # a key of registry.BALANCERS
     reason_code: str
     reason: str
@@ -30,6 +32,7 @@ class BalancingRecommendation:
 
 
 def _severity(ratio: float) -> str:
+    """The imbalance band of the smallest / largest class ratio, v4's thresholds."""
     if ratio >= 0.5:
         return "mild"
     if ratio >= 0.1:
@@ -40,6 +43,7 @@ def _severity(ratio: float) -> str:
 
 
 def _size(rows: int) -> str:
+    """The training rows' size band, v4's thresholds."""
     if rows < 1_000:
         return "small"
     if rows < 10_000:

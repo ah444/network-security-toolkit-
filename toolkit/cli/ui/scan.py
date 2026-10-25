@@ -38,6 +38,7 @@ class ConsoleProgress:
         self._thread: threading.Thread | None = None
 
     def start(self, total: int) -> None:
+        """Shows the first line and starts the thread that repeats it (nothing for 0 tasks)."""
         self._total, self._done = total, 0
         self._stop.clear()
         if total > 0:  # nothing to show (and no division by zero) for 0 tasks
@@ -46,10 +47,13 @@ class ConsoleProgress:
             self._thread.start()
 
     def advance(self, done: int = 1) -> None:
+        """Counts finished checks; the scanner's worker threads call it (locked)."""
         with self._lock:
             self._done += done
 
     def finish(self) -> None:
+        """Stops the thread and shows the last line: 100 % only if every check finished (else the
+        scan was cancelled)."""
         if self._thread is None:
             return
         self._stop.set()
@@ -59,10 +63,12 @@ class ConsoleProgress:
         print("\nProgress: 100.00% complete" if self._done >= self._total else "")  # else cancelled
 
     def _repeat(self) -> None:
+        """The thread: the line again every ``interval`` seconds until ``finish``."""
         while not self._stop.wait(self.interval):
             self._write()
 
     def _write(self) -> None:
+        """Writes the progress line over the previous one (a carriage return)."""
         with self._lock:
             done = self._done
         sys.stdout.write(f"\rProgress: {done / self._total * 100:.2f}% complete | "
@@ -78,6 +84,8 @@ ABUSE_FIELDS = (
 
 
 def print_abuse_report(data: Mapping[str, Any]) -> None:
+    """The AbuseIPDB fields of ``ABUSE_FIELDS``, one per line, each on one line, cleaned and cut
+    (the reply is text from the network); a missing one as N/A."""
     for field in ABUSE_FIELDS:
         value = data.get(field, "N/A")
         if isinstance(value, list):
@@ -86,6 +94,7 @@ def print_abuse_report(data: Mapping[str, Any]) -> None:
 
 
 def print_table(results: Sequence[PortResult], title: str) -> None:
+    """The ports as a table; the service and the banner cleaned and cut to their column."""
     print(f"\n{title}")
     header = f"| {'PORT':^9} | {'STATE':^7} | {'SERVICE':^10} | {'BANNER':^40} |"
     separator = "+" + "-" * (len(header) - 2) + "+"
@@ -99,6 +108,8 @@ def print_table(results: Sequence[PortResult], title: str) -> None:
 
 
 def print_entry(entry: ReportEntry) -> None:
+    """One open port's details: the software, up to 10 CVEs (and how many more), the severity, the
+    AI explanation labelled as possibly wrong, and the failed lookups."""
     print(f"\nPort: {entry['port']}/{entry['protocol']}")
     print(f"Service: {entry['service']}")
     print(f"Banner: {one_line(entry['banner'], 200)}")
@@ -120,10 +131,12 @@ def print_entry(entry: ReportEntry) -> None:
 
 
 def ask_yes_no(question: str) -> bool:
+    """True for y or yes (any case); any other answer is no."""
     return input(question).strip().lower() in ("y", "yes")
 
 
 def ask_protocols() -> list[str]:
+    """Asks until the answer is TCP, UDP or both; the protocols to scan."""
     while True:
         choice = input("Select protocol for scanning (TCP/UDP/both): ").strip().lower()
         if choice in PROTOCOLS:
@@ -132,19 +145,24 @@ def ask_protocols() -> list[str]:
 
 
 def ask_target() -> str:
+    """The target as typed; checked by ``resolve_targets``."""
     return input("Enter target IP (IPv4 or IPv6), network (e.g. 192.168.1.0/24) "
                  "or domain: ").strip()
 
 
 def ask_ports() -> tuple[str, str]:
+    """The start and end port as typed; checked by ``parse_port_range``."""
     return input("Enter start port: "), input("Enter end port: ")
 
 
 def ask_verbose() -> bool:
+    """Whether to show the progress line."""
     return ask_yes_no("Enable verbose mode? (Y/N): ")
 
 
 def ask_ai(model: str) -> bool:
+    """Whether this scan sends the detected software names to OpenRouter (``model``); asked only
+    when a key is set."""
     return ask_yes_no(
         f"Send the detected software names (e.g. 'OpenSSH 8.9', never the raw banner) "
         f"to OpenRouter ({model}) for an AI explanation? (Y/N): ")
@@ -167,6 +185,7 @@ def say(message: object) -> None:
 
 
 def cancelled() -> None:
+    """Ctrl+C, or the end of input at a question (the command then exits with 130)."""
     print("\nScan cancelled.")
 
 
@@ -174,16 +193,20 @@ class ConsoleScan:
     """The ``ScanView`` of the terminal: every line a scan shows, every question it asks."""
 
     def resolved(self, text: str, address: str) -> None:
+        """Shows the address the host name resolved to."""
         print(f"Domain {text} resolved to IP: {address}")
 
     def abuse_skipped(self, target: str) -> None:
+        """Says the reputation check is skipped for want of a key."""
         print(f"{target} is a public IP; AbuseIPDB check skipped (no key).")
 
     def ask_abuse(self, target: str) -> bool:
+        """Asks whether ``target`` may be sent to AbuseIPDB."""
         return ask_yes_no(f"Send {target} to AbuseIPDB to check its reputation? (Y/N): ")
 
     def abuse_report(self, target: str, data: Mapping[str, Any] | None,
                      error: str | None) -> None:
+        """Shows the reputation fields, or why the lookup failed."""
         print(f"\nAbuseIPDB reputation info for {target}:")
         if data is None:  # the lookup failed: error says why
             print(f"  Lookup failed: {error}")
@@ -191,15 +214,19 @@ class ConsoleScan:
             print_abuse_report(data)
 
     def host_down(self, target: str) -> None:
+        """Says the host did not answer the ping."""
         print(f"Host {target} did not respond to ping.")
 
     def ask_scan_anyway(self) -> bool:
+        """Asks whether to scan the host anyway."""
         return ask_yes_no("Do you want to scan this host anyway? (Y/N): ")
 
     def unresponsive_skipped(self) -> None:
+        """Says the host was skipped, and the flag that scans it."""
         print("Skipped (--scan-unresponsive scans it anyway).")
 
     def scanning(self, target: str, ttl: int | None, guess: tuple[str, int] | None) -> None:
+        """Shows the target and the OS guess, said to be only a guess."""
         print(f"\nScanning target: {target}")
         if guess:
             print(f"OS guess from TTL {ttl}: {guess[0]} (about {guess[1]} hops away; "
@@ -208,19 +235,24 @@ class ConsoleScan:
             print("OS guess: not possible (no TTL in the ping reply)")
 
     def progress(self) -> ConsoleProgress:
+        """A ``ConsoleProgress`` for the target's checks."""
         return ConsoleProgress()
 
     def silent_udp(self, ports: Sequence[int]) -> None:
+        """Counts the silent UDP ports and lists the first 20."""
         listed = ", ".join(map(str, ports[:20])) + (" ..." if len(ports) > 20 else "")
         print(f"UDP ports with no reply (open|filtered): {len(ports)} ({listed})")
 
     def no_open_ports(self, target: str) -> None:
+        """Says the target has no open port."""
         print(f"No open ports found on {target}")
 
     def open_ports(self, results: Sequence[PortResult]) -> None:
+        """Shows the open ports as a table."""
         print_table(results, "OPEN PORTS")
 
     def looking_up(self, products: int, workers: int) -> None:
+        """Says how many products will be looked up online."""
         if products > 1:
             print(f"\nLooking up {products} products online (up to {workers} at a "
                   "time)...")
@@ -228,19 +260,23 @@ class ConsoleScan:
             print("\nLooking up 1 product online...")
 
     def entry(self, entry: ReportEntry, first: bool) -> None:
+        """Shows one port's details, under a heading before the first."""
         if first:
             print("\nVulnerability details per open port:")
         print_entry(entry)
 
     def lookups_notice(self) -> None:
+        """Says what the CVE lookups send to NVD."""
         print("CVE lookups send only the detected software name and version to the NVD API "
               "(services.nvd.nist.gov).")
 
     def target_done(self) -> None:
+        """A line under the target."""
         print("=" * 60)
 
     def summary(self, targets: int, entries: int, failed: Sequence[str],
                 seconds: float) -> None:
+        """Shows the summary report."""
         print("\nScan Summary Report")
         print("-------------------")
         print(f"Total targets scanned: {targets}")
@@ -249,6 +285,7 @@ class ConsoleScan:
         print(f"Elapsed time: {seconds:.2f} seconds")
 
     def nothing_to_export(self) -> None:
+        """Says there is nothing to export."""
         print("No open port results to export.")
 
     def ask_export(self) -> str | None:
@@ -258,9 +295,11 @@ class ConsoleScan:
         return input("Enter desired file extension (txt, json, csv): ").strip().lower()
 
     def unknown_format(self) -> None:
+        """Says the extension is unknown and nothing was saved."""
         print("Unknown extension. No export performed.")
 
     def exported(self, path: Path) -> None:
+        """Shows where the report was saved."""
         print(f"Results exported to {path}")
 
 

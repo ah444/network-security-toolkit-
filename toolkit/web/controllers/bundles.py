@@ -34,6 +34,7 @@ bp = Blueprint("bundles", __name__, url_prefix="/api/v1")
 @bp.route("/run/predict", methods=["POST"])
 @with_workspace()
 def predict(ws: Workspace) -> Answer:
+    """``POST /run/predict``: one row predicted with the session's trained models."""
     req = load(PredictRequest, json_body())
     if ws.run is None:
         return error_response("Models not trained yet. Train a model first.", code=NOT_TRAINED)
@@ -44,6 +45,7 @@ def predict(ws: Workspace) -> Answer:
 @bp.route("/bundle/predict", methods=["POST"])
 @with_workspace()
 def predict_loaded(ws: Workspace) -> Answer:
+    """``POST /bundle/predict``: one row predicted with the loaded bundle's models."""
     req = load(PredictRequest, json_body())
     if ws.loaded is None:
         return error_response("No model loaded. Load a bundle exported by this toolkit first.",
@@ -77,10 +79,12 @@ def _predict_file(ws: Workspace, source: str, models: Mapping[str, FittedModel],
 
 
 def _run_label(run: TrainingRun) -> str | None:
+    """The trained run's label column (to compare a predicted file with), or None."""
     return run.settings.label or (run.profile.label_column if run.profile else None)
 
 
 def _record_label(record: Mapping[str, Any]) -> str | None:
+    """The loaded bundle's label column, from its run record, or None."""
     label = record["settings"].get("label") or (record.get("profile") or {}).get("label_column")
     return str(label) if label else None
 
@@ -88,6 +92,7 @@ def _record_label(record: Mapping[str, Any]) -> str | None:
 @bp.route("/run/predict-file", methods=["POST"])
 @with_workspace()
 def predict_file(ws: Workspace) -> Answer:
+    """``POST /run/predict-file``: every row of a CSV file, with the trained models."""
     if ws.run is None:
         return error_response("Models not trained yet. Train a model first.", code=NOT_TRAINED)
     return _predict_file(ws, "run", ws.run.evaluation.training.models,
@@ -97,6 +102,7 @@ def predict_file(ws: Workspace) -> Answer:
 @bp.route("/bundle/predict-file", methods=["POST"])
 @with_workspace()
 def predict_file_loaded(ws: Workspace) -> Answer:
+    """``POST /bundle/predict-file``: every row of a CSV file, with the loaded bundle."""
     if ws.loaded is None:
         return error_response("No model loaded. Load a bundle exported by this toolkit first.",
                               code=NO_MODEL_LOADED)
@@ -107,6 +113,7 @@ def predict_file_loaded(ws: Workspace) -> Answer:
 @bp.route("/predictions", methods=["GET"])
 @with_workspace()
 def download_predictions(ws: Workspace) -> Answer:
+    """``GET /predictions``: the last labelled file of the session, as CSV."""
     if ws.predictions is None:
         return error_response("Predict a CSV file first.", 404, NOT_FOUND)
     return send_file(io.BytesIO(ws.predictions.csv), as_attachment=True,
@@ -162,6 +169,8 @@ def export_answer(export: ExportedBundle) -> dict[str, Any]:
 @bp.route("/run/bundle", methods=["GET"])
 @with_workspace()
 def download(ws: Workspace) -> Answer:
+    """``GET /run/bundle``: the session's exported bundle, under the name the user gave (checked by
+    ``safe_model_basename``, so it can't carry a path)."""
     if ws.export is None:
         return error_response("Export the model first.", 404, NOT_TRAINED)
     return send_file(ws.export.saved.path, as_attachment=True,

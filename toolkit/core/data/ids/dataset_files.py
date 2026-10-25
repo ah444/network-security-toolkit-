@@ -29,6 +29,7 @@ def read_sample(path: str | Path) -> tuple[bytes, bool]:
 
 
 def file_sha256(path: str | Path) -> str:
+    """The file's SHA-256 as hex, read 1 MiB at a time (the file is never loaded whole)."""
     digest = hashlib.sha256()
     with Path(path).open("rb") as handle:
         for block in iter(lambda: handle.read(1024 * 1024), b""):

@@ -33,6 +33,8 @@ from sklearn.tree import DecisionTreeClassifier
 
 @dataclass(frozen=True)
 class BuildContext:
+    """What a model, balancer or selector is built from: the seed, the workers, the training rows
+    per encoded class, the class-weight choice, ``k_features`` and SMOTE's neighbour limit."""
     seed: int
     workers: int
     class_counts: Mapping[int, int]  # training rows per encoded class
@@ -48,17 +50,23 @@ class BuildContext:
 
     @property
     def smote_neighbors(self) -> int:
+        """SMOTE's neighbours: at most ``smote_max_neighbors`` and fewer than the smallest class to
+        grow has rows (at least 1)."""
         targets = self.oversample_targets
         smallest = min((self.class_counts[c] for c in targets), default=2)
         return max(1, min(self.smote_max_neighbors, smallest - 1))
 
     @property
     def balanced(self) -> str | None:
+        """``balanced`` for the estimators' ``class_weight`` when it was chosen, else None."""
         return "balanced" if self.class_weight else None
 
 
 @dataclass(frozen=True)
 class ModelSpec:
+    """A model of the registry: its name and texts, how to build it, how its features are prepared,
+    how class weights reach it, whether it is a default, the optional package it needs and its
+    training-rows limit."""
     name: str
     title: str
     description: str
@@ -73,6 +81,8 @@ class ModelSpec:
 
 @dataclass(frozen=True)
 class BalancerSpec:
+    """A balancing method: its name and texts, how to build its sampler (None: no sampler), and
+    whether it adds rows or weights the classes."""
     name: str
     title: str
     description: str
@@ -83,18 +93,21 @@ class BalancerSpec:
 
 @dataclass(frozen=True)
 class SelectorSpec:
+    """A feature selector: its name, its title and how to build it (None: every feature)."""
     name: str
     title: str
     build: Callable[[BuildContext], Any | None]
 
 
 def _xgboost(ctx: BuildContext) -> Any:
+    """XGBoost, imported only when built (an optional package)."""
     from xgboost import XGBClassifier
 
     return XGBClassifier(n_estimators=100, random_state=ctx.seed, n_jobs=ctx.workers, verbosity=0)
 
 
 def _lightgbm(ctx: BuildContext) -> Any:
+    """LightGBM, imported only when built (an optional package)."""
     from lightgbm import LGBMClassifier
 
     return LGBMClassifier(n_estimators=100, random_state=ctx.seed, n_jobs=ctx.workers, verbose=-1,
@@ -140,6 +153,7 @@ MODELS: dict[str, ModelSpec] = {spec.name: spec for spec in (
 
 
 def _smote(ctx: BuildContext) -> SMOTE:
+    """SMOTE that grows each class of ``oversample_targets`` to the majority's size."""
     return SMOTE(random_state=ctx.seed, k_neighbors=ctx.smote_neighbors,
                  sampling_strategy=ctx.oversample_targets)
 
@@ -214,10 +228,13 @@ class _TopK(SelectKBest):  # type: ignore[misc]
     (one-hot encoding decides the number only at fit time)."""
 
     def _check_params(self, X: Any, y: Any) -> None:
+        """Skips scikit-learn's check that k is at most the number of features, so a larger k keeps
+        them all."""
         pass
 
 
 def _top_k(method: str) -> Callable[[BuildContext], Any]:
+    """A selector that keeps the ``k_features`` best features by ``method``'s scores."""
     return lambda ctx: _TopK(_Scores(method, ctx.seed), k=ctx.k_features)
 
 
@@ -229,12 +246,15 @@ SELECTORS: dict[str, SelectorSpec] = {spec.name: spec for spec in (
 
 
 def is_available(spec: ModelSpec) -> bool:
+    """True if the model's optional package (if any) is installed."""
     return spec.requires is None or importlib.util.find_spec(spec.requires) is not None
 
 
 def available_models() -> tuple[str, ...]:
+    """The models that can be trained here, in the registry's order."""
     return tuple(name for name, spec in MODELS.items() if is_available(spec))
 
 
 def default_models() -> tuple[str, ...]:
+    """The models trained when none are chosen (the available defaults)."""
     return tuple(name for name, spec in MODELS.items() if spec.default and is_available(spec))

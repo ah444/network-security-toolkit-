@@ -44,6 +44,8 @@ def load(schema: type[T], source: Mapping[str, Any]) -> T:
 
 
 def _convert(name: str, value: Any, kind: Any, metadata: Mapping[str, Any]) -> Any:
+    """``value`` checked against the field's type (``X | None`` as ``X``); ApiError with a message
+    for the user when it doesn't fit, TypeError for a type no schema should use."""
     origin = get_origin(kind)
     if origin in (Union, types.UnionType):  # "X | None": None was handled by load()
         kind = next(arg for arg in get_args(kind) if arg is not type(None))
@@ -84,6 +86,8 @@ def _dict_field(name: str, value: Any) -> dict[str, Any]:
 
 
 def _number(name: str, value: Any, kind: type, metadata: Mapping[str, Any]) -> int | float:
+    """A whole number or a number from ``value`` (a boolean or NaN refused), clamped when the field
+    says so; ApiError with the field's message otherwise."""
     whole = kind is int
     message = metadata.get("message") or (f"'{name}' must be a whole number." if whole
                                           else f"'{name}' must be a number.")
@@ -102,6 +106,7 @@ def _number(name: str, value: Any, kind: type, metadata: Mapping[str, Any]) -> i
 
 
 def _text(name: str, value: Any) -> str:
+    """``value`` if it is text of at most ``MAX_TEXT`` characters; ApiError otherwise."""
     if not isinstance(value, str):
         raise ApiError(f"'{name}' must be text.")
     if len(value) > MAX_TEXT:
@@ -126,28 +131,34 @@ DEFAULT_TEST_SIZE = SplitConfig().test_size
 
 @dataclasses.dataclass(frozen=True)
 class PreviewRequest:
+    """``GET /dataset/preview``: how many rows to show (1 to 100)."""
     rows: int = dataclasses.field(default=10, metadata=clamp(1, 100))
 
 
 @dataclasses.dataclass(frozen=True)
 class ClassesRequest:
+    """``GET /dataset/classes``: the target column."""
     target: str = ""
 
 
 @dataclasses.dataclass(frozen=True)
 class FilterRequest:
+    """``POST /dataset/filter``: the target column and the classes to remove."""
     target: str = ""
     remove: list[str] = dataclasses.field(default_factory=list)
 
 
 @dataclasses.dataclass(frozen=True)
 class DistributionRequest:
+    """``GET /dataset/distribution``: the target column and the test share."""
     target: str = ""
     test_size: float = dataclasses.field(default=DEFAULT_TEST_SIZE, metadata=TEST_SIZE)
 
 
 @dataclasses.dataclass(frozen=True)
 class BalancingPreviewRequest:
+    """``POST /dataset/balancing-preview``: the target, the balancing method, the features (default:
+    all candidates) and the test share."""
     target: str = ""
     balancing: str = ""
     features: list[str] | None = None
@@ -156,6 +167,8 @@ class BalancingPreviewRequest:
 
 @dataclasses.dataclass(frozen=True)
 class FeatureScoresRequest:
+    """``POST /dataset/feature-scores``: the target, how many features to suggest (1 to 10,000) and
+    the test share."""
     target: str = ""
     k: int = dataclasses.field(default=10, metadata=clamp(1, 10_000))
     test_size: float = dataclasses.field(default=DEFAULT_TEST_SIZE, metadata=TEST_SIZE)
@@ -163,6 +176,8 @@ class FeatureScoresRequest:
 
 @dataclasses.dataclass(frozen=True)
 class TrainRequest:
+    """``POST /jobs/training``: the target, the features and models (default: all candidates, the
+    default models), the balancing method and the test share."""
     target: str = ""
     features: list[str] | None = None
     models: list[str] | None = None
@@ -172,15 +187,18 @@ class TrainRequest:
 
 @dataclasses.dataclass(frozen=True)
 class ConfusionRequest:
+    """``GET /run/confusion``: the model whose confusion matrix to show."""
     model: str = ""
 
 
 @dataclasses.dataclass(frozen=True)
 class PredictRequest:
+    """``POST /run/predict`` and ``/bundle/predict``: one row's values and the model."""
     values: dict[str, str | int | float | None] | None = None
     model: str = ""
 
 
 @dataclasses.dataclass(frozen=True)
 class ExportRequest:
+    """``POST /run/export``: the name the bundle is downloaded under."""
     name: str = ""

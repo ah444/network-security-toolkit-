@@ -53,7 +53,8 @@ class IntelProvider(Protocol):
     kind: str
 
     def lookup(self, subject: str) -> IntelFinding:
-        """Raises on any failure (network, timeout, bad reply); the caller records it."""
+        """What the provider found about ``subject``; raises on any failure (network,
+        timeout, bad reply), which the caller records."""
 
 
 @runtime_checkable
@@ -62,21 +63,27 @@ class ProgressSink(Protocol):
     finished unit (also from worker threads, so implementations must be thread-safe),
     then ``finish()`` once, also after an error."""
 
-    def start(self, total: int) -> None: ...
+    def start(self, total: int) -> None:
+        """``total`` units are about to be done (0: there is nothing to show)."""
 
-    def advance(self, done: int = 1) -> None: ...
+    def advance(self, done: int = 1) -> None:
+        """``done`` more units finished; may be called from several threads at once."""
 
-    def finish(self) -> None: ...
+    def finish(self) -> None:
+        """The task ended (also after an error or a cancel); called once."""
 
 
 class NullProgress:
     """A ProgressSink that reports nothing (the default)."""
 
     def start(self, total: int) -> None:
+        """Does nothing."""
         pass
 
     def advance(self, done: int = 1) -> None:
+        """Does nothing."""
         pass
 
     def finish(self) -> None:
+        """Does nothing."""
         pass

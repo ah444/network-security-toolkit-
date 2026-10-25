@@ -24,26 +24,36 @@ SCAN_TIMEOUT = 1  # seconds per port
 class Progress(Protocol):
     """What the scanner reports to (``toolkit.core.services.ports.ProgressSink`` fits)."""
 
-    def start(self, total: int) -> None: ...
+    def start(self, total: int) -> None:
+        """``total`` checks are about to run."""
 
-    def advance(self, done: int = 1) -> None: ...
+    def advance(self, done: int = 1) -> None:
+        """``done`` more checks finished; called from the worker threads."""
 
-    def finish(self) -> None: ...
+    def finish(self) -> None:
+        """The checks ended (also after Ctrl+C); called once."""
 
 
 class _NoProgress:
+    """The progress of a scan nobody watches."""
     def start(self, total: int) -> None:
+        """Does nothing."""
         pass
 
     def advance(self, done: int = 1) -> None:
+        """Does nothing."""
         pass
 
     def finish(self) -> None:
+        """Does nothing."""
         pass
 
 
 @dataclass
 class PortResult:
+    """One port's check. ``service`` is the usual name of the port (from the system's services
+    list), ``banner`` what the service sent: text from the network, to be cleaned before it is shown
+    or saved."""
     port: int
     protocol: str  # "tcp" or "udp"
     state: str  # "open", "closed" (TCP: closed or filtered) or (UDP) "open|filtered"
@@ -52,6 +62,7 @@ class PortResult:
 
 
 def service_name(port: int, protocol: str = "tcp") -> str:
+    """The system's usual service name for ``port``, or an empty string."""
     try:
         return socket.getservbyport(port, protocol)
     except OSError:

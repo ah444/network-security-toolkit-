@@ -43,6 +43,7 @@ SELECTION_METRIC = "cv_macro_f1"
 
 @dataclass(frozen=True)
 class ClassMetrics:
+    """Precision, recall and F1 of one class, and its rows in the scored data."""
     label: str
     precision: float
     recall: float
@@ -52,6 +53,7 @@ class ClassMetrics:
 
 @dataclass(frozen=True)
 class Scores:
+    """The metrics of one prediction: overall, per class and the confusion matrix."""
     rows: int
     accuracy: float
     balanced_accuracy: float
@@ -64,6 +66,8 @@ class Scores:
 
 @dataclass(frozen=True)
 class CVSummary:
+    """The cross-validation of one model on the training split: the metrics of each fold, and each
+    class's recall averaged over the folds where it has rows."""
     folds: int
     macro_f1: tuple[float, ...]  # one value per fold
     balanced_accuracy: tuple[float, ...]
@@ -72,27 +76,33 @@ class CVSummary:
 
     @property
     def macro_f1_mean(self) -> float:
+        """The mean macro-F1 over the folds: what models are ranked by."""
         return float(np.mean(self.macro_f1))
 
     @property
     def macro_f1_std(self) -> float:
+        """The macro-F1's standard deviation over the folds."""
         return float(np.std(self.macro_f1))
 
     @property
     def balanced_accuracy_mean(self) -> float:
+        """The mean balanced accuracy over the folds."""
         return float(np.mean(self.balanced_accuracy))
 
     @property
     def balanced_accuracy_std(self) -> float:
+        """The balanced accuracy's standard deviation over the folds."""
         return float(np.std(self.balanced_accuracy))
 
     @property
     def accuracy_mean(self) -> float:
+        """The mean accuracy over the folds."""
         return float(np.mean(self.accuracy))
 
 
 @dataclass(frozen=True)
 class ModelEvaluation:
+    """One model's CV summary, its test scores and its fit and predict times."""
     name: str
     cv: CVSummary
     test: Scores
@@ -102,6 +112,7 @@ class ModelEvaluation:
 
 @dataclass(frozen=True)
 class LeaderboardRow:
+    """One model's line in the leaderboard, as the record and the pages show it."""
     rank: int
     model: str
     title: str
@@ -121,6 +132,9 @@ class LeaderboardRow:
 
 @dataclass(frozen=True, eq=False)
 class EvaluationResult:
+    """Everything ``evaluate`` found: the models in leaderboard order, the one selected by CV only,
+    the balancing and selection used, the failures and skips, the classes, the fitted models and the
+    notes."""
     models: tuple[ModelEvaluation, ...]  # leaderboard order
     selected: str | None
     selection_metric: str
@@ -170,6 +184,8 @@ def score(truth: np.ndarray, predicted: np.ndarray, labels: Sequence[str]) -> Sc
 
 
 def _summary(fold_scores: Sequence[Scores]) -> CVSummary:
+    """The CV summary of one model's fold scores; a class's recall is averaged over the folds that
+    had rows of it."""
     labels = sorted({c.label for s in fold_scores for c in s.per_class})
     recall = {label: [c.recall for s in fold_scores for c in s.per_class
                       if c.label == label and c.support] for label in labels}
@@ -201,6 +217,9 @@ def _cross_validate(frame: pd.DataFrame, label: str, features: Sequence[str],
                     names: Sequence[str], train_options: _TrainOptions,
                     config: EvaluationConfig, notes: list[str], progress: ProgressSink,
                     ) -> tuple[dict[str, CVSummary], dict[str, pipeline.ModelFailure]]:
+    """Stratified K-fold CV on the training split only: each fold trains the models still standing
+    and scores the held-out rows; a model that fails in a fold is dropped (its remaining progress
+    steps counted). The summaries and the failures."""
     labels = frame[label].astype(str).to_numpy()
     counts = pd.Series(labels).value_counts()
     if (counts < config.cv_folds).any():
@@ -233,6 +252,7 @@ def _cross_validate(frame: pd.DataFrame, label: str, features: Sequence[str],
 
 
 def _row(rank: int, evaluation: ModelEvaluation, selected: str | None) -> LeaderboardRow:
+    """The leaderboard line of one model; its recalls only for classes present in the test."""
     present = [c for c in evaluation.test.per_class if c.support]
     recall = tuple((c.label, c.recall) for c in present)
     return LeaderboardRow(

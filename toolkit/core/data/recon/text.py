@@ -17,6 +17,7 @@ def clean_text(text: object, limit: int | None = None) -> str:
 
 
 def one_line(text: object, limit: int | None = None) -> str:
+    """``clean_text`` with every run of whitespace, new lines included, made one space."""
     return clean_text(" ".join(str(text).split()), limit)
 
 

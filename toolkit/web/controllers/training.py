@@ -100,11 +100,13 @@ def job_view(job: Job, runner: JobRunner) -> dict[str, Any]:
 
 
 def features_info(fitted: FittedModel) -> list[dict[str, Any]]:
+    """Each input feature of a model as the prediction form needs it."""
     return [{"name": f.name, "type": f.kind, "classes": list(f.categories)}
             for f in fitted.feature_schema()]
 
 
 def _blocked(leakage_record: Mapping[str, Any]) -> list[dict[str, Any]]:
+    """The leakage guard's blocked columns from a run record, each with its first reason."""
     reasons: dict[str, str] = {}
     for finding in leakage_record["findings"]:
         if finding["action"] == "block":

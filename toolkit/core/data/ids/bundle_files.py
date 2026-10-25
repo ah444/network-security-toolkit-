@@ -28,10 +28,12 @@ class BundleError(ValueError):
 
 
 def key_path(environ: Mapping[str, str] | None = None) -> Path:
+    """``instance/signing.key``: this install's signing key."""
     return instance_dir(environ) / "signing.key"
 
 
 def bundles_dir(environ: Mapping[str, str] | None = None) -> Path:
+    """``instance/bundles``: the exported bundles."""
     return instance_dir(environ) / "bundles"
 
 
@@ -85,6 +87,8 @@ def read_start(path: str | Path, size: int) -> bytes:
 
 
 def read_all(path: str | Path) -> bytes:
+    """A bundle file's bytes, read whole; they are checked (``ids.bundle.unpack``) before anything
+    in them is deserialized."""
     return Path(path).read_bytes()
 
 

@@ -85,6 +85,7 @@ def user_data_dir(environ: Mapping[str, str] | None = None) -> Path:
 
 
 def _data_root(environ: Mapping[str, str] | None = None) -> Path:
+    """The project folder in a checkout, else the installed copy's ``user_data_dir``."""
     return REPO_ROOT if is_checkout() else user_data_dir(environ)
 
 
@@ -313,6 +314,7 @@ SWITCHES = ("TOOLKIT_HTTPS", "TOOLKIT_DEBUG", "TOOLKIT_NO_BROWSER")
 
 
 def _check(environ: Mapping[str, str], variable: str) -> None:
+    """Reads ``variable`` the way its command does; ValueError naming it when it is bad."""
     if variable == "TOOLKIT_LOG_LEVEL":
         log_level(environ)
     elif variable == "TOOLKIT_PORT":

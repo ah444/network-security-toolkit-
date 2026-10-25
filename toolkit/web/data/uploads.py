@@ -23,6 +23,7 @@ def save(stream: IO[bytes], path: Path) -> int:
 
 
 def remove(path: Path) -> None:
+    """Deletes the upload (nothing if it is already gone)."""
     path.unlink(missing_ok=True)
 
 

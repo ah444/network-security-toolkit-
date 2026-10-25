@@ -16,6 +16,7 @@ from .pipeline import FittedModel
 
 
 def missing_features(fitted: FittedModel, frame: pd.DataFrame) -> list[str]:
+    """The model's feature columns that ``frame`` lacks, in the model's order."""
     return [name for name in fitted.features if name not in frame.columns]
 
 

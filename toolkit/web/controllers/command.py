@@ -18,6 +18,7 @@ HELP_FLAGS = {"-h", "--help"}
 
 
 def _port_argument(text: str) -> int:
+    """``--port`` as a port number; argparse's error with the message otherwise."""
     try:
         return port_number(text, "--port")
     except ValueError as error:

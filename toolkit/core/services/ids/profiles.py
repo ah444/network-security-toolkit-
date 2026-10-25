@@ -72,6 +72,7 @@ def clean_column_names(raw: Sequence[str]) -> tuple[str, ...]:
 
 
 def is_number(value: str) -> bool:
+    """True if the text reads as a number (as ``float`` reads it)."""
     try:
         float(value)
     except ValueError:
@@ -131,6 +132,9 @@ _CIC_MIN_KNOWN, _CIC_MIN_SHARE = 5, 0.8
 
 
 def _detect_cic(rows: Rows) -> ProfileMatch | None:
+    """CIC-IDS2017 when the header has a ``Label`` and its other columns are mostly known
+    CICFlowMeter names; the variant, the identifier and time columns blocked, and a per-class
+    temporal split when there is a time column."""
     names = clean_column_names(rows[0])
     label = _find(names, "label")
     if label is None:
@@ -196,6 +200,8 @@ _NSL_MIN_ROW_SHARE = 0.9
 
 def _nsl_match(names: tuple[str, ...], has_header: bool, variant: str,
                warnings: list[str]) -> ProfileMatch:
+    """The NSL-KDD match: the label (``attack``, ``class`` or ``label``), the ``level`` column
+    blocked (the dataset's difficulty score, not a traffic feature), the official split."""
     label = _find(names, "attack", "class", "label")
     if label is None:
         warnings.append("LABEL_COLUMN_UNKNOWN")
@@ -213,6 +219,7 @@ def _nsl_match(names: tuple[str, ...], has_header: bool, variant: str,
 
 
 def _looks_like_nsl_row(row: Sequence[str]) -> bool:
+    """True for a data row of NSL-KDD's width with its protocol and flag values."""
     return (len(row) in (len(NSL_KDD_COLUMNS), len(NSL_KDD_COLUMNS) - 1)
             and is_number(row[0])
             and row[1].strip() in _NSL_PROTOCOLS
@@ -220,6 +227,8 @@ def _looks_like_nsl_row(row: Sequence[str]) -> bool:
 
 
 def _detect_nsl_kdd(rows: Rows) -> ProfileMatch | None:
+    """NSL-KDD from its header, or from the rows themselves when the file has none (the official
+    test file): the published column names are then applied."""
     names = clean_column_names(rows[0])
     keys = {normalise(n) for n in names}
     if _NSL_CORE_KEYS <= keys:
@@ -252,6 +261,8 @@ def _first_row_is_header(rows: Rows) -> bool:
 
 
 def _detect_generic(rows: Rows) -> ProfileMatch:
+    """Any other table: a header if the first row looks like one, the label found by name if
+    possible; warned as an unknown schema."""
     warnings = ["UNKNOWN_SCHEMA"]
     has_header = _first_row_is_header(rows)
     if has_header:

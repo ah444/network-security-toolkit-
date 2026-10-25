@@ -16,6 +16,7 @@ MENU = ("1. Network Recon", "2. Intrusion Detection (CLI)", "3. Intrusion Detect
 
 
 def show_banner() -> None:
+    """The banner, once when the menu starts."""
     print(BANNER)
 
 
@@ -27,14 +28,17 @@ def ask_choice() -> str:
 
 
 def not_a_choice(choice: str) -> None:
+    """Says what the menu accepts."""
     print(f"{choice!r} is not a choice: enter 1, 2, 3 or 4 (q also exits).")
 
 
 def goodbye(after_interrupt: bool = False) -> None:
+    """The last line; on a new line after Ctrl+C or the end of input."""
     print("\nGoodbye!" if after_interrupt else "Goodbye!")
 
 
 def stopped() -> None:
+    """A tool was stopped with Ctrl+C; the menu comes back."""
     print("\nStopped.")
 
 
@@ -45,4 +49,5 @@ def bad_settings(problems: list[str]) -> None:
 
 
 def could_not_start(command: str, error: OSError) -> None:
+    """The tool's process could not be started, and why."""
     print(f"Could not start {command}: {error}")

@@ -4,6 +4,7 @@ from pathlib import Path
 
 
 def read_text(path: str | Path) -> str:
+    """A text file's content, read as UTF-8."""
     return Path(path).read_text(encoding="utf-8")
 
 

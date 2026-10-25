@@ -19,6 +19,7 @@ from .datasets import load_dataset
 
 
 def label_column(bundle: Bundle) -> str | None:
+    """The run's label column (chosen, else the profile's), or None."""
     record = bundle.run
     return cast(str | None, record["settings"].get("label")
                 or (record.get("profile") or {}).get("label_column"))

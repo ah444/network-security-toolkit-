@@ -54,6 +54,9 @@ class DatasetInfo:
 
 @dataclass(frozen=True)
 class LoadReport:
+    """What loading did to the file, for the user and the run record: its SHA-256, how it was read,
+    its size, the columns renamed, dropped or narrowed, the missing and infinite values counted, the
+    labels fixed, and the warnings."""
     sha256: str
     encoding: str
     separator: str
@@ -71,6 +74,7 @@ class LoadReport:
 
 @dataclass(frozen=True)
 class LoadedDataset:
+    """A loaded file: its frame, the profile it matched and the load report."""
     frame: pd.DataFrame
     profile: ProfileMatch
     report: LoadReport
@@ -79,6 +83,8 @@ class LoadedDataset:
 # --- Sniffing ----------------------------------------------------------------------
 
 def _detect_encoding(sample: bytes) -> str:
+    """The encoding from the sample: a BOM if there is one, else UTF-8 when it decodes (a character
+    cut at the sample's end allowed), else cp1252."""
     if sample.startswith(codecs.BOM_UTF8):
         return "utf-8-sig"
     if sample.startswith((codecs.BOM_UTF16_LE, codecs.BOM_UTF16_BE)):
@@ -93,6 +99,7 @@ def _detect_encoding(sample: bytes) -> str:
 
 
 def _sample_text(sample: bytes, encoding: str, complete: bool) -> str:
+    """The sample as text, without its last line when the file goes on (it may be cut)."""
     text = sample.decode(encoding, errors="replace")
     if not complete and "\n" in text:
         text = text[: text.rindex("\n")]  # drop the last, possibly cut, line
@@ -159,6 +166,8 @@ def _unify_text(column: pd.Series) -> pd.Series:
 
 
 def _read_frame(path: Path, info: DatasetInfo, encoding: str, chunk_rows: int) -> pd.DataFrame:
+    """The whole file in chunks, each narrowed as it is read so the peak memory stays low;
+    DatasetError when there are no data rows."""
     chunks = read_chunks(path, separator=info.separator, names=info.profile.column_names,
                          skip_header=info.profile.has_header, encoding=encoding,
                          chunk_rows=chunk_rows)

@@ -27,6 +27,9 @@ from .split import SplitResult
 # C901 kept: one isinstance test per kind of value, in order; a dispatch table would only
 # hide the order
 def jsonable(value: Any) -> Any:  # noqa: C901
+    """``value`` as JSON types: a dataclass as a dict of its fields and properties, NumPy values as
+    Python ones, NaN and infinity as None, sets sorted, times in ISO 8601, a class as its name,
+    anything else as its ``repr``."""
     if value is None or isinstance(value, (bool, int, str)):
         return value
     if isinstance(value, float):
@@ -55,6 +58,7 @@ def jsonable(value: Any) -> Any:  # noqa: C901
 
 
 def profile_dict(match: ProfileMatch | None) -> dict[str, Any] | None:
+    """What the record keeps of the matched profile (None when none matched)."""
     if match is None:
         return None
     return {
@@ -67,6 +71,7 @@ def profile_dict(match: ProfileMatch | None) -> dict[str, Any] | None:
 
 
 def split_dict(split: SplitResult) -> dict[str, Any]:
+    """The split's fields without its two frames, with their row counts instead."""
     data = {f.name: jsonable(getattr(split, f.name)) for f in fields(split)
             if f.name not in ("train", "test")}
     data["train_rows"], data["test_rows"] = len(split.train), len(split.test)
@@ -74,6 +79,7 @@ def split_dict(split: SplitResult) -> dict[str, Any]:
 
 
 def training_dict(outcome: TrainingOutcome) -> dict[str, Any]:
+    """The training's counts, columns, failures and notes (not the fitted models)."""
     return {
         "train_rows": outcome.train_rows, "classes": list(outcome.classes),
         "class_counts": jsonable(outcome.class_counts),
@@ -85,6 +91,8 @@ def training_dict(outcome: TrainingOutcome) -> dict[str, Any]:
 
 
 def models_dict(outcome: TrainingOutcome) -> dict[str, Any]:
+    """Each fitted pipeline described: its steps, the preprocessing in words, the selector, the
+    sampler, the estimator with its parameters, the fit time and notes."""
     models: dict[str, Any] = {}
     for name, fitted in outcome.models.items():
         steps = fitted.pipeline.named_steps
@@ -112,6 +120,7 @@ def models_dict(outcome: TrainingOutcome) -> dict[str, Any]:
 
 
 def _step_dict(step: Any) -> dict[str, Any] | None:
+    """A pipeline step's class and parameters; None for an empty step."""
     if step is None or step == "passthrough":
         return None
     return {"class": type(step).__name__, "params": jsonable(step.get_params(deep=False))}

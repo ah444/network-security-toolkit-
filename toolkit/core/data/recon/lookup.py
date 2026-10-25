@@ -9,6 +9,8 @@ INTEL_WORKERS = 4  # lookups at a time (step 1.4e); more wouldn't help: NVD limi
 
 
 def describe(error: BaseException) -> str:
+    """A short name for a failed lookup (``timed out``, ``HTTP 404``, ``no connection``, or the
+    error's type), without the URL, so a key in it never reaches a report."""
     if isinstance(error, requests.Timeout):
         return "timed out"
     if isinstance(error, requests.HTTPError) and error.response is not None:

@@ -68,6 +68,7 @@ def choose_export() -> Path:
 
 
 def list_exports() -> int:
+    """``--list``: this install's exports, newest first; exit code 0."""
     screen.exports_list(MODEL_STORE.list_bundles())
     return 0
 
@@ -89,6 +90,8 @@ def run_json(bundle: Bundle, text: str, model: str | None = None) -> int:
 
 
 def interactive(bundle: Bundle, model: str | None = None) -> int:
+    """The menu: the model card, the model to use, then predictions until Exit. A bad value, a
+    missing file or a result file that already exists is shown and the menu goes on."""
     screen.card(bundle)
     model = screen.choose_model(bundle, model or bundle.selected)
     screen.ready(model)
@@ -139,10 +142,15 @@ def build_parser(prog: str | None = None) -> argparse.ArgumentParser:
 
 
 def parse_args(argv: Sequence[str] | None, prog: str | None = None) -> argparse.Namespace:
+    """The flags of ``argv`` (``prog``: the command the help shows)."""
     return build_parser(prog).parse_args(argv)
 
 
 def main(argv: Sequence[str] | None = None, prog: str | None = None) -> int:
+    """The command, without exiting: ``--list``, the model card (``--info``), ``--csv``, ``--json``,
+    or the menu. Only a bundle signed by this install is opened. Exit code 0, or 2 with the message
+    for a bundle that is refused, a bad value or a file problem; Ctrl+C or the end of input says
+    goodbye (0)."""
     args = parse_args(argv, prog)
     if args.list:
         return list_exports()

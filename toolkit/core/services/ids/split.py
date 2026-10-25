@@ -89,6 +89,9 @@ WARNING_CODES = (
 
 @dataclass(frozen=True)
 class DedupeStats:
+    """What the dedupe found and did: rows before and after, the copies per class, the rows that
+    conflict (same features, another label), the columns compared and, for an official split, the
+    test file's copies and its overlap with train."""
     rows_before: int
     rows_after: int
     removed: int
@@ -107,6 +110,7 @@ class DedupeStats:
 
 @dataclass(frozen=True)
 class ClassCoverage:
+    """Rows of one class in the train and the test split."""
     label: str
     train: int
     test: int
@@ -114,6 +118,9 @@ class ClassCoverage:
 
 @dataclass(frozen=True, eq=False)
 class SplitResult:
+    """The train and test frames (original index kept) and how they were made: the strategy used and
+    requested, the reasons for any fallback, the warnings, the time check, the dedupe and the
+    classes on each side."""
     train: pd.DataFrame  # original index kept, so rows can be traced back
     test: pd.DataFrame
     strategy: str  # the one used
@@ -162,6 +169,7 @@ def dedupe(frame: pd.DataFrame, label: str,
 # --- Entry point -------------------------------------------------------------------
 
 def _coverage(train: pd.Series, test: pd.Series) -> tuple[ClassCoverage, ...]:
+    """Rows per class on each side, for every class present in either."""
     train_counts = train.astype(str).value_counts()
     test_counts = test.astype(str).value_counts()
     names = sorted(set(train_counts.index[train_counts > 0]) | set(test_counts.index[test_counts > 0]))
@@ -200,11 +208,13 @@ _TimeSplit = Callable[[np.ndarray, pd.Series, SplitConfig], tuple[np.ndarray, np
 
 def _parts(state: _SplitState, train_pos: np.ndarray, test_pos: np.ndarray,
            found: list[str]) -> _Parts:
+    """The kept rows at the positions found, each side in its original order."""
     return (state.kept.iloc[np.sort(train_pos)], state.kept.iloc[np.sort(test_pos)], state.stats,
             found)
 
 
 def _official(state: _SplitState) -> _Parts:
+    """The separate test file as the test split; fails without one."""
     if state.test_frame is None:
         raise StrategyFailed("OFFICIAL_TEST_FILE_MISSING")
     return strategies.official(state.frame, state.kept, state.stats, state.test_frame, state.config)
@@ -223,6 +233,7 @@ def _checked_times(state: _SplitState) -> tuple[TimeCheck, pd.Series]:
 
 
 def _over_time(state: _SplitState, split: _TimeSplit) -> _Parts:
+    """A temporal split by ``split`` on the checked times; warns if rows had no time."""
     check, times = _checked_times(state)
     train_pos, test_pos = split(state.labels, times, state.config)
     return _parts(state, train_pos, test_pos,
@@ -230,10 +241,12 @@ def _over_time(state: _SplitState, split: _TimeSplit) -> _Parts:
 
 
 def _temporal(state: _SplitState) -> _Parts:
+    """One time cut over every row: the latest rows are the test."""
     return _over_time(state, strategies.temporal)
 
 
 def _temporal_per_class(state: _SplitState) -> _Parts:
+    """A time cut per class: each class's latest rows are its test."""
     return _over_time(state, strategies.temporal_per_class)
 
 
@@ -248,6 +261,7 @@ def _group(state: _SplitState) -> _Parts:
 
 
 def _stratified(state: _SplitState) -> _Parts:
+    """A random split per class; its scores may be optimistic (warned)."""
     train_pos, test_pos = strategies.stratified(state.labels, state.config)
     return _parts(state, train_pos, test_pos, ["STRATIFIED_SCORES_MAY_BE_OPTIMISTIC"])
 

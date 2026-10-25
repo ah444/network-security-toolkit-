@@ -51,10 +51,14 @@ def add_secrets(*values: str) -> None:
 
 
 def forget_secrets() -> None:
+    """Empties the values registered with ``add_secrets`` (for the tests)."""
     _secrets.clear()
 
 
 def redact(text: str) -> str:
+    """``text`` with every known secret replaced (the longest first, so a secret that contains
+    another is removed whole), then the values after ``Bearer`` and after the named keys
+    (``Authorization``, ``api_key``, ``token``, ``password``, ...)."""
     for secret in sorted(_secrets, key=len, reverse=True):  # longest first
         text = text.replace(secret, REDACTED)
     text = _BEARER.sub(f"Bearer {REDACTED}", text)
@@ -62,7 +66,10 @@ def redact(text: str) -> str:
 
 
 class RedactingFormatter(logging.Formatter):
+    """The formatter of every handler ``setup_logging`` adds: the whole line is redacted after
+    formatting, so tracebacks and other libraries' records are covered too."""
     def format(self, record: logging.LogRecord) -> str:
+        """The record formatted as usual, then passed through ``redact``."""
         return redact(super().format(record))
 
 

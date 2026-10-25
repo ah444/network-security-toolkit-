@@ -37,15 +37,19 @@ class ReportEntry(TypedDict):
 
 
 def _cve_list(entry: ReportEntry) -> str:
+    """The entry's CVEs as ``ID (CVSS)``, separated by commas (``?`` for no score)."""
     return ", ".join(f"{c['id']} ({c['cvss'] if c['cvss'] is not None else '?'})"
                      for c in entry["cves"])
 
 
 def _write_json(entries: Sequence[ReportEntry], handle: TextIO) -> None:
+    """The entries as indented JSON, non-ASCII text kept as it is."""
     json.dump(entries, handle, ensure_ascii=False, indent=2)
 
 
 def _write_csv(entries: Sequence[ReportEntry], handle: TextIO) -> None:
+    """A header row, then a row per entry; every cell through ``csv_cell``, so a cell that starts
+    like a formula stays text in a spreadsheet (S14)."""
     writer = csv.writer(handle)
     writer.writerow(CSV_HEADER)
     for e in entries:
@@ -56,6 +60,7 @@ def _write_csv(entries: Sequence[ReportEntry], handle: TextIO) -> None:
 
 
 def _write_txt(entries: Sequence[ReportEntry], handle: TextIO) -> None:
+    """A block of lines per entry, separated by a dashed line."""
     for e in entries:
         handle.write(f"Target: {e['target']}\nPort: {e['port']}/{e['protocol']}\n"
                      f"Service: {e['service']}\nBanner: {e['banner']}\n"
@@ -71,6 +76,7 @@ WRITERS: dict[str, Callable[[Sequence[ReportEntry], TextIO], None]] = {
 
 
 def scans_dir() -> Path:
+    """``instance/scans``, where the reports are saved."""
     return instance_dir() / "scans"
 
 

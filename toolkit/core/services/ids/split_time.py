@@ -31,6 +31,9 @@ _ISO_DATE = re.compile(r"^\s*\d{4}-\d{2}-\d{2}")
 
 @dataclass(frozen=True)
 class TimeCheck:
+    """Whether a time column can order a temporal split, the format it was read in, the shares of
+    missing and unreadable values, and the rows left out for want of a time; ``reason`` says why
+    when it can't."""
     column: str
     passed: bool
     reason: str | None  # one of split.REASON_CODES when not passed
@@ -71,6 +74,7 @@ def _backward_steps(times: pd.Series, sources: pd.Series | None) -> int:
 
 
 def _same_order(first: pd.Series, second: pd.Series) -> bool:
+    """True if both series have the same missing values and sort the rows the same way."""
     if not first.isna().equals(second.isna()):
         return False
     return cast(bool, first.rank(method="dense").equals(second.rank(method="dense")))

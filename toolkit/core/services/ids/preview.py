@@ -33,6 +33,8 @@ _MIN_PER_CLASS = 50  # rows kept per class when sampling (or the whole class)
 
 @dataclass(frozen=True)
 class FeatureScores:
+    """The allowed features' scores, best first, and the columns the leakage guard blocked (with the
+    reason), from the training rows scored."""
     scores: tuple[tuple[str, float], ...]  # allowed features, best first (may be inf)
     blocked: tuple[tuple[str, str], ...]  # (column, reason code) from the leakage guard
     method: str
@@ -42,6 +44,8 @@ class FeatureScores:
 
 @dataclass(frozen=True)
 class BalancingPreview:
+    """How a balancing method would change the training rows' class counts, on a sample if the split
+    is large; for ``recommended``, the method chosen and why."""
     requested: str
     balancer: str  # as resolved ("recommended" -> the recommender's choice)
     before: tuple[tuple[str, int], ...]  # class counts of the rows used
@@ -55,6 +59,8 @@ class BalancingPreview:
 
 
 def _sample(train: pd.DataFrame, label: str, max_rows: int, seed: int) -> pd.DataFrame:
+    """The training rows with a label, or a stratified sample of ``max_rows`` that keeps some rows
+    of every class."""
     data = train[train[label].notna()]
     if len(data) <= max_rows:
         return data
@@ -107,6 +113,7 @@ def recommend_features(
 
 
 def _counts(labels: pd.Series) -> tuple[tuple[str, int], ...]:
+    """Rows per class, largest first."""
     counts = labels.astype(str).value_counts()
     return tuple((str(c), int(n)) for c, n in counts.items())
 

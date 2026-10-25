@@ -52,10 +52,10 @@ def error_response(message: str, status: int = 400, code: str = BAD_REQUEST,
 
 
 def json_body() -> dict[str, Any]:
-    """Return the request's JSON object, or raise ApiError (S9, S10 interim).
+    """The request's JSON object, or ApiError (S9).
 
-    Requiring a JSON object (Content-Type: application/json) also means a plain
-    HTML form on another website can't trigger these routes.
+    Requiring a JSON object (Content-Type: application/json) also means a plain HTML form
+    on another website can't send these requests: a layer under the CSRF check (S10).
     """
     data = request.get_json(silent=True)
     if not isinstance(data, dict):
@@ -83,10 +83,12 @@ def status_of(error: ServiceError) -> int:
 
 
 def _api_error(error: ServiceError) -> tuple[Response, int]:
+    """A service's refusal as the API's JSON error, with its status and code."""
     return error_response(error.message, status_of(error), error.code, **error.details)
 
 
 def _upload_too_large(_error: HTTPException) -> tuple[Response, int]:
+    """Flask's 413 for a body above the upload limit, as the API's JSON error."""
     return error_response(f"Upload too large (limit: {state().config.max_upload_mb} MB).", 413,
                           TOO_LARGE)
 

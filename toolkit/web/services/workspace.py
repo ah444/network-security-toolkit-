@@ -88,7 +88,8 @@ class Workspace:
 
     @property
     def leased(self) -> bool:
-        """True while a training (later: a job) still needs this workspace."""
+        """True while a training job still needs this workspace (a lease, or the training
+        lock held): the store never drops it then."""
         return self._leases > 0 or self.training.locked()
 
     def acquire_lease(self) -> None:
@@ -98,6 +99,7 @@ class Workspace:
             self._leases += 1
 
     def release_lease(self) -> None:
+        """Gives back a lease taken with ``acquire_lease``."""
         with self._lease_lock:
             self._leases -= 1
 
@@ -163,9 +165,12 @@ class WorkspaceStore:
         return len(self._workspaces)
 
     def values(self) -> list[Workspace]:
+        """The workspaces now kept (a copy of the list)."""
         return list(self._workspaces.values())
 
     def _drop_idle(self, now: float) -> int:
+        """Drops the workspaces unused for ``idle_seconds``, never a leased one; how many. The
+        caller holds the lock."""
         dropped = 0
         for ws_id, ws in list(self._workspaces.items()):
             if now - ws.last_used > self.idle_seconds and not ws.leased:

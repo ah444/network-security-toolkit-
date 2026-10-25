@@ -94,6 +94,7 @@ def request_from_flags(args: argparse.Namespace, keys: Mapping[str, str],
 
 
 def build_parser(prog: str | None = None) -> argparse.ArgumentParser:
+    """The ``scan`` command's flags; ``prog`` is the command its help shows."""
     parser = argparse.ArgumentParser(
         prog=prog, formatter_class=argparse.RawDescriptionHelpFormatter,
         description="Port scanner. Only scan systems you are authorised to scan.\n\n"
@@ -127,6 +128,9 @@ def build_parser(prog: str | None = None) -> argparse.ArgumentParser:
 
 
 def main(argv: Sequence[str] | None = None, prog: str | None = None) -> int:
+    """The command, without exiting: the flags, the limits and the keys (added to the log's
+    secrets), the request from the flags or the questions, then the scan. Its exit code: the scan's,
+    2 for a bad flag, target or limit or no authorization, 130 when cancelled."""
     parser = build_parser(prog)
     args = parser.parse_args(argv)
     used = ["--" + name.replace("_", "-") for name in SCAN_FLAGS if getattr(args, name)]

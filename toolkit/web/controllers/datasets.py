@@ -65,6 +65,7 @@ def _json_records(frame: pd.DataFrame) -> list[dict[str, Any]]:
 
 
 def _dataset_summary(data: UploadedData, size: int) -> dict[str, Any]:
+    """The upload's figures for the page: files, rows, memory, test file, profile."""
     profile = data.profile
     return {
         "files": data.files,
@@ -97,6 +98,10 @@ def dataset_answer(data: UploadedData, size: int) -> dict[str, Any]:
 @bp.route("/dataset", methods=["POST"])
 @with_workspace(create=True, changes_dataset=True)
 def upload(ws: Workspace) -> Answer:
+    """``POST /dataset``: the uploaded files read as one dataset (a train file and an official test
+    file allowed). Each file is saved under a new, sanitised name inside the upload folder, read,
+    then deleted (S2, S3, S11); the data's memory is reserved, which may drop idle workspaces or
+    refuse the upload."""
     if "dataset" not in request.files:
         return error_response("No files uploaded.")
     files = [f for f in request.files.getlist("dataset") if f.filename]
@@ -136,7 +141,8 @@ def upload(ws: Workspace) -> Answer:
 @bp.route("/dataset/preview", methods=["GET"])
 @with_workspace()
 def preview(ws: Workspace) -> Answer:
-    """Return a preview of the uploaded dataset (first N rows)."""
+    """``GET /dataset/preview``: the first ``rows`` rows (1 to 100) as JSON-safe records,
+    with the column counts."""
     req = load(PreviewRequest, query())  # rows clamped to 1-100 (S9)
     df = require_data(ws).frame
     return jsonify({
@@ -186,6 +192,7 @@ def classes(ws: Workspace) -> Answer:
 
 
 def _split_summary(split: SplitResult) -> dict[str, Any]:
+    """What the page shows of a split: the strategy, the rows and the warnings."""
     return {"strategy": split.strategy, "train_rows": len(split.train),
             "test_rows": len(split.test), "test_size": split.test_size,
             "warnings": list(split.warnings)}

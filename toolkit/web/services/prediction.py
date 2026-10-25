@@ -45,6 +45,7 @@ def predict_one(models: Mapping[str, FittedModel], default: str | None,
 
 
 def model_title(name: str) -> str:
+    """A model's title from the registry, else its name."""
     return registry.MODELS[name].title if name in registry.MODELS else name
 
 
@@ -65,6 +66,7 @@ def read_prediction_file(stream: IO[bytes], path: Path, name: str,
 
 
 def too_large(max_mb: int) -> str:
+    """The message for a file above the prediction limit."""
     return f"File too large to predict (limit: {max_mb} MB, TOOLKIT_MAX_PREDICT_MB)."
 
 

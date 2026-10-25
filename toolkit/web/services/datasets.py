@@ -37,6 +37,7 @@ def read_upload(stream: IO[bytes], path: Path) -> LoadedDataset:
 
 
 def label_values(frame: pd.DataFrame, target: str) -> pd.Series:
+    """The target column's values as text, without the missing ones."""
     return frame[target].dropna().astype(str)
 
 
@@ -70,12 +71,14 @@ def combine(loaded: list[tuple[str, LoadedDataset]]) -> UploadedData:
 
 
 def require_data(ws: Workspace) -> UploadedData:
+    """The workspace's dataset; ServiceError(``NO_DATASET``) if none was uploaded."""
     if ws.data is None:
         raise ServiceError("No dataset uploaded.", NO_DATASET)
     return ws.data
 
 
 def require_target(data: UploadedData, target: str) -> str:
+    """``target`` if it is a column of the dataset; ServiceError(``UNKNOWN_COLUMN``)."""
     if not target or target not in data.frame.columns:
         raise ServiceError("Target column not specified or not found.", UNKNOWN_COLUMN)
     return target
@@ -96,6 +99,8 @@ def training_split(ws: Workspace, target: str, test_size: float) -> SplitResult:
 
 def candidate_features(data: UploadedData, target: str,
                         chosen: list[str] | None = None) -> list[str]:
+    """The features to use: the ones the user chose (each must be a column; the target left out),
+    else every column but the target and the profile's blocked ones."""
     blocked = set(data.profile.blocked_columns)
     if chosen:
         if any(c not in data.frame.columns for c in chosen):

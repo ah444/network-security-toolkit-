@@ -71,6 +71,7 @@ MYSQL_GREETING = re.compile(rb"^.{4}\x0a([0-9][\w.\-]*)\x00", re.DOTALL)
 
 
 def probe_for(port: int) -> Probe:
+    """The probe of ``port``: its entry in ``PROBES``, else ``DEFAULT_PROBE``."""
     return PROBES.get(port, DEFAULT_PROBE)
 
 
@@ -90,6 +91,7 @@ def banner_tls_context() -> ssl.SSLContext:
 
 
 def _receive_once(sock: socket.socket, limit: int = 1024) -> bytes:
+    """One read of at most ``limit`` bytes; empty if nothing came within the timeout."""
     try:
         return sock.recv(limit)
     except TimeoutError:
@@ -97,6 +99,8 @@ def _receive_once(sock: socket.socket, limit: int = 1024) -> bytes:
 
 
 def _receive_all(sock: socket.socket, limit: int = 8192) -> bytes:
+    """Reads until the service closes the connection, ``limit`` bytes arrived or the timeout passed;
+    what came."""
     data = b""
     try:
         while len(data) < limit:
@@ -110,10 +114,12 @@ def _receive_all(sock: socket.socket, limit: int = 8192) -> bytes:
 
 
 def banner_text(data: bytes) -> str:
+    """Bytes from the network as text (invalid UTF-8 replaced), trimmed."""
     return data.decode("utf-8", errors="replace").strip()
 
 
 def _host_header(host: str) -> str:
+    """``host`` for an HTTP Host header: an IPv6 address in brackets."""
     return f"[{host}]" if ":" in host else host
 
 
@@ -122,10 +128,13 @@ Reader = Callable[[socket.socket, str, Probe], str]
 
 
 def _read_detect(sock: socket.socket, host: str, probe: Probe) -> str:
+    """Reads nothing: the port is shown as its known service (``probe.label``)."""
     return f"{probe.label} service detected"
 
 
 def _read_http(sock: socket.socket, host: str, probe: Probe) -> str:
+    """Sends ``HEAD /`` and returns the Server header, or says the service is HTTP without one;
+    anything else that answered is returned as it is."""
     sock.sendall(f"HEAD / HTTP/1.0\r\nHost: {_host_header(host)}\r\n\r\n".encode())
     reply = banner_text(_receive_all(sock))
     for line in reply.splitlines():
@@ -135,12 +144,14 @@ def _read_http(sock: socket.socket, host: str, probe: Probe) -> str:
 
 
 def _read_mysql(sock: socket.socket, host: str, probe: Probe) -> str:
+    """The version from MySQL's greeting packet, else what was received."""
     data = _receive_once(sock)
     match = MYSQL_GREETING.match(data)
     return f"MySQL {match.group(1).decode()}" if match else banner_text(data)
 
 
 def _read_request(sock: socket.socket, host: str, probe: Probe) -> str:
+    """Sends ``probe.send`` and returns the answer."""
     sock.sendall(probe.send)
     return banner_text(_receive_once(sock))
 

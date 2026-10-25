@@ -84,6 +84,8 @@ def _check_state_changing_request() -> tuple[Response, int] | None:
 
 
 def register_security(app: Flask) -> None:
+    """Adds the security headers to every answer and the origin and CSRF check to every
+    state-changing request; templates get ``csrf_token``."""
     app.after_request(_security_headers)
     app.before_request(_check_state_changing_request)
     app.jinja_env.globals["csrf_token"] = csrf_token

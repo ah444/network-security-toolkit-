@@ -50,6 +50,10 @@ STEPS = ("prepare", "select", "sample", "model")
 
 @dataclass(frozen=True, eq=False)
 class FittedModel:
+    """One trained pipeline (prepare, select, sample, model) with what is needed to use it: its
+    input ``features`` in order, the label text of its class numbers, how categories were encoded,
+    whether numbers were scaled, and the fit time. Pickled in bundles, so its module and name must
+    not move without an alias."""
     name: str
     pipeline: Pipeline
     features: tuple[str, ...]
@@ -60,6 +64,7 @@ class FittedModel:
     notes: tuple[str, ...] = ()
 
     def predict(self, frame: pd.DataFrame) -> np.ndarray:
+        """The predicted label of each row of ``frame`` (only ``features`` are used)."""
         codes = np.asarray(self.pipeline.predict(frame[list(self.features)]), dtype=int)
         return cast(np.ndarray, np.asarray(self.classes, dtype=object)[codes])
 
@@ -102,6 +107,7 @@ class FittedModel:
 
 @dataclass(frozen=True)
 class FeatureInfo:
+    """An input feature as a prediction form shows it: its kind and, if any, the categories."""
     name: str
     kind: str  # "numeric" | "categorical"
     categories: tuple[str, ...] = ()  # categorical: the values seen in training
@@ -109,12 +115,16 @@ class FeatureInfo:
 
 @dataclass(frozen=True)
 class ModelFailure:
+    """A model that failed to train, and the error's message."""
     name: str
     error: str
 
 
 @dataclass(frozen=True, eq=False)
 class TrainingOutcome:
+    """What ``train_models`` produced: the models that trained, the ones that failed or were skipped
+    (with the reason code), the classes and columns, the training rows per class, the balancing and
+    selection used, the seed, the workers and notes."""
     models: dict[str, FittedModel]  # only models that trained successfully
     failures: tuple[ModelFailure, ...]
     skipped: tuple[tuple[str, str], ...]  # (model, reason code)
@@ -152,6 +162,9 @@ def _signed_log(values: Any) -> np.ndarray:
 
 def _prepare(numeric: Sequence[str], categorical: Sequence[str],
              spec: registry.ModelSpec) -> ColumnTransformer:
+    """The pipeline's first step for ``spec``: numbers made finite (inf → missing), the median
+    imputed and, for linear and distance models, a signed log and scaling; categories one-hot
+    (unknown ones ignored) or ordinal (unknown -1, missing -2)."""
     parts = []
     if numeric:
         steps = [("finite", FunctionTransformer(_finite, feature_names_out="one-to-one")),
@@ -173,6 +186,9 @@ def _prepare(numeric: Sequence[str], categorical: Sequence[str],
 
 def _check_names(train: pd.DataFrame, label: str, features: Sequence[str], models: Sequence[str],
                  balancer: str, selector: str, k_features: int | None) -> None:
+    """ValueError with the message for the first problem of the request: the label among the
+    features, a missing column, no feature, an unknown model, balancer or selector, or selection
+    without ``k_features``."""
     if label in features:
         raise ValueError(f"The label column {label!r} can't be a feature")
     missing = [c for c in (*features, label) if c not in train.columns]

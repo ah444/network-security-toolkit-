@@ -109,7 +109,8 @@ class Intel:
         return {product: results[product] for product in distinct}
 
     def abuse_report(self, ip: str) -> tuple[dict[str, Any] | None, str | None]:
-        """(reputation data, error message)."""
+        """(AbuseIPDB's data for ``ip``, None), or (None, why it failed); without a key
+        nothing is sent. The caller passes only a public address, after consent."""
         errors: list[str] = []
         if not any(p.kind == "ip_reputation" for p in self.providers):
             return None, "AbuseIPDB: no API key"

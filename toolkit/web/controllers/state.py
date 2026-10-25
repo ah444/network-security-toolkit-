@@ -21,6 +21,8 @@ if TYPE_CHECKING:
 
 @dataclass
 class WebState:
+    """What one app keeps between requests: its settings, the workspaces, the model store, the
+    upload folder and the job runner."""
     config: WebConfig
     workspaces: WorkspaceStore
     model_store: ModelStore  # exports and loads: signed bundles in instance/bundles

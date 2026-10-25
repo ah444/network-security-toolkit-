@@ -39,11 +39,13 @@ def _test_count(rows: int, test_size: float) -> int:
 
 
 def _class_positions(labels: np.ndarray) -> Iterator[tuple[str, np.ndarray]]:
+    """Each class (sorted) and the positions of its rows."""
     for name in sorted(np.unique(labels)):
         yield name, np.flatnonzero(labels == name)
 
 
 def stratified(labels: np.ndarray, config: SplitConfig) -> tuple[np.ndarray, np.ndarray]:
+    """Random positions per class: each class's share goes to the test (seeded)."""
     rng = np.random.default_rng(config.random_state)
     train, test = [], []
     for _, positions in _class_positions(labels):
@@ -69,6 +71,7 @@ def _cut(times: np.ndarray, test_rows: int) -> int | None:
 
 
 def _time_order(times: pd.Series, positions: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """``positions`` sorted by their time (stable), with the sorted times as numbers."""
     keys = times.to_numpy()[positions]
     keys = keys.astype("datetime64[ns]").astype(np.int64) if keys.dtype.kind == "M" else keys
     order = np.argsort(keys, kind="stable")
@@ -77,6 +80,8 @@ def _time_order(times: pd.Series, positions: np.ndarray) -> tuple[np.ndarray, np
 
 def temporal(labels: np.ndarray, times: pd.Series,
              config: SplitConfig) -> tuple[np.ndarray, np.ndarray]:
+    """The latest rows as the test, at a time cut that keeps equal times on one side; fails if no
+    such cut exists or a class with two rows or more ends up on one side."""
     usable = np.flatnonzero(times.notna().to_numpy())
     ordered, keys = _time_order(times, usable)
     point = _cut(keys, _test_count(len(ordered), config.test_size))
@@ -94,6 +99,8 @@ def temporal(labels: np.ndarray, times: pd.Series,
 
 def temporal_per_class(labels: np.ndarray, times: pd.Series,
                        config: SplitConfig) -> tuple[np.ndarray, np.ndarray]:
+    """Each class's latest rows as its test, cut where equal times stay on one side; fails if a
+    class can't be cut so."""
     usable = times.notna().to_numpy()
     train, test = [], []
     for _, positions in _class_positions(labels):
@@ -113,6 +120,8 @@ def temporal_per_class(labels: np.ndarray, times: pd.Series,
 
 def group(labels: np.ndarray, groups: pd.Series | None,
           config: SplitConfig) -> tuple[np.ndarray, np.ndarray]:
+    """Train and test without a group on both sides (one fold of a stratified group K-fold); fails
+    without groups, with too few, or when a class is left on one side."""
     if groups is None:
         raise StrategyFailed("GROUP_COLUMN_MISSING")
     folds = max(2, round(1 / config.test_size))

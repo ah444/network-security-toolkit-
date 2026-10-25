@@ -22,6 +22,8 @@ class AbuseIpdbProvider:
         self.max_age = max_age
 
     def lookup(self, subject: str) -> IntelFinding:
+        """AbuseIPDB's ``data`` for the address ``subject`` (reports from the last ``max_age``
+        days). The caller sends only a public address, after consent."""
         response = self.session.get(
             ABUSEIPDB_URL, params={"ipAddress": subject, "maxAgeInDays": str(self.max_age)},
             headers={"Accept": "application/json", "Key": self.key}, timeout=self.timeout)

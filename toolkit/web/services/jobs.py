@@ -58,9 +58,12 @@ class Job:
 
     # --- ProgressSink -------------------------------------------------------------------
     def start(self, total: int) -> None:
+        """The training's step count; nothing done yet."""
         self.total, self.done = total, 0
 
     def advance(self, done: int = 1) -> None:
+        """Counts finished steps, then raises JobCancelled if the job was cancelled or ran past
+        ``max_seconds``: the training stops between steps, never inside a fit."""
         self.done = min(self.total, self.done + done) if self.total else self.done + done
         if self.cancel_requested.is_set():
             raise JobCancelled(CANCELLED, "Training cancelled. Nothing was kept from it.")
@@ -69,10 +72,12 @@ class Job:
                                            "minutes (TOOLKIT_JOB_MAX_MIN). Nothing was kept.")
 
     def finish(self) -> None:
+        """Nothing: the worker records how the job ended."""
         pass
 
     # --- What the page shows ------------------------------------------------------------
     def phase(self) -> str:
+        """The page's text for where the job is, from its state and step count."""
         if self.state == QUEUED:
             return "Waiting for another training to finish"
         if self.state in FINISHED:
@@ -88,6 +93,7 @@ class Job:
         return "Scoring the test split"
 
     def elapsed(self) -> float:
+        """Seconds since the job started running (0 while it waits); final once it ended."""
         if self.started is None:
             return 0.0
         return (self.ended or time.monotonic()) - self.started
@@ -104,6 +110,7 @@ class JobRunner:
         self._thread: threading.Thread | None = None
 
     def submit(self, job: Job) -> None:
+        """Queues ``job``; the worker thread is started with the first job."""
         with self._lock:
             self._waiting.append(job)
             if self._thread is None:
@@ -131,6 +138,9 @@ class JobRunner:
         job.on_end()
 
     def _work(self) -> None:
+        """The worker thread: one job at a time, in order, skipping cancelled ones; records the
+        result or the error (an unexpected one only as a generic message, the details in the log)
+        and always calls ``on_end``."""
         while True:
             job = self._queue.get()
             with self._lock:

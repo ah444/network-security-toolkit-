@@ -16,6 +16,7 @@ from ..settings import instance_dir
 
 
 def runs_dir(environ: Mapping[str, str] | None = None) -> Path:
+    """``instance/runs``: the TrainingRun records."""
     return instance_dir(environ) / "runs"
 
 
@@ -37,5 +38,6 @@ def read_record(path: str | Path) -> Any:
 
 
 def list_runs(directory: str | Path | None = None) -> list[Path]:
+    """The ``*.json`` files of ``directory`` (default ``runs_dir``), sorted by name."""
     directory = Path(directory) if directory is not None else runs_dir()
     return sorted(directory.glob("*.json")) if directory.is_dir() else []

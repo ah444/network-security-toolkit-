@@ -40,6 +40,7 @@ from .runs import SCHEMA_VERSION, TrainingRun
 
 @dataclass(frozen=True)
 class SavedBundle:
+    """A bundle just written: its path, its SHA-256 and the run that now records it."""
     path: Path
     sha256: str
     run: TrainingRun  # the run with ``bundle_sha256`` set; the caller saves its record
@@ -47,6 +48,8 @@ class SavedBundle:
 
 @dataclass(frozen=True)
 class BundleInfo:
+    """A bundle file as listed: its path, its size and its manifest, read without checking the
+    signature, so for lists and messages only (never to load from)."""
     path: Path
     size: int  # bytes
     manifest: dict[str, Any]  # read without checking the signature: for lists and messages only
@@ -104,15 +107,19 @@ class BundleStore:
         self.key_file = key_file
 
     def save(self, run: TrainingRun) -> SavedBundle:
+        """``save_bundle`` in the store's folder, signed with its key."""
         return save_bundle(run, self.directory, key_file=self.key_file)
 
     def list_bundles(self) -> list[BundleInfo]:
+        """``list_bundles`` of the store's folder."""
         return list_bundles(self.directory)
 
     def load(self, path: str | Path) -> Bundle:
+        """``load_bundle`` with the store's key: signed by this install, or refused."""
         return load_bundle(path, key_file=self.key_file)
 
     def open(self, data: bytes) -> Bundle:
+        """``open_bundle`` with the store's key (bytes already in memory)."""
         return open_bundle(data, key_file=self.key_file)
 
 
@@ -146,6 +153,8 @@ def write_run(run: TrainingRun, directory: str | Path | None = None) -> Path:
 
 
 def read_run(path: str | Path) -> dict[str, Any]:
+    """A TrainingRun record read back: ValueError if it is not one, or if its schema is newer than
+    this toolkit understands."""
     record = read_record(path)
     if not isinstance(record, dict) or "schema_version" not in record or "run_id" not in record:
         raise ValueError(f"{Path(path).name} is not a TrainingRun record")

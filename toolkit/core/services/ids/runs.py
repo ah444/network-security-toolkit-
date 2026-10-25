@@ -57,6 +57,7 @@ class DatasetRef:
 
     @classmethod
     def from_loaded(cls, name: str, loaded: LoadedDataset) -> DatasetRef:
+        """The reference of a file loaded by ``load_dataset``, under ``name``."""
         return cls(name, loaded.report.sha256, loaded.report.rows, loaded.report.columns)
 
 
@@ -82,6 +83,8 @@ class TrainSettings:
 
     @classmethod
     def from_dict(cls, data: Mapping[str, Any]) -> TrainSettings:
+        """The settings back from a record's ``settings`` (the configs, the tuples and the overrides
+        rebuilt), for ``rerun``."""
         values = dict(data)
         for key, config in _CONFIGS.items():
             values[key] = config(**values[key])
@@ -94,6 +97,9 @@ class TrainSettings:
 
 @dataclass(frozen=True, eq=False)
 class TrainingRun:
+    """One training, everything needed to explain and repeat it: the settings as used, the data's
+    SHA-256, the profile, the split, the leakage report, the evaluation with the fitted models, and
+    the library versions. ``to_dict`` is its record."""
     run_id: str
     created_at: str  # UTC, ISO 8601
     settings: TrainSettings  # as used (workers resolved)
@@ -109,6 +115,8 @@ class TrainingRun:
 
     @property
     def metric_tolerance(self) -> float:
+        """How far a re-run's metrics may differ: 0 with one worker (exact), else the evaluation
+        config's tolerance for parallel runs."""
         return 0.0 if self.settings.workers == 1 else self.settings.evaluation.parallel_metric_tolerance
 
     def to_dict(self) -> dict[str, Any]:
@@ -143,6 +151,7 @@ class TrainingRun:
 
 
 def package_versions() -> dict[str, str | None]:
+    """Python, the platform and the versions of ``VERSIONED_PACKAGES`` (None if absent)."""
     versions: dict[str, str | None] = {"python": platform.python_version(),
                                        "platform": platform.platform()}
     for package in VERSIONED_PACKAGES:
@@ -197,6 +206,8 @@ def _train(frame: pd.DataFrame, label: str, settings: TrainSettings, now: dateti
            profile: ProfileMatch | None, test_frame: pd.DataFrame | None,
            source: DatasetRef | None, test_source: DatasetRef | None,
            sources: Sequence[str] | pd.Series | None, progress: ProgressSink) -> TrainingRun:
+    """``train`` after its checks: the split, the leakage guard and the evaluation, each advancing
+    ``progress``; the run, with a new id from the time and 4 random bytes."""
     split = split_dataset(frame, label, profile=profile, strategy=settings.strategy,
                           time_column=settings.time_column, group_column=settings.group_column,
                           test_frame=test_frame, sources=sources, config=settings.split)
@@ -225,6 +236,8 @@ def _train(frame: pd.DataFrame, label: str, settings: TrainSettings, now: dateti
 
 
 def _check_source(recorded: Mapping[str, Any] | None, given: DatasetRef | None, what: str) -> None:
+    """ValueError unless ``given`` is the file the run recorded (its SHA-256); no check when the run
+    recorded none."""
     if recorded is None:
         return
     if given is None:

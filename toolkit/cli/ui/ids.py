@@ -31,6 +31,7 @@ SPLIT_NOTES = {
 
 
 def size_text(size: int) -> str:
+    """A file size in MB, or in GB from 1 GB."""
     return f"{size / 2**30:.2f} GB" if size >= 2**30 else f"{size / 2**20:.1f} MB"
 
 
@@ -76,7 +77,9 @@ def model_card(bundle: Bundle) -> str:
 
 def display_prediction(result: Mapping[str, Any], true_label: str | None = None,
                        classes: Sequence[str] = ()) -> None:
-    """Display a prediction result (``classes``: the model's classes)."""
+    """The prediction: normal traffic, an attack (when the model has a normal class among
+    ``classes``) or just the class; then the true label, the confidence and the top
+    probabilities when known."""
     print("\n" + "=" * 50)
     print("🎯 PREDICTION RESULT")
     print("=" * 50)
@@ -119,6 +122,8 @@ def choose(prompt: str, count: int, default: int | None = None) -> int:
 
 
 def choose_model(bundle: Bundle, current: str) -> str:
+    """Lists the bundle's models (the best one starred) and returns the one picked; Enter keeps
+    ``current``."""
     names = model_order(bundle)
     for i, name in enumerate(names, 1):
         marker = "⭐" if name == bundle.selected else "  "
@@ -155,6 +160,7 @@ def manual_input(bundle: Bundle, model: str | None) -> dict[str, Any]:
 
 
 def header() -> None:
+    """The tool's title."""
     print("\n" + "=" * 60)
     print("🛡️  IDS with Machine Learning - CLI Tool")
     print("=" * 60)
@@ -179,6 +185,7 @@ def choose_export(exports: Sequence[BundleInfo]) -> Path:
 
 
 def loading_large(path: Path, size: int) -> None:
+    """Warns (on stderr) that a large bundle takes a while and needs memory."""
     print(f"⏳ Loading {path.name} ({size_text(size)}): large models can "
           "take minutes and need several times that size in memory...", file=sys.stderr)
 
@@ -196,14 +203,17 @@ def labelled(rows: int, model: str, output: Path, summary: Mapping[str, Any],
 
 
 def json_results(results: Sequence[Mapping[str, Any]]) -> None:
+    """``--json``: the results as JSON."""
     print(json.dumps(list(results), indent=1))
 
 
 def ready(model: str) -> None:
+    """Says which model the predictions use."""
     print(f"\n🎯 Ready for predictions with {model}!")
 
 
 def ask_option() -> str:
+    """Shows the menu's options and returns the answer as typed."""
     print("\nOptions:")
     print("  1. Enter features manually")
     print("  2. Test with a real example (from the model's test split)")
@@ -214,36 +224,44 @@ def ask_option() -> str:
 
 
 def choose_example(bundle: Bundle, examples: Sequence[Mapping[str, Any]]) -> Mapping[str, Any]:
+    """Lists the bundle's examples and returns the one picked."""
     for i, example in enumerate(examples, 1):
         print(f"  {i}. {example_name(bundle, example)}")
     return examples[choose(f"\nChoose example (1-{len(examples)}): ", len(examples)) - 1]
 
 
 def ask_csv_path() -> str:
+    """A CSV file's path, without the quotes a pasted path may have."""
     return input("CSV file path: ").strip().strip('"')
 
 
 def no_examples() -> None:
+    """Says the bundle has no examples, and which options remain."""
     print("⚠️ This bundle has no examples; use option 1 or 4.")
 
 
 def using(model: str) -> None:
+    """Says which model is now used."""
     print(f"✅ Using {model}")
 
 
 def invalid_option() -> None:
+    """Says the option is not on the menu."""
     print("⚠️ Invalid option")
 
 
 def error(problem: Exception) -> None:
+    """Shows a problem's message (a refused bundle, a bad value, a file)."""
     print(f"❌ {problem}")
 
 
 def card(bundle: Bundle) -> None:
+    """Shows the model card."""
     print(model_card(bundle))
 
 
 def goodbye() -> None:
+    """The last line."""
     print("\n👋 Goodbye!")
 
 

@@ -51,52 +51,90 @@ class ScanRequest:
 class ScanView(Protocol):
     """What a scan shows and asks on its way (the console: ``toolkit.cli.ui.scan``)."""
 
-    def resolved(self, text: str, address: str) -> None: ...
+    def resolved(self, text: str, address: str) -> None:
+        """Once, when the target was a host name: it resolved to ``address``. The DNS query has
+        already gone out (see ``resolve_targets``)."""
 
-    def abuse_skipped(self, target: str) -> None: ...
+    def abuse_skipped(self, target: str) -> None:
+        """A public ``target`` in an interactive scan without an AbuseIPDB key: nothing is sent."""
 
-    def ask_abuse(self, target: str) -> bool: ...
+    def ask_abuse(self, target: str) -> bool:
+        """Interactive scans, a public ``target`` and a key: True sends it to AbuseIPDB. Asked
+        before the ping, so nothing has reached the host yet."""
 
     def abuse_report(self, target: str, data: Mapping[str, Any] | None,
-                     error: str | None) -> None: ...
+                     error: str | None) -> None:
+        """AbuseIPDB's answer for ``target``: ``data`` (its fields, text from the network: show it
+        cleaned), or None and ``error`` saying why the lookup failed."""
 
-    def host_down(self, target: str) -> None: ...
+    def host_down(self, target: str) -> None:
+        """``target`` did not answer the ping; ``ask_scan_anyway`` (interactive) or
+        ``unresponsive_skipped`` (no ``--scan-unresponsive``) may follow."""
 
-    def ask_scan_anyway(self) -> bool: ...
+    def ask_scan_anyway(self) -> bool:
+        """Interactive scans, after ``host_down``: True scans the host anyway."""
 
-    def unresponsive_skipped(self) -> None: ...
+    def unresponsive_skipped(self) -> None:
+        """A host that did not answer was skipped (no ``--scan-unresponsive``)."""
 
-    def scanning(self, target: str, ttl: int | None, guess: tuple[str, int] | None) -> None: ...
+    def scanning(self, target: str, ttl: int | None, guess: tuple[str, int] | None) -> None:
+        """The port checks of ``target`` start; ``guess`` is the OS guess from the ping's ``ttl`` (a
+        name and the hops away), None without a TTL."""
 
-    def progress(self) -> Progress: ...
+    def progress(self) -> Progress:
+        """Verbose scans only: a new ProgressSink for this target's checks; it is advanced from the
+        scanner's worker threads, so it must be thread-safe."""
 
-    def silent_udp(self, ports: Sequence[int]) -> None: ...
+    def silent_udp(self, ports: Sequence[int]) -> None:
+        """UDP ports that sent no reply (``open|filtered``), sorted; there may be many."""
 
-    def no_open_ports(self, target: str) -> None: ...
+    def no_open_ports(self, target: str) -> None:
+        """No port of ``target`` is open: it adds no entry to the report."""
 
-    def open_ports(self, results: Sequence[PortResult]) -> None: ...
+    def open_ports(self, results: Sequence[PortResult]) -> None:
+        """The open ports, before their lookups; ``service`` and ``banner`` come from the network:
+        show them cleaned (``one_line``)."""
 
-    def looking_up(self, products: int, workers: int) -> None: ...
+    def looking_up(self, products: int, workers: int) -> None:
+        """``products`` distinct products (at least one) are about to be looked up online, up to
+        ``workers`` at a time."""
 
-    def entry(self, entry: ReportEntry, first: bool) -> None: ...
+    def entry(self, entry: ReportEntry, first: bool) -> None:
+        """One open port's report entry, in port order; ``first`` for the target's first entry."""
 
-    def lookups_notice(self) -> None: ...
+    def lookups_notice(self) -> None:
+        """Once, before the first target: what the CVE lookups send online."""
 
-    def target_done(self) -> None: ...
+    def target_done(self) -> None:
+        """After each target, scanned or skipped."""
 
     def summary(self, targets: int, entries: int, failed: Sequence[str],
-                seconds: float) -> None: ...
+                seconds: float) -> None:
+        """After the last target: the targets, the entries, the failed lookups (as ``port/protocol
+        error``) and the seconds since the command started."""
 
-    def nothing_to_export(self) -> None: ...
+    def nothing_to_export(self) -> None:
+        """No entries, and an export was asked for (interactive or ``--export``)."""
 
-    def ask_export(self) -> str | None: ...
+    def ask_export(self) -> str | None:
+        """Interactive scans with entries: a format of ``EXPORT_FORMATS``, or None for no file; any
+        other answer is refused through ``unknown_format``."""
 
-    def unknown_format(self) -> None: ...
+    def unknown_format(self) -> None:
+        """The answer to ``ask_export`` is not a known format: nothing is saved."""
 
-    def exported(self, path: Path) -> None: ...
+    def exported(self, path: Path) -> None:
+        """The report was saved as ``path``, a new file (never overwriting one)."""
 
 
 def resolve_targets(text: str, limits: ScanConfig, view: ScanView) -> list[str]:
+    """The addresses to scan from what the user typed: an address, a network, or a host name, which
+    is resolved here (its first address, shown through ``view.resolved``). ValueError with a message
+    for a bad target or a network above the hosts limit.
+
+    This runs before the authorization question, so for a host name the DNS query (the name, to the
+    system's resolver) is sent before the user confirms; nothing reaches the target itself before
+    then."""
     targets = parse_target(text, limits.max_hosts)
     if "/" not in text and not is_ip_literal(text):
         view.resolved(text, targets[0])
@@ -105,6 +143,9 @@ def resolve_targets(text: str, limits: ScanConfig, view: ScanView) -> list[str]:
 
 def check_scan(targets: Sequence[str], ports: Sequence[int], protocols: Sequence[str],
                limits: ScanConfig) -> None:
+    """ValueError with the message when the scan is above the limits (the hosts, or the host x port
+    x protocol checks). Called before the authorization question, so a scan that is too big is
+    refused without asking it."""
     problem = check_limits(len(targets), len(targets) * len(ports) * len(protocols), limits)
     if problem:
         raise ValueError(problem)

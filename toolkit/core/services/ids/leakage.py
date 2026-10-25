@@ -46,6 +46,8 @@ _PATTERN_TOKENS = tuple((p, tuple(p.split())) for p in NAME_PATTERNS)
 
 @dataclass(frozen=True)
 class ColumnFinding:
+    """Why a column may leak the label: blocked or only warned, the reason code, a detail, and for
+    the score check the one-feature tree's score."""
     column: str
     action: str  # "block" | "warn"
     reason: str  # PROFILE_BLOCKED | NAME_PATTERN | ID_LIKE | LABEL_RELABELLING | STRONG_SINGLE_FEATURE
@@ -56,6 +58,7 @@ class ColumnFinding:
 
 @dataclass(frozen=True)
 class Override:
+    """A finding the user chose to keep as a feature, with their reason (recorded in the run)."""
     column: str
     action: str
     reason: str
@@ -65,6 +68,8 @@ class Override:
 
 @dataclass(frozen=True)
 class LeakageReport:
+    """The guard's result: the columns that may be features, the ones blocked or warned and why, the
+    overrides, the rows checked and the classes too rare for the check."""
     features: tuple[str, ...]  # columns that may be used as features
     blocked: tuple[str, ...]
     warned: tuple[str, ...]
@@ -94,6 +99,8 @@ def name_pattern(name: str) -> str | None:
 
 
 def _id_like(column: pd.Series, config: LeakageConfig) -> str | None:
+    """Why the column looks like a row identifier (whole numbers rising in row order, or nearly
+    every value unique), else None; only for whole numbers and text."""
     kind = column.dtype.kind
     is_text = kind == "O" or isinstance(column.dtype, (pd.CategoricalDtype, pd.StringDtype))
     if not (kind in "iu" or is_text):
@@ -141,6 +148,8 @@ def _sample(frame: pd.DataFrame, label: str,
 
 
 def _single_feature(x: np.ndarray, y: np.ndarray, leaves: int, config: LeakageConfig) -> float:
+    """The cross-validated balanced accuracy of a small tree on this one feature (the training
+    split's sample): a score near 1 means the column alone gives the label away."""
     tree = DecisionTreeClassifier(max_leaf_nodes=leaves, random_state=config.random_state)
     folds = StratifiedKFold(n_splits=config.cv_folds, shuffle=True,
                             random_state=config.random_state)

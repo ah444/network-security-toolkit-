@@ -7,7 +7,9 @@ from ...data.recon.resolve import first_address
 
 
 def parse_target(text: str, max_hosts: int) -> list[str]:
-    """The IP addresses to scan: one IPv4/IPv6 address, a network (CIDR) or a host name."""
+    """The IP addresses to scan: one IPv4/IPv6 address, a network (CIDR, at most
+    ``max_hosts`` addresses) or a host name, resolved here (a DNS query to the system's
+    resolver); ValueError with a message otherwise."""
     text = text.strip()
     if not text:
         raise ValueError("No target given.")
@@ -75,6 +77,8 @@ def check_limits(host_count: int, probe_count: int, limits: ScanConfig) -> str |
 
 
 def is_ip_literal(text: str) -> bool:
+    """True if ``text`` is an IP address as typed (an IPv6 one may be in brackets): checked without
+    any name lookup."""
     try:
         ipaddress.ip_address(text.strip().strip("[]"))
     except ValueError:
@@ -83,6 +87,9 @@ def is_ip_literal(text: str) -> bool:
 
 
 def is_public_ip(ip: str) -> bool:
+    """True for a globally routable address; False for private, loopback, link-local and reserved
+    ones, and for anything that is not an address. Only a public address may be sent to
+    AbuseIPDB."""
     try:
         return ipaddress.ip_address(ip).is_global
     except ValueError:
