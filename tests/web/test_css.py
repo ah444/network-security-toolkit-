@@ -16,7 +16,7 @@ SYSTEM_DARK = ':root:not([data-theme="light"])'
 CHOSEN_DARK = ':root[data-theme="dark"]'
 COLOUR = re.compile(r"#[0-9a-fA-F]{3,8}\b|\brgba?\(|\bhsla?\(|(?<![\w-])(?:white|black)(?![\w-])")
 # class names the modules build at runtime: "status-" + kind, "severity-" + level, ...
-BUILT_PREFIXES = ("status-", "severity-", "cm-correct-", "cm-wrong-")
+BUILT_PREFIXES = ("status-", "severity-", "cvss-", "cm-correct-", "cm-wrong-")
 
 
 def _without_comments(text):
@@ -88,7 +88,7 @@ def test_chosen_dark_is_the_system_dark(css):
     """The two copies of the dark tokens are the same, value for value and in order."""
     _, dark, chosen = _token_blocks(css)
     assert list(_declarations(chosen).items()) == list(_declarations(dark).items())
-    assert len(_declarations(dark)) == 17
+    assert len(_declarations(dark)) == 20  # + the scanner's 3 CVSS levels (v5.2 step 2.4e)
 
 
 def test_dark_tokens_change_only_theme_tokens(css):

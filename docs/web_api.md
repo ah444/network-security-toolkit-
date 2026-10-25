@@ -1,6 +1,7 @@
 # Web trainer API (`/api/v1`)
 
-The web trainer's page (`/dynamic_ids`) talks to the server only through these routes.
+The web trainer's page (`/dynamic_ids`) and the port scanner's (`/scan`) talk to the
+server only through these routes.
 They work on the calling browser session's **workspace** (its dataset, trained run and
 loaded bundle); the session cookie holds only the workspace ID. A workspace is created
 only by an upload, a bundle load or a scan; other routes answer `NO_DATASET`, `NOT_TRAINED`, ...

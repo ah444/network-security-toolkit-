@@ -38,7 +38,7 @@ PERMISSIONS_POLICY = ", ".join(f"{feature}=()" for feature in (
 ))
 
 # Pages kept out of the browser cache: the trainer page carries the session's CSRF token.
-NO_STORE_ENDPOINTS = frozenset({"pages.dynamic_ids_page"})
+NO_STORE_ENDPOINTS = frozenset({"pages.dynamic_ids_page", "pages.scan_page"})
 
 
 def _security_headers(response: Response) -> Response:

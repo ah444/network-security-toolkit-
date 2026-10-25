@@ -33,6 +33,8 @@
   --red-300: #fca5a5;
   --amber-400: #ffc107;
   --orange-500: #fd7e14;
+  --orange-800: #9a3412;
+  --orange-300: #fdba74;
   --yellow-50: #fff3cd;
   --yellow-100: #ffeeba;
   --yellow-900: #856404;
@@ -83,6 +85,10 @@
   --danger: var(--red-700);
   --warning: var(--yellow-900);
   --info: var(--cyan-900);
+  /* the port scanner's CVSS levels (v5.2 step 2.4e): each >= 4.5:1 on the cards */
+  --cvss-critical: var(--red-700);
+  --cvss-high: var(--orange-800);
+  --cvss-medium: var(--yellow-900);
   /* names for the result panels (the Upload Dataset card, the scan results): they follow
      the theme tokens they point to, so the dark blocks below need no copy of them */
   --muted: var(--placeholder);
@@ -138,6 +144,9 @@
     --danger: var(--red-300);
     --warning: var(--amber-400);
     --info: var(--cyan-100);
+    --cvss-critical: var(--red-300);
+    --cvss-high: var(--orange-300);
+    --cvss-medium: var(--amber-400);
   }
 }
 
@@ -160,6 +169,9 @@
   --danger: var(--red-300);
   --warning: var(--amber-400);
   --info: var(--cyan-100);
+  --cvss-critical: var(--red-300);
+  --cvss-high: var(--orange-300);
+  --cvss-medium: var(--amber-400);
 }
 
 /* ---------- Base ---------- */
@@ -1068,6 +1080,134 @@ textarea:focus-visible,
   }
 }
 
+/* ---------- The port scanner (/scan, v5.2 step 2.4e) ---------- */
+.section-title {
+  margin-top: 0;
+}
+
+/* A line under a field: what goes in it, or why a choice is off */
+.field-hint {
+  max-width: 75ch;
+  margin: 0.25rem 0 0.75rem;
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+/* Radio and checkbox groups: the legend is the group's label, no frame */
+.choice-group {
+  min-width: 0;
+  border: none;
+}
+
+.choice-group legend {
+  margin-bottom: 0.5rem;
+}
+
+/* The authorization: its own box, the target named in it */
+.authorize {
+  max-width: 40rem;
+  margin: 1.25rem 0;
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-inset);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.scan-log {
+  max-height: 20rem;
+  overflow-y: auto;
+  padding: 0.75rem 1rem;
+  list-style: none;
+  background: var(--surface-inset);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  overflow-wrap: anywhere;
+}
+
+.scan-log li + li {
+  margin-top: 0.25rem;
+}
+
+.host-list {
+  margin: 0 0 1.5rem;
+  padding-left: 1.25rem;
+}
+
+.host-list li {
+  margin-bottom: 0.5rem;
+  overflow-wrap: anywhere;
+}
+
+.host-os {
+  display: block;
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+.port-cards {
+  display: grid;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+/* An open port: the edge has its CVSS level's colour, the level is also written */
+.port-card {
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--cvss-colour);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  overflow-wrap: anywhere;
+}
+
+.port-card > summary {
+  min-height: 44px;
+  padding: 0.625rem 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.port-details {
+  display: grid;
+  grid-template-columns: minmax(8rem, max-content) minmax(0, 1fr);
+  gap: 0.375rem 1rem;
+  padding: 0 1rem 1rem;
+}
+
+.port-details dt {
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+.port-details dd {
+  min-width: 0;
+}
+
+.cvss-level {
+  font-weight: 700;
+  color: var(--cvss-colour);
+}
+
+.cvss-critical { --cvss-colour: var(--cvss-critical); }
+.cvss-high { --cvss-colour: var(--cvss-high); }
+.cvss-medium { --cvss-colour: var(--cvss-medium); }
+.cvss-low { --cvss-colour: var(--info); }
+.cvss-none { --cvss-colour: var(--success); }
+.cvss-unknown { --cvss-colour: var(--muted); }
+
+/* A port's CVEs, one a line */
+.cve-list {
+  padding-left: 1.25rem;
+}
+
+/* The AI's text keeps its paragraphs */
+.ai-text {
+  white-space: pre-wrap;
+}
+
 /* Training job progress (v5.1 step 1.2d) */
 .training-progress { margin-top: 12px; max-width: 40rem; }
 .training-progress progress { width: 100%; height: 18px; }
@@ -1422,6 +1562,15 @@ textarea:focus-visible,
 
   .summary-panel {
     padding: 1.25rem 1rem;
+  }
+
+  /* a port's details: the label above its value */
+  .port-details {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .port-details dd {
+    margin-bottom: 0.5rem;
   }
 
   .stat-grid {

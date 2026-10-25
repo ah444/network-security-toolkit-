@@ -25,6 +25,7 @@ from typing import Any
 
 from ...core.data.keys import KEY_VARIABLES, load_api_keys
 from ...core.data.logs import add_secrets
+from ...core.data.recon.nmap import NEEDS_PRIVILEGES, VERSION_SCRIPTS_NOTE
 from ...core.data.settings import ScanConfig
 from ...core.services.recon.engines import (
     DEFAULT_ENGINE,
@@ -121,7 +122,8 @@ def scan_options(keys: Mapping[str, str], limits: ScanConfig) -> dict[str, Any]:
         "nmap": {"service_detection": list(INTENSITIES), "timing": list(TIMINGS),
                  "default_service_detection": defaults.service_detection,
                  "default_timing": defaults.timing, "scripts": list(SCRIPTS),
-                 "udp_and_os_detection": raw_packets},
+                 "udp_and_os_detection": raw_packets, "raw_packets_note": NEEDS_PRIVILEGES,
+                 "version_scripts_note": VERSION_SCRIPTS_NOTE},
         "limits": {"max_hosts": limits.max_hosts, "max_checks": limits.max_probes,
                    "max_minutes": limits.max_minutes},
         "keys": {name: bool(keys.get(name)) for name in KEY_VARIABLES},

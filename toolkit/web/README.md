@@ -7,7 +7,7 @@ Upload a dataset, train and compare models, export a signed bundle, predict with
 ```
 web/
   ui/
-    templates/       the two pages (home.html, dynamic_ids.html)
+    templates/       the three pages (home.html, dynamic_ids.html, scan.html)
     static/          css/app.css (one stylesheet, colours as tokens) and js/ (ES modules;
                      api.js holds the only fetch)
     console.py       what the web command prints in the terminal
@@ -15,7 +15,7 @@ web/
     command.py       the web command: its settings, --port, --no-browser, then the server
     __init__.py      create_app(): the Flask app with its own state
     server.py        waitress on 127.0.0.1, the port bound exclusively, the browser opened
-    pages.py         the two HTML pages
+    pages.py         the three HTML pages: home, the trainer, the port scanner
     datasets.py      upload, preview, class filter, the analyses before training
     training.py      the model list, a training job started, its results
     jobs.py          any job's state, progress and cancel (a scan's log too)

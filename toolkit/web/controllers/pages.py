@@ -1,4 +1,4 @@
-"""The two HTML pages."""
+"""The HTML pages: home, the trainer and the port scanner."""
 
 from __future__ import annotations
 
@@ -19,3 +19,9 @@ def homepage() -> str:
 def dynamic_ids_page() -> str:
     """``GET /dynamic_ids``: the trainer's page, told when an idle workspace expires."""
     return render_template("dynamic_ids.html", idle_minutes=state().config.workspace_idle_minutes)
+
+
+@bp.route("/scan")
+def scan_page() -> str:
+    """``GET /scan``: the port scanner's page (v5.2 step 2.4e)."""
+    return render_template("scan.html")

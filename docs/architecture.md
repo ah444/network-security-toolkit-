@@ -158,7 +158,7 @@ The page, its routes and jobs, and the `web` command; it never imports the comma
 | `toolkit/web/controllers/command.py` | controllers | the web trainer's command (from `toolkit.start`): its settings checked, `--port` and `--no-browser`, then the server |
 | `toolkit/web/controllers/__init__.py` | controllers | `create_app()`: the Flask app with its own state, serving `toolkit/web/ui` |
 | `toolkit/web/controllers/server.py` | controllers | `run_server()`: waitress on 127.0.0.1, the port bound exclusively, the browser opened |
-| `toolkit/web/controllers/pages.py` | controllers | the two HTML pages |
+| `toolkit/web/controllers/pages.py` | controllers | the three HTML pages: home, the trainer (`/dynamic_ids`), the port scanner (`/scan`) |
 | `toolkit/web/controllers/datasets.py` | controllers | upload, preview, class filter and the analyses before training |
 | `toolkit/web/controllers/training.py` | controllers | the model list, a training job started, its results |
 | `toolkit/web/controllers/jobs.py` | controllers | any job's state, progress and cancel (`GET`/`DELETE /api/v1/jobs/<id>`), a scan's log |

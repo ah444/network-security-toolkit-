@@ -6,6 +6,9 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 JS_DIR = REPO_ROOT / "toolkit/web/ui/static/js"
 TEMPLATE = REPO_ROOT / "toolkit/web/ui/templates/dynamic_ids.html"
+SCAN_TEMPLATE = REPO_ROOT / "toolkit/web/ui/templates/scan.html"  # the port scanner (v5.2 2.4e)
+# each page's entry module, and the template its element ids are in
+ENTRY_MODULES = {"main.js": TEMPLATE, "scan.js": SCAN_TEMPLATE}
 
 
 def found(paths, what):
