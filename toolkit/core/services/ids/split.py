@@ -32,7 +32,7 @@ The strategies themselves: ``split_strategies.py``. Time validation: ``split_tim
 from __future__ import annotations
 
 import logging
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from typing import cast
 
@@ -169,6 +169,106 @@ def _coverage(train: pd.Series, test: pd.Series) -> tuple[ClassCoverage, ...]:
                  for n in names)
 
 
+@dataclass
+class _SplitState:
+    """What the strategies tried by one ``split_dataset`` call share.
+
+    A strategy reads it and returns its parts, or raises ``StrategyFailed``; only two things
+    are written while trying: ``time_check`` and ``times``, by the first temporal strategy
+    (the next one reuses them, so the column is parsed once per call, and the result keeps
+    the check even when a fallback is used), and ``used_group``.
+    """
+
+    frame: pd.DataFrame  # the rows with a label, before dedupe (an official split keeps them)
+    kept: pd.DataFrame  # after dedupe
+    labels: np.ndarray  # kept's labels as text
+    stats: DedupeStats
+    sources: pd.Series | None  # the file of each kept row
+    time_column: str | None
+    group_column: str | None
+    test_frame: pd.DataFrame | None
+    config: SplitConfig
+    time_check: TimeCheck | None = None
+    times: pd.Series | None = None
+    used_group: str | None = None
+
+
+# train, test, the dedupe stats, the warnings of the strategy used
+_Parts = tuple[pd.DataFrame, pd.DataFrame, DedupeStats, list[str]]
+_TimeSplit = Callable[[np.ndarray, pd.Series, SplitConfig], tuple[np.ndarray, np.ndarray]]
+
+
+def _parts(state: _SplitState, train_pos: np.ndarray, test_pos: np.ndarray,
+           found: list[str]) -> _Parts:
+    return (state.kept.iloc[np.sort(train_pos)], state.kept.iloc[np.sort(test_pos)], state.stats,
+            found)
+
+
+def _official(state: _SplitState) -> _Parts:
+    if state.test_frame is None:
+        raise StrategyFailed("OFFICIAL_TEST_FILE_MISSING")
+    return strategies.official(state.frame, state.kept, state.stats, state.test_frame, state.config)
+
+
+def _checked_times(state: _SplitState) -> tuple[TimeCheck, pd.Series]:
+    """The time check and the parsed times: made by the first temporal strategy tried,
+    reused by the next."""
+    if state.time_check is None:
+        state.time_check, state.times = check_time_column(state.kept, state.time_column,
+                                                          state.config, state.sources)
+    if not state.time_check.passed:
+        assert state.time_check.reason is not None  # a failed check always has one
+        raise StrategyFailed(state.time_check.reason)
+    return state.time_check, cast(pd.Series, state.times)  # a passed check has them
+
+
+def _over_time(state: _SplitState, split: _TimeSplit) -> _Parts:
+    check, times = _checked_times(state)
+    train_pos, test_pos = split(state.labels, times, state.config)
+    return _parts(state, train_pos, test_pos,
+                  ["TIME_MISSING_ROWS_DROPPED"] if check.rows_dropped else [])
+
+
+def _temporal(state: _SplitState) -> _Parts:
+    return _over_time(state, strategies.temporal)
+
+
+def _temporal_per_class(state: _SplitState) -> _Parts:
+    return _over_time(state, strategies.temporal_per_class)
+
+
+def _group(state: _SplitState) -> _Parts:
+    """The group column when the frame has it, else the files the rows came from."""
+    if state.group_column and state.group_column in state.kept.columns:
+        groups, state.used_group = state.kept[state.group_column], state.group_column
+    else:
+        groups, state.used_group = state.sources, SOURCE_GROUP
+    train_pos, test_pos = strategies.group(state.labels, groups, state.config)
+    return _parts(state, train_pos, test_pos, [])
+
+
+def _stratified(state: _SplitState) -> _Parts:
+    train_pos, test_pos = strategies.stratified(state.labels, state.config)
+    return _parts(state, train_pos, test_pos, ["STRATIFIED_SCORES_MAY_BE_OPTIMISTIC"])
+
+
+_RUN = {"official": _official, "temporal": _temporal, "temporal_per_class": _temporal_per_class,
+        "group": _group, "stratified": _stratified}
+
+
+def _first_that_works(state: _SplitState, requested: str) -> tuple[str, _Parts, list[str]]:
+    """The strategy used, its parts and the reason codes of those tried before it, in
+    order (``stratified`` is last and never fails)."""
+    reasons: list[str] = []
+    for candidate in (requested, *FALLBACKS[requested]):
+        try:
+            return candidate, _RUN[candidate](state), reasons
+        except StrategyFailed as failure:
+            if failure.code not in reasons:
+                reasons.append(failure.code)
+    raise AssertionError("stratified never fails")
+
+
 def split_dataset(
     frame: pd.DataFrame,
     label: str,
@@ -211,50 +311,14 @@ def split_dataset(
         frame = frame[has_label]
         result_warnings.append("LABEL_MISSING_ROWS_DROPPED")
     kept, stats = dedupe(frame, label, ignored)
-    if sources is not None:
-        sources = cast(pd.Series, sources).loc[kept.index]
-    labels = kept[label].astype(str).to_numpy()
-
-    reasons: list[str] = []
-    time_check: TimeCheck | None = None
-    times: pd.Series | None = None
-    used_group: str | None = None
-    for candidate in (requested, *FALLBACKS[requested]):
-        try:
-            if candidate == "official":
-                if test_frame is None:
-                    raise StrategyFailed("OFFICIAL_TEST_FILE_MISSING")
-                train_part, test_part, stats, found = strategies.official(
-                    frame, kept, stats, test_frame, config)
-                result_warnings.extend(found)
-            elif candidate in TEMPORAL:
-                if time_check is None:
-                    time_check, times = check_time_column(kept, time_column, config, sources)
-                if not time_check.passed:
-                    assert time_check.reason is not None  # a failed check always has one
-                    raise StrategyFailed(time_check.reason)
-                split = (strategies.temporal if candidate == "temporal"
-                         else strategies.temporal_per_class)
-                train_pos, test_pos = split(labels, times, config)
-                if time_check.rows_dropped:
-                    result_warnings.append("TIME_MISSING_ROWS_DROPPED")
-            elif candidate == "group":
-                if group_column and group_column in kept.columns:
-                    groups, used_group = kept[group_column], group_column
-                else:
-                    groups, used_group = sources, SOURCE_GROUP
-                train_pos, test_pos = strategies.group(labels, groups, config)
-            else:
-                train_pos, test_pos = strategies.stratified(labels, config)
-                result_warnings.append("STRATIFIED_SCORES_MAY_BE_OPTIMISTIC")
-        except StrategyFailed as failure:
-            if failure.code not in reasons:
-                reasons.append(failure.code)
-            continue
-        if candidate != "official":
-            train_part = kept.iloc[np.sort(train_pos)]
-            test_part = kept.iloc[np.sort(test_pos)]
-        break
+    state = _SplitState(
+        frame=frame, kept=kept, labels=kept[label].astype(str).to_numpy(), stats=stats,
+        sources=None if sources is None else cast(pd.Series, sources).loc[kept.index],
+        time_column=time_column, group_column=group_column, test_frame=test_frame,
+        config=config)
+    candidate, parts, reasons = _first_that_works(state, requested)
+    train_part, test_part, stats, found = parts
+    result_warnings.extend(found)
 
     coverage = _coverage(train_part[label], test_part[label])
     if any(c.test == 0 for c in coverage):
@@ -273,8 +337,8 @@ def split_dataset(
         reason_codes=tuple(reasons),
         warnings=tuple(dict.fromkeys(result_warnings)),
         time_column=time_column if candidate in TEMPORAL else None,
-        group_column=used_group if candidate == "group" else None,
-        time_check=time_check,
+        group_column=state.used_group if candidate == "group" else None,
+        time_check=state.time_check,
         official_mode=(("deduplicated" if config.official_dedupe else "as_published")
                        if candidate == "official" else None),
         dedupe=stats,
