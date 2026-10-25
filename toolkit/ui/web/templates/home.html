@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Home - Intrusion Detection System</title>
+  <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
   <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/app.css') }}">
 </head>
 <body>
@@ -12,6 +13,7 @@
     <a href="/" class="nav-logo">Intrusion Detection System</a>
     <ul class="nav-menu">
       <li class="nav-item"><a href="/dynamic_ids" class="nav-link">Dynamic Intrusion Detection System</a></li>
+      <li class="nav-item"><button type="button" id="themeToggle" class="nav-link theme-toggle" hidden>Theme: Auto</button></li>
     </ul>
   </nav>
 

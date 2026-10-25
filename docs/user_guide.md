@@ -221,6 +221,10 @@ The address is printed (`http://127.0.0.1:5000/`) and the page opens in your def
 browser. Ctrl+C in the terminal stops the trainer. If port 5000 is taken, start it with
 `python -m toolkit web --port 5001`.
 
+The **Theme** button at the top right of every page switches between **Auto** (the page
+follows your system's light or dark setting), **Light** and **Dark**; your browser remembers
+the choice.
+
 ![The web trainer's home page](user-guide/01-home.jpg)
 
 Click **Dynamic Intrusion Detection System** at the top. The trainer has six steps; the

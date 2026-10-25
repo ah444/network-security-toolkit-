@@ -15,7 +15,9 @@ def _imports(name):
 def test_template_loads_main_as_a_module():
     html = TEMPLATE.read_text(encoding="utf-8")
     scripts = re.findall(r"<script[^>]*>", html)
-    assert scripts == ['<script type="module" src="{{ url_for(\'static\', filename=\'js/main.js\') }}">']
+    # theme.js (v5.2 step 2.1) is the one classic script, in the <head>: tests/web/test_theme.py
+    assert scripts == ['<script src="{{ url_for(\'static\', filename=\'js/theme.js\') }}">',
+                       '<script type="module" src="{{ url_for(\'static\', filename=\'js/main.js\') }}">']
 
 
 def test_imports_are_relative_and_exist():
@@ -32,7 +34,7 @@ def test_every_module_is_used():
         if name not in reached:
             reached.add(name)
             todo += [target[2:] for target in _imports(name)]
-    assert reached == set(js_sources())
+    assert reached == set(js_sources()) - {"theme.js"}  # theme.js: a classic script, no imports
 
 
 def test_only_api_js_talks_to_the_server():

@@ -1,8 +1,11 @@
 /* Network Security Toolkit web app: one stylesheet for the home page and the trainer
    (v5.1 step 1.3b; before: style.css and style2.css).
 
-   Every colour is a token in :root. The dark theme follows the system setting and only
-   changes token values (the block after :root), so no rule is written twice. Parts that
+   Every colour is a token in :root. The dark theme follows the system setting unless the
+   theme button (theme.js, v5.2 step 2.1) chose Light or Dark, and only changes token
+   values, so no rule is written twice. Its tokens are written twice, for the system's dark
+   and for Dark chosen (CSS can't put a media query and a selector in one block);
+   tests/web/test_css.py keeps the two copies equal. Parts that
    stay light in both themes (tables, the balancing select, the warning and info boxes) and
    the always-dark recommendation box use tokens the dark block leaves alone.
    No !important except [hidden]; no inline styles (the CSP allows style-src 'self' only). */
@@ -62,7 +65,7 @@
   --cm-wrong-4: rgba(255, 0, 0, 0.4);
   --cm-wrong-5: rgba(255, 0, 0, 0.5);
 
-  /* theme: light values here, dark values in the block below */
+  /* theme: light values here, dark values in the two blocks below */
   --bg: var(--gray-50);
   --surface: var(--white);
   --text: var(--gray-700);
@@ -109,8 +112,9 @@
   --shadow-accent: 0 4px 15px var(--indigo-20);
 }
 
+/* Dark: the system's setting, unless Light is chosen */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: var(--gray-800);
     --surface: var(--gray-700);
     --text: var(--gray-100);
@@ -129,6 +133,27 @@
     --warning: var(--amber-400);
     --info: var(--cyan-100);
   }
+}
+
+/* Dark chosen with the theme button: the same values as the block above */
+:root[data-theme="dark"] {
+  --bg: var(--gray-800);
+  --surface: var(--gray-700);
+  --text: var(--gray-100);
+  --heading-strong: var(--gray-100);
+  --label: var(--gray-100);
+  --label-strong: var(--white);
+  --label-strong-weight: 700;
+  --placeholder: var(--gray-300);
+  --input-bg: var(--gray-700);
+  --input-border: var(--gray-600);
+  --input-text: var(--gray-100);
+  --list-border: var(--gray-600);
+  --focus: var(--amber-400);
+  --success: var(--green-300);
+  --danger: var(--red-300);
+  --warning: var(--amber-400);
+  --info: var(--cyan-100);
 }
 
 /* ---------- Base ---------- */
@@ -283,6 +308,21 @@ textarea:focus-visible {
 .nav-link:hover {
   color: var(--on-accent);
   background: var(--white-10);
+}
+
+/* The theme button looks like the navbar's links, with a border to show it's a button */
+.theme-toggle {
+  font: inherit;
+  font-weight: 500;
+  background: none;
+  border: 1px solid var(--white-20);
+  cursor: pointer;
+}
+
+/* The page's focus colour is too close to the navbar's own; white shows on it */
+.navbar a:focus-visible,
+.navbar button:focus-visible {
+  outline-color: var(--on-accent);
 }
 
 .container {

@@ -1,5 +1,7 @@
 """CSS that keeps both themes readable (step 0.7: U1, U2, U3, D2) and, since v5.1 step 1.3b,
-one stylesheet with colour tokens for both pages (no inline styles, CSP style-src 'self')."""
+one stylesheet with colour tokens for both pages (no inline styles, CSP style-src 'self').
+Since v5.2 step 2.1 the dark tokens are written twice: for the system's dark theme (unless
+Light is chosen with the theme button) and for Dark chosen; a test keeps the two equal."""
 
 import re
 
@@ -11,6 +13,8 @@ CSS_DIR = JS_DIR.parent / "css"
 APP_CSS = CSS_DIR / "app.css"
 TEMPLATES = sorted(TEMPLATE.parent.glob("*.html"))
 DARK = "@media (prefers-color-scheme: dark)"
+SYSTEM_DARK = ':root:not([data-theme="light"])'
+CHOSEN_DARK = ':root[data-theme="dark"]'
 COLOUR = re.compile(r"#[0-9a-fA-F]{3,8}\b|\brgba?\(|\bhsla?\(|(?<![\w-])(?:white|black)(?![\w-])")
 # class names the modules build at runtime: "status-" + kind, "severity-" + level, ...
 BUILT_PREFIXES = ("status-", "severity-", "cm-correct-", "cm-wrong-")
@@ -36,10 +40,17 @@ def _block(text, start):
 
 
 def _token_blocks(css):
+    """The light tokens, the system's dark tokens and the chosen dark tokens."""
     light = re.search(r"^:root\s*\{", css, re.M)
-    dark = re.search(re.escape(DARK) + r"\s*\{\s*:root\s*\{", css)
-    assert light and dark
-    return _block(css, light.end()), _block(css, dark.end())
+    dark = re.search(re.escape(DARK) + r"\s*\{\s*" + re.escape(SYSTEM_DARK) + r"\s*\{", css)
+    chosen = re.search(r"^" + re.escape(CHOSEN_DARK) + r"\s*\{", css, re.M)
+    assert light and dark and chosen
+    return _block(css, light.end()), _block(css, dark.end()), _block(css, chosen.end())
+
+
+def _declarations(block):
+    parts = [part.strip() for part in block.split(";") if part.strip()]
+    return dict(re.split(r"\s*:\s*", part, maxsplit=1) for part in parts)
 
 
 def test_one_stylesheet_for_both_pages():
@@ -57,19 +68,34 @@ def test_no_inline_styles_in_templates():
 
 
 def test_colours_only_in_tokens(css):
-    light, dark = _token_blocks(css)
-    rest = css.replace(light, "").replace(dark, "")
+    rest = css
+    for block in _token_blocks(css):
+        rest = rest.replace(block, "")
     assert COLOUR.findall(rest) == []
 
 
 def test_dark_theme_only_changes_tokens(css):
-    """One dark block, and it only sets custom properties: no rule is written twice."""
-    assert css.count(DARK) == 1
+    """The dark blocks only set custom properties: no rule is written twice."""
+    assert css.count(DARK) == 1 and css.count(SYSTEM_DARK) == 1 and css.count(CHOSEN_DARK) == 1
     media = re.search(re.escape(DARK) + r"\s*\{", css)
-    _, dark = _token_blocks(css)
-    assert re.sub(r"\s", "", _block(css, media.end()).replace(dark, "")) == ":root{}"
-    declarations = [part.strip() for part in dark.split(";") if part.strip()]
-    assert declarations and all(part.startswith("--") for part in declarations)
+    _, dark, chosen = _token_blocks(css)
+    assert re.sub(r"\s", "", _block(css, media.end()).replace(dark, "")) == SYSTEM_DARK + "{}"
+    for block in (dark, chosen):
+        declarations = _declarations(block)
+        assert declarations and all(name.startswith("--") for name in declarations)
+
+
+def test_chosen_dark_is_the_system_dark(css):
+    """The two copies of the dark tokens are the same, value for value and in order."""
+    _, dark, chosen = _token_blocks(css)
+    assert list(_declarations(chosen).items()) == list(_declarations(dark).items())
+    assert len(_declarations(dark)) == 17
+
+
+def test_dark_tokens_change_only_theme_tokens(css):
+    """Every dark token has a light value, so Light chosen on a dark system is all light."""
+    light, dark, _ = _token_blocks(css)
+    assert set(_declarations(dark)) <= set(_declarations(light))
 
 
 def test_every_token_is_defined(css):
