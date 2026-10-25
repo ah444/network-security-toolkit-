@@ -105,6 +105,22 @@ def _parse_text_times(text: pd.Series,
         return per_row(pd.to_datetime(unique, errors="coerce")), "inferred"
 
 
+def _parse_times(values: pd.Series, missing: pd.Series,
+                 sources: pd.Series | None) -> tuple[pd.Series, str]:
+    """The column as times (NaN/NaT = unusable) and the format read, by the column's type:
+    datetimes as they are, numbers with infinity unusable, text by ``_parse_text_times``
+    (only the rows that are not ``missing``; raises ``_FormatAmbiguous``)."""
+    if pd.api.types.is_datetime64_any_dtype(values):
+        return values, "datetime"
+    if values.dtype.kind in "iuf":
+        numbers = values.astype(np.float64)
+        return numbers.where(np.isfinite(numbers)), "number"
+    present = values[~missing]
+    parsed, fmt = _parse_text_times(present.astype(str).str.strip(),
+                                    None if sources is None else sources[~missing])
+    return parsed.reindex(values.index), fmt
+
+
 def check_time_column(frame: pd.DataFrame, column: str | None, config: SplitConfig,
                       sources: pd.Series | None = None) -> tuple[TimeCheck, pd.Series | None]:
     """Validate a time column; returns the check and the parsed times (NaN/NaT = unusable)."""
@@ -124,20 +140,12 @@ def check_time_column(frame: pd.DataFrame, column: str | None, config: SplitConf
 
     if missing_ratio > config.max_time_missing:
         return failed("TIME_MISSING_RATIO_EXCEEDED")
-    present = values[~missing]
-    if pd.api.types.is_datetime64_any_dtype(values):
-        times, fmt = values, "datetime"
-    elif values.dtype.kind in "iuf":
-        times, fmt = values.astype(np.float64).where(np.isfinite(values.astype(np.float64))), "number"
-    else:
-        try:
-            parsed, fmt = _parse_text_times(present.astype(str).str.strip(),
-                                            None if sources is None else sources[~missing])
-        except _FormatAmbiguous:
-            return failed("TIME_FORMAT_AMBIGUOUS")
-        times = parsed.reindex(values.index)
+    try:
+        times, fmt = _parse_times(values, missing, sources)
+    except _FormatAmbiguous:
+        return failed("TIME_FORMAT_AMBIGUOUS")
     unusable = times.isna()
-    parse_ratio = float(unusable[~missing].mean()) if len(present) else 1.0
+    parse_ratio = float(unusable[~missing].mean()) if (~missing).any() else 1.0
     if parse_ratio > config.max_time_parse_failure:
         return failed("TIME_PARSE_FAILURE_RATIO_EXCEEDED", fmt, parse_ratio)
     if sources is not None:
