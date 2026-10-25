@@ -94,16 +94,17 @@ def print_abuse_report(data: Mapping[str, Any]) -> None:
 
 
 def print_table(results: Sequence[PortResult], title: str) -> None:
-    """The ports as a table; the service and the banner cleaned and cut to their column."""
+    """The ports as a table, 79 characters wide; the service and the banner cleaned and cut to
+    their column."""
     print(f"\n{title}")
-    header = f"| {'PORT':^9} | {'STATE':^7} | {'SERVICE':^10} | {'BANNER':^40} |"
+    header = f"| {'PORT':^9} | {'STATE':^7} | {'SERVICE':^14} | {'BANNER':^36} |"
     separator = "+" + "-" * (len(header) - 2) + "+"
     print(separator)
     print(header)
     print(separator)
     for r in results:
-        print(f"| {f'{r.port}/{r.protocol}':^9} | {r.state:^7} | {one_line(r.service, 10):^10} "
-              f"| {one_line(r.banner, 40):^40} |")
+        print(f"| {f'{r.port}/{r.protocol}':^9} | {r.state:^7} | {one_line(r.service, 14):^14} "
+              f"| {one_line(r.banner, 36):^36} |")
     print(separator)
 
 

@@ -1,7 +1,8 @@
 """Port scanning: TCP and UDP checks of one host (R1, R2, B8, B9).
 
 One connection per TCP port, always closed; its banner is read over that connection
-(see ``probes``). A UDP port that doesn't answer is ``open|filtered``. Progress goes to
+(see ``probes``), and the service is the one its answer showed (``services``, step
+A2). A UDP port that doesn't answer is ``open|filtered``. Progress goes to
 an object with ``start``, ``advance`` and ``finish`` (none by default),
 such as a ``toolkit.core.services.ports.ProgressSink``.
 """
@@ -14,7 +15,8 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from typing import Protocol
 
-from .probes import banner_text, read_banner, udp_payload
+from .probes import Reply, banner_text, read_banner, udp_payload
+from .services import service_label, usual_name
 
 log = logging.getLogger(__name__)
 
@@ -51,9 +53,9 @@ class _NoProgress:
 
 @dataclass
 class PortResult:
-    """One port's check. ``service`` is the usual name of the port (from the system's services
-    list), ``banner`` what the service sent: text from the network, to be cleaned before it is shown
-    or saved."""
+    """One port's check. ``service`` is the service the answer showed, or (TCP) the port's usual
+    name with a "?" (``services.service_label``; UDP: the usual name); ``banner`` what the service
+    sent: text from the network, to be cleaned before it is shown or saved."""
     port: int
     protocol: str  # "tcp" or "udp"
     state: str  # "open", "closed" (TCP: closed or filtered) or (UDP) "open|filtered"
@@ -61,27 +63,19 @@ class PortResult:
     banner: str = ""
 
 
-def service_name(port: int, protocol: str = "tcp") -> str:
-    """The system's usual service name for ``port``, or an empty string."""
-    try:
-        return socket.getservbyport(port, protocol)
-    except OSError:
-        return ""
-
-
 def scan_tcp_port(host: str, port: int, timeout: float = SCAN_TIMEOUT) -> PortResult:
     """One connection per port, always closed, also when reading the banner fails (R1)."""
     try:
         sock = socket.create_connection((host, port), timeout=timeout)
-    except OSError:  # refused or no answer (Windows retries refused connections, so a
-        return PortResult(port, "tcp", "closed")  # timeout can't tell "filtered" apart)
+    except OSError:  # refused or no answer (Windows retries a refused connection for about
+        return PortResult(port, "tcp", "closed")  # 2 s, past the timeout: both time out)
     with sock:
         try:
-            banner = read_banner(sock, host, port)
+            reply = read_banner(sock, host, port)
         except OSError as error:  # includes TLS errors: the port is still open
             log.debug("Banner of %s:%s failed: %s", host, port, error)
-            banner = ""
-    return PortResult(port, "tcp", "open", service_name(port), banner)
+            reply = Reply()
+    return PortResult(port, "tcp", "open", service_label(port, reply.service), reply.text)
 
 
 def scan_udp_port(host: str, port: int, timeout: float = SCAN_TIMEOUT) -> PortResult:
@@ -95,13 +89,13 @@ def scan_udp_port(host: str, port: int, timeout: float = SCAN_TIMEOUT) -> PortRe
             sock.send(udp_payload(port))
             data = sock.recv(1024)
         except TimeoutError:
-            return PortResult(port, "udp", "open|filtered", service_name(port, "udp"))
+            return PortResult(port, "udp", "open|filtered", usual_name(port, "udp"))
         except (ConnectionRefusedError, ConnectionResetError):
             return PortResult(port, "udp", "closed")
         except OSError as error:
             log.debug("UDP %s:%s failed: %s", host, port, error)
             return PortResult(port, "udp", "closed")
-    return PortResult(port, "udp", "open", service_name(port, "udp"), banner_text(data))
+    return PortResult(port, "udp", "open", usual_name(port, "udp"), banner_text(data))
 
 
 Scan = Callable[[str, int], PortResult]

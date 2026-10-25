@@ -106,9 +106,9 @@ OS guess from TTL 128: Windows (about 0 hops away; TTLs can be changed, so this 
 
 OPEN PORTS
 +-----------------------------------------------------------------------------+
-|   PORT    |  STATE  |  SERVICE   |                  BANNER                  |
+|   PORT    |  STATE  |    SERVICE     |                BANNER                |
 +-----------------------------------------------------------------------------+
-| 47822/tcp |  open   |            | SSH-2.0-OpenSSH_8.9p1 Ubuntu-3ubuntu0.10 |
+| 47822/tcp |  open   |      ssh       | SSH-2.0-OpenSSH_8.9p1 Ubuntu-3ubu... |
 +-----------------------------------------------------------------------------+
 
 Looking up 1 product online...
@@ -116,7 +116,7 @@ Looking up 1 product online...
 Vulnerability details per open port:
 
 Port: 47822/tcp
-Service:
+Service: ssh
 Banner: SSH-2.0-OpenSSH_8.9p1 Ubuntu-3ubuntu0.10
 Software: OpenSSH 8.9
 CVEs (NVD keyword search): CVE-2023-28531 (CVSS 9.8, CRITICAL), CVE-2021-36368 (CVSS 3.7, LOW)
@@ -138,8 +138,11 @@ Results exported to <project>\instance\scans\scan-20261024T185841Z.json
 
 ### 3.2 Read the report
 
-- **OPEN PORTS:** each open port with its banner. `SERVICE` is empty when the port is not
-  a well-known one (47822 isn't).
+- **OPEN PORTS:** each open port with its banner. `SERVICE` is the service its answer
+  showed, on any port (here `ssh` on 47822). When the answer doesn't show it, it is the
+  service usually on that port with a `?` (`postgresql?`: not confirmed), or empty. A
+  port that sends nothing first is asked `GET /`, so a web server is found on any port;
+  printers (9100-9107) are never sent anything.
 - **Software:** the product and version read from the banner, here `OpenSSH 8.9`.
 - **CVEs:** known vulnerabilities of that version, with their CVSS scores, from the NVD
   database. `Severity` is the highest score's level.
@@ -168,9 +171,9 @@ OS guess from TTL 128: Windows (about 0 hops away; TTLs can be changed, so this 
 
 OPEN PORTS
 +-----------------------------------------------------------------------------+
-|   PORT    |  STATE  |  SERVICE   |                  BANNER                  |
+|   PORT    |  STATE  |    SERVICE     |                BANNER                |
 +-----------------------------------------------------------------------------+
-| 47822/tcp |  open   |            | SSH-2.0-OpenSSH_8.9p1 Ubuntu-3ubuntu0.10 |
+| 47822/tcp |  open   |      ssh       | SSH-2.0-OpenSSH_8.9p1 Ubuntu-3ubu... |
 +-----------------------------------------------------------------------------+
 
 Looking up 1 product online...
@@ -178,7 +181,7 @@ Looking up 1 product online...
 Vulnerability details per open port:
 
 Port: 47822/tcp
-Service:
+Service: ssh
 Banner: SSH-2.0-OpenSSH_8.9p1 Ubuntu-3ubuntu0.10
 Software: OpenSSH 8.9
 CVEs (NVD keyword search): CVE-2023-28531 (CVSS 9.8, CRITICAL), CVE-2021-36368 (CVSS 3.7, LOW)
