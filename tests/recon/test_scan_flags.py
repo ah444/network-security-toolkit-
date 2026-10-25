@@ -28,8 +28,8 @@ class FakeIntel:
 
     def lookup(self, software):
         self.looked_up.append(software)
-        return {"cves": [], "max_cvss": None, "severity": "UNKNOWN", "ai_explanation": "",
-                "errors": []}
+        return {"cves": [], "cve_source": "", "max_cvss": None, "severity": "UNKNOWN",
+                "ai_explanation": "", "errors": []}
 
     def lookup_many(self, products):
         return {product: self.lookup(product) for product in products}

@@ -15,6 +15,7 @@ The real-data samples are cut from the local datasets in `data/raw/`, which are 
 | `nslkdd_train_sample.txt` | `data/raw/KDDTrain+.txt`, up to 10 rows per attack label (23 labels) | NSL-KDD profile with a header, including the label-derived `level` column (L6) |
 | `nslkdd_test_sample_noheader.txt` | `data/raw/KDDTest+.txt`, 100 rows, evenly spaced | NSL-KDD test file **without a header**, like the source (L10) |
 | `nvd_openssh_8.9.json` | Real reply of the NVD CVE API 2.0 for `keywordSearch=OpenSSH 8.9`, saved 2026-10-20 | NVD parser tests (B10): CVSS v3.1 primary and secondary scores, CVSS v2 and SSVC entries |
+| `nvd_openssh_8.9_version.json` | Real reply of the NVD CVE API 2.0 for `virtualMatchString=cpe:2.3:a:openbsd:openssh:8.9` (`resultsPerPage=500`, `noRejected`), saved 2026-10-25 | The version match (step A4): 32 CVEs, CVE-2024-6387 and CVE-2023-48795 among them, which the keyword search misses |
 | `nvd_no_results.json` | Real NVD reply with no results (`keywordSearch=OpenSSH 8.9p1`), saved 2026-10-20 | Empty-result handling |
 | `label_leak.csv` | Synthetic (seed 42), 300 rows, 3 classes | Leakage-guard tests (D9): label copy / encoded / prefixed (block), strong continuous feature (warn), `row_id` (ID-like), `Idle Mean` (must **not** trip the `id` pattern) |
 | `xss_header.csv` | Synthetic | XSS tests (S5): HTML/JS payloads in the header and cells |

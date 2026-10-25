@@ -21,5 +21,6 @@ class IntelFinding:
     """What one provider found; each kind of provider fills its own field."""
 
     cves: tuple[CveEntry, ...] = ()  # kind "cves"
+    source: str = ""  # kind "cves": how they were found ("version match (...)", ...)
     text: str = ""  # kind "explanation": plain text, already made safe to show
     data: Mapping[str, Any] = field(default_factory=dict)  # kind "ip_reputation": raw facts

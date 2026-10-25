@@ -15,7 +15,8 @@ def _entry(banner, ai=""):
     result = recon_scanner.PortResult(8080, "tcp", "open", "http-alt", banner)
     intel = {"cves": [{"id": "CVE-2021-41773", "cvss": 9.8, "cvss_version": "3.1",
                        "severity": "CRITICAL"}],
-             "max_cvss": 9.8, "severity": "CRITICAL", "ai_explanation": ai, "errors": []}
+             "max_cvss": 9.8, "severity": "CRITICAL", "ai_explanation": ai, "errors": [],
+             "cve_source": "version match (cpe:2.3:a:apache:http_server:2.4.49)"}
     return report.make_entry("127.0.0.1", result, software.product_version(banner), intel)
 
 

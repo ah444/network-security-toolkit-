@@ -17,7 +17,7 @@ from .text import csv_cell
 
 EXPORT_FORMATS = ("txt", "json", "csv")
 CSV_HEADER = ["Target", "Port", "Protocol", "Service", "Banner", "Software", "Severity (CVSS)",
-              "Max CVSS", "CVEs (NVD)", "AI explanation (may be wrong)", "Lookup errors", "OS hint"]
+              "Max CVSS", "CVEs (NVD)", "AI explanation (may be wrong)", "Lookup errors", "OS hint", "CVE source"]
 
 
 class ReportEntry(TypedDict):
@@ -30,6 +30,7 @@ class ReportEntry(TypedDict):
     banner: str
     software: str
     cves: list[CveEntry]
+    cve_source: str  # how NVD found them: by version (CPE names) or by keyword
     max_cvss: float | None
     severity: str
     ai_explanation: str
@@ -57,7 +58,7 @@ def _write_csv(entries: Sequence[ReportEntry], handle: TextIO) -> None:
         writer.writerow([csv_cell(v) for v in (
             e["target"], e["port"], e["protocol"], e["service"], e["banner"], e["software"],
             e["severity"], e["max_cvss"], _cve_list(e), e["ai_explanation"],
-            "; ".join(e["lookup_errors"]), e["os_hint"])])
+            "; ".join(e["lookup_errors"]), e["os_hint"], e["cve_source"])])
 
 
 def _write_txt(entries: Sequence[ReportEntry], handle: TextIO) -> None:
@@ -68,6 +69,7 @@ def _write_txt(entries: Sequence[ReportEntry], handle: TextIO) -> None:
                      f"Service: {e['service']}\nBanner: {e['banner']}\n"
                      f"Software: {e['software']}\nSeverity (CVSS): {e['severity']}\n"
                      f"CVEs (NVD): {_cve_list(e) or 'none'}\n"
+                     f"CVE source: {e['cve_source'] or 'none'}\n"
                      f"AI explanation (may be wrong): {e['ai_explanation']}\n"
                      f"Lookup errors: {'; '.join(e['lookup_errors']) or 'none'}\n"
                      + "-" * 40 + "\n")

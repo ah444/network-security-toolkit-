@@ -118,7 +118,10 @@ def test_nvd_cache_is_shared_by_threads(fake_session, no_nvd_wait):
         thread.start()
     for thread in threads:
         thread.join()
-    assert [call[2]["params"]["keywordSearch"] for call in session.calls] == ["nginx 1.25"]
+    asked = [call[2]["params"].get("virtualMatchString") or call[2]["params"]["keywordSearch"]
+             for call in session.calls]
+    assert asked == ["cpe:2.3:a:f5:nginx:1.25", "nginx 1.25"], \
+        "one lookup (the version match, then the keyword search), the others from the cache"
 
 
 def test_ctrl_c_cancels_the_queued_lookups():

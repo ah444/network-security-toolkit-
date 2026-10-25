@@ -20,6 +20,7 @@ class LookupResult(TypedDict):
     """What ``Intel.lookup`` found about one product."""
 
     cves: list[CveEntry]  # worst first
+    cve_source: str  # how they were found: "version match (...)" or "keyword search (...)"
     max_cvss: float | None
     severity: str  # of the worst CVE; "NO KNOWN CVE" if none, "UNKNOWN" if no source answered
     ai_explanation: str
@@ -72,12 +73,13 @@ class Intel:
         with self._lock:
             if software in self._done:
                 return self._done[software]
-        result: LookupResult = {"cves": [], "max_cvss": None, "severity": "UNKNOWN",
-                                "ai_explanation": "", "errors": []}
+        result: LookupResult = {"cves": [], "cve_source": "", "max_cvss": None,
+                                "severity": "UNKNOWN", "ai_explanation": "", "errors": []}
         answers = self._ask("cves", software, result["errors"])
         if answers:
             cves = [cve for answer in answers for cve in answer.cves]
             result["cves"] = sorted(cves, key=lambda c: (-(c["cvss"] or 0), c["id"]))
+            result["cve_source"] = "; ".join(answer.source for answer in answers if answer.source)
             worst = result["cves"][0] if result["cves"] else None
             result["max_cvss"] = worst["cvss"] if worst else None
             result["severity"] = worst["severity"] if worst else "NO KNOWN CVE"

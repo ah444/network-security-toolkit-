@@ -124,7 +124,8 @@ Port: 47822/tcp
 Service: ssh
 Banner: SSH-2.0-OpenSSH_8.9p1 Ubuntu-3ubuntu0.10
 Software: OpenSSH 8.9
-CVEs (NVD keyword search): CVE-2023-28531 (CVSS 9.8, CRITICAL), CVE-2021-36368 (CVSS 3.7, LOW)
+CVEs (NVD): CVE-2023-28531 (CVSS 9.8, CRITICAL), CVE-2023-38408 (CVSS 9.8, CRITICAL), CVE-2026-60002 (CVSS 9.4, CRITICAL), CVE-2024-6387 (CVSS 8.1, HIGH), CVE-2026-35385 (CVSS 8.1, HIGH), CVE-2026-35414 (CVSS 8.1, HIGH), CVE-2026-106583 (CVSS 7.8, HIGH), CVE-2026-106553 (CVSS 7.5, HIGH), CVE-2026-106555 (CVSS 7.5, HIGH), CVE-2026-59999 (CVSS 7.5, HIGH) ... +22 more
+CVE source: version match (cpe:2.3:a:openbsd:openssh:8.9)
 Severity (from CVSS): CRITICAL
 ============================================================
 
@@ -150,7 +151,12 @@ Results exported to <project>\instance\scans\scan-20261024T185841Z.json
   printers (9100-9107) are never sent anything.
 - **Software:** the product and version read from the banner, here `OpenSSH 8.9`.
 - **CVEs:** known vulnerabilities of that version, with their CVSS scores, from the NVD
-  database. `Severity` is the highest score's level.
+  database, worst first (the first 10, then how many more). `Severity` is the highest
+  score's level. `CVE source` says how they were found: a **version match** (the CVEs
+  whose affected versions, as NVD records them, include this one; for about 20 products
+  the scanner knows NVD's name for, such as OpenSSH, Apache, nginx, MySQL, MariaDB), or a
+  **keyword search** on the name and version (any other product, or when the version
+  match found none), which can list CVEs of other versions and miss some.
 - **OS:** the first line is the guess from the time-to-live (TTL) of the ping reply alone.
   After the ports, the scanner weighs all it saw: the TTL, words in the banners
   (`Ubuntu`, `Debian`, `Microsoft-IIS`, `OpenSSH_for_Windows`, ...) and open ports only
@@ -202,7 +208,8 @@ Port: 47822/tcp
 Service: ssh
 Banner: SSH-2.0-OpenSSH_8.9p1 Ubuntu-3ubuntu0.10
 Software: OpenSSH 8.9
-CVEs (NVD keyword search): CVE-2023-28531 (CVSS 9.8, CRITICAL), CVE-2021-36368 (CVSS 3.7, LOW)
+CVEs (NVD): CVE-2023-28531 (CVSS 9.8, CRITICAL), CVE-2023-38408 (CVSS 9.8, CRITICAL), CVE-2026-60002 (CVSS 9.4, CRITICAL), CVE-2024-6387 (CVSS 8.1, HIGH), CVE-2026-35385 (CVSS 8.1, HIGH), CVE-2026-35414 (CVSS 8.1, HIGH), CVE-2026-106583 (CVSS 7.8, HIGH), CVE-2026-106553 (CVSS 7.5, HIGH), CVE-2026-106555 (CVSS 7.5, HIGH), CVE-2026-59999 (CVSS 7.5, HIGH) ... +22 more
+CVE source: version match (cpe:2.3:a:openbsd:openssh:8.9)
 Severity (from CVSS): CRITICAL
 ============================================================
 
@@ -222,8 +229,9 @@ answer ping), `--ai`, `--abuseipdb`, `--i-am-authorized`. Their defaults are in
 
 ### 3.4 What leaves your computer
 
-- **The CVE lookup** sends only the software name and version (here `OpenSSH 8.9`) to the
-  public NVD API, never the banner or the address you scanned.
+- **The CVE lookup** sends only the software name and version (here `OpenSSH 8.9`, or
+  as NVD names it, `cpe:2.3:a:openbsd:openssh:8.9`) to the public NVD API, never the
+  banner or the address you scanned.
 - **The AI explanation** (OpenRouter) is asked only when an `OPENROUTER_API_KEY` is set,
   and with a target only with `--ai`. It receives the same name and version.
 - **The IP reputation check** (AbuseIPDB) runs only for public addresses, only with an

@@ -19,6 +19,7 @@ from toolkit.core.services.recon.intel import Intel
 
 BANNER = "SSH-2.0-OpenSSH_8.9p1 Ubuntu-3ubuntu0.1"
 PRODUCT = "OpenSSH 8.9"
+CPE = "cpe:2.3:a:openbsd:openssh:8.9"  # the same product and version, in NVD's naming (A4)
 AUTHORIZE = "authorised to scan"
 
 
@@ -166,10 +167,12 @@ def test_a_host_that_does_not_answer_is_not_scanned(scanner, net):
 def test_lookups_carry_the_product_only(scanner, net):
     net["keys"].update(openrouter="or-key", nvd="nvd-key")
     assert scanner.main(["scanme.example", "-p", "22", "--ai"]) == 0
-    sent = _http(net["events"], "nvd.nist.gov") + _http(net["events"], "openrouter")
-    assert len(sent) == 2
-    for _, url, request in sent:
-        assert PRODUCT in request, url
+    nvd = _http(net["events"], "nvd.nist.gov")
+    ai = _http(net["events"], "openrouter")
+    # NVD: the version match (the product's CPE name), then, as it found none, the keyword search
+    assert [len(nvd), len(ai)] == [2, 1]
+    assert CPE in nvd[0][2] and PRODUCT in nvd[1][2] and PRODUCT in ai[0][2]
+    for _, url, request in nvd + ai:
         for secret in ("8.8.8.8", "scanme.example", "SSH-2.0", "Ubuntu", "OpenSSH_8.9p1"):
             assert secret not in url + request, (secret, url)
 

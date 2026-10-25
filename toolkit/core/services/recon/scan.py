@@ -200,8 +200,8 @@ def _entries(target: str, open_ports: list[PortResult], intel: Intel, view: Scan
     for result, software in zip(open_ports, products, strict=True):
         found: LookupResult = (
             looked_up[software] if software else
-            {"cves": [], "max_cvss": None, "severity": "UNKNOWN", "ai_explanation": "",
-             "errors": []})
+            {"cves": [], "cve_source": "", "max_cvss": None, "severity": "UNKNOWN",
+             "ai_explanation": "", "errors": []})
         entry = make_entry(target, result, software, found, os_text)
         view.entry(entry, first=not entries)
         entries.append(entry)

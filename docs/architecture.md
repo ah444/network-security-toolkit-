@@ -117,7 +117,7 @@ no Flask, no argparse. Read by `cli/` and `web/`, it imports neither
 | `toolkit/core/data/recon/text.py` | data | makes text from the network safe to show and export |
 | `toolkit/core/data/recon/scan_files.py` | data | scan report files as JSON, CSV or TXT in `instance/scans/` |
 | `toolkit/core/data/recon/findings.py` | data | what the intel gateways return (`CveEntry`, `IntelFinding`) |
-| `toolkit/core/data/recon/nvd.py` | data | CVEs and CVSS scores from the NVD API (an `IntelProvider`) |
+| `toolkit/core/data/recon/nvd.py` | data | CVEs and CVSS scores from the NVD API, by version (CPE names) or by keyword (an `IntelProvider`) |
 | `toolkit/core/data/recon/openrouter.py` | data | the optional AI explanation through OpenRouter (an `IntelProvider`) |
 | `toolkit/core/data/recon/abuseipdb.py` | data | the optional IP reputation from AbuseIPDB (an `IntelProvider`) |
 | `toolkit/core/data/recon/lookup.py` | data | the HTTP session, lookup time limits, expected failures and their names |
@@ -297,6 +297,7 @@ Everything else is plain functions and dict registries.
 | dataset profiles | `PROFILES` in `toolkit/core/services/ids/profiles.py` | CIC-IDS2017, NSL-KDD, generic | a `DatasetProfile` with the real column names (never guessed) |
 | banner probes | `PROBES` and `READERS` in `toolkit/core/data/recon/probes.py` | 34 ports (8 of them printers, which get nothing sent), 7 ways to read a banner | a `Probe` for the port |
 | signs of an OS | `BANNER_WORDS` and `PORT_SIGNS` in `toolkit/core/services/recon/os_guess.py` | 11 banner words (Windows, 7 Linux distributions, 3 BSDs), 1 port (135, Microsoft RPC) | a pattern or a port, its family and what it says |
+| NVD product names | `CPE_PRODUCTS` in `toolkit/core/data/recon/nvd.py` | 17 products, 18 CPE names (MySQL has two), each checked against NVD | a product name and its NVD `vendor:product` |
 | services an answer shows | `RULES` in `toolkit/core/data/recon/services.py` | SSH, HTTP, VNC, POP3, IMAP, FTP, SMTP, Redis, Memcached, MySQL, MongoDB, AMQP | a pattern and the service's name |
 | software in a banner | `RULES` in `toolkit/core/data/recon/software.py` | SSH, MariaDB, Redis, Memcached; then the generic "Name/1.2" | a `Rule`: a pattern and how its match is named |
 | scan export formats | `WRITERS` in `toolkit/core/data/recon/scan_files.py` | JSON, CSV, TXT | a writer function |
@@ -422,7 +423,8 @@ screen and every question goes through the `ScanView` (`ConsoleScan` in
      |
      v
  Intel.lookup_many: up to INTEL_WORKERS at a time               core/services/recon/intel.py
-     |   NVD (always; spaced as NVD asks), OpenRouter (--ai or yes, and a key)
+     |   NVD (always; spaced as NVD asks): by version, else by keyword
+     |   OpenRouter (--ai or yes, and a key)
      v
  report entries (network text cleaned)                          core/services/recon/report.py
      --> table on screen --> export (--export json|csv|txt)     core/data/recon/scan_files.py
@@ -498,6 +500,7 @@ stays in its folder.
 | read another port's banner | a `Probe` in `PROBES` (and a reader in `READERS` if none fits) in `toolkit/core/data/recon/probes.py` | - | `tests/recon/test_probes.py` |
 | recognise another service from its answer | a pattern in `RULES` (`toolkit/core/data/recon/services.py`); the port's usual name, when no list has it, in `PORT_NAMES` | - | `tests/recon/test_services.py` |
 | recognise another sign of an OS | a pattern in `BANNER_WORDS` or a port in `PORT_SIGNS` (`toolkit/core/services/recon/os_guess.py`); a new family also needs `agree()` to know which families it fits | - | `tests/recon/test_os_detect.py` |
+| match another product's CVEs by version | its NVD `vendor:product` in `CPE_PRODUCTS` (`toolkit/core/data/recon/nvd.py`), under the name `software.product_version` gives, lower case; check it against NVD with a version known to have CVEs | the list in [README.md](../README.md) | `tests/recon/test_nvd.py` |
 | recognise another product in a banner | a `Rule` in `RULES` (`toolkit/core/data/recon/software.py`), before the generic pattern; what it returns is looked up online, so never an address or free text | - | `tests/recon/test_software.py` |
 | add a scan export format | a writer in `WRITERS` and its name in `EXPORT_FORMATS` (`toolkit/core/data/recon/scan_files.py`; the `--export` choices and the question come from there) | [reference.md](reference.md) | `tests/recon/test_export.py` |
 | add an online lookup | an `IntelProvider` in `toolkit/core/data/recon/`, added to `Intel`'s providers (`toolkit/core/services/recon/intel.py`) only after consent or a flag | what leaves the computer: section 9 here and the README's privacy notes | `tests/recon/test_scan_contract.py`, `tests/recon/test_intel_providers.py` |

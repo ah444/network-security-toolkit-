@@ -184,11 +184,11 @@ def test_no_open_ports_still_says_this_computer(scan_service, monkeypatch):
 
 def test_the_report_files_carry_the_hint(tmp_path):
     entry = {"target": "10.0.0.5", "port": 22, "protocol": "tcp", "service": "ssh",
-             "banner": "SSH-2.0-OpenSSH_8.9p1 Ubuntu", "software": "OpenSSH 8.9", "cves": [],
+             "banner": "SSH-2.0-OpenSSH_8.9p1 Ubuntu", "software": "OpenSSH 8.9", "cves": [], "cve_source": "",
              "max_cvss": None, "severity": "NO KNOWN CVE", "ai_explanation": "",
              "lookup_errors": [], "os_hint": "Linux (Ubuntu): Linux (Ubuntu) (the banner of 22/tcp)"}
     saved = {fmt: scan_files.export_results([entry], fmt, tmp_path) for fmt in ("json", "csv", "txt")}
     assert json.loads(saved["json"].read_text(encoding="utf-8"))[0]["os_hint"] == entry["os_hint"]
     rows = list(csv.reader(saved["csv"].open(encoding="utf-8", newline="")))
-    assert rows[0][-1] == "OS hint" and rows[1][-1] == entry["os_hint"]
+    assert rows[0][-2] == "OS hint" and rows[1][-2] == entry["os_hint"]
     assert f"OS hint: {entry['os_hint']}\n" in saved["txt"].read_text(encoding="utf-8")
