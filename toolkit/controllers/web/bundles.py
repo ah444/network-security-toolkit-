@@ -11,11 +11,11 @@ from typing import Any
 
 from flask import Blueprint, jsonify, request, send_file
 
-from ...services.ids.exports import write_run
-from ...services.ids import registry
-from ...services.ids.bundle import Bundle, BundleError, BundleVersionWarning
-from ...services.ids.pipeline import FittedModel
-from ...services.ids.runs import TrainingRun
+from ...core.services.ids.exports import write_run
+from ...core.services.ids import registry
+from ...core.services.ids.bundle import Bundle, BundleError, BundleVersionWarning
+from ...core.services.ids.pipeline import FittedModel
+from ...core.services.ids.runs import TrainingRun
 from ...services.web.errors import NO_MODEL_LOADED, NOT_FOUND, NOT_TRAINED, TOO_LARGE
 from ...services.web import prediction
 from .api import Answer, error_response, json_body

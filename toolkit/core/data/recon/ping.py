@@ -1,7 +1,7 @@
 """Ping a host and read the reply's TTL (B6).
 
 The ping flags and timeouts follow the OS (``platform.system()``). What the TTL says
-about the host is ``toolkit.services.recon.os_guess``.
+about the host is ``toolkit.core.services.recon.os_guess``.
 """
 
 import ipaddress

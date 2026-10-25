@@ -6,8 +6,8 @@ import subprocess
 
 import pytest
 
-from toolkit.data.settings import ScanConfig, scan_limits
-from toolkit.services.recon import targets
+from toolkit.core.data.settings import ScanConfig, scan_limits
+from toolkit.core.services.recon import targets
 
 
 def _answers(monkeypatch, answers):

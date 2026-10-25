@@ -22,7 +22,7 @@ from collections.abc import Callable, Sequence
 from typing import NamedTuple
 
 from ...data.processes import run_toolkit
-from ...data.settings import REPO_ROOT, check_settings, instance_dir, is_checkout
+from ...core.data.settings import REPO_ROOT, check_settings, instance_dir, is_checkout
 from ...ui.cli import menu as screen
 
 PROG = "python -m toolkit"

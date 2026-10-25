@@ -1,5 +1,5 @@
 """Predictions with the session's trained or loaded models: one row, or every row of an
-uploaded CSV file (step 1.4f; the labelled CSV is the CLI's, ``toolkit.services.ids.batch``)."""
+uploaded CSV file (step 1.4f; the labelled CSV is the CLI's, ``toolkit.core.services.ids.batch``)."""
 
 from __future__ import annotations
 
@@ -10,12 +10,12 @@ from typing import IO, Any
 
 import pandas as pd
 
-from ...data.ids.dataset_files import DatasetError
+from ...core.data.ids.dataset_files import DatasetError
 from ...data.web import uploads
-from ..ids import registry
-from ..ids.batch import missing_features, prediction_csv, prediction_summary, prediction_table
-from ..ids.datasets import load_dataset
-from ..ids.pipeline import FittedModel
+from ...core.services.ids import registry
+from ...core.services.ids.batch import missing_features, prediction_csv, prediction_summary, prediction_table
+from ...core.services.ids.datasets import load_dataset
+from ...core.services.ids.pipeline import FittedModel
 from .errors import TOO_LARGE, UNKNOWN_COLUMN, UNREADABLE_FILE, Failed, ServiceError
 from .workspace import BatchPredictions, Workspace
 

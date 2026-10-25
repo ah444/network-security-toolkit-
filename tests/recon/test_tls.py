@@ -3,8 +3,8 @@
 import ssl
 from pathlib import Path
 
-from toolkit.data.recon import probes
-from toolkit.services.recon import intel as recon_intel
+from toolkit.core.data.recon import probes
+from toolkit.core.services.recon import intel as recon_intel
 
 
 def test_banner_context_unverified_only_for_banners(scanner, repo_root):

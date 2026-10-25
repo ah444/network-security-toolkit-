@@ -34,6 +34,17 @@ def test_from_the_project_folder(paths, repo_root):
     assert paths["env_file"] == paths["ENV_FILE"] == str(repo_root / ".env")
 
 
+def test_settings_refuses_to_run_under_another_name(repo_root, tmp_path):
+    """v5.2 step 2.3b: REPO_ROOT counts the dots of the module's name; run as ``__main__``
+    the count would be wrong, so settings.py stops instead of guessing a folder."""
+    env = {k: v for k, v in os.environ.items() if k != "TOOLKIT_INSTANCE_DIR"}
+    env.update(PYTHONPATH=str(repo_root))
+    done = subprocess.run([sys.executable, "-m", "toolkit.core.data.settings"], cwd=tmp_path,
+                          env=env, capture_output=True, text=True, encoding="utf-8", check=False)
+    assert done.returncode != 0
+    assert "RuntimeError: __main__: settings.py is part of the toolkit package" in done.stderr
+
+
 def test_the_web_files_are_found(paths):
     assert paths["templates"] == ["dynamic_ids.html", "home.html"]
     assert {"css/app.css", "js/main.js", "js/theme.js", "js/navbar.js"} <= set(paths["static"])

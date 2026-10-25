@@ -5,8 +5,8 @@ import subprocess
 
 import pytest
 
-from toolkit.data.recon import ping as recon_ping
-from toolkit.services.recon import os_guess
+from toolkit.core.data.recon import ping as recon_ping
+from toolkit.core.services.recon import os_guess
 
 # Windows lines: real output of `ping -n 1` on the project machine (Windows 10, 2026-10-20).
 WINDOWS_V4 = b"Reply from 127.0.0.1: bytes=32 time<1ms TTL=128\r\n"

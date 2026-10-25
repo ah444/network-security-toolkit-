@@ -2,7 +2,7 @@
 
 Runs live in ``instance/runs/<run id>.json`` (gitignored; ``TOOLKIT_INSTANCE_DIR`` moves
 ``instance/``). A record is written once and never overwritten. Which schema versions
-are understood is ``toolkit.services.ids.exports.read_run``.
+are understood is ``toolkit.core.services.ids.exports.read_run``.
 """
 
 from __future__ import annotations

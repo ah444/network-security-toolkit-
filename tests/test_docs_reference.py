@@ -6,8 +6,8 @@ import re
 import pytest
 
 from toolkit.controllers.cli import ids, scan, web
-from toolkit.data.keys import DEFAULT_AI_MODEL, KEY_VARIABLES
-from toolkit.data.settings import COMMAND_SETTINGS, SHARED_SETTINGS, ScanConfig, WebConfig
+from toolkit.core.data.keys import DEFAULT_AI_MODEL, KEY_VARIABLES
+from toolkit.core.data.settings import COMMAND_SETTINGS, SHARED_SETTINGS, ScanConfig, WebConfig
 
 PARSERS = {"scan": scan.build_parser, "ids": ids.build_parser, "web": web.build_parser}
 DEFAULTS = {  # the settings table's default column, from the code

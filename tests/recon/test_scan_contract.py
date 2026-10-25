@@ -14,8 +14,8 @@ import socket
 
 import pytest
 
-from toolkit.data.recon.scanner import PortResult
-from toolkit.services.recon.intel import Intel
+from toolkit.core.data.recon.scanner import PortResult
+from toolkit.core.services.recon.intel import Intel
 
 BANNER = "SSH-2.0-OpenSSH_8.9p1 Ubuntu-3ubuntu0.1"
 PRODUCT = "OpenSSH 8.9"

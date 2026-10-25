@@ -8,10 +8,10 @@ from collections.abc import Callable
 from dataclasses import asdict
 from typing import Any
 
-from ...data.settings import SplitConfig
-from ..ids import registry
-from ..ids.runs import TrainingRun, TrainSettings
-from ..ids.runs import train as train_run
+from ...core.data.settings import SplitConfig
+from ...core.services.ids import registry
+from ...core.services.ids.runs import TrainingRun, TrainSettings
+from ...core.services.ids.runs import train as train_run
 from .datasets import label_values
 from .errors import BUSY, TRAINING_FAILED, UNKNOWN_COLUMN, ServiceError
 from .jobs import Job, JobRunner

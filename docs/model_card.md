@@ -73,7 +73,7 @@ classes, about 86.5 % are correct. Details and the per-model table:
 
 The numbers were measured with the 5.0 ML core. The v5.1 changes to it (progress
 reporting, logging, batch prediction, type annotations, and its move from
-`toolkit/ids_core/` to `toolkit/services/ids/` in step 1.5d) don't change how models are
+`toolkit/ids_core/` to `toolkit/core/services/ids/` in step 1.5d) don't change how models are
 trained, and the report has not been re-run for them.
 
 ## Limitations

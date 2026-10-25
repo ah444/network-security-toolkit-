@@ -6,12 +6,12 @@ import json
 
 import pytest
 
-from toolkit.data.recon import scan_files as export, probes
-from toolkit.services.recon import report
-from toolkit.services.recon import intel as recon_intel
-from toolkit.data.recon import scanner as recon_scanner
-from toolkit.data.recon import text as recon_text
-from toolkit.data.recon import openrouter as llm, nvd
+from toolkit.core.data.recon import scan_files as export, probes
+from toolkit.core.services.recon import report
+from toolkit.core.services.recon import intel as recon_intel
+from toolkit.core.data.recon import scanner as recon_scanner
+from toolkit.core.data.recon import text as recon_text
+from toolkit.core.data.recon import openrouter as llm, nvd
 
 BANNER = "SSH-2.0-OpenSSH_8.9p1 Ubuntu-3ubuntu0.1 host=db01.corp.internal user=admin"
 EVIL_REPLY = (

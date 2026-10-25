@@ -7,9 +7,9 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from toolkit.data.settings import SplitConfig
-from toolkit.services.ids.datasets import load_dataset
-from toolkit.services.ids.split import dedupe, split_dataset
+from toolkit.core.data.settings import SplitConfig
+from toolkit.core.services.ids.datasets import load_dataset
+from toolkit.core.services.ids.split import dedupe, split_dataset
 
 TEMPORAL = ("temporal", "temporal_per_class")
 

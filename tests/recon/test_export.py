@@ -5,10 +5,10 @@ import json
 
 import pytest
 
-from toolkit.data.recon import scan_files as export, probes
-from toolkit.services.recon import report
-from toolkit.data.recon import scanner as recon_scanner
-from toolkit.data.recon import text as recon_text
+from toolkit.core.data.recon import scan_files as export, probes
+from toolkit.core.services.recon import report
+from toolkit.core.data.recon import scanner as recon_scanner
+from toolkit.core.data.recon import text as recon_text
 
 
 def _entry(banner, ai=""):

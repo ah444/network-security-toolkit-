@@ -1,6 +1,6 @@
 """Web trainer: the Flask app (presentation layer, plan §2; moved here in v5.1 step 1.2a).
 
-Since v5.0 (step 0.4g) the routes are a thin layer over ``toolkit.services.ids``: the loader
+Since v5.0 (step 0.4g) the routes are a thin layer over ``toolkit.core.services.ids``: the loader
 reads uploads, the split, leakage guard, training pipeline and evaluation run in
 ``train(...)``, and models are saved as signed bundles. Nothing here preprocesses data
 itself, so the web trainer, a saved bundle and the CLI all use the same pipeline.
@@ -18,8 +18,8 @@ import secrets
 
 from flask import Flask
 
-from ...services.ids.exports import BundleStore
-from ...data.settings import WebConfig, instance_dir, web_config
+from ...core.services.ids.exports import BundleStore
+from ...core.data.settings import WebConfig, instance_dir, web_config
 from . import bundles, datasets, pages, resume, training, workspace
 from .api import register_error_handlers
 from ...services.web.datasets import prepare_uploads
@@ -34,7 +34,7 @@ BLUEPRINTS = (pages.bp, datasets.bp, training.bp, bundles.bp, workspace.bp, resu
 
 def create_app(config: WebConfig | None = None) -> Flask:
     """The web trainer with its own workspaces; settings from ``config`` (default: the
-    ``TOOLKIT_*`` environment variables, see ``toolkit.data.settings.web_config``)."""
+    ``TOOLKIT_*`` environment variables, see ``toolkit.core.data.settings.web_config``)."""
     config = config or web_config()
     # The page's scripts are ES modules, which browsers run only when served as JavaScript;
     # some Windows installs map ".js" to text/plain in the registry, which mimetypes reads.

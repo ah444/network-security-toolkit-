@@ -395,7 +395,7 @@ Project/
 11. **Export / Load** - signed `.bundle` (see Known limitations)
 
 ### ML core (v5.0)
-`toolkit/services/ids` (named `toolkit/ids_core` until v5.1 step 1.5d) is the leakage-free pipeline. It has no web or network code; the web trainer uses it since 5.0-rc1 and the CLI since step 0.5.
+`toolkit/core/services/ids` (named `toolkit/ids_core` until v5.1 step 1.5d) is the leakage-free pipeline. It has no web or network code; the web trainer uses it since 5.0-rc1 and the CLI since step 0.5.
 
 1. **Load** (`datasets.load_dataset`): encoding and separator sniffed, header spaces stripped, exact dtype downcast, SHA-256; the dataset family (CIC-IDS2017, NSL-KDD or generic) is recognised from the content, not the file name.
 2. **Split** (`split.split_dataset`): exact copies removed first, then the profile's split: `official` (NSL-KDD's own files, kept as published), `temporal` / `temporal_per_class` (validated time column), `group`, or `stratified` with an "optimistic" warning. Every fallback has a reason code.
@@ -404,10 +404,10 @@ Project/
 5. **Evaluate** (`evaluation.evaluate`): cross-validation on the training split, the model chosen by CV macro-F1 **before** the test split is used, then the test split scored once; macro-F1, balanced accuracy, per-class recall and a leaderboard.
 
 ```python
-from toolkit.services.ids.datasets import load_dataset
-from toolkit.services.ids.split import split_dataset
-from toolkit.services.ids.leakage import check_leakage
-from toolkit.services.ids.evaluation import evaluate, leaderboard_table
+from toolkit.core.services.ids.datasets import load_dataset
+from toolkit.core.services.ids.split import split_dataset
+from toolkit.core.services.ids.leakage import check_leakage
+from toolkit.core.services.ids.evaluation import evaluate, leaderboard_table
 
 data = load_dataset("data/raw/CIC-2017.csv")
 split = split_dataset(data.frame, "Label", profile=data.profile)

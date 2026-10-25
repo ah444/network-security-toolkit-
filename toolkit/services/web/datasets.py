@@ -11,11 +11,11 @@ from typing import IO
 import numpy as np
 import pandas as pd
 
-from ...data.settings import SplitConfig
+from ...core.data.settings import SplitConfig
 from ...data.web import uploads
-from ..ids.datasets import LoadedDataset, load_dataset
-from ..ids.runs import DatasetRef
-from ..ids.split import SplitResult, split_dataset
+from ...core.services.ids.datasets import LoadedDataset, load_dataset
+from ...core.services.ids.runs import DatasetRef
+from ...core.services.ids.split import SplitResult, split_dataset
 from .errors import NO_DATASET, UNKNOWN_COLUMN, ServiceError
 from .workspace import UploadedData, Workspace, dataset_bytes
 

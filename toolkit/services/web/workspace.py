@@ -17,11 +17,11 @@ from typing import Any
 
 import pandas as pd
 
-from ..ids.exports import SavedBundle
-from ..ids.bundle import Bundle
-from ..ids.profiles import ProfileMatch
-from ..ids.runs import DatasetRef, TrainingRun
-from ..ids.split import SplitResult
+from ...core.services.ids.exports import SavedBundle
+from ...core.services.ids.bundle import Bundle
+from ...core.services.ids.profiles import ProfileMatch
+from ...core.services.ids.runs import DatasetRef, TrainingRun
+from ...core.services.ids.split import SplitResult
 from .errors import BUSY, DATA_LIMIT, NOT_FOUND, ServiceError, Unavailable
 from .jobs import FINISHED, Job
 

@@ -75,7 +75,7 @@ read like a dataset upload and deleted at once; it needs the model's feature col
 `counts` are largest first; `matches` and `label_column` are null when the file has no
 label column. `GET /api/v1/predictions` downloads the labelled CSV with the columns of
 `python -m toolkit ids --csv`: `row, prediction, confidence[, true_label]` (both are made
-by `toolkit.services.ids.batch`). Only the last result is kept, in the session's workspace;
+by `toolkit.core.services.ids.batch`). Only the last result is kept, in the session's workspace;
 `GET /api/v1/workspace` repeats its answer as `predictions`.
 
 ## Security token

@@ -1,7 +1,7 @@
 """What the port scanner shows and asks (S14, S16): the questions, the authorization,
 the progress line, the tables and the report; ``ConsoleScan`` is the ``ScanView`` a scan
-reports to (``toolkit.services.recon.scan``). Text from the network is shown on one line,
-cleaned (``toolkit.data.recon.text``)."""
+reports to (``toolkit.core.services.recon.scan``). Text from the network is shown on one line,
+cleaned (``toolkit.core.data.recon.text``)."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
-from ...services.recon.scan import PROTOCOLS, PortResult, ReportEntry, one_line
+from ...core.services.recon.scan import PROTOCOLS, PortResult, ReportEntry, one_line
 
 AUTHORIZATION = ("\nOnly scan systems you own or have written permission to test. Scanning "
                  "other systems can be illegal.\nType 'yes' if you are authorised to scan "

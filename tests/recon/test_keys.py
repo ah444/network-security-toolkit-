@@ -2,8 +2,8 @@
 
 import logging
 
-from toolkit.services.recon import intel as recon_intel
-from toolkit.data import keys as intel_keys
+from toolkit.core.services.recon import intel as recon_intel
+from toolkit.core.data import keys as intel_keys
 
 
 def test_env_overrides_file(tmp_path, caplog):

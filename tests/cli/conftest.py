@@ -3,7 +3,7 @@
 import pytest
 
 from toolkit.controllers.cli import ids
-from toolkit.services.ids import prediction
+from toolkit.core.services.ids import prediction
 from toolkit.ui.cli import ids as ids_ui
 
 
@@ -21,5 +21,5 @@ def ids_screen():
 
 @pytest.fixture(scope="module")
 def ids_prediction():
-    """The predictions behind it (``toolkit/services/ids/prediction.py``)."""
+    """The predictions behind it (``toolkit/core/services/ids/prediction.py``)."""
     return prediction

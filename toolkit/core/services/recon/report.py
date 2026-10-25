@@ -1,5 +1,5 @@
 """One report entry per open port (B12); every text from the network is cleaned here
-(S14). ``toolkit.data.recon.scan_files`` saves them."""
+(S14). ``toolkit.core.data.recon.scan_files`` saves them."""
 
 from ...data.recon.scan_files import ReportEntry
 from .intel import LookupResult

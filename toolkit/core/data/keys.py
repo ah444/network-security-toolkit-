@@ -1,5 +1,5 @@
 """API keys and the AI model setting (S15): the environment, else ``.env`` (project
-folder; an installed copy: its data folder, ``toolkit.data.settings.env_file``). All keys are
+folder; an installed copy: its data folder, ``toolkit.core.data.settings.env_file``). All keys are
 optional.
 
 The old fallback file ``tools/Port_scan/api_keys.txt`` is no longer read (v5.1 step 1.4a,

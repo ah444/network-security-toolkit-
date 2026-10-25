@@ -7,7 +7,7 @@ import dataclasses
 import sys
 from collections.abc import Sequence
 
-from ...data.settings import port_number, web_config
+from ...core.data.settings import port_number, web_config
 from ...ui.cli import web as messages
 from ..web.server import run_server
 

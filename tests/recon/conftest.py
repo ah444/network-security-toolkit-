@@ -6,10 +6,10 @@ import threading
 import pytest
 
 from toolkit.controllers.cli import scan as scan_command
-from toolkit.services.recon import scan as scan_service_module
+from toolkit.core.services.recon import scan as scan_service_module
 from toolkit.ui.cli import scan as scan_ui
-from toolkit.data.recon import nvd
-from toolkit.data import keys as intel_keys
+from toolkit.core.data.recon import nvd
+from toolkit.core.data import keys as intel_keys
 
 
 @pytest.fixture(scope="module")
@@ -20,7 +20,7 @@ def scanner():
 
 @pytest.fixture(scope="module")
 def scan_service():
-    """The scan itself (``toolkit/services/recon/scan.py``): ping, ports, lookups, export."""
+    """The scan itself (``toolkit/core/services/recon/scan.py``): ping, ports, lookups, export."""
     return scan_service_module
 
 

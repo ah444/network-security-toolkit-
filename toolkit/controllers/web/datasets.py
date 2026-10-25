@@ -15,12 +15,12 @@ import numpy as np
 import pandas as pd
 from flask import Blueprint, jsonify, request
 
-from ...services.ids import registry
-from ...services.ids.balancing import recommend_balancing
-from ...services.ids.datasets import DatasetError
-from ...services.ids.preview import preview_balancing
-from ...services.ids.preview import recommend_features as score_features
-from ...services.ids.split import SplitResult
+from ...core.services.ids import registry
+from ...core.services.ids.balancing import recommend_balancing
+from ...core.services.ids.datasets import DatasetError
+from ...core.services.ids.preview import preview_balancing
+from ...core.services.ids.preview import recommend_features as score_features
+from ...core.services.ids.split import SplitResult
 from ...services.web.datasets import (
     candidate_features,
     combine,

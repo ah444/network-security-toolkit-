@@ -7,7 +7,7 @@ import time
 
 import pytest
 
-from toolkit.data.settings import WebConfig
+from toolkit.core.data.settings import WebConfig
 from toolkit.data.web.uploads import remove_stale_uploads
 from toolkit.services.web.workspace import Workspace, WorkspaceStore, start_idle_sweep
 

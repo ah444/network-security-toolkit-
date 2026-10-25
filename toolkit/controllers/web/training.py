@@ -8,9 +8,9 @@ from typing import Any
 
 from flask import Blueprint, jsonify
 
-from ...services.ids import registry
-from ...services.ids.pipeline import FittedModel
-from ...services.ids.runs import TrainingRun
+from ...core.services.ids import registry
+from ...core.services.ids.pipeline import FittedModel
+from ...core.services.ids.runs import TrainingRun
 from ...services.web.datasets import require_data
 from ...services.web.errors import NOT_TRAINED, TRAINING_FAILED
 from .api import Answer, ApiError, error_response, json_body, query

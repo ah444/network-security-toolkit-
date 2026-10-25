@@ -24,9 +24,9 @@ SUPPRESSIONS = [
      "the old code's imports follow the line that puts the project folder on sys.path"),
     ("toolkit/controllers/web/schemas.py", "type: ignore[arg-type]", 1,
      "load() takes any schema class (a TypeVar); mypy cannot know it is a dataclass"),
-    ("toolkit/services/ids/profiles.py", "pragma: no cover", 1,
+    ("toolkit/core/services/ids/profiles.py", "pragma: no cover", 1,
      "unreachable: the generic profile matches every file, the line only documents that"),
-    ("toolkit/services/ids/registry.py", "type: ignore[misc]", 1,
+    ("toolkit/core/services/ids/registry.py", "type: ignore[misc]", 1,
      "SelectKBest has no type information (an untyped base class)"),
 ]
 

@@ -11,7 +11,7 @@ deserialized until every check has passed: size and layout, then the signature (
 install's key) or a pinned SHA-256 (models shipped with the project), then the manifest,
 then the library-version policy. Only then does ``joblib.load`` run.
 
-This module works on bytes only: ``toolkit.data.ids.bundle_files`` keeps the key and the
+This module works on bytes only: ``toolkit.core.data.ids.bundle_files`` keeps the key and the
 files, ``exports`` saves, lists and loads them.
 """
 

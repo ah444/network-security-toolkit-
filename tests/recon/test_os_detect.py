@@ -1,6 +1,6 @@
 """B6: OS guess from TTL ranges, not exact values."""
 
-from toolkit.services.recon import os_guess
+from toolkit.core.services.recon import os_guess
 
 
 def test_ttl_ranges():

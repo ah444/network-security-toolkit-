@@ -7,10 +7,10 @@ import time
 import pytest
 import requests
 
-from toolkit.data.recon.findings import IntelFinding
-from toolkit.services.recon import intel as recon_intel
-from toolkit.data.recon import lookup, nvd
-from toolkit.data.recon.scanner import PortResult
+from toolkit.core.data.recon.findings import IntelFinding
+from toolkit.core.services.recon import intel as recon_intel
+from toolkit.core.data.recon import lookup, nvd
+from toolkit.core.data.recon.scanner import PortResult
 
 
 class SlowCves:

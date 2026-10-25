@@ -6,8 +6,8 @@ from __future__ import annotations
 import logging
 import threading
 
-from ...data.logs import setup_logging
-from ...data.settings import WebConfig, web_config
+from ...core.data.logs import setup_logging
+from ...core.data.settings import WebConfig, web_config
 from ...data.web import net
 from ...services.web.workspace import start_idle_sweep
 from ...ui.cli import web as messages

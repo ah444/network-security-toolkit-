@@ -3,7 +3,7 @@ or faked in tests. There are exactly three; everything else is plain functions a
 registries.
 
 - ``ModelStore``: where trained models are kept (signed bundles on disk:
-  ``toolkit.services.ids.exports.BundleStore``).
+  ``toolkit.core.services.ids.exports.BundleStore``).
 - ``IntelProvider``: an online (or offline, or fake) source of facts about a detected
   product or an IP address (NVD, OpenRouter, AbuseIPDB).
 - ``ProgressSink``: where a long task reports progress (the console, a web job, a test).

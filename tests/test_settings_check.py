@@ -8,8 +8,8 @@ import sys
 import pytest
 
 from toolkit.controllers.cli import main as cli
-from toolkit.data import settings
-from toolkit.data.settings import (COMMAND_SETTINGS, check_settings, max_workers,
+from toolkit.core.data import settings
+from toolkit.core.data.settings import (COMMAND_SETTINGS, check_settings, max_workers,
                                    scan_limits, switch, web_config, whole_number)
 
 WEB_NUMBERS = ("TOOLKIT_MAX_UPLOAD_MB", "TOOLKIT_MAX_PREDICT_MB", "TOOLKIT_WORKSPACE_IDLE_MIN",

@@ -6,12 +6,12 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from toolkit.data.ids import run_files
-from toolkit.services.ids import exports as core_exports
-from toolkit.data.settings import instance_dir
-from toolkit.services.ids.datasets import load_dataset
-from toolkit.services.ids.evaluation import EvaluationResult
-from toolkit.services.ids.runs import (
+from toolkit.core.data.ids import run_files
+from toolkit.core.services.ids import exports as core_exports
+from toolkit.core.data.settings import instance_dir
+from toolkit.core.services.ids.datasets import load_dataset
+from toolkit.core.services.ids.evaluation import EvaluationResult
+from toolkit.core.services.ids.runs import (
     SCHEMA_VERSION,
     DatasetRef,
     TrainSettings,

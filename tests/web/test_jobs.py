@@ -13,7 +13,7 @@ import weakref
 import pytest
 from imblearn.pipeline import Pipeline
 
-from toolkit.data.settings import WebConfig
+from toolkit.core.data.settings import WebConfig
 from toolkit.services.web import jobs
 from toolkit.services.web import training
 from toolkit.controllers.web import training as web_training

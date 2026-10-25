@@ -11,8 +11,8 @@ from typing import TYPE_CHECKING
 
 from flask import current_app
 
-from ...data.settings import WebConfig
-from ...services.ports import ModelStore
+from ...core.data.settings import WebConfig
+from ...core.services.ports import ModelStore
 
 if TYPE_CHECKING:
     from ...services.web.jobs import JobRunner

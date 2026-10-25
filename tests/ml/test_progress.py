@@ -12,10 +12,10 @@ import pandas as pd
 import pytest
 from sklearn.base import BaseEstimator, ClassifierMixin
 
-from toolkit.data.settings import PipelineConfig
-from toolkit.services.ids import registry
-from toolkit.services.ids.runs import TrainSettings, total_steps, train
-from toolkit.services.ports import ProgressSink
+from toolkit.core.data.settings import PipelineConfig
+from toolkit.core.services.ids import registry
+from toolkit.core.services.ids.runs import TrainSettings, total_steps, train
+from toolkit.core.services.ports import ProgressSink
 
 CLASSES = ("BENIGN", "DoS", "PortScan")
 

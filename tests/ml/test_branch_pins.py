@@ -12,13 +12,13 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from toolkit.data.ids.dataset_files import SAMPLE_BYTES, DatasetError
-from toolkit.data.settings import SplitConfig
-from toolkit.services.ids import split as split_module
-from toolkit.services.ids.datasets import load_dataset
-from toolkit.services.ids.leakage import check_leakage
-from toolkit.services.ids.runs import _jsonable
-from toolkit.services.ids.split import SOURCE_GROUP, TimeCheck, check_time_column, split_dataset
+from toolkit.core.data.ids.dataset_files import SAMPLE_BYTES, DatasetError
+from toolkit.core.data.settings import SplitConfig
+from toolkit.core.services.ids import split as split_module
+from toolkit.core.services.ids.datasets import load_dataset
+from toolkit.core.services.ids.leakage import check_leakage
+from toolkit.core.services.ids.runs import _jsonable
+from toolkit.core.services.ids.split import SOURCE_GROUP, TimeCheck, check_time_column, split_dataset
 
 
 def _frame(rows=300, seed=0, classes=("A", "B", "C")):

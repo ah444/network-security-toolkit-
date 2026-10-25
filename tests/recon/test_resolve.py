@@ -4,8 +4,8 @@ import socket
 
 import pytest
 
-from toolkit.services.recon import targets
-from toolkit.data.recon import scanner as recon_scanner
+from toolkit.core.services.recon import targets
+from toolkit.core.data.recon import scanner as recon_scanner
 
 
 def _has_ipv6_loopback():

@@ -49,7 +49,15 @@ class SplitConfig:
     official_dedupe: bool = False
 
 
-REPO_ROOT = Path(__file__).resolve().parents[2]  # the project folder, when run from it
+# The project folder (when run from it) holds toolkit/: as many folders above this file as
+# the module's name has dots (toolkit.core.data.settings -> parents[3]), so moving the file
+# changes both together (v5.2 step 2.3b; a fixed parents[2] would have pointed at toolkit/
+# after the move, and the tool would have taken itself for an installed copy). Under any
+# other name (the file run as a script) the count would be wrong: refuse instead.
+if not __name__.startswith("toolkit."):
+    raise RuntimeError(f"{__name__}: settings.py is part of the toolkit package; import it "
+                       "as toolkit.core.data.settings")
+REPO_ROOT = Path(__file__).resolve().parents[__name__.count(".")]
 APP_NAME = "network-security-toolkit"
 
 

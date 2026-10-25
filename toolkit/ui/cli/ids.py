@@ -9,10 +9,10 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any, cast
 
-from ...services.ids.bundle import Bundle
-from ...services.ids.exports import BundleInfo
-from ...services.ids.prediction import model_order
-from ...services.ids.registry import MODELS
+from ...core.services.ids.bundle import Bundle
+from ...core.services.ids.exports import BundleInfo
+from ...core.services.ids.prediction import model_order
+from ...core.services.ids.registry import MODELS
 
 # Normal-traffic labels of the supported datasets (real labels): CIC-IDS2017 "BENIGN",
 # NSL-KDD "normal"

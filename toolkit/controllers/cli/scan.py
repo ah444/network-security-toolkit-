@@ -27,7 +27,7 @@ folder (S15). Results are saved as UTF-8 in instance/scans/, never overwriting a
 (B12, S14).
 
 This module is the command: its flags or questions make a ``ScanRequest``; the scan is
-``toolkit.services.recon.scan``, what the user sees ``toolkit.ui.cli.scan`` (v5.1 step
+``toolkit.core.services.recon.scan``, what the user sees ``toolkit.ui.cli.scan`` (v5.1 step
 1.5d).
 """
 
@@ -38,10 +38,10 @@ import sys
 import time
 from collections.abc import Mapping, Sequence
 
-from ...data.keys import KEY_VARIABLES, ai_model, legacy_key_file_notice, load_api_keys
-from ...data.logs import add_secrets, setup_logging
-from ...data.settings import ScanConfig, scan_limits
-from ...services.recon.scan import (
+from ...core.data.keys import KEY_VARIABLES, ai_model, legacy_key_file_notice, load_api_keys
+from ...core.data.logs import add_secrets, setup_logging
+from ...core.data.settings import ScanConfig, scan_limits
+from ...core.services.recon.scan import (
     EXPORT_FORMATS,
     PROTOCOLS,
     ScanRequest,
@@ -49,7 +49,7 @@ from ...services.recon.scan import (
     resolve_targets,
     run_scan,
 )
-from ...services.recon.targets import parse_port_range, parse_ports
+from ...core.services.recon.targets import parse_port_range, parse_ports
 from ...ui.cli import scan as screen
 
 DEFAULT_PORTS = "1-1024"  # the well-known ports

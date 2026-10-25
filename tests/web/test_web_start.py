@@ -10,7 +10,7 @@ import pytest
 from toolkit.controllers.cli import web as web_command
 from toolkit.controllers.web import server as web
 from toolkit.data.web import net
-from toolkit.data.settings import WebConfig, port_number, web_config
+from toolkit.core.data.settings import WebConfig, port_number, web_config
 
 HOST = "127.0.0.1"
 

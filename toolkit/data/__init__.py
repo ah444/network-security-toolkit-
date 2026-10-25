@@ -1,6 +1,4 @@
-"""Data layer (v5.1 step 1.5d): files on disk, the network and the environment.
-
-Settings and API keys, log files, bundle and run files, dataset files, uploads, scan
-reports; sockets, ping, the outside APIs (NVD, AbuseIPDB, OpenRouter). Nothing here
-imports the services, controllers or UI; there is no database (a future one goes here).
+"""The data of one interface until v5.2 step 2.3c/d: the web trainer's uploads and
+socket (``web``) and the menu's child processes (``processes``). The shared data is in
+``toolkit.core.data`` since step 2.3b.
 """

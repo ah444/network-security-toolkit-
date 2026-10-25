@@ -3,7 +3,7 @@
 One connection per TCP port, always closed; its banner is read over that connection
 (see ``probes``). A UDP port that doesn't answer is ``open|filtered``. Progress goes to
 an object with ``start``, ``advance`` and ``finish`` (none by default),
-such as a ``toolkit.services.ports.ProgressSink``.
+such as a ``toolkit.core.services.ports.ProgressSink``.
 """
 
 import logging
@@ -22,7 +22,7 @@ SCAN_TIMEOUT = 1  # seconds per port
 
 
 class Progress(Protocol):
-    """What the scanner reports to (``toolkit.services.ports.ProgressSink`` fits)."""
+    """What the scanner reports to (``toolkit.core.services.ports.ProgressSink`` fits)."""
 
     def start(self, total: int) -> None: ...
 

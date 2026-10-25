@@ -1,6 +1,6 @@
 """Saving, listing and loading this install's runs and bundles (plan D11, D21).
 
-The bytes come from and go to ``toolkit.data.ids`` (``bundle_files``, ``run_files``); what
+The bytes come from and go to ``toolkit.core.data.ids`` (``bundle_files``, ``run_files``); what
 they mean is ``bundle`` (format, signature, library versions) and ``runs`` (the TrainingRun
 record). If the signing key is lost, the bundles saved on this install can no longer be
 checked, so they are not loaded: back up ``instance/``, or retrain from the run's
@@ -92,7 +92,7 @@ def load_bundle(path: str | Path, *, key_file: str | Path | None = None,
 
 
 class BundleStore:
-    """``toolkit.services.ports.ModelStore`` over this install's bundle files.
+    """``toolkit.core.services.ports.ModelStore`` over this install's bundle files.
 
     ``directory`` and ``key_file`` default to ``instance/bundles`` and
     ``instance/signing.key``, resolved at each call (so ``TOOLKIT_INSTANCE_DIR`` applies).

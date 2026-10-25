@@ -4,8 +4,8 @@ import socket
 
 import pytest
 
-from toolkit.data.recon import probes
-from toolkit.data.recon import scanner as recon_scanner
+from toolkit.core.data.recon import probes
+from toolkit.core.data.recon import scanner as recon_scanner
 
 
 @pytest.fixture

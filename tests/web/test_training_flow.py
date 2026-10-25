@@ -11,9 +11,9 @@ import joblib
 import pandas as pd
 import pytest
 
-from toolkit.data.ids import bundle_files
-from toolkit.services.ids.bundle import pack
-from toolkit.services.ids.datasets import load_dataset
+from toolkit.core.data.ids import bundle_files
+from toolkit.core.services.ids.bundle import pack
+from toolkit.core.services.ids.datasets import load_dataset
 from toolkit.services.web import training
 from toolkit.controllers.web import datasets
 from web_jobs import train_and_wait

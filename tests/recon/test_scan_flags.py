@@ -9,9 +9,9 @@ import time
 
 import pytest
 
-from toolkit.data.recon import scanner as recon_scanner
-from toolkit.services.recon import targets
-from toolkit.data.recon.scanner import PortResult
+from toolkit.core.data.recon import scanner as recon_scanner
+from toolkit.core.services.recon import targets
+from toolkit.core.data.recon.scanner import PortResult
 
 AUTHORIZED = "--i-am-authorized"
 
@@ -66,7 +66,7 @@ def fake(scan_service, scanner, monkeypatch, tmp_path):
     monkeypatch.setattr(scan_service, "Intel", FakeIntel)
     monkeypatch.setattr(scanner, "load_api_keys",
                         lambda: {"openrouter": "", "abuseipdb": "", "nvd": ""})
-    monkeypatch.setattr("toolkit.data.recon.scan_files.scans_dir", lambda: tmp_path / "scans")
+    monkeypatch.setattr("toolkit.core.data.recon.scan_files.scans_dir", lambda: tmp_path / "scans")
     calls["scans_dir"] = tmp_path / "scans"
     return calls
 
