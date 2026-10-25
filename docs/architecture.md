@@ -108,7 +108,8 @@ no Flask, no argparse. Read by `cli/` and `web/`, it imports neither
 | `toolkit/core/data/ids/dataset_files.py` | data | a dataset file's first bytes, SHA-256 and row chunks |
 | `toolkit/core/data/recon/__init__.py` | data | the scanner's network access and report files |
 | `toolkit/core/data/recon/scanner.py` | data | TCP and UDP port checks of one host |
-| `toolkit/core/data/recon/probes.py` | data | the banner-probe registry (one entry per port) and product/version parsing |
+| `toolkit/core/data/recon/probes.py` | data | the banner-probe registry (one entry per port) |
+| `toolkit/core/data/recon/software.py` | data | the product and version in a banner (the only part of it looked up online) |
 | `toolkit/core/data/recon/ping.py` | data | ping (per-OS flags) and the TTL of the reply |
 | `toolkit/core/data/recon/resolve.py` | data | host names to addresses |
 | `toolkit/core/data/recon/text.py` | data | makes text from the network safe to show and export |
@@ -293,6 +294,7 @@ Everything else is plain functions and dict registries.
 | feature selectors | `SELECTORS`, same file | all chosen features, ANOVA F-test, mutual information | a `SelectorSpec` |
 | dataset profiles | `PROFILES` in `toolkit/core/services/ids/profiles.py` | CIC-IDS2017, NSL-KDD, generic | a `DatasetProfile` with the real column names (never guessed) |
 | banner probes | `PROBES` and `READERS` in `toolkit/core/data/recon/probes.py` | 30 ports, 6 ways to read a banner | a `Probe` for the port |
+| software in a banner | `RULES` in `toolkit/core/data/recon/software.py` | SSH, MariaDB, Redis, Memcached; then the generic "Name/1.2" | a `Rule`: a pattern and how its match is named |
 | scan export formats | `WRITERS` in `toolkit/core/data/recon/scan_files.py` | JSON, CSV, TXT | a writer function |
 
 A model whose optional package is missing (XGBoost, LightGBM without `[boost]`) is simply
@@ -408,7 +410,7 @@ screen and every question goes through the `ScanView` (`ConsoleScan` in
  scan_ports: TCP connect / UDP probe per port                   core/data/recon/scanner.py
      |       banner read with the port's probe                  core/data/recon/probes.py
      v
- products from the banners, each one once
+ products from the banners, each one once                       core/data/recon/software.py
      |
      v
  Intel.lookup_many: up to INTEL_WORKERS at a time               core/services/recon/intel.py
@@ -486,6 +488,7 @@ stays in its folder.
 | add a model, balancer or feature selector | a `ModelSpec`, `BalancerSpec` or `SelectorSpec` in `MODELS`, `BALANCERS` or `SELECTORS` (`toolkit/core/services/ids/registry.py`); the page and `/api/v1/models` list it from there | [model_card.md](model_card.md) if it changes what the card says | `tests/ml/test_pipeline.py`, `tests/ml/test_evaluation.py` |
 | recognise a new dataset | a `DatasetProfile` in `PROFILES` (`toolkit/core/services/ids/profiles.py`) with the real column names, never guessed; a sample cut from the real file by `tests/fixtures/make_fixtures.py` | [datasets.md](datasets.md), [tests/fixtures/README.md](../tests/fixtures/README.md) | `tests/ml/test_profiles.py`, `tests/ml/test_loader.py` |
 | read another port's banner | a `Probe` in `PROBES` (and a reader in `READERS` if none fits) in `toolkit/core/data/recon/probes.py` | - | `tests/recon/test_probes.py` |
+| recognise another product in a banner | a `Rule` in `RULES` (`toolkit/core/data/recon/software.py`), before the generic pattern; what it returns is looked up online, so never an address or free text | - | `tests/recon/test_software.py` |
 | add a scan export format | a writer in `WRITERS` and its name in `EXPORT_FORMATS` (`toolkit/core/data/recon/scan_files.py`; the `--export` choices and the question come from there) | [reference.md](reference.md) | `tests/recon/test_export.py` |
 | add an online lookup | an `IntelProvider` in `toolkit/core/data/recon/`, added to `Intel`'s providers (`toolkit/core/services/recon/intel.py`) only after consent or a flag | what leaves the computer: section 9 here and the README's privacy notes | `tests/recon/test_scan_contract.py`, `tests/recon/test_intel_providers.py` |
 | add a step to the trainer page | a `<section class="step" data-step="...">` and its step button in `toolkit/web/ui/templates/dynamic_ids.html`, its name in `STEPS` (`toolkit/web/ui/static/js/steps.js`), a module with `setup()` started from `toolkit/web/ui/static/js/main.js`; styles in `toolkit/web/ui/static/css/app.css` (colours as tokens) | [user_guide.md](user_guide.md) | `tests/web/test_steps.py`, `tests/web/test_js_modules.py`, `tests/web/test_css.py`, `tests/web/test_responsive.py` |

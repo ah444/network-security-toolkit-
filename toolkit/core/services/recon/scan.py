@@ -14,7 +14,7 @@ from typing import Any, Protocol
 
 from ...data.recon.lookup import INTEL_WORKERS
 from ...data.recon.ping import ping_host
-from ...data.recon.probes import product_version
+from ...data.recon.software import product_version
 from ...data.recon.scan_files import EXPORT_FORMATS as EXPORT_FORMATS
 from ...data.recon.scan_files import ReportEntry as ReportEntry  # what the UI shows
 from ...data.recon.scan_files import export_results

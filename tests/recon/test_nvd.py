@@ -4,7 +4,6 @@ import json
 
 import pytest
 
-from toolkit.core.data.recon import probes
 from toolkit.core.services.recon import intel as recon_intel
 from toolkit.core.data.recon import nvd
 
@@ -68,19 +67,3 @@ def test_requests_are_spaced_without_a_key(nvd_reply, fake_session, monkeypatch)
     intel.lookup("nginx 1.25")
     intel.lookup("Apache 2.4.49")
     assert len(sleeps) == 1 and 5 < sleeps[0] <= 6
-
-
-@pytest.mark.parametrize(("banner", "software"), [
-    ("SSH-2.0-OpenSSH_8.9p1 Ubuntu-3ubuntu0.1", "OpenSSH 8.9"),
-    ("Apache/2.4.41 (Ubuntu)", "Apache 2.4.41"),
-    ("220 (vsFTPd 3.0.3)", "vsFTPd 3.0.3"),
-    ("SimpleHTTP/0.6 Python/3.14.3", "SimpleHTTP 0.6"),
-    ("Microsoft-IIS/10.0", "Microsoft-IIS 10.0"),
-    ("MySQL 8.0.33", "MySQL 8.0.33"),
-    ("# Server\r\nredis_version:7.0.11\r\n", "Redis 7.0.11"),
-    ("HTTP/1.1 200 OK", None),
-    ("nginx", None),
-    ("", None),
-])
-def test_product_version(banner, software):
-    assert probes.product_version(banner) == software

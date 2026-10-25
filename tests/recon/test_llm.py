@@ -6,7 +6,8 @@ import json
 
 import pytest
 
-from toolkit.core.data.recon import scan_files as export, probes
+from toolkit.core.data.recon import scan_files as export
+from toolkit.core.data.recon.software import product_version
 from toolkit.core.services.recon import report
 from toolkit.core.services.recon import intel as recon_intel
 from toolkit.core.data.recon import scanner as recon_scanner
@@ -31,7 +32,7 @@ def nvd_openssh(fixtures_dir):
 
 
 def test_only_redacted_version_sent(fake_session, nvd_openssh, no_nvd_wait):
-    software = probes.product_version(BANNER)
+    software = product_version(BANNER)
     assert software == "OpenSSH 8.9"
     session = fake_session(get=nvd_openssh, post=_ai_reply("Keep OpenSSH updated."))
     intel = recon_intel.Intel({"openrouter": "or-test-key"}, use_ai=True, session=session)

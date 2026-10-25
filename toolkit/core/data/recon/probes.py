@@ -15,7 +15,6 @@ import ssl
 from collections.abc import Callable
 from dataclasses import dataclass
 
-from .text import clean_text
 
 
 @dataclass(frozen=True)
@@ -183,23 +182,3 @@ def read_banner(sock: socket.socket, host: str, port: int) -> str:
         with banner_tls_context().wrap_socket(sock) as tls:
             return read(tls, host, probe)
     return read(sock, host, probe)
-
-
-# --- Software in a banner ---------------------------------------------------------------------
-
-PRODUCT_VERSION = re.compile(r"([A-Za-z][A-Za-z0-9\-]{1,30})[/_ ]v?(\d+(?:\.\d+)+)")
-REDIS_VERSION = re.compile(r"redis_version:(\d+(?:\.\d+)+)")
-NOT_PRODUCTS = {"http", "https", "ssh", "rtsp", "sip"}  # protocol names, not software
-
-
-def product_version(banner: str) -> str | None:
-    """"product version" from a banner (e.g. "OpenSSH 8.9"), or None. This short,
-    allow-listed text is the only part of a banner that ever leaves the computer (S12)."""
-    text = clean_text(banner)
-    match = REDIS_VERSION.search(text)
-    if match:
-        return f"Redis {match.group(1)}"
-    for match in PRODUCT_VERSION.finditer(text):
-        if match.group(1).lower() not in NOT_PRODUCTS:
-            return f"{match.group(1)} {match.group(2)}"[:60]
-    return None

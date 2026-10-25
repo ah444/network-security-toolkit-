@@ -5,7 +5,7 @@ import json
 
 import pytest
 
-from toolkit.core.data.recon import scan_files as export, probes
+from toolkit.core.data.recon import scan_files as export, software
 from toolkit.core.services.recon import report
 from toolkit.core.data.recon import scanner as recon_scanner
 from toolkit.core.data.recon import text as recon_text
@@ -16,7 +16,7 @@ def _entry(banner, ai=""):
     intel = {"cves": [{"id": "CVE-2021-41773", "cvss": 9.8, "cvss_version": "3.1",
                        "severity": "CRITICAL"}],
              "max_cvss": 9.8, "severity": "CRITICAL", "ai_explanation": ai, "errors": []}
-    return report.make_entry("127.0.0.1", result, probes.product_version(banner), intel)
+    return report.make_entry("127.0.0.1", result, software.product_version(banner), intel)
 
 
 def test_export_utf8_ansi_stripped_no_overwrite(tmp_path):
