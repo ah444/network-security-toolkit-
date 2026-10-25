@@ -75,6 +75,7 @@ no Flask, no argparse. Read by `cli/` and `web/`, it imports neither
 | `toolkit/core/services/ids/datasets.py` | services | a CSV/TXT dataset understood: encoding, separator, profile, header, dtypes, a load report |
 | `toolkit/core/services/ids/profiles.py` | services | recognises CIC-IDS2017, NSL-KDD or a generic file from its content |
 | `toolkit/core/services/ids/split.py` | services | removes exact copies, then splits train/test (official, temporal, group, stratified) |
+| `toolkit/core/services/ids/split_strategies.py` | services | the strategies: each returns the train and test rows, or the reason code its prerequisite failed with |
 | `toolkit/core/services/ids/split_time.py` | services | the time column of a temporal split: the empty and unparseable shares, `d/m/Y` or `m/d/Y`, capture files that overlap in time |
 | `toolkit/core/services/ids/leakage.py` | services | the leakage guard: columns that must not be features (profile, name, ID-like, label copies) |
 | `toolkit/core/services/ids/sampling.py` | services | stratified row samples that keep every class |
@@ -309,7 +310,8 @@ upload route loads the file; `train()` starts from the loaded table.
      |                    + the profile: label, blocked columns, split strategy
      v
  split_dataset ---------> drop rows without a label, remove exact copies,
-     |                    then official / temporal / group / stratified split   (split.py)
+     |                    then official / temporal / group / stratified split   (split.py,
+     |                    the strategies in split_strategies.py)
      |                    (a temporal split checks the time column first: split_time.py)
      |
      +--> train split ------------------------+          test split
