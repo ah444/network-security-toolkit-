@@ -3,7 +3,6 @@
 
 import { send } from "./api.js";
 import { byId, el, fillSelect, setContent, show, table, watchFileInput } from "./dom.js";
-import { fmt } from "./format.js";
 import { on } from "./state.js";
 
 // One input per feature: a number box, a list of the known categories, or a text box
@@ -137,7 +136,7 @@ export function setup() {
   }
   on("run:ready", result => {
     fillSelect(byId("algorithmSelect"), result.leaderboard.map(row => ({
-      value: row.model, text: `${row.title} (CV macro-F1 ${fmt(row.cv_macro_f1_mean, 3)})`, selected: row.selected })));
+      value: row.model, text: row.title, selected: row.selected })));
     buildPredictionForm("dynamicInputs", "session-feature-", result.features_info);
     show(byId("predictionSection"));
     show(byId("exportSection"));

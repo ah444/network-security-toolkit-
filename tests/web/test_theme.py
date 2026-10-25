@@ -31,8 +31,10 @@ def test_both_pages_have_the_button_in_the_navbar(template):
     html = template.read_text(encoding="utf-8")
     nav = re.search(r'<nav class="navbar">.*?</nav>', html, re.S).group(0)
     buttons = re.findall(r"<button[^>]*>[^<]*</button>", nav)
-    assert buttons == ['<button type="button" id="themeToggle" class="nav-link theme-toggle" '
-                       'hidden>Theme: Auto</button>']
+    # the Menu button (v5.2 step 2.2a) opens the links on small screens: tests/web/test_responsive.py
+    assert buttons[1:] == ['<button type="button" id="themeToggle" class="nav-link theme-toggle" '
+                           'hidden>Theme: Auto</button>']
+    assert len(buttons) == 2 and 'id="navToggle"' in buttons[0]
 
 
 def test_no_inline_script_anywhere():

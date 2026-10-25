@@ -310,13 +310,20 @@ textarea:focus-visible {
   background: var(--white-10);
 }
 
-/* The theme button looks like the navbar's links, with a border to show it's a button */
-.theme-toggle {
+/* The theme and menu buttons look like the navbar's links, with a border to show they're
+   buttons */
+.theme-toggle,
+.nav-toggle {
   font: inherit;
   font-weight: 500;
   background: none;
   border: 1px solid var(--white-20);
   cursor: pointer;
+}
+
+/* The Menu button (v5.2 step 2.2a) is drawn on small screens only */
+.nav-toggle {
+  display: none;
 }
 
 /* The page's focus colour is too close to the navbar's own; white shows on it */
@@ -469,8 +476,9 @@ textarea:focus-visible {
   min-height: 44px;
 }
 
+/* Full width inside its 0.5rem margins (100% overflowed the card by 1rem, v5.2 step 2.2a) */
 .btn {
-  width: 100%;
+  width: calc(100% - 1rem);
 }
 
 .btn:disabled {
@@ -1010,20 +1018,48 @@ textarea:focus-visible {
 }
 
 /* ---------- Small screens ---------- */
+/* v5.2 step 2.2a: the navbar is one row, the logo and the Menu button; the menu opens on
+   the rows under it (navbar.js). Without JavaScript it is always open. */
 @media (max-width: 768px) {
   .navbar {
-    flex-direction: column;
-    padding: 1rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
   }
 
+  /* the logo shares the row with the Menu button; on a phone its text takes two lines */
   .nav-logo {
-    margin-bottom: 1rem;
+    flex: 1;
+    font-size: 1.2rem;
+    line-height: 1.2;
+  }
+
+  .nav-toggle {
+    display: inline-flex;
   }
 
   .nav-menu {
-    gap: 1rem;
-    flex-wrap: wrap;
-    justify-content: center;
+    flex-basis: 100%;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding-bottom: 0.5rem;
+  }
+
+  .navbar[data-menu="closed"] .nav-menu {
+    display: none;
+  }
+
+  /* The step bar is one row that scrolls sideways; the padding leaves room for the focus
+     ring inside the scrolling box */
+  .stepper-list {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding: 5px;
+    margin-inline: -5px;
+  }
+
+  .stepper-list > li {
+    flex: none;
   }
 
   .container {
@@ -1054,5 +1090,21 @@ textarea:focus-visible {
   .cta-buttons .custom-btn {
     width: 100%;
     margin: 0.25rem 0;
+  }
+}
+
+/* Phones (v5.2 step 2.2a): about 288 of 320 px for the content */
+@media (max-width: 600px) {
+  .container {
+    margin: 1rem 0;
+    padding: 0 0.5rem;
+  }
+
+  .section {
+    padding: 1rem 0.5rem;
+  }
+
+  .feature-card {
+    padding: 1rem;
   }
 }

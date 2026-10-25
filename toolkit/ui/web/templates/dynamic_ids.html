@@ -13,12 +13,14 @@
   <!-- Nav Bar -->
   <nav class="navbar">
     <a href="/" class="nav-logo">Intrusion Detection System</a>
-    <ul class="nav-menu">
+    <button type="button" id="navToggle" class="nav-link nav-toggle" aria-expanded="false" aria-controls="navMenu" hidden>Menu</button>
+    <ul class="nav-menu" id="navMenu">
       <li class="nav-item"><a href="/" class="nav-link">Home</a></li>
       <li class="nav-item"><a href="/dynamic_ids" class="nav-link">Dynamic Intrusion Detection System</a></li>
       <li class="nav-item"><button type="button" id="themeToggle" class="nav-link theme-toggle" hidden>Theme: Auto</button></li>
     </ul>
   </nav>
+  <script src="{{ url_for('static', filename='js/navbar.js') }}"></script>
 
   <div class="container">
     <h1>Dynamic IDS Model Trainer</h1>

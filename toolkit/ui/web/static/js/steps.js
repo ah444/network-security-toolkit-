@@ -23,6 +23,17 @@ function neighbour(step, offset) {
   return steps[steps.indexOf(step) + offset];
 }
 
+// On a small screen the step bar scrolls sideways: bring the current step into it, without
+// scrolling the page (v5.2 step 2.2a)
+function keepInView(link) {
+  const list = link.closest(".stepper-list");
+  const box = list.getBoundingClientRect();
+  const item = link.getBoundingClientRect();
+  if (item.left < box.left || item.right > box.right) {
+    list.scrollLeft += item.left - box.left - (box.width - item.width) / 2;
+  }
+}
+
 // Step bar, step sections and Next buttons follow `current` and `unlocked`
 function refresh() {
   const steps = pathSteps();
@@ -32,6 +43,7 @@ function refresh() {
     link.disabled = !unlocked.has(step);
     if (step === current) {
       link.setAttribute("aria-current", "step");
+      keepInView(link);
     } else {
       link.removeAttribute("aria-current");
     }

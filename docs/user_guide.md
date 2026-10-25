@@ -223,7 +223,9 @@ browser. Ctrl+C in the terminal stops the trainer. If port 5000 is taken, start 
 
 The **Theme** button at the top right of every page switches between **Auto** (the page
 follows your system's light or dark setting), **Light** and **Dark**; your browser remembers
-the choice.
+the choice. On a phone, a tablet or a narrow window (768 px wide or less) the links and the
+Theme button are under **Menu** at the top right (Escape closes it), and the trainer's step
+buttons are one row that scrolls sideways.
 
 ![The web trainer's home page](user-guide/01-home.jpg)
 
