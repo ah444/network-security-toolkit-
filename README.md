@@ -105,10 +105,14 @@ python -m venv .venv
 
 # 4. Upgrade pip (a new venv starts with the pip its Python came with)
 python -m pip install --upgrade pip
+#    Python 3.11 also puts an old setuptools (65.5.0, with known advisories) in a new venv:
+#    python -m pip install --upgrade pip setuptools
 
 # 5. Install the pinned dependencies
 python -m pip install -r requirements.txt
 ```
+
+If PowerShell refuses `Activate.ps1` ("running scripts is disabled on this system", the Windows default), activate in cmd with `.venv\Scripts\activate.bat`, or allow local scripts for your user once: `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`.
 
 Or install the toolkit as a package, which also gives you the `toolkit` command (`toolkit scan`, `toolkit ids`, `toolkit web`). An installed copy keeps its data in a per-user folder ([docs/reference.md](docs/reference.md#73-where-the-data-folder-is)):
 

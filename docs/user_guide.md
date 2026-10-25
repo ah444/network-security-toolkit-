@@ -33,6 +33,9 @@ shows how they fit together.
   | Windows cmd | `.venv\Scripts\activate.bat` |
   | macOS, Linux | `source .venv/bin/activate` |
 
+  If PowerShell refuses `Activate.ps1`, see the note under the README's
+  [install steps](../README.md#-installation).
+
 - **Commands:** this guide writes `python -m toolkit`. `python main.py` is the same, and so
   is `toolkit` once the toolkit is installed with `pip install .`.
 - **Datasets** are not part of the project. Put them in `data/raw/`;

@@ -56,6 +56,18 @@ def test_readme_points_to_every_document(repo_root):
     assert "docs/V5.1_CHECKLIST.md" in readme[:readme.index("### Known limitations")]
 
 
+def test_install_steps_cover_what_a_fresh_windows_install_meets(repo_root):
+    """5.1 gate (found in 1.5h): Windows' default PowerShell policy refuses Activate.ps1, and a
+    Python 3.11 venv starts with setuptools 65.5.0; the install steps say what to do."""
+    readme = (repo_root / "README.md").read_text(encoding="utf-8")
+    steps = readme[readme.index("### Steps"):readme.index("### Dependencies")]
+    assert "python -m pip install --upgrade pip setuptools" in steps
+    assert ".venv\\Scripts\\activate.bat" in steps.split("```")[2], "the note after the steps"
+    assert "Set-ExecutionPolicy -Scope CurrentUser RemoteSigned" in steps
+    guide = (repo_root / "docs" / "user_guide.md").read_text(encoding="utf-8")
+    assert "If PowerShell refuses `Activate.ps1`" in guide
+
+
 def test_changelog_starts_with_5_1(repo_root):
     changelog = (repo_root / "CHANGELOG.md").read_text(encoding="utf-8")
     versions = re.findall(r"^## \[([^\]]+)\]", changelog, re.MULTILINE)
