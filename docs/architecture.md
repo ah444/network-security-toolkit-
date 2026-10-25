@@ -162,6 +162,7 @@ The page, its routes and jobs, and the `web` command; it never imports the comma
 | `toolkit/web/controllers/datasets.py` | controllers | upload, preview, class filter and the analyses before training |
 | `toolkit/web/controllers/training.py` | controllers | the model list, a training job started, its results |
 | `toolkit/web/controllers/jobs.py` | controllers | any job's state, progress and cancel (`GET`/`DELETE /api/v1/jobs/<id>`), a scan's log |
+| `toolkit/web/controllers/access.py` | controllers | the unlock page and `POST /api/v1/unlock`: other computers type the access token when `--host` opens the toolkit to the network |
 | `toolkit/web/controllers/scan.py` | controllers | the port scan's routes: its options, a scan started (the authorization checked first), the session's scan, the report download |
 | `toolkit/web/controllers/bundles.py` | controllers | export, download and load bundles; predictions, one row or a CSV file |
 | `toolkit/web/controllers/resume.py` | controllers | `GET /api/v1/workspace`, so the page resumes after a reload |
@@ -177,6 +178,7 @@ The page, its routes and jobs, and the `web` command; it never imports the comma
 | `toolkit/web/services/datasets.py` | services | uploads read, files combined, the class filter, the training split |
 | `toolkit/web/services/training.py` | services | training settings checked, the job queued, the run kept |
 | `toolkit/web/services/scan.py` | services | the web port scan: the choices checked (the authorization first, nothing sent before it), the scan queued as a job, the last scan kept for the download |
+| `toolkit/web/services/access.py` | services | the access token of a start (`--host`): made, checked (five wrong tries a minute per address), loopback told apart |
 | `toolkit/web/services/scan_view.py` | services | `WebScan`, the page's `ScanView`: a running scan's log, its progress host by host and its answer, no path of this computer shown |
 | `toolkit/web/services/prediction.py` | services | one row or a whole file predicted |
 | `toolkit/web/data/__init__.py` | data | the web trainer's files and sockets |

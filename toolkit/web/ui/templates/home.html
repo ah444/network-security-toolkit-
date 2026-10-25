@@ -19,6 +19,7 @@
     </ul>
   </nav>
   <script src="{{ url_for('static', filename='js/navbar.js') }}"></script>
+  {% if network_banner %}<p class="network-banner" role="note">{{ network_banner }}</p>{% endif %}
 
   <!-- Page Content -->
   <div class="container container-wide">

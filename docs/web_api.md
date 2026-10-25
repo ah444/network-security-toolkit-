@@ -7,7 +7,8 @@ loaded bundle); the session cookie holds only the workspace ID. A workspace is c
 only by an upload, a bundle load or a scan; other routes answer `NO_DATASET`, `NOT_TRAINED`, ...
 without creating one. The requests of one session take turns; during a training the
 session can still read and predict, but not change its dataset. Everything runs on this
-computer (`127.0.0.1`).
+computer (`127.0.0.1`), unless `toolkit web --host` opens it to the network (see "Opened to
+the network").
 
 - **Requests:** `POST` bodies are JSON objects (`Content-Type: application/json`), except
   the file uploads (`multipart/form-data`). `GET` routes read the query string.
@@ -66,6 +67,7 @@ computer (`127.0.0.1`).
 | GET | `/api/v1/scan/options` | none | the scan engines (nmap: whether it can run here), the choices, the limits, whether each API key is set (see Port scan) |
 | POST | `/api/v1/jobs/scan` | `authorized`, `target`, `ports`, `protocol`, `engine`, nmap's choices, `abuseipdb`, `ai`, `scan_unresponsive` | **202** and the scan's job (see Port scan) |
 | GET | `/api/v1/scan` | none | the session's scan still queued or running, and its last finished one |
+| POST | `/api/v1/unlock` | `token` | another computer's session unlocked, when `--host` opened the toolkit to the network (see Opened to the network) |
 | GET | `/api/v1/scan/report` | `format`: `txt` (default), `json` or `csv` | the last finished scan as a download (404 `NO_SCAN` before one) |
 
 ## Dataset upload
@@ -244,6 +246,23 @@ scan stays in the session, in memory only (nothing is saved on the server):
 that look like formulas as text). The web log (`web.log`) has one line per scan: the
 target, the hosts, the ports, the engine, how it ended.
 
+## Opened to the network
+
+`python -m toolkit web --host ADDRESS` (see [reference.md](reference.md)) also listens on an
+address of the network; `127.0.0.1` stays bound. Then:
+
+- A request from another computer (its connection's address isn't a loopback one;
+  `X-Forwarded-For` is never trusted) needs a session unlocked with the **access token**
+  printed in the terminal at the start (new at every start, never logged). Before that, a
+  page is redirected to `/unlock` and the API answers `LOCKED` (401); `/unlock`,
+  `POST /api/v1/unlock` and the static files stay open.
+- `POST /api/v1/unlock` with `{"token": "K7QX-M2PD-9RTA-W4HE"}` (case, spaces and dashes
+  don't matter; the CSRF token is needed as for every POST) unlocks the session until the
+  toolkit stops: `{"message": "Unlocked: ..."}`. Another token is `WRONG_TOKEN` (401); five
+  wrong ones from one address within a minute are `TOO_MANY_TRIES` (429) until the oldest is
+  a minute old. From this computer it answers that no token is needed.
+- Every page shows a banner saying the toolkit is open to the network and where.
+
 ## Errors
 
 Every error answer has the same shape; `details` is present only when there is more to say:
@@ -271,6 +290,9 @@ Every error answer has the same shape; `details` is present only when there is m
 | `NO_SCAN` | 404 | no finished scan in this session yet |
 | `CROSS_SITE` | 403 | the request came from another site |
 | `CSRF_TOKEN` | 403 | the `X-CSRF-Token` header is missing or isn't this session's token (reload the page) |
+| `LOCKED` | 401 | another computer, before it typed the access token (`--host` only) |
+| `WRONG_TOKEN` | 401 | that isn't the access token |
+| `TOO_MANY_TRIES` | 429 | five wrong access tokens from one address within a minute |
 | `NOT_FOUND` | 404 | no such API route, or no such job in this session |
 | `METHOD_NOT_ALLOWED` | 405 | the route exists, the method doesn't |
 | `BUSY` | 409 | a training run is in progress in this workspace: a second training, an upload, a class filter or clearing the workspace has to wait for it; or a scan is: a second scan or clearing the workspace has to wait for it |

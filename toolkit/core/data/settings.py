@@ -248,6 +248,7 @@ class WebConfig:
     max_data_mb: int = 4096  # loaded datasets of all workspaces together (models not counted)
     job_max_minutes: int = 180  # a training job is stopped (cancelled) after this long
     port: int = 5000
+    host: str = "127.0.0.1"  # where it listens: --host only, never an environment variable (2.4f)
     https: bool = False  # Secure session cookie: only behind HTTPS (D23)
     debug: bool = False  # Flask's debug server: development only, its debugger can run code
     secret_key: str = ""  # session signing key; '' = random per start

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  <title>Unlock - Intrusion Detection System</title>
+  <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+  <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/app.css') }}">
+</head>
+<body>
+  <!-- Nav Bar -->
+  <nav class="navbar">
+    <a href="/" class="nav-logo">Intrusion Detection System</a>
+    <button type="button" id="navToggle" class="nav-link nav-toggle" aria-expanded="false" aria-controls="navMenu" hidden>Menu</button>
+    <ul class="nav-menu" id="navMenu">
+      <li class="nav-item"><a href="/" class="nav-link">Home</a></li>
+      <li class="nav-item"><a href="/dynamic_ids" class="nav-link">Dynamic Intrusion Detection System</a></li>
+      <li class="nav-item"><a href="/scan" class="nav-link">Port Scanner</a></li>
+      <li class="nav-item"><button type="button" id="themeToggle" class="nav-link theme-toggle" hidden>Theme: Auto</button></li>
+    </ul>
+  </nav>
+  <script src="{{ url_for('static', filename='js/navbar.js') }}"></script>
+  {% if network_banner %}<p class="network-banner" role="note">{{ network_banner }}</p>{% endif %}
+
+  <!-- v5.2 step 2.4f: another computer types the access token once (it is shown in the
+       terminal where the toolkit was started); this computer's own browser never needs it -->
+  <div class="container">
+    <h1>Unlock the toolkit</h1>
+    <section class="section" aria-labelledby="unlockTitle">
+      <h2 class="section-title" id="unlockTitle">Access token</h2>
+      <p class="field-hint">This toolkit was opened to your network. Type the access token shown in the terminal where it was started, once for this browser; it stays unlocked until the toolkit stops.</p>
+      <form id="unlockForm">
+        <div class="form-group">
+          <label for="accessToken" class="label">Access token</label>
+          <input type="text" id="accessToken" name="token" required maxlength="40" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-describedby="accessTokenHint">
+          <p id="accessTokenHint" class="field-hint">Four groups of four letters and digits, such as K7QX-M2PD-9RTA-W4HE.</p>
+        </div>
+        <button type="submit" id="unlockButton" class="btn">Unlock</button>
+      </form>
+      <div id="unlockStatus" class="message" role="status" tabindex="-1"></div>
+    </section>
+  </div>
+  <script type="module" src="{{ url_for('static', filename='js/unlock.js') }}"></script>
+</body>
+</html>

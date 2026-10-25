@@ -13,6 +13,7 @@ scikit-learn version.
 
 from __future__ import annotations
 
+import ipaddress
 import mimetypes
 import secrets
 
@@ -20,17 +21,28 @@ from flask import Flask
 
 from ...core.services.ids.exports import BundleStore
 from ...core.data.settings import WebConfig, instance_dir, web_config
-from . import bundles, datasets, jobs, pages, resume, scan, training, workspace
+from . import access, bundles, datasets, jobs, pages, resume, scan, training, workspace
 from .api import register_error_handlers
 from ..services.datasets import prepare_uploads
+from ..services.access import Access, is_this_computer
 from ..services.jobs import SCAN, TRAINING, JobRunner
 from .security import register_security
 from .state import WebState
 from ..services.workspace import WorkspaceStore
 from .. import ui as page
 
-BLUEPRINTS = (pages.bp, datasets.bp, training.bp, jobs.bp, scan.bp, bundles.bp, workspace.bp,
-              resume.bp)
+BLUEPRINTS = (pages.bp, access.bp, datasets.bp, training.bp, jobs.bp, scan.bp, bundles.bp,
+              workspace.bp, resume.bp)
+
+
+def network_banner(config: WebConfig) -> str:
+    """The pages' banner when ``--host`` opened the toolkit to the network, else ''."""
+    if is_this_computer(config.host):
+        return ""
+    where = (f"{config.host}, port {config.port}" if not ipaddress.ip_address(config.host)
+             .is_unspecified else f"all of this computer's addresses, port {config.port}")
+    return (f"This toolkit is open to your network ({where}): anyone with its access token can "
+            "use it, port scans included. Stop it with Ctrl+C in its terminal when you are done.")
 
 
 def create_app(config: WebConfig | None = None) -> Flask:
@@ -61,9 +73,13 @@ def create_app(config: WebConfig | None = None) -> Flask:
         upload_dir=upload_dir,
         training_jobs=JobRunner(TRAINING),
         scan_jobs=JobRunner(SCAN),
+        # other computers type a token, made new at every start (v5.2 step 2.4f)
+        access=None if is_this_computer(config.host) else Access(),
     )
     register_error_handlers(app)
     register_security(app, config.port)
+    # every page says so while the toolkit is open to the network (v5.2 step 2.4f)
+    app.jinja_env.globals["network_banner"] = network_banner(config)
     for blueprint in BLUEPRINTS:
         app.register_blueprint(blueprint)
     return app

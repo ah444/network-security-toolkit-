@@ -25,7 +25,7 @@ def _served(web_app):
 
 
 def test_routes_match_the_documentation(repo_root, web_app):
-    assert len(_documented(repo_root)) == 26  # + the scan's 4 (v5.2 step 2.4d)
+    assert len(_documented(repo_root)) == 27  # + the scan's 4 (2.4d), the unlock (2.4f)
     assert _served(web_app) == _documented(repo_root)
 
 
@@ -46,20 +46,21 @@ def test_page_uses_only_api_routes():
     # the two predict-file routes are the url of predict.js's BATCH parts (step 1.4f);
     # /api/v1/workspace is used twice: GET to resume after a reload, DELETE to clear;
     # the scan page (v5.2 step 2.4e): its options, a scan started, and the session's scan,
-    # asked after a reload and after a scan that was cancelled
+    # asked after a reload and after a scan that was cancelled; the unlock page's (2.4f)
     urls = re.findall(r'(?:getJSON|send|predictWith)\("(/[^"?]*)|\burl: "(/[^"?]*)', all_js())
     urls = [call or part for call, part in urls]
-    assert len(urls) == 21 and all(url.startswith("/api/v1/") for url in urls), urls
+    assert len(urls) == 22 and all(url.startswith("/api/v1/") for url in urls), urls
 
 
 def test_page_sends_every_state_change_with_the_token():
     """Step 1.2e: a POST/DELETE without the token is refused (403 CSRF_TOKEN). Since step
     1.3a every request goes through api.js, and send() always adds the token."""
     code = all_js()
-    # 15 POST/DELETE routes in 13 send() calls: both predict routes share predictWith's,
-    # both predict-file routes predictFile's (step 1.4f); a scan started and cancelled (2.4e)
+    # 16 POST/DELETE routes in 14 send() calls: both predict routes share predictWith's,
+    # both predict-file routes predictFile's (step 1.4f); a scan started and cancelled (2.4e),
+    # the unlock (2.4f)
     sends = re.findall(r'\bsend\([^,]+,\s*"([A-Z]+)"', code)
-    assert len(sends) == 13 and set(sends) == {"POST", "DELETE"}, sends
+    assert len(sends) == 14 and set(sends) == {"POST", "DELETE"}, sends
     api = js_sources()["api.js"]
     assert api.count("fetch(") == 2  # getJSON and send
     assert '"X-CSRF-Token": csrfToken()' in api

@@ -7,7 +7,8 @@ Upload a dataset, train and compare models, export a signed bundle, predict with
 ```
 web/
   ui/
-    templates/       the three pages (home.html, dynamic_ids.html, scan.html)
+    templates/       the pages (home.html, dynamic_ids.html, scan.html; unlock.html for
+                     other computers when --host opens the toolkit to the network)
     static/          css/app.css (one stylesheet, colours as tokens) and js/ (ES modules;
                      api.js holds the only fetch)
     console.py       what the web command prints in the terminal
@@ -16,6 +17,7 @@ web/
     __init__.py      create_app(): the Flask app with its own state
     server.py        waitress on 127.0.0.1, the port bound exclusively, the browser opened
     pages.py         the three HTML pages: home, the trainer, the port scanner
+    access.py        the unlock page and route: other computers type the access token
     datasets.py      upload, preview, class filter, the analyses before training
     training.py      the model list, a training job started, its results
     jobs.py          any job's state, progress and cancel (a scan's log too)
@@ -35,6 +37,7 @@ web/
     scan.py          the port scan: its choices checked (the authorization first), the job,
                      the last scan kept for the download
     scan_view.py     what the page sees of a running scan: its log, progress and answer
+    access.py        the access token of a start (--host): made, checked, wrong tries counted
     prediction.py    one row or a whole file predicted
     errors.py        the error codes and ServiceError
   data/

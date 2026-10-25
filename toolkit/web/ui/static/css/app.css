@@ -1080,6 +1080,18 @@ textarea:focus-visible,
   }
 }
 
+/* The toolkit is open to the network (--host, v5.2 step 2.4f): on every page, light in both
+   themes like the warning boxes */
+.network-banner {
+  padding: 0.625rem 1rem;
+  background-color: var(--yellow-50);
+  color: var(--yellow-900);
+  border-bottom: 1px solid var(--yellow-100);
+  text-align: center;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
 /* ---------- The port scanner (/scan, v5.2 step 2.4e) ---------- */
 .section-title {
   margin-top: 0;

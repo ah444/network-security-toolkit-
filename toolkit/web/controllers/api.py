@@ -23,6 +23,8 @@ from ..services.errors import (
     NO_SCAN,
     NOT_FOUND,
     TOO_LARGE,
+    TOO_MANY_TRIES,
+    WRONG_TOKEN,
     Failed,
     ServiceError,
     Unavailable,
@@ -69,7 +71,8 @@ def query() -> dict[str, str]:
     return request.args.to_dict()
 
 
-STATUS = {NOT_FOUND: 404, NO_SCAN: 404, BUSY: 409, DATA_LIMIT: 413, TOO_LARGE: 413}  # else 400
+STATUS = {NOT_FOUND: 404, NO_SCAN: 404, WRONG_TOKEN: 401, BUSY: 409, DATA_LIMIT: 413,
+          TOO_LARGE: 413, TOO_MANY_TRIES: 429}  # else 400
 
 
 def status_of(error: ServiceError) -> int:

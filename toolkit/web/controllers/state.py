@@ -15,6 +15,7 @@ from ...core.data.settings import WebConfig
 from ...core.services.ports import ModelStore
 
 if TYPE_CHECKING:
+    from ..services.access import Access
     from ..services.jobs import JobKind, JobRunner
     from ..services.workspace import WorkspaceStore
 
@@ -29,6 +30,7 @@ class WebState:
     upload_dir: Path  # uploads are written here only while the loader reads them (S11)
     training_jobs: JobRunner  # one training at a time for the whole server, others queued
     scan_jobs: JobRunner  # one scan at a time for the whole server, next to a training
+    access: Access | None = None  # the access token when opened to the network (--host)
 
     def runner(self, kind: JobKind) -> JobRunner:
         """The runner whose queue holds the jobs of ``kind``."""

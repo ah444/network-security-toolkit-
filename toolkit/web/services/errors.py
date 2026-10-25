@@ -31,6 +31,10 @@ NOT_AUTHORIZED = "NOT_AUTHORIZED"  # 400: the scan wasn't confirmed as authorise
 SCAN_LIMIT = "SCAN_LIMIT"  # 400: above TOOLKIT_SCAN_MAX_HOSTS or TOOLKIT_SCAN_MAX_PROBES
 ENGINE_UNAVAILABLE = "ENGINE_UNAVAILABLE"  # 400: the engine can't run this scan here
 NO_SCAN = "NO_SCAN"  # 404: no finished scan in this session yet
+# Opened to the network (v5.2 step 2.4f)
+LOCKED = "LOCKED"  # 401: a computer other than this one, before it typed the access token
+WRONG_TOKEN = "WRONG_TOKEN"  # 401: that isn't the access token
+TOO_MANY_TRIES = "TOO_MANY_TRIES"  # 429: five wrong tokens from one address in a minute
 
 
 

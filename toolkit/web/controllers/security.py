@@ -1,5 +1,6 @@
-"""Security headers, the Host check, the CSRF token and the cross-site check on every request
-(S5, S10, v5.2 step 2.4a), and safe names for uploaded and exported files (S2-S4)."""
+"""Security headers, the Host check, the lock for other computers, the CSRF token and the
+cross-site check on every request (S5, S10, v5.2 steps 2.4a and 2.4f), and safe names for
+uploaded and exported files (S2-S4)."""
 
 from __future__ import annotations
 
@@ -12,11 +13,14 @@ from collections.abc import Callable
 from pathlib import PureWindowsPath
 from uuid import uuid4
 
-from flask import Flask, Response, request, session
+from flask import Flask, Response, redirect, request, session
 from werkzeug.utils import secure_filename
+from werkzeug.wrappers import Response as BaseResponse  # what redirect() gives
 
-from ..services.errors import BAD_HOST, CROSS_SITE, CSRF_TOKEN
+from ..services.access import is_this_computer
+from ..services.errors import BAD_HOST, CROSS_SITE, CSRF_TOKEN, LOCKED
 from .api import error_response
+from .state import state
 
 log = logging.getLogger(__name__)
 
@@ -38,7 +42,9 @@ PERMISSIONS_POLICY = ", ".join(f"{feature}=()" for feature in (
 ))
 
 # Pages kept out of the browser cache: the trainer page carries the session's CSRF token.
-NO_STORE_ENDPOINTS = frozenset({"pages.dynamic_ids_page", "pages.scan_page"})
+NO_STORE_ENDPOINTS = frozenset({"pages.dynamic_ids_page", "pages.scan_page", "access.unlock_page"})
+# What a computer other than this one may ask for before it typed the access token
+OPEN_ENDPOINTS = frozenset({"static", "access.unlock_page", "access.unlock"})
 
 
 def _security_headers(response: Response) -> Response:
@@ -109,6 +115,23 @@ def _host_check(port: int) -> Callable[[], Response | tuple[Response, int] | Non
     return check
 
 
+def _access_check() -> BaseResponse | tuple[Response, int] | None:
+    """When the app is open to the network (``--host``, v5.2 step 2.4f): a request from
+    another computer needs a session unlocked with this start's access token; before that,
+    a page sends it to the unlock page and the API answers 401 LOCKED. This computer's own
+    browser (a loopback address) never needs the token. ``X-Forwarded-For`` is never
+    trusted: the address is the connection's."""
+    access = state().access
+    if access is None or is_this_computer(request.remote_addr):
+        return None
+    if request.endpoint in OPEN_ENDPOINTS or session.get("unlocked") == access.run_id:
+        return None
+    if request.path.startswith("/api/"):
+        return error_response("Type the access token first: open /unlock. It is shown in the "
+                              "terminal where the toolkit was started.", 401, LOCKED)
+    return redirect("/unlock")
+
+
 CSRF_HEADER = "X-CSRF-Token"
 STATE_CHANGING_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
 
@@ -143,10 +166,11 @@ def _check_state_changing_request() -> tuple[Response, int] | None:
 
 def register_security(app: Flask, port: int) -> None:
     """Adds the security headers to every answer, the Host check (the app on ``port``) to
-    every request, before anything else, and the origin and CSRF check to every
-    state-changing request; templates get ``csrf_token``."""
+    every request, before anything else, then the lock for other computers, and the origin
+    and CSRF check to every state-changing request; templates get ``csrf_token``."""
     app.after_request(_security_headers)
     app.before_request(_host_check(port))
+    app.before_request(_access_check)
     app.before_request(_check_state_changing_request)
     app.jinja_env.globals["csrf_token"] = csrf_token
 

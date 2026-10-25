@@ -203,6 +203,12 @@ class ScanReportRequest:
 
 
 @dataclasses.dataclass(frozen=True)
+class UnlockRequest:
+    """``POST /unlock``: the access token as typed (spaces, dashes and case don't matter)."""
+    token: str = ""
+
+
+@dataclasses.dataclass(frozen=True)
 class ConfusionRequest:
     """``GET /run/confusion``: the model whose confusion matrix to show."""
     model: str = ""

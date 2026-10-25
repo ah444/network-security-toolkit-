@@ -123,16 +123,39 @@ python -m toolkit ids --json rows.json
 A bundle above 500 MB says first that loading takes a while: large models can take minutes
 and need several times their size in memory.
 
-## 5. `web`: the web trainer
+## 5. `web`: the web trainer and the port scanner
 
-`python -m toolkit web [flags]`: serves the trainer on this computer only (`127.0.0.1`),
-prints its address and opens it in the default browser once the port answers. Ctrl+C
+`python -m toolkit web [flags]`: serves the trainer (`/dynamic_ids`) and the port scanner
+(`/scan`) on this computer only (`127.0.0.1`) unless `--host` opens them to the network,
+prints the address and opens it in the default browser once the port answers. Ctrl+C
 stops it ("Web trainer stopped.").
 
 | Flag | Default | What it does |
 |---|---|---|
 | `--port PORT` | `TOOLKIT_PORT`, else `5000` | the port (1-65535) |
 | `--no-browser` | off | doesn't open the browser (also `TOOLKIT_NO_BROWSER=1`) |
+| `--host ADDRESS` | `127.0.0.1` | also listens on this IP address of this computer (`0.0.0.0`: all of its IPv4 addresses), so other computers on your network can use the toolkit: see below. A host name is refused. No environment variable sets it: it is chosen at every start |
+
+**Opened to the network (`--host`).** Only on a network you trust, such as your virtual
+machines' host-only network: anyone who can reach the toolkit and has its access token can
+upload data, train models and run port scans **from this computer**, and the connection is
+plain HTTP, so someone who can read the network's traffic could take over a session.
+
+- At the start the terminal prints a warning, the addresses other computers open and an
+  **access token** such as `K7QX-M2PD-9RTA-W4HE`: 16 letters and digits (no 0, O, 1 or I),
+  new at every start, shown only there (never in a log). Every page shows a banner while
+  the toolkit is open to the network.
+- Another computer's browser is sent to `/unlock`, where the token is typed once (spaces,
+  dashes and case don't matter); its session stays unlocked until the toolkit stops. The
+  API answers it `LOCKED` (401) before that. Five wrong tokens from one address within a
+  minute are refused with `TOO_MANY_TRIES` (429) for the rest of the minute; each wrong
+  try is logged with its address. The token is never in an address (URL).
+- This computer's own browser, at `127.0.0.1` (which stays bound), never needs the token.
+  The address of a request is its connection's: `X-Forwarded-For` is never trusted.
+- `TOOLKIT_DEBUG=1` is refused with `--host` (exit code 2): the debug server's debugger can
+  run any code on this computer.
+- An address this computer doesn't have is a message and exit code 2. On Windows the
+  firewall may ask, the first time, whether to let Python accept connections.
 
 A port already in use is a message naming the next port to try. Its settings are
 `TOOLKIT_*` variables (section 7); the pages and API are in [`web_api.md`](web_api.md).
@@ -143,7 +166,7 @@ A port already in use is a message naming the next port to try. Its settings are
 |---|---|---|---|---|
 | 0 | the scan ended (also with nothing found) | done; also Ctrl+C or "5. Exit" | stopped with Ctrl+C | left the menu; `--help` |
 | 1 | nmap could not scan a target (missing or failed; the other targets were still scanned) | | | |
-| 2 | a bad flag or setting, a bad target or port list, over a limit, not authorised | a bad flag or setting, no export, a bundle refused (signature, format), an unknown model, a missing or unreadable file, an output file that exists | a bad flag or setting, a bad port, the port in use | an unknown command |
+| 2 | a bad flag or setting, a bad target or port list, over a limit, not authorised | a bad flag or setting, no export, a bundle refused (signature, format), an unknown model, a missing or unreadable file, an output file that exists | a bad flag or setting, a bad port, the port in use, an address this computer doesn't have, `TOOLKIT_DEBUG=1` with `--host` | an unknown command |
 | 130 | cancelled (Ctrl+C, or the end of input at a question) | | | |
 
 `--help` exits with 0 everywhere. A bad flag is reported by the command's own parser with

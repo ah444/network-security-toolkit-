@@ -1,4 +1,5 @@
-"""``toolkit web``: the web trainer's flags (``--port``, ``--no-browser``), then the server.
+"""``toolkit web``: the web trainer's flags (``--port``, ``--no-browser``, ``--host``), then the
+server.
 
 Started by ``toolkit.start`` (v5.2 step 2.3c), never by the command line; here, among the
 web trainer's controllers, since step 2.3d (it was ``toolkit/controllers/cli/web.py``)."""
@@ -7,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import dataclasses
+import ipaddress
 import sys
 from collections.abc import Sequence
 
@@ -25,17 +27,35 @@ def _port_argument(text: str) -> int:
         raise argparse.ArgumentTypeError(str(error)) from None
 
 
+def listen_address(text: str) -> str:
+    """``--host`` as an IP address (IPv6 with or without brackets); a host name is refused, so
+    the app is opened only where the user named an address (v5.2 step 2.4f)."""
+    try:
+        return str(ipaddress.ip_address(text.strip().strip("[]")))
+    except ValueError:
+        raise argparse.ArgumentTypeError(
+            f"--host takes an IP address of this computer (or 0.0.0.0 for all of them), not "
+            f"{text!r}") from None
+
+
 def build_parser(prog: str | None = None) -> argparse.ArgumentParser:
     """The command's flags (each one is in docs/reference.md)."""
     parser = argparse.ArgumentParser(
         prog=prog,
-        description="The web trainer, on this computer only (127.0.0.1). It opens in your "
-                    "default browser. Other settings: TOOLKIT_DEBUG and the other TOOLKIT_* "
+        description="The web trainer and the port scanner, on this computer only (127.0.0.1) "
+                    "unless --host opens them to your network. It opens in your default "
+                    "browser. Other settings: TOOLKIT_DEBUG and the other TOOLKIT_* "
                     "environment variables, in docs/reference.md.")
     parser.add_argument("--port", type=_port_argument,
                         help="port number (default: TOOLKIT_PORT, else 5000)")
     parser.add_argument("--no-browser", action="store_true",
                         help="don't open the browser (also TOOLKIT_NO_BROWSER=1)")
+    parser.add_argument("--host", type=listen_address, metavar="ADDRESS",
+                        help="open the toolkit to your network on this address of this "
+                             "computer (0.0.0.0: all of them); other computers then type an "
+                             "access token shown at the start. Only on a network you trust: "
+                             "the connection is plain HTTP. Default 127.0.0.1 (this computer "
+                             "only)")
     return parser
 
 
@@ -64,6 +84,8 @@ def run(argv: Sequence[str] | None = None, prog: str | None = None) -> None:
         config = dataclasses.replace(config, port=args.port)
     if args.no_browser:
         config = dataclasses.replace(config, open_browser=False)
+    if args.host:
+        config = dataclasses.replace(config, host=args.host)
     code = run_server(config)
     if code:
         sys.exit(code)
