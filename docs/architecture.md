@@ -114,6 +114,7 @@ no Flask, no argparse. Read by `cli/` and `web/`, it imports neither
 | `toolkit/core/data/recon/software.py` | data | the product and version in a banner (the only part of it looked up online) |
 | `toolkit/core/data/recon/ping.py` | data | ping (per-OS flags) and the TTL of the reply |
 | `toolkit/core/data/recon/resolve.py` | data | host names to addresses |
+| `toolkit/core/data/recon/nmap.py` | data | the optional nmap engine's program: found by its full path (`TOOLKIT_NMAP_PATH`, `PATH`, its install folder; never the current folder), its version (7.80 or newer), its command from an allow-list only |
 | `toolkit/core/data/recon/local.py` | data | whether an address is this computer's own (nothing sent), and its OS |
 | `toolkit/core/data/recon/text.py` | data | makes text from the network safe to show and export |
 | `toolkit/core/data/recon/scan_files.py` | data | scan report files as JSON, CSV or TXT in `instance/scans/` |

@@ -234,6 +234,7 @@ class ScanConfig:
 
     max_hosts: int = 256  # one /24 network
     max_probes: int = 65_536  # host x port checks; TCP and UDP count separately
+    max_minutes: int = 60  # the nmap engine's time for one host (its --host-timeout)
 
 
 @dataclass(frozen=True)
@@ -289,21 +290,35 @@ def web_config(environ: Mapping[str, str] | None = None) -> WebConfig:
 
 
 def scan_limits(environ: Mapping[str, str] | None = None) -> ScanConfig:
-    """``TOOLKIT_SCAN_MAX_HOSTS`` / ``TOOLKIT_SCAN_MAX_PROBES``, else the defaults.
+    """``TOOLKIT_SCAN_MAX_HOSTS``, ``TOOLKIT_SCAN_MAX_PROBES`` and ``TOOLKIT_SCAN_MAX_MIN``,
+    else the defaults.
 
     A value that isn't a positive whole number is an error, so a typo can't lift a limit.
     """
     environ = os.environ if environ is None else environ
     return ScanConfig(
         max_hosts=whole_number(environ, "TOOLKIT_SCAN_MAX_HOSTS", ScanConfig.max_hosts),
-        max_probes=whole_number(environ, "TOOLKIT_SCAN_MAX_PROBES", ScanConfig.max_probes))
+        max_probes=whole_number(environ, "TOOLKIT_SCAN_MAX_PROBES", ScanConfig.max_probes),
+        max_minutes=whole_number(environ, "TOOLKIT_SCAN_MAX_MIN", ScanConfig.max_minutes))
+
+
+def nmap_path(environ: Mapping[str, str] | None = None) -> str:
+    """``TOOLKIT_NMAP_PATH`` (quotes and spaces around it dropped), '' when unset; ValueError
+    naming it when it is not a full path (a relative one would be read from the current
+    folder, where a planted program could wait)."""
+    environ = os.environ if environ is None else environ
+    raw = environ.get("TOOLKIT_NMAP_PATH", "").strip().strip('"')
+    if raw and not Path(raw).is_absolute():
+        raise ValueError(f"TOOLKIT_NMAP_PATH must be nmap's full path, not {raw!r}")
+    return raw
 
 
 # The TOOLKIT_* settings each command reads, checked before it starts (v5.1 step 1.5e).
 # TOOLKIT_INSTANCE_DIR and TOOLKIT_SECRET_KEY take any value.
 SHARED_SETTINGS = ("TOOLKIT_LOG_LEVEL",)
 COMMAND_SETTINGS = {
-    "scan": (*SHARED_SETTINGS, "TOOLKIT_SCAN_MAX_HOSTS", "TOOLKIT_SCAN_MAX_PROBES"),
+    "scan": (*SHARED_SETTINGS, "TOOLKIT_SCAN_MAX_HOSTS", "TOOLKIT_SCAN_MAX_PROBES",
+             "TOOLKIT_SCAN_MAX_MIN", "TOOLKIT_NMAP_PATH"),
     "ids": SHARED_SETTINGS,
     "web": (*SHARED_SETTINGS, "TOOLKIT_MAX_UPLOAD_MB", "TOOLKIT_MAX_PREDICT_MB",
             "TOOLKIT_WORKSPACE_IDLE_MIN", "TOOLKIT_MAX_WORKSPACES", "TOOLKIT_MAX_DATA_MB",
@@ -322,6 +337,8 @@ def _check(environ: Mapping[str, str], variable: str) -> None:
             port_number(environ[variable])
     elif variable in SWITCHES:
         switch(environ, variable)
+    elif variable == "TOOLKIT_NMAP_PATH":
+        nmap_path(environ)
     else:
         whole_number(environ, variable, 0)
 

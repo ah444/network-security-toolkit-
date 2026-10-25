@@ -14,6 +14,7 @@ PARSERS = {"scan": scan.build_parser, "ids": ids.build_parser, "web": web.build_
 DEFAULTS = {  # the settings table's default column, from the code
     "TOOLKIT_SCAN_MAX_HOSTS": ScanConfig.max_hosts,
     "TOOLKIT_SCAN_MAX_PROBES": ScanConfig.max_probes,
+    "TOOLKIT_SCAN_MAX_MIN": ScanConfig.max_minutes,
     "TOOLKIT_PORT": WebConfig.port,
     "TOOLKIT_MAX_UPLOAD_MB": WebConfig.max_upload_mb,
     "TOOLKIT_MAX_PREDICT_MB": WebConfig.max_predict_mb,

@@ -141,6 +141,8 @@ doesn't stop a scan, and `--help` always works.
 | `TOOLKIT_INSTANCE_DIR` | all | a folder | `instance/` in the project folder (installed: section 7.3) | where exports, runs, the signing key, scans and logs are kept |
 | `TOOLKIT_SCAN_MAX_HOSTS` | `scan` | whole number | `256` | hosts in one scan (one /24 network) |
 | `TOOLKIT_SCAN_MAX_PROBES` | `scan` | whole number | `65536` | host×port checks in one scan |
+| `TOOLKIT_SCAN_MAX_MIN` | `scan` | whole number | `60` | minutes the nmap engine may spend on one host (nmap's `--host-timeout`) |
+| `TOOLKIT_NMAP_PATH` | `scan` | a full path (nmap or its folder) | `PATH`'s folders, then where nmap's installer puts it; never the current folder | the nmap the nmap engine runs |
 | `TOOLKIT_PORT` | `web` | 1-65535 | `5000` | the web trainer's port (`--port` wins) |
 | `TOOLKIT_NO_BROWSER` | `web` | on/off | off | `1`: don't open the browser |
 | `TOOLKIT_MAX_UPLOAD_MB` | `web` | whole number | `2048` | the largest dataset upload |
