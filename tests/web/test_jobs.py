@@ -5,9 +5,13 @@ The app's worker thread is held inside training with an Event where a test needs
 to stay queued or running.
 """
 
+import gc
 import threading
+import time
+import weakref
 
 import pytest
+from imblearn.pipeline import Pipeline
 
 from toolkit.data.settings import WebConfig
 from toolkit.services.web import jobs
@@ -149,6 +153,32 @@ def test_cancel_a_running_job_keeps_the_previous_run(client, columns, gate, work
     assert ws.run.run_id == previous, "a cancelled job stores nothing"
     assert not ws.training.locked() and not ws.leased
     assert train_and_wait(client, _body(columns)).status_code == 200, "the workspace stays usable"
+
+
+def test_cancelled_job_frees_what_it_fitted(client, columns, monkeypatch):
+    """5.1 gate (plan §8, cancellation frees its memory): once a cancelled job has ended,
+    nothing keeps the pipelines it fitted (not the job, its error, nor the worker thread)."""
+    fitted, first_fit, release = [], threading.Event(), threading.Event()
+    real_fit = Pipeline.fit
+
+    def tracked(self, *args, **kwargs):
+        result = real_fit(self, *args, **kwargs)
+        fitted.append(weakref.ref(self))
+        first_fit.set()
+        assert release.wait(30), "test never released the held fit"
+        return result
+
+    monkeypatch.setattr(Pipeline, "fit", tracked)
+    job = client.post(TRAIN_URL, json=_body(columns, ("decision_tree", "naive_bayes"))).get_json()
+    assert first_fit.wait(30), "the job fitted a model before it was cancelled"
+    assert client.delete(job["url"]).get_json()["state"] == "cancelling"
+    release.set()
+    assert wait_for(client, job["url"])["state"] == "cancelled"
+    deadline = time.monotonic() + 10
+    while any(ref() is not None for ref in fitted) and time.monotonic() < deadline:
+        gc.collect()
+        time.sleep(0.05)
+    assert fitted and [ref for ref in fitted if ref() is not None] == []
 
 
 def test_time_limit_stops_the_job(make_app, fixtures_dir):
