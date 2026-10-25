@@ -61,10 +61,9 @@ from ...core.services.recon.scan import (
     resolve_targets,
     run_scan,
 )
-from ...core.services.recon.targets import parse_port_range, parse_ports
+from ...core.services.recon.targets import DEFAULT_PORTS, parse_port_range, parse_ports
 from ..ui import scan as screen
 
-DEFAULT_PORTS = "1-1024"  # the well-known ports
 NOT_AUTHORIZED = "Scan cancelled: only scan systems you are authorised to scan."
 # The flags that only make sense with a TARGET (without one, the scanner asks instead)
 NMAP_FLAGS = ("service_detection", "timing", "scripts", "os_detect")  # only with --engine nmap

@@ -13,7 +13,7 @@ import time
 from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pandas as pd
 
@@ -24,6 +24,9 @@ from ...core.services.ids.runs import DatasetRef, TrainingRun
 from ...core.services.ids.split import SplitResult
 from .errors import BUSY, DATA_LIMIT, NOT_FOUND, ServiceError, Unavailable
 from .jobs import FINISHED, Job, JobKind
+
+if TYPE_CHECKING:
+    from .scan import FinishedScan
 
 log = logging.getLogger(__name__)
 
@@ -80,6 +83,8 @@ class Workspace:
         self.predictions: BatchPredictions | None = None  # the last "Predict a CSV file"
         self.lock = threading.RLock()
         self.training = threading.Lock()  # held while a training runs (one at a time)
+        self.scanning = threading.Lock()  # held while a scan waits or runs (one at a time)
+        self.scan: FinishedScan | None = None  # the last finished scan (v5.2 step 2.4d)
         self.last_used = time.monotonic()
         self.data_bytes = 0  # memory of the loaded dataset (counted by the store's cap)
         self.jobs: dict[str, Job] = {}  # this session's last JOBS_KEPT jobs of each kind
@@ -90,7 +95,7 @@ class Workspace:
     def leased(self) -> bool:
         """True while a job still needs this workspace (a lease, or the training lock held):
         the store never drops it then."""
-        return self._leases > 0 or self.training.locked()
+        return self._leases > 0 or self.training.locked() or self.scanning.locked()
 
     def acquire_lease(self) -> None:
         """Keep this workspace from being dropped until ``release_lease`` (D22); a job
@@ -133,6 +138,12 @@ class Workspace:
         """This session's last job of ``kind`` that is still queued or running."""
         active = [j for j in self.jobs.values() if j.kind == kind and j.state not in FINISHED]
         return active[-1] if active else None
+
+    def require_no_scan(self) -> None:
+        """Refuse clearing the workspace while its scan waits or runs (409 BUSY)."""
+        if self.scanning.locked():
+            raise ServiceError("A scan is running in this session. Wait for it to finish or "
+                               "cancel it, then try again.", BUSY)
 
     def require_no_training(self) -> None:
         """Refuse a dataset change while a training reads the dataset (409 BUSY)."""

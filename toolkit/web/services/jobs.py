@@ -38,10 +38,12 @@ class JobKind:
     name: str  # "Waiting for another <name> to finish"; the thread "<name>-jobs"
     title: str  # "<title> cancelled. ..."
     time_limit: str  # the environment variable the job's max_seconds comes from
+    logged: bool = False  # its view has the lines it wrote so far (``Job.note``)
 
 
 TRAINING = JobKind("training", "Training", "TOOLKIT_JOB_MAX_MIN")
-SCAN = JobKind("scan", "Scan", "TOOLKIT_SCAN_MAX_MIN")
+SCAN = JobKind("scan", "Scan", "TOOLKIT_SCAN_MAX_MIN", logged=True)
+MAX_LOG_LINES = 5000  # a job's log stops here, with a last line saying so
 
 
 class JobCancelled(Exception):
@@ -73,6 +75,8 @@ class Job:
     result: dict[str, Any] | None = None
     error: dict[str, Any] | None = None
     cancel_requested: threading.Event = field(default_factory=threading.Event)
+    log: list[str] = field(default_factory=list)  # a logged kind's lines (``note``)
+    _log_lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
 
     # --- ProgressSink -------------------------------------------------------------------
     def start(self, total: int) -> None:
@@ -84,16 +88,45 @@ class Job:
         ``max_seconds``: the job stops between steps, never inside one (a training's fit)."""
         self.done = min(self.total, self.done + done) if self.total else self.done + done
         if self.cancel_requested.is_set():
-            raise JobCancelled(CANCELLED, f"{self.kind.title} cancelled. Nothing was kept "
-                                          "from it.")
-        if self.started is not None and time.monotonic() - self.started > self.max_seconds:
-            raise JobCancelled(TIME_LIMIT, f"{self.kind.title} stopped after "
-                                           f"{self.max_seconds / 60:,.0f} minutes "
-                                           f"({self.kind.time_limit}). Nothing was kept.")
+            raise self.stopped(CANCELLED)
+        if self.out_of_time():
+            raise self.stopped(TIME_LIMIT)
 
     def finish(self) -> None:
         """Nothing: the worker records how the job ended."""
         pass
+
+    # --- For work that stops on its own (a scan stops on ``cancel_requested``) -----------
+    def out_of_time(self) -> bool:
+        """True once the job has run longer than ``max_seconds``."""
+        return self.started is not None and time.monotonic() - self.started > self.max_seconds
+
+    def stopped(self, code: str) -> JobCancelled:
+        """The JobCancelled for a cancel (CANCELLED) or the time limit (TIME_LIMIT)."""
+        if code == TIME_LIMIT:
+            return JobCancelled(TIME_LIMIT, f"{self.kind.title} stopped after "
+                                            f"{self.max_seconds / 60:,.0f} minutes "
+                                            f"({self.kind.time_limit}). Nothing was kept.")
+        return JobCancelled(CANCELLED, f"{self.kind.title} cancelled. Nothing was kept from it.")
+
+    def tally(self, done: int, total: int) -> None:
+        """Sets the progress without the cancel check of ``advance`` (any thread may call it)."""
+        self.done, self.total = min(done, total), total
+
+    def note(self, line: str) -> None:
+        """Adds a line to the job's log (any thread); after MAX_LOG_LINES, one line saying the
+        rest was left out."""
+        with self._log_lock:
+            if len(self.log) < MAX_LOG_LINES:
+                self.log.append(line)
+            elif len(self.log) == MAX_LOG_LINES:
+                self.log.append(f"(the log stops at {MAX_LOG_LINES:,} lines; the result has "
+                                "everything)")
+
+    def notes(self, since: int = 0) -> list[str]:
+        """The log's lines from line ``since`` (0: all)."""
+        with self._log_lock:
+            return self.log[max(0, since):]
 
     # --- What the page shows ------------------------------------------------------------
     def phase(self) -> str:
@@ -158,7 +191,8 @@ class JobRunner:
     def _work(self) -> None:
         """The worker thread: one job at a time, in order, skipping cancelled ones; records the
         result or the error (an unexpected one only as a generic message, the details in the log)
-        and always calls ``on_end``."""
+        and always calls ``on_end``, before the job is seen to end: a client that sees the end
+        can start the next job at once (v5.2 step 2.4d)."""
         while True:
             job = self._queue.get()
             with self._lock:
@@ -167,23 +201,22 @@ class JobRunner:
                 self._waiting.remove(job)
                 self._running = job
                 job.state, job.started = RUNNING, time.monotonic()
+            ended = FAILED
+            result: dict[str, Any] | None = None
+            error: dict[str, Any] | None = None
             try:
-                job.result = job.work(job)
-                job.state = DONE
+                result, ended = job.work(job), DONE
             except JobCancelled as stop:
-                job.error = {"code": stop.code, "message": stop.message}
-                job.state = STOPPED
+                error, ended = {"code": stop.code, "message": stop.message}, STOPPED
                 log.info("%s job stopped (%s)", job.kind.title, stop.code)
-            except ServiceError as error:
-                job.error = {"code": error.code, "message": error.message}
-                if error.details:
-                    job.error["details"] = error.details
-                job.state = FAILED
+            except ServiceError as refused:
+                error = {"code": refused.code, "message": refused.message}
+                if refused.details:
+                    error["details"] = refused.details
             except Exception:  # the worker must survive anything a job does
                 log.exception("%s job failed", job.kind.title)
-                job.error = {"code": INTERNAL, "message": "Something went wrong on the server. "
-                                                          "Details are in the server log."}
-                job.state = FAILED
+                error = {"code": INTERNAL, "message": "Something went wrong on the server. "
+                                                      "Details are in the server log."}
             finally:
                 job.ended = time.monotonic()
                 with self._lock:
@@ -192,3 +225,4 @@ class JobRunner:
                     job.on_end()
                 except Exception:
                     log.exception("Releasing a finished job's workspace failed")
+                job.result, job.error, job.state = result, error, ended

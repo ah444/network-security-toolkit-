@@ -17,7 +17,8 @@ web/
     server.py        waitress on 127.0.0.1, the port bound exclusively, the browser opened
     pages.py         the two HTML pages
     datasets.py      upload, preview, class filter, the analyses before training
-    training.py      the model list, training jobs and their results
+    training.py      the model list, a training job started, its results
+    jobs.py          any job's state, progress and cancel
     bundles.py       export, download and load bundles; predictions
     resume.py        GET /api/v1/workspace, so a reload resumes
     workspace.py     the calling session's workspace, locked for the request
@@ -27,9 +28,12 @@ web/
     api.py           request and error helpers; the HTTP status of each ServiceError
   services/
     workspace.py     one in-memory workspace per browser session, with memory caps
-    jobs.py          the background job: one training at a time, progress, cancel
+    jobs.py          the background jobs: a queue per kind (training, scan), progress, cancel
     datasets.py      uploads read, files combined, the class filter, the training split
     training.py      training settings checked, the job queued, the run kept
+    scan.py          the port scan: its choices checked (the authorization first), the job,
+                     the last scan kept for the download
+    scan_view.py     what the page sees of a running scan: its log, progress and answer
     prediction.py    one row or a whole file predicted
     errors.py        the error codes and ServiceError
   data/

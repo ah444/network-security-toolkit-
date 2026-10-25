@@ -53,6 +53,8 @@ def with_workspace(create: bool = False,
 @bp.route("/workspace", methods=["DELETE"])
 @with_workspace(changes_dataset=True)
 def clear_workspace(ws: Workspace) -> Answer:
-    """Forget this session's dataset and models; the next upload starts a new workspace."""
+    """Forget this session's dataset, models and last scan; the next upload starts a new
+    workspace. Refused while a training or a scan runs."""
+    ws.require_no_scan()
     state().workspaces.clear(session.pop("ws", ""))
     return jsonify({"message": "Workspace cleared."})

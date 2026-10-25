@@ -200,3 +200,26 @@ def test_each_kind_keeps_its_own_last_five(client, columns, workspaces):
     assert sum(job.kind == jobs.SCAN for job in ws.jobs.values()) == 5
     gone = client.get("/api/v1/jobs/no-such-job").get_json()["error"]
     assert gone == {"code": "NOT_FOUND", "message": "No such job in this session."}
+
+
+@pytest.mark.parametrize("work, ended", [(lambda job: {"open": []}, "done"),
+                                         (lambda job: job.advance(), "cancelled")])
+def test_a_job_is_seen_to_end_only_once_it_let_go(work, ended):
+    """v5.2 step 2.4d: ``on_end`` (the session's lock and lease) runs before the job's end is
+    seen, so a page that sees it can start the next job at once (it got BUSY before)."""
+    released = []
+
+    def on_end():
+        time.sleep(0.05)
+        released.append(True)
+
+    runner = jobs.JobRunner(jobs.SCAN)
+    job = _scan(work)
+    job.on_end = on_end
+    if ended == "cancelled":
+        job.cancel_requested.set()
+    runner.submit(job)
+    deadline = time.monotonic() + 10
+    while job.state not in jobs.FINISHED and time.monotonic() < deadline:
+        time.sleep(0.001)
+    assert job.state == ended and released == [True]

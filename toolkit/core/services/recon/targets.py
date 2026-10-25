@@ -5,6 +5,8 @@ import ipaddress
 from ...data.settings import ScanConfig
 from ...data.recon.resolve import first_address
 
+DEFAULT_PORTS = "1-1024"  # the well-known ports: the command line's and the web page's default
+
 
 def parse_target(text: str, max_hosts: int) -> list[str]:
     """The IP addresses to scan: one IPv4/IPv6 address, a network (CIDR, at most

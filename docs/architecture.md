@@ -175,6 +175,8 @@ The page, its routes and jobs, and the `web` command; it never imports the comma
 | `toolkit/web/services/errors.py` | services | the error codes and `ServiceError` |
 | `toolkit/web/services/datasets.py` | services | uploads read, files combined, the class filter, the training split |
 | `toolkit/web/services/training.py` | services | training settings checked, the job queued, the run kept |
+| `toolkit/web/services/scan.py` | services | the web port scan: the choices checked (the authorization first, nothing sent before it), the scan queued as a job, the last scan kept for the download |
+| `toolkit/web/services/scan_view.py` | services | `WebScan`, the page's `ScanView`: a running scan's log, its progress host by host and its answer, no path of this computer shown |
 | `toolkit/web/services/prediction.py` | services | one row or a whole file predicted |
 | `toolkit/web/data/__init__.py` | data | the web trainer's files and sockets |
 | `toolkit/web/data/uploads.py` | data | uploads on disk, only while they are read |

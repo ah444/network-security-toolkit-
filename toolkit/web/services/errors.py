@@ -26,6 +26,11 @@ CSRF_TOKEN = "CSRF_TOKEN"  # 403: the X-CSRF-Token header is missing or not this
 NOT_FOUND = "NOT_FOUND"  # 404
 METHOD_NOT_ALLOWED = "METHOD_NOT_ALLOWED"  # 405
 INTERNAL = "INTERNAL"  # 500: anything unexpected; details only in the server log
+# The port scan (v5.2 step 2.4d)
+NOT_AUTHORIZED = "NOT_AUTHORIZED"  # 400: the scan wasn't confirmed as authorised
+SCAN_LIMIT = "SCAN_LIMIT"  # 400: above TOOLKIT_SCAN_MAX_HOSTS or TOOLKIT_SCAN_MAX_PROBES
+ENGINE_UNAVAILABLE = "ENGINE_UNAVAILABLE"  # 400: the engine can't run this scan here
+NO_SCAN = "NO_SCAN"  # 404: no finished scan in this session yet
 
 
 
