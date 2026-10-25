@@ -71,3 +71,39 @@ def product_version(banner: str) -> str | None:
             return found[:MAX_LENGTH] if found else None
     found = _generic(text)
     return found[:MAX_LENGTH] if found else None
+
+
+# Step N4: what nmap names, as the names the CVE lookup knows (each product of
+# ``nvd.CPE_PRODUCTS``, checked against nmap 7.992's nmap-service-probes). nmap's own CPE
+# names are not used for the lookup: their vendors are often not NVD's current ones
+# (igor_sysoev:nginx, not f5:nginx; vsftpd:vsftpd, not vsftpd_project:vsftpd).
+NMAP_NAMES = {
+    "OpenSSH": "OpenSSH", "Apache httpd": "Apache", "nginx": "nginx",
+    "Microsoft IIS httpd": "Microsoft-IIS", "Microsoft HTTPAPI httpd": "Microsoft-HTTPAPI",
+    "vsftpd": "vsftpd", "ProFTPD": "ProFTPD", "FileZilla ftpd": "FileZilla Server",
+    "MySQL": "MySQL", "MariaDB": "MariaDB", "Redis key-value store": "Redis",
+    "Memcached": "Memcached", "lighttpd": "lighttpd", "Dropbear sshd": "Dropbear",
+    "libssh": "libssh", "Exim smtpd": "Exim", "Sendmail": "Sendmail",
+    "Elasticsearch REST API": "Elasticsearch",
+}
+NMAP_PRODUCT = re.compile(r"[A-Za-z][A-Za-z0-9 .+\-]{0,39}")
+LEADING_VERSION = re.compile(r"^v?" + VERSION)
+# The A1 rules, for a version as nmap writes it: OpenSSH for Windows, and MariaDB's "5.5.5-"
+NMAP_VERSION_PREFIXES = {"OpenSSH": "for_Windows_", "MariaDB": "5.5.5-"}
+
+
+def nmap_software(product: str, version: str) -> str | None:
+    """"product version" from what nmap named (``OpenSSH``, ``for_Windows_8.1``: "OpenSSH 8.1"),
+    or None: the name the lookup knows (``NMAP_NAMES``) or nmap's own if it is a short plain
+    name, and the leading version number with A1's prefixes dropped; never an address."""
+    name = NMAP_NAMES.get(product.strip(), product.strip())
+    if not NMAP_PRODUCT.fullmatch(name) or name.lower() in NOT_PRODUCTS:
+        return None
+    version = version.strip()
+    prefix = NMAP_VERSION_PREFIXES.get(name, "")
+    if prefix and version.startswith(prefix):
+        version = version[len(prefix):]
+    match = LEADING_VERSION.match(version)
+    if not match or IPV4_LIKE.match(match.group(1)):
+        return None
+    return f"{name} {match.group(1)}"[:MAX_LENGTH]

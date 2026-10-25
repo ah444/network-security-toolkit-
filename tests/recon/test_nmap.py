@@ -91,6 +91,8 @@ def test_the_install_folder_after_path(tmp_path, on):
     assert nmap.install_places(environ) == [tmp_path / "x86" / "Nmap", tmp_path / "pf" / "Nmap"]
     assert nmap.locate(environ) == installed
     assert nmap.install_places({"ProgramFiles": "relative"}) == []
+    same = {"ProgramFiles(x86)": str(tmp_path / "pf"), "ProgramFiles": str(tmp_path / "pf")}
+    assert nmap.install_places(same) == [tmp_path / "pf" / "Nmap"]  # the same folder: once
     upper = {"PROGRAMFILES(X86)": str(tmp_path / "x86"), "Path": str(tmp_path / "empty")}
     assert nmap.locate(upper) == installed, "a copy of os.environ: the names in upper case"
     assert nmap.path_folders(upper) == [tmp_path / "empty"]

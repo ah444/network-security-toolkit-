@@ -27,6 +27,8 @@ def _scratch_instance_dir(tmp_path_factory, monkeypatch):
     """Runs, bundles and the signing key go to a temporary instance/ in every test."""
     monkeypatch.setenv("TOOLKIT_INSTANCE_DIR", str(tmp_path_factory.mktemp("instance")))
     monkeypatch.setenv("TOOLKIT_NO_BROWSER", "1")  # no test ever opens a real browser
+    # no test finds this computer's nmap: TOOLKIT_NMAP_PATH, when set, is the only place looked at
+    monkeypatch.setenv("TOOLKIT_NMAP_PATH", str(tmp_path_factory.mktemp("no_nmap") / "nmap"))
 
 
 @pytest.fixture

@@ -121,8 +121,11 @@ def print_entry(entry: ReportEntry) -> None:
     print(f"\nPort: {entry['port']}/{entry['protocol']}")
     print(f"Service: {entry['service']}")
     print(f"Banner: {one_line(entry['banner'], 200)}")
+    if entry["cpe"]:
+        print(f"CPE (nmap): {' '.join(entry['cpe'])}")
     if not entry["software"]:
-        print("Software: not recognised in the banner (no CVE lookup)")
+        print("Software: not recognised in the banner (no CVE lookup)" if entry["engine"] !=
+              "nmap" else "Software: not recognised by nmap or in the banner (no CVE lookup)")
         return
     print(f"Software: {entry['software']}")
     cves = entry["cves"]
@@ -163,6 +166,38 @@ def ask_target() -> str:
 def ask_ports() -> tuple[str, str]:
     """The start and end port as typed; checked by ``parse_port_range``."""
     return input("Enter start port: "), input("Enter end port: ")
+
+
+def ask_choice(question: str, choices: Sequence[str], default: str) -> str:
+    """Asks until the answer is one of ``choices`` (any case); Enter is ``default``."""
+    while True:
+        answer = input(f"{question} ({'/'.join(choices)}, Enter for {default}): ").strip().lower()
+        if not answer:
+            return default
+        if answer in choices:
+            return answer
+        print(f"Please type {', '.join(choices[:-1])} or {choices[-1]}.")
+
+
+def ask_engine(engines: Sequence[str], default: str) -> str:
+    """The scan engine; asked only when nmap is installed."""
+    return ask_choice("Scan engine: the toolkit's own scanner or nmap?", engines, default)
+
+
+def ask_service_detection(levels: Sequence[str], default: str) -> str:
+    """nmap's service detection level."""
+    return ask_choice("nmap service detection: how hard to try?", levels, default)
+
+
+def ask_scripts(scripts: Sequence[str]) -> bool:
+    """Whether nmap also runs the toolkit's allowed scripts (``scripts``)."""
+    return ask_yes_no(f"Also run the toolkit's {len(scripts)} nmap scripts "
+                      f"({', '.join(scripts)})? (Y/N): ")
+
+
+def ask_os_detect() -> bool:
+    """Whether nmap detects the OS; asked only when it can send raw packets."""
+    return ask_yes_no("Let nmap detect the OS (-O, raw packets)? (Y/N): ")
 
 
 def ask_verbose() -> bool:
@@ -288,6 +323,16 @@ class ConsoleScan:
         if first:
             print("\nVulnerability details per open port:")
         print_entry(entry)
+
+    def engine_notice(self, lines: Sequence[str]) -> None:
+        """Shows the scan engine and its choices, one per line."""
+        print("Scan engine:")
+        for line in lines:
+            print(f"  {line}")
+
+    def scan_failed(self, target: str, message: str) -> None:
+        """Says the engine could not scan ``target`` and why."""
+        print(f"Could not scan {target}: {message}")
 
     def lookups_notice(self, online: OnlinePlan) -> None:
         """Says what this scan may send to each online service, or why it sends nothing."""

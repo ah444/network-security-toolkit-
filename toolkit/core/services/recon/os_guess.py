@@ -1,5 +1,6 @@
 """Guess a host's OS from what the scan saw (B7, step A3): the TTL of its ping reply, words in
-its banners and its open ports. Each is a piece of ``Evidence`` that says where it was seen;
+its banners and its open ports, and with the nmap engine nmap's OS detection (step N4). Each
+is a piece of ``Evidence`` that says where it was seen;
 ``os_hint`` combines them, says when they disagree, and when the target is this computer (whose
 ports may lead to a VM, a container or WSL). Only a guess: TTLs can be set, banners can lie."""
 
@@ -26,8 +27,9 @@ def _word(name: str, also: str = "") -> re.Pattern[str]:
 
 # Words in a banner: (pattern, family, what it says); the first that matches a banner counts
 BANNER_WORDS: tuple[tuple[re.Pattern[str], str, str], ...] = (
-    (_word("Windows", r"OpenSSH_for_Windows|Microsoft-IIS|Microsoft-HTTPAPI|Microsoft FTP|"
-                      r"Microsoft ESMTP|\(Win(?:32|64)\)"), "Windows", "Windows"),
+    # nmap's descriptions have spaces: "OpenSSH for_Windows_8.1", "Microsoft HTTPAPI httpd 2.0"
+    (_word("Windows", r"OpenSSH[_ ]for_Windows|Microsoft[- ]IIS|Microsoft[- ]HTTPAPI|"
+                      r"Microsoft FTP|Microsoft ESMTP|\(Win(?:32|64)\)"), "Windows", "Windows"),
     (re.compile(r"ubuntu", re.IGNORECASE), "Linux", "Linux (Ubuntu)"),
     (_word("Debian", r"\+deb\d+u\d"), "Linux", "Linux (Debian)"),
     (_word("CentOS"), "Linux", "Linux (CentOS)"),
@@ -44,6 +46,11 @@ PORT_SIGNS = {135: ("Windows", "Windows", "Microsoft RPC")}
 CONFLICT = "unsure: the evidence conflicts"
 CONFLICT_NOTE = ("The ping may be answered by another device than the services (NAT, a "
                  "forwarded port), or a banner may name software of another system.")
+# nmap's OS names: a word in them -> the family (the first that matches counts)
+NMAP_FAMILIES = (("Windows", "Windows"), ("Linux", "Linux"), ("Android", "Linux"),
+                 ("Mac OS", "macOS"), ("macOS", "macOS"), ("iOS", "macOS"),
+                 ("FreeBSD", "BSD"), ("OpenBSD", "BSD"), ("NetBSD", "BSD"))
+NMAP_SEEN = "nmap OS detection"
 THIS_COMPUTER_NOTE = ("This computer's ports may lead to a VM, a container or WSL (a forwarded "
                       "port): the services that disagree run there.")
 
@@ -117,6 +124,16 @@ def port_evidence(results: Iterable[PortResult]) -> list[Evidence]:
     return found
 
 
+def nmap_evidence(matches: Sequence[tuple[str, int]]) -> list[Evidence]:
+    """nmap's best OS match (``NmapEngine.os_matches``), its family from ``NMAP_FAMILIES``
+    (else its name: a device of its own)."""
+    if not matches:
+        return []
+    name, accuracy = matches[0]
+    family = next((family for word, family in NMAP_FAMILIES if word in name), name)
+    return [Evidence(family, name, f"{NMAP_SEEN}, a {accuracy}% match")]
+
+
 def agree(first: str, second: str) -> bool:
     """Whether two families can be the same OS ("Unix" from a TTL fits Linux, BSD or macOS)."""
     return first == second or ({first, second} <= UNIX_LIKE and "Unix" in (first, second))
@@ -129,18 +146,22 @@ def _family_of(os_name: str) -> str:
 
 
 def _most_specific(evidence: Sequence[Evidence]) -> str:
-    """What the agreeing evidence says most precisely: a family over "Unix", a distribution
-    ("Linux (Ubuntu)") over a family."""
+    """What the agreeing evidence says most precisely: nmap's OS match, else a family over
+    "Unix", a distribution ("Linux (Ubuntu)") over a family."""
+    nmap = [e for e in evidence if e.seen.startswith(NMAP_SEEN)]
+    if nmap:
+        return nmap[0].says
     specific = [e for e in evidence if e.family != "Unix"] or list(evidence)
     return max(specific, key=lambda e: "(" in e.says).says
 
 
 def os_hint(ttl: int | None, open_ports: Sequence[PortResult], this_computer: bool = False,
-            local_os: str = "") -> OsHint | None:
-    """The OS from the TTL, the banners and the open ports: what they agree on, or that they
-    conflict; for this computer its own OS (``local_os``), and why some evidence may disagree.
-    None without any evidence."""
-    evidence = (*ttl_evidence(ttl), *banner_evidence(open_ports), *port_evidence(open_ports))
+            local_os: str = "", nmap_os: Sequence[tuple[str, int]] = ()) -> OsHint | None:
+    """The OS from the TTL, the banners, the open ports and nmap's OS match (``nmap_os``): what
+    they agree on, or that they conflict; for this computer its own OS (``local_os``), and why
+    some evidence may disagree. None without any evidence."""
+    evidence = (*ttl_evidence(ttl), *banner_evidence(open_ports), *port_evidence(open_ports),
+                *nmap_evidence(nmap_os))
     if this_computer:
         family = _family_of(local_os)
         odd = bool(family) and any(not agree(e.family, family) for e in evidence)

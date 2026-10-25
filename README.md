@@ -51,7 +51,7 @@ A comprehensive network security tool combining **Network Reconnaissance** and *
 ## 🎯 Features
 
 ### 1. Network Reconnaissance (Port Scanner)
-- 🔍 TCP/UDP port scanning
+- 🔍 TCP/UDP port scanning, with the toolkit's own scanner or, if it is installed and you ask for it, nmap (`--engine nmap`: service detection, OS detection, 8 allowed scripts)
 - 🖥️ OS guess from the TTL, the banners and the open ports, with the evidence
 - 🏷️ Service banner grabbing
 - 🌐 IPv4, IPv6, networks (CIDR) and domain names

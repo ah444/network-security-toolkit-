@@ -99,6 +99,8 @@ Select protocol for scanning (TCP/UDP/both): tcp
 Only scan systems you own or have written permission to test. Scanning other systems can be illegal.
 Type 'yes' if you are authorised to scan 127.0.0.1: yes
 Enable verbose mode? (Y/N): n
+Scan engine:
+  built-in (the toolkit's own scanner: a TCP connection or a UDP probe per port, nothing installed)
 Online in this scan:
   NVD (CVEs, services.nvd.nist.gov): on, the software name and version only; no NVD_API_KEY, so one request every 6 s
   AI explanation (OpenRouter): off: no OPENROUTER_API_KEY
@@ -144,7 +146,9 @@ Enter desired file extension (txt, json, csv): json
 Results exported to <project>\instance\scans\scan-20261024T185841Z.json
 ```
 
-`<project>` is the project folder.
+`<project>` is the project folder. When nmap is installed, the scanner also asks, after the
+protocol, which engine to use (Enter keeps its own), and for nmap its choices
+([section 3.5](#35-scan-with-nmap)).
 
 ### 3.2 Read the report
 
@@ -187,6 +191,8 @@ choice is a flag. `--i-am-authorized` answers that question too (for scripts).
 > python -m toolkit scan 127.0.0.1 -p 47820-47824 --export csv
 Only scan systems you own or have written permission to test. Scanning other systems can be illegal.
 Type 'yes' if you are authorised to scan 127.0.0.1: yes
+Scan engine:
+  built-in (the toolkit's own scanner: a TCP connection or a UDP probe per port, nothing installed)
 Online in this scan:
   NVD (CVEs, services.nvd.nist.gov): on, the software name and version only; no NVD_API_KEY, so one request every 6 s
   AI explanation (OpenRouter): off: no OPENROUTER_API_KEY
@@ -232,7 +238,8 @@ Results exported to <project>\instance\scans\scan-20261024T185851Z.csv
 
 The flags: `-p` (ports, for example `22,80,8000-8100`), `--protocol tcp|udp|both`, `-v`
 (progress line), `--export txt|json|csv`, `--scan-unresponsive` (also hosts that don't
-answer ping), `--ai`, `--abuseipdb`, `--i-am-authorized`. Their defaults are in
+answer ping), `--ai`, `--abuseipdb`, `--i-am-authorized`, and `--engine nmap` with its own
+flags ([section 3.5](#35-scan-with-nmap)). Their defaults are in
 [reference.md, section 3](reference.md#3-scan-the-port-scanner).
 
 ### 3.4 What leaves your computer
@@ -249,9 +256,112 @@ requests went to each.
   and with a target only with `--ai`. It receives the same name and version.
 - **The IP reputation check** (AbuseIPDB) runs only for public addresses, only with an
   `ABUSEIPDB_API_KEY`, and with a target only with `--abuseipdb`.
+- **nmap** (only with `--engine nmap`) runs on your computer and sends its packets only to
+  the target; what goes to NVD is still only the name and version.
 
 Keys go in a `.env` file in the project folder (copy `.env.example`); see
 [reference.md, section 7.2](reference.md#72-api-keys-and-the-ai-model).
+
+### 3.5 Scan with nmap
+
+The scanner can use nmap (from https://nmap.org) for the port checks instead of its own, when
+nmap 7.80 or newer is installed and you ask for it: `--engine nmap`, or `nmap` at the engine
+question. nmap is never chosen for you: when it isn't installed, a scan with `--engine nmap`
+stops before anything is sent and says how to install it. nmap is found by
+`TOOLKIT_NMAP_PATH` (its full path) if set, else on `PATH`, else in its install folder
+(`C:\Program Files (x86)\Nmap` on Windows).
+
+This was taken on 2026-10-26 with nmap 7.992 and two test programs: port 47822 as above,
+and port 2222, which answers like OpenSSH 8.1 for Windows:
+
+```
+> python -m toolkit scan 127.0.0.1 -p 2222,47822 --engine nmap --os-detect --i-am-authorized
+Scan engine:
+  nmap 7.992 (C:\Program Files (x86)\Nmap\nmap.exe)
+  raw packets: yes (SYN scan)
+  service detection: normal (--version-intensity 7)
+  timing: normal (-T3)
+  scripts: none of the toolkit's 8 (--scripts safe adds them)
+  OS detection: on (-O)
+  nmap's service detection also runs nmap's own version scripts (48 in nmap 7.992, such as rpcinfo and rpc-grind), each only on a service it recognised; nmap can't turn them off. One, iec61850-mms, is in nmap's 'intrusive' category: it talks to IEC 61850 industrial devices on port 102. --scripts safe adds only the 8 scripts the toolkit allows.
+Online in this scan:
+  NVD (CVEs, services.nvd.nist.gov): on, the software name and version only; no NVD_API_KEY, so one request every 6 s
+  AI explanation (OpenRouter): off: no OPENROUTER_API_KEY
+  IP reputation (AbuseIPDB): off: no public address (a private one is never sent)
+
+Scanning target: 127.0.0.1
+OS guess from TTL 128: Windows (about 0 hops away; TTLs can be changed, so this is only a guess)
+
+OPEN PORTS
++-----------------------------------------------------------------------------+
+|   PORT    |  STATE  |    SERVICE     |                BANNER                |
++-----------------------------------------------------------------------------+
+| 2222/tcp  |  open   |      ssh       | OpenSSH for_Windows_8.1 (protocol... |
+| 47822/tcp |  open   |      ssh       | OpenSSH 8.9p1 Ubuntu 3ubuntu0.10 ... |
++-----------------------------------------------------------------------------+
+
+OS: this computer (Windows 10), as 127.0.0.1 is one of its own addresses
+  - Windows: TTL 128, about 0 hops away
+  - Windows: the banner of 2222/tcp
+  - Linux (Ubuntu): the banner of 47822/tcp
+  - Microsoft Windows 10 1809 - 21H2: nmap OS detection, a 100% match
+  This computer's ports may lead to a VM, a container or WSL (a forwarded port): the services that disagree run there.
+
+Looking up 2 products online (up to 4 at a time)...
+
+Vulnerability details per open port:
+
+Port: 2222/tcp
+Service: ssh
+Banner: OpenSSH for_Windows_8.1 (protocol 2.0)
+CPE (nmap): cpe:/a:openbsd:openssh:for_windows_8.1
+Software: OpenSSH 8.1
+CVEs (NVD): CVE-2023-38408 (CVSS 9.8, CRITICAL), CVE-2026-60002 (CVSS 9.4, CRITICAL), CVE-2026-35385 (CVSS 8.1, HIGH), CVE-2026-35414 (CVSS 8.1, HIGH), CVE-2026-106583 (CVSS 7.8, HIGH), CVE-2026-106553 (CVSS 7.5, HIGH), CVE-2026-106555 (CVSS 7.5, HIGH), CVE-2026-59999 (CVSS 7.5, HIGH), CVE-2026-60000 (CVSS 7.5, HIGH), CVE-2020-15778 (CVSS 7.4, HIGH) ... +24 more
+CVE source: version match (cpe:2.3:a:openbsd:openssh:8.1)
+Severity (from CVSS): CRITICAL
+
+Port: 47822/tcp
+Service: ssh
+Banner: OpenSSH 8.9p1 Ubuntu 3ubuntu0.10 (Ubuntu Linux; protocol 2.0)
+CPE (nmap): cpe:/a:openbsd:openssh:8.9p1 cpe:/o:linux:linux_kernel
+Software: OpenSSH 8.9
+CVEs (NVD): CVE-2023-28531 (CVSS 9.8, CRITICAL), CVE-2023-38408 (CVSS 9.8, CRITICAL), CVE-2026-60002 (CVSS 9.4, CRITICAL), CVE-2024-6387 (CVSS 8.1, HIGH), CVE-2026-35385 (CVSS 8.1, HIGH), CVE-2026-35414 (CVSS 8.1, HIGH), CVE-2026-106583 (CVSS 7.8, HIGH), CVE-2026-106553 (CVSS 7.5, HIGH), CVE-2026-106555 (CVSS 7.5, HIGH), CVE-2026-59999 (CVSS 7.5, HIGH) ... +22 more
+CVE source: version match (cpe:2.3:a:openbsd:openssh:8.9)
+Severity (from CVSS): CRITICAL
+============================================================
+
+Scan Summary Report
+-------------------
+Total targets scanned: 1
+Total open ports found: 2
+Failed lookups: 0
+Requests sent online: NVD 2, AI (OpenRouter) 0, AbuseIPDB 0
+Elapsed time: 9.19 seconds
+```
+
+- **Scan engine:** which nmap runs, and each choice. nmap's service detection always runs
+  nmap's own *version scripts* too (48 in nmap 7.992), each only on a service it
+  recognised; nmap can't turn them off. One of them, `iec61850-mms`, is in nmap's
+  "intrusive" category: it talks to IEC 61850 industrial devices on port 102. Every nmap
+  scan says so here.
+- **The choices:** `--service-detection light|normal|all` (how hard nmap tries to name a
+  service), `--timing polite|normal|aggressive`, `--scripts safe` (also the toolkit's 8
+  allowed scripts, such as `banner`, `http-title` and `ssl-cert`) and `--os-detect`. They
+  work only with `--engine nmap`. Without a target the scanner asks for the level, the
+  scripts and, when nmap can send raw packets, OS detection; the timing stays normal.
+- **Raw packets:** nmap's SYN scan, UDP scan and OS detection send raw packets. On Windows
+  they need Npcap (it comes with nmap's installer; if Npcap was installed for
+  administrators only, run the terminal as administrator); on Linux and macOS root
+  (`sudo`). Without them nmap does a TCP connect scan, and a UDP scan or `--os-detect` stops
+  before anything is sent.
+- **The report:** `Banner` is what nmap read from the service. `Software` is nmap's
+  product and version as the CVE lookup knows them (`OpenSSH for_Windows_8.1` is looked up
+  as `OpenSSH 8.1`). `CPE (nmap)` lists nmap's own CPE names: shown and saved, not looked
+  up. nmap's OS match is one more piece of evidence for the OS. The exported files have
+  two more columns, `Engine` and `CPE (nmap)`.
+- **Limits:** nmap stops after `TOOLKIT_SCAN_MAX_MIN` minutes per host (default 60). When
+  nmap can't scan a target, the scanner says why, goes on with the next one, and the
+  command ends with exit code 1.
 
 ## 4. Train a model in the web trainer
 

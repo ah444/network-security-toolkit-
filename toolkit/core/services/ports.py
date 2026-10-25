@@ -84,9 +84,11 @@ class ScanEngine(Protocol):
     """Checks a host's ports (step N1). ``name`` picks it; ``available`` says why it can't run on
     this computer (None: it can). ``scan`` gives every port of ``host`` for each protocol,
     sorted by port, reports each finished check to ``progress`` and stops once ``stop`` is set
-    (``toolkit.core.data.recon.scanner.ScanStopped``)."""
+    (``toolkit.core.data.recon.scanner.ScanStopped``). ``os_matches``: what it found of the
+    host's OS in its last scan, (name, accuracy %) best first (step N4; () if it doesn't look)."""
 
     name: str
+    os_matches: tuple[tuple[str, int], ...]
 
     def available(self) -> str | None:
         """None when this engine can run here, else why not (to show the user)."""

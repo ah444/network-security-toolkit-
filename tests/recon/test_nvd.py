@@ -210,6 +210,7 @@ def test_the_source_is_shown_and_saved(tmp_path, capsys):
     assert f"CVE source: version match ({OPENSSH_CPE})\n" in out
     csv_file = scan_files.export_results([entry], "csv", tmp_path)
     header, row = csv_file.read_text(encoding="utf-8").splitlines()
-    assert header.endswith(",CVE source") and row.endswith(f",version match ({OPENSSH_CPE})")
+    assert header.endswith(",CVE source,Engine,CPE (nmap)")
+    assert row.endswith(f",version match ({OPENSSH_CPE}),builtin,")
     txt = scan_files.export_results([entry], "txt", tmp_path).read_text(encoding="utf-8")
     assert f"CVE source: version match ({OPENSSH_CPE})\n" in txt

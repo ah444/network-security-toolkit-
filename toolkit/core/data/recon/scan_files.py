@@ -18,7 +18,7 @@ from .text import csv_cell
 EXPORT_FORMATS = ("txt", "json", "csv")
 CSV_HEADER = ["Target", "Port", "Protocol", "Service", "Banner", "Software", "Severity (CVSS)",
               "Max CVSS", "CVEs (NVD)", "AI explanation (may be wrong)", "Lookup errors",
-              "OS hint", "CVE source"]
+              "OS hint", "CVE source", "Engine", "CPE (nmap)"]
 
 
 class ReportEntry(TypedDict):
@@ -37,6 +37,8 @@ class ReportEntry(TypedDict):
     ai_explanation: str
     lookup_errors: list[str]
     os_hint: str  # the host's OS guess and its evidence, the same on each of its entries
+    engine: str  # the scan engine that found the port: builtin or nmap (step N4)
+    cpe: list[str]  # nmap's CPE names for the service, as nmap gave them (not looked up)
 
 
 def _cve_list(entry: ReportEntry) -> str:
@@ -59,7 +61,8 @@ def _write_csv(entries: Sequence[ReportEntry], handle: TextIO) -> None:
         writer.writerow([csv_cell(v) for v in (
             e["target"], e["port"], e["protocol"], e["service"], e["banner"], e["software"],
             e["severity"], e["max_cvss"], _cve_list(e), e["ai_explanation"],
-            "; ".join(e["lookup_errors"]), e["os_hint"], e["cve_source"])])
+            "; ".join(e["lookup_errors"]), e["os_hint"], e["cve_source"], e["engine"],
+            " ".join(e["cpe"]))])
 
 
 def _write_txt(entries: Sequence[ReportEntry], handle: TextIO) -> None:
@@ -73,6 +76,7 @@ def _write_txt(entries: Sequence[ReportEntry], handle: TextIO) -> None:
                      f"CVE source: {e['cve_source'] or 'none'}\n"
                      f"AI explanation (may be wrong): {e['ai_explanation']}\n"
                      f"Lookup errors: {'; '.join(e['lookup_errors']) or 'none'}\n"
+                     f"Engine: {e['engine']}\nCPE (nmap): {' '.join(e['cpe']) or 'none'}\n"
                      + "-" * 40 + "\n")
 
 

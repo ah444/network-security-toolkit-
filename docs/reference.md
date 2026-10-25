@@ -38,7 +38,9 @@ or an error in it. Ctrl+C at the menu itself says "Goodbye!" and leaves.
 permission to test.
 
 - Without a `TARGET` it asks its questions: the target, the first and last port, the
-  protocol, the authorization, the progress line and the AI explanation (only with a key);
+  protocol, the engine (only when nmap is installed; for nmap its service detection, its
+  scripts and, with raw packets, OS detection), the authorization, the progress line and
+  the AI explanation (only with a key);
   during the scan, the AbuseIPDB check of a public IP (only with a key) and whether to scan
   a host that doesn't answer ping; at the end, the export.
 - With a `TARGET` it asks nothing but the authorization question, and sends nothing online
@@ -57,13 +59,38 @@ permission to test.
 | `--scan-unresponsive` | off | also scans hosts that don't answer ping |
 | `--export {txt,json,csv}` | none | saves the report in `instance/scans/` (a new file, never overwritten) |
 | `--i-am-authorized` | off | confirms you are authorised to scan the target (for scripts) |
+| `--engine {builtin,nmap}` | `builtin` | the toolkit's own scanner, or nmap when it is installed (version 7.80 or newer); with `nmap` and no nmap found, the scan stops before anything is sent and says how to install it (never falls back to the built-in engine) |
+| `--service-detection {light,normal,all}` | `normal` | nmap only: how hard `-sV` tries (`--version-intensity` 2, 7 or 9) |
+| `--timing {polite,normal,aggressive}` | `normal` | nmap only: `-T2`, `-T3` or `-T4` |
+| `--scripts {safe}` | none | nmap only: also runs the toolkit's 8 allowed scripts (`banner`, `http-title`, `http-server-header`, `ssl-cert`, `ssh-hostkey`, `smb-protocols`, `smb2-time`, `rdp-ntlm-info`) |
+| `--os-detect` | off | nmap only: OS detection (`-O`); needs raw packets |
 
-The flags other than `--i-am-authorized` work only with a `TARGET`. Limits:
-`TOOLKIT_SCAN_MAX_HOSTS` hosts and `TOOLKIT_SCAN_MAX_PROBES` host×port checks (TCP and UDP
-count separately).
+The flags other than `--i-am-authorized` work only with a `TARGET`, and the four nmap-only
+flags only with `--engine nmap`. Limits: `TOOLKIT_SCAN_MAX_HOSTS` hosts and
+`TOOLKIT_SCAN_MAX_PROBES` host×port checks (TCP and UDP count separately); nmap also stops
+after `TOOLKIT_SCAN_MAX_MIN` minutes per host.
+
+With `--engine nmap`:
+
+- nmap is run by its full path (`TOOLKIT_NMAP_PATH`, else the folders on `PATH`, else its
+  install folder), never through a shell, with only the options above (`-n -Pn`, no DNS and
+  no ping of its own).
+- nmap's service detection (`-sV`) also runs nmap's own version scripts (48 in nmap 7.992,
+  such as `rpcinfo`), each only on a service it recognised; nmap can't turn them off. One,
+  `iec61850-mms`, is in nmap's "intrusive" category: it talks to IEC 61850 industrial devices
+  on port 102. The scan's opening notice says so every time.
+- Raw packets (the SYN scan, UDP, `-O`): on Windows Npcap usable by this user (it comes with
+  nmap's installer; an administrator's prompt if Npcap is set to administrators only), on
+  Linux and macOS root. Without them nmap does a TCP connect scan, and UDP or `--os-detect`
+  stops before anything is sent.
+- What is looked up in NVD is nmap's product and version, cleaned with the same rules as a
+  banner (for example `OpenSSH for_Windows_8.1` → `OpenSSH 8.1`, `Apache httpd 2.4.49` →
+  `Apache 2.4.49`); the report also carries the engine and nmap's CPE names (not looked
+  up), and nmap's OS match joins the OS hint.
 
 ```
 python -m toolkit scan 192.168.1.10 -p 1-1024 --protocol both --export csv
+python -m toolkit scan 127.0.0.1 -p 1-1024 --engine nmap --scripts safe
 ```
 
 ## 4. `ids`: intrusion detection with an export
@@ -115,6 +142,7 @@ A port already in use is a message naming the next port to try. Its settings are
 | Code | `scan` | `ids` | `web` | the menu, `toolkit` |
 |---|---|---|---|---|
 | 0 | the scan ended (also with nothing found) | done; also Ctrl+C or "5. Exit" | stopped with Ctrl+C | left the menu; `--help` |
+| 1 | nmap could not scan a target (missing or failed; the other targets were still scanned) | | | |
 | 2 | a bad flag or setting, a bad target or port list, over a limit, not authorised | a bad flag or setting, no export, a bundle refused (signature, format), an unknown model, a missing or unreadable file, an output file that exists | a bad flag or setting, a bad port, the port in use | an unknown command |
 | 130 | cancelled (Ctrl+C, or the end of input at a question) | | | |
 

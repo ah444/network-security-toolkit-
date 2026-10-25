@@ -95,8 +95,8 @@ no Flask, no argparse. Read by `cli/` and `web/`, it imports neither
 | `toolkit/core/services/recon/targets.py` | services | targets, port lists and scan limits |
 | `toolkit/core/services/recon/scan.py` | services | a scan, start to end, through a `ScanView` (what it shows and asks) |
 | `toolkit/core/services/recon/intel.py` | services | `Intel`: the lookups for open ports, in parallel, each product once |
-| `toolkit/core/services/recon/engines.py` | services | the scan engines by name: the built-in one (the toolkit's own scanner) and nmap (`NmapEngine`; `NmapProgress`: nmap's phases as one bar) |
-| `toolkit/core/services/recon/os_guess.py` | services | the OS guess from the TTL, the banners and the open ports, with its evidence; this computer said |
+| `toolkit/core/services/recon/engines.py` | services | the scan engines by name: the built-in one (the toolkit's own scanner) and nmap (`NmapEngine`; `NmapProgress`: nmap's phases as one bar); `engine_problem` (why an engine can't do a scan here, asked before the authorization) and `describe` (the opening notice's lines) |
+| `toolkit/core/services/recon/os_guess.py` | services | the OS guess from the TTL, the banners, the open ports and nmap's OS match, with its evidence; this computer said |
 | `toolkit/core/services/recon/report.py` | services | one report entry per open port, its network text cleaned |
 | `toolkit/core/data/__init__.py` | data | the shared data: files, the network, the environment |
 | `toolkit/core/data/settings.py` | data | every tunable setting, the `TOOLKIT_*` variables, the data folder, `.env` reading |
@@ -111,7 +111,7 @@ no Flask, no argparse. Read by `cli/` and `web/`, it imports neither
 | `toolkit/core/data/recon/scanner.py` | data | TCP and UDP port checks of one host |
 | `toolkit/core/data/recon/probes.py` | data | the banner-probe registry (one entry per port) |
 | `toolkit/core/data/recon/services.py` | data | which service answered: from its answer, else the port's usual name with a "?" |
-| `toolkit/core/data/recon/software.py` | data | the product and version in a banner (the only part of it looked up online) |
+| `toolkit/core/data/recon/software.py` | data | the product and version in a banner (the only part of it looked up online), and nmap's product and version as the same names (`nmap_software`) |
 | `toolkit/core/data/recon/ping.py` | data | ping (per-OS flags) and the TTL of the reply |
 | `toolkit/core/data/recon/resolve.py` | data | host names to addresses |
 | `toolkit/core/data/recon/nmap.py` | data | the optional nmap engine's program: found by its full path (`TOOLKIT_NMAP_PATH`, `PATH`, its install folder; never the current folder), its version (7.80 or newer), its command from an allow-list only; whether it can send raw packets (`has_privileges`: Npcap usable on Windows, root elsewhere) |
@@ -119,7 +119,7 @@ no Flask, no argparse. Read by `cli/` and `web/`, it imports neither
 | `toolkit/core/data/recon/nmap_xml.py` | data | nmap's XML as the scanner's `PortResult`s (the built-in scanner's states, nmap's own in `reason`), the OS matches and host scripts; every text from the network cleaned and cut |
 | `toolkit/core/data/recon/local.py` | data | whether an address is this computer's own (nothing sent), and its OS |
 | `toolkit/core/data/recon/text.py` | data | makes text from the network safe to show and export |
-| `toolkit/core/data/recon/scan_files.py` | data | scan report files as JSON, CSV or TXT in `instance/scans/` |
+| `toolkit/core/data/recon/scan_files.py` | data | scan report files as JSON, CSV or TXT in `instance/scans/` (with the engine and nmap's CPE names) |
 | `toolkit/core/data/recon/findings.py` | data | what the intel gateways return (`CveEntry`, `IntelFinding`) |
 | `toolkit/core/data/recon/nvd.py` | data | CVEs and CVSS scores from the NVD API, by version (CPE names) or by keyword (an `IntelProvider`) |
 | `toolkit/core/data/recon/openrouter.py` | data | the optional AI explanation through OpenRouter (an `IntelProvider`) |
@@ -417,16 +417,16 @@ screen and every question goes through the `ScanView` (`ConsoleScan` in
  OS guess from the TTL                                          core/services/recon/os_guess.py
      |
      v
- the engine (ScanRequest.engine)                                core/services/recon/engines.py
+ the engine (ScanRequest.engine, --engine or the question)      core/services/recon/engines.py
  builtin: TCP connect / UDP probe per port                      core/data/recon/scanner.py
  nmap: its command, its run, its XML              core/data/recon/nmap.py, nmap_run.py, nmap_xml.py
      |       banner read with the port's probe                  core/data/recon/probes.py
      |       the service from the answer, else "usual?"         core/data/recon/services.py
      v
- OS hint: the TTL, the banners, the open ports; this PC?        core/services/recon/os_guess.py
+ OS hint: TTL, banners, open ports, nmap's match; this PC?      core/services/recon/os_guess.py
      |
      v
- products from the banners, each one once                       core/data/recon/software.py
+ products from nmap or the banners, each one once               core/data/recon/software.py
      |
      v
  Intel.lookup_many: up to INTEL_WORKERS at a time               core/services/recon/intel.py
@@ -508,7 +508,7 @@ stays in its folder.
 | add a model, balancer or feature selector | a `ModelSpec`, `BalancerSpec` or `SelectorSpec` in `MODELS`, `BALANCERS` or `SELECTORS` (`toolkit/core/services/ids/registry.py`); the page and `/api/v1/models` list it from there | [model_card.md](model_card.md) if it changes what the card says | `tests/ml/test_pipeline.py`, `tests/ml/test_evaluation.py` |
 | recognise a new dataset | a `DatasetProfile` in `PROFILES` (`toolkit/core/services/ids/profiles.py`) with the real column names, never guessed; a sample cut from the real file by `tests/fixtures/make_fixtures.py` | [datasets.md](datasets.md), [tests/fixtures/README.md](../tests/fixtures/README.md) | `tests/ml/test_profiles.py`, `tests/ml/test_loader.py` |
 | read another port's banner | a `Probe` in `PROBES` (and a reader in `READERS` if none fits) in `toolkit/core/data/recon/probes.py` | - | `tests/recon/test_probes.py` |
-| add a scan engine | a class with `name`, `available()` and `scan(host, ports, protocols, progress, stop)` (the `ScanEngine` port, `toolkit/core/services/ports.py`), named in `ENGINES` (`toolkit/core/services/recon/engines.py`); it fills `PortResult`'s `product`, `version`, `cpe`, `reason`, `scripts` if it knows them, and raises `ScanStopped` once `stop` is set | - | `tests/recon/test_engines.py` |
+| add a scan engine | a class with `name`, `os_matches` (its OS matches after a scan, else `()`), `available()` and `scan(host, ports, protocols, progress, stop)` (the `ScanEngine` port, `toolkit/core/services/ports.py`), named in `ENGINES` (`toolkit/core/services/recon/engines.py`); it fills `PortResult`'s `product`, `version`, `cpe`, `reason`, `scripts` if it knows them, and raises `ScanStopped` once `stop` is set | - | `tests/recon/test_engines.py` |
 | recognise another service from its answer | a pattern in `RULES` (`toolkit/core/data/recon/services.py`); the port's usual name, when no list has it, in `PORT_NAMES` | - | `tests/recon/test_services.py` |
 | recognise another sign of an OS | a pattern in `BANNER_WORDS` or a port in `PORT_SIGNS` (`toolkit/core/services/recon/os_guess.py`); a new family also needs `agree()` to know which families it fits | - | `tests/recon/test_os_detect.py` |
 | match another product's CVEs by version | its NVD `vendor:product` in `CPE_PRODUCTS` (`toolkit/core/data/recon/nvd.py`), under the name `software.product_version` gives, lower case; check it against NVD with a version known to have CVEs | the list in [README.md](../README.md) | `tests/recon/test_nvd.py` |

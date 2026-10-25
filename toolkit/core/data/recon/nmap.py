@@ -154,10 +154,10 @@ def path_folders(environ: Mapping[str, str]) -> list[Path]:
 
 
 def install_places(environ: Mapping[str, str]) -> list[Path]:
-    """The folders nmap's installer puts it in on this OS."""
+    """The folders nmap's installer puts it in on this OS, each once."""
     if _system() == "windows":
         folders = (Path(_variable(environ, name)) for name in PROGRAM_FILES)
-        return [folder / "Nmap" for folder in folders if folder.is_absolute()]
+        return list(dict.fromkeys(folder / "Nmap" for folder in folders if folder.is_absolute()))
     return [Path(place) for place in PLACES.get(_system(), PLACES["linux"])]
 
 

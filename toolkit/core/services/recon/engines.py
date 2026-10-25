@@ -6,7 +6,19 @@ needs nothing installed; nmap is an engine of its own when it is installed (N2-N
 import threading
 from collections.abc import Callable, Iterable, Sequence
 
-from ...data.recon.nmap import NmapMissing, NmapOptions, find_nmap, has_privileges, nmap_command
+from ...data.recon.nmap import INTENSITIES as INTENSITIES  # nmap's choices, for the command
+from ...data.recon.nmap import SCRIPT_SETS as SCRIPT_SETS
+from ...data.recon.nmap import SCRIPTS as SCRIPTS
+from ...data.recon.nmap import TIMINGS as TIMINGS
+from ...data.recon.nmap import NmapOptions as NmapOptions
+from ...data.recon.nmap import has_privileges as has_privileges
+from ...data.recon.nmap import (
+    NEEDS_PRIVILEGES,
+    VERSION_SCRIPTS_NOTE,
+    NmapMissing,
+    find_nmap,
+    nmap_command,
+)
 from ...data.recon.nmap_run import run_nmap
 from ...data.recon.nmap_xml import parse_nmap
 from ...data.recon.scanner import PortResult, Progress, scan_ports
@@ -23,6 +35,7 @@ class BuiltinEngine:
     UDP probe per port and the banner it sends; works on every OS with nothing installed."""
 
     name = "builtin"
+    os_matches: tuple[tuple[str, int], ...] = ()  # it doesn't look at the OS
 
     def available(self) -> str | None:
         """Always None: it can always run."""
@@ -118,8 +131,47 @@ ENGINES: dict[str, Callable[[], ScanEngine]] = {"builtin": BuiltinEngine, "nmap"
 DEFAULT_ENGINE = "builtin"
 
 
-def engine_named(name: str) -> ScanEngine:
-    """The engine called ``name``; ValueError with the known names for any other."""
+def engine_named(name: str, nmap_options: NmapOptions | None = None) -> ScanEngine:
+    """The engine called ``name`` (nmap with ``nmap_options``); ValueError with the known names
+    for any other."""
     if name not in ENGINES:
         raise ValueError(f"Unknown scan engine {name!r}; use one of {', '.join(ENGINES)}.")
-    return ENGINES[name]()
+    engine = ENGINES[name]()
+    if nmap_options is not None and isinstance(engine, NmapEngine):
+        engine.options = nmap_options
+    return engine
+
+
+def engine_problem(name: str, options: NmapOptions, protocols: Sequence[str]) -> str | None:
+    """Why the engine can't do this scan here, before anything is sent: nmap not installed (and
+    how to install it), or UDP or OS detection without raw packets; None when it can."""
+    problem = engine_named(name).available()
+    if problem or name != "nmap":
+        return problem
+    if ("udp" in protocols or options.os_detect) and not has_privileges():
+        return NEEDS_PRIVILEGES
+    return None
+
+
+def describe(name: str, options: NmapOptions) -> list[str]:
+    """The opening notice's lines for the engine (nmap: where it is, raw packets or not, each
+    choice, and nmap's own version scripts, ``VERSION_SCRIPTS_NOTE``)."""
+    if name != "nmap":
+        return ["built-in (the toolkit's own scanner: a TCP connection or a UDP probe per port, "
+                "nothing installed)"]
+    try:
+        found = find_nmap()
+    except NmapMissing as error:  # gone since the scan was checked: each target then fails
+        return [f"nmap: {error}"]
+    return [
+        f"nmap {found.version_text} ({found.path})",
+        "raw packets: yes (SYN scan)" if has_privileges() else
+        "raw packets: no, so a TCP connect scan (no UDP, no OS detection)",
+        f"service detection: {options.service_detection} "
+        f"(--version-intensity {INTENSITIES[options.service_detection]})",
+        f"timing: {options.timing} ({TIMINGS[options.timing]})",
+        f"scripts: the toolkit's {len(SCRIPTS)} ({', '.join(SCRIPTS)})" if options.scripts else
+        f"scripts: none of the toolkit's {len(SCRIPTS)} (--scripts safe adds them)",
+        f"OS detection: {'on' if options.os_detect else 'off'} (-O)",
+        VERSION_SCRIPTS_NOTE,
+    ]

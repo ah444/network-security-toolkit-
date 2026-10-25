@@ -15,9 +15,11 @@ from typing import Any, Protocol
 from ...data.keys import KEY_VARIABLES
 from ...data.recon.local import is_this_computer, this_os
 from ...data.recon.lookup import INTEL_WORKERS
+from ...data.recon.nmap import NmapMissing, NmapOptions
+from ...data.recon.nmap_run import NmapFailed
 from ...data.recon.nvd import NVD_INTERVAL
 from ...data.recon.ping import ping_host
-from ...data.recon.software import product_version
+from ...data.recon.software import nmap_software, product_version
 from ...data.recon.scan_files import EXPORT_FORMATS as EXPORT_FORMATS
 from ...data.recon.scan_files import ReportEntry as ReportEntry  # what the UI shows
 from ...data.recon.scan_files import export_results
@@ -25,7 +27,7 @@ from ...data.recon.scanner import PortResult as PortResult
 from ...data.recon.scanner import Progress
 from ...data.recon.text import one_line as one_line  # network text, shown on one line
 from ...data.settings import ScanConfig
-from .engines import DEFAULT_ENGINE, engine_named
+from .engines import DEFAULT_ENGINE, describe, engine_named
 from .intel import Intel, LookupResult
 from .os_guess import OsHint as OsHint  # what the UI shows
 from .os_guess import guess_os, os_hint
@@ -52,6 +54,7 @@ class ScanRequest:
     export: str | None = None
     interactive: bool = False
     engine: str = DEFAULT_ENGINE  # a name in engines.ENGINES (step N1)
+    nmap_options: NmapOptions = NmapOptions()  # nmap's choices, for --engine nmap (step N4)
 
 
 @dataclass(frozen=True)
@@ -151,9 +154,17 @@ class ScanView(Protocol):
     def entry(self, entry: ReportEntry, first: bool) -> None:
         """One open port's report entry, in port order; ``first`` for the target's first entry."""
 
+    def engine_notice(self, lines: Sequence[str]) -> None:
+        """Once, before ``lookups_notice``: the scan engine and its choices (``engines.describe``;
+        for nmap, its own version scripts too), the scanner's own words."""
+
     def lookups_notice(self, online: OnlinePlan) -> None:
         """Once, before the first target: what this scan may send to each online service, or why
         it sends nothing (step A5)."""
+
+    def scan_failed(self, target: str, message: str) -> None:
+        """The engine could not scan ``target`` (nmap missing or failed, ``message`` saying why):
+        it adds no entry, and the scan goes on with the next target."""
 
     def target_done(self) -> None:
         """After each target, scanned or skipped."""
@@ -231,12 +242,20 @@ def _ping_decision(target: str, request: ScanRequest, view: ScanView) -> tuple[b
     return True, ttl
 
 
+def _software(result: PortResult) -> str | None:
+    """What is looked up for a port: nmap's product and version when it gave them (the A1
+    names, ``nmap_software``), else the product and version in the banner."""
+    if result.product:
+        return nmap_software(result.product, result.version)
+    return product_version(result.banner)
+
+
 def _entries(target: str, open_ports: list[PortResult], intel: Intel, view: ScanView,
-             os_text: str) -> list[ReportEntry]:
+             os_text: str, engine: str) -> list[ReportEntry]:
     """The report entry of each open port, with its product's lookup (each product once, in
-    parallel, step 1.4e; a port without a product gets an empty one) and the host's OS hint
-    (``os_text``); each shown as made."""
-    products = [product_version(result.banner) for result in open_ports]
+    parallel, step 1.4e; a port without a product gets an empty one), the host's OS hint
+    (``os_text``) and the engine's name; each shown as made."""
+    products = [_software(result) for result in open_ports]
     distinct = [software for software in dict.fromkeys(products) if software]
     if distinct:
         view.looking_up(len(distinct), INTEL_WORKERS)
@@ -247,7 +266,7 @@ def _entries(target: str, open_ports: list[PortResult], intel: Intel, view: Scan
             looked_up[software] if software else
             {"cves": [], "cve_source": "", "max_cvss": None, "severity": "UNKNOWN",
              "ai_explanation": "", "errors": []})
-        entry = make_entry(target, result, software, found, os_text)
+        entry = make_entry(target, result, software, found, os_text, engine)
         view.entry(entry, first=not entries)
         entries.append(entry)
     return entries
@@ -255,15 +274,17 @@ def _entries(target: str, open_ports: list[PortResult], intel: Intel, view: Scan
 
 def scan_target(target: str, request: ScanRequest, intel: Intel,
                 view: ScanView) -> list[ReportEntry]:
-    """Scan one host and look up its open ports; returns the report entries."""
+    """Scan one host and look up its open ports; returns the report entries. NmapMissing or
+    NmapFailed when nmap can't scan it (``run_scan`` shows it and goes on)."""
     _reputation(target, request, intel, view)
     scan, ttl = _ping_decision(target, request, view)
     if not scan:
         return []
     view.scanning(target, ttl, guess_os(ttl))
 
-    results = engine_named(request.engine).scan(target, request.ports, request.protocols,
-                                                view.progress() if request.verbose else None)
+    engine = engine_named(request.engine, request.nmap_options)
+    results = engine.scan(target, request.ports, request.protocols,
+                          view.progress() if request.verbose else None)
     open_ports = [r for r in results if r.state == "open"]
     silent_udp = [r.port for r in results if r.state == "open|filtered"]
     if silent_udp:
@@ -272,21 +293,30 @@ def scan_target(target: str, request: ScanRequest, intel: Intel,
         view.open_ports(open_ports)
     else:
         view.no_open_ports(target)
-    hint = os_hint(ttl, open_ports, is_this_computer(target), this_os())
+    hint = os_hint(ttl, open_ports, is_this_computer(target), this_os(),
+                   nmap_os=engine.os_matches)
     if hint:
         view.os_hint(target, hint)
-    return _entries(target, open_ports, intel, view, hint.summary() if hint else "")
+    return _entries(target, open_ports, intel, view, hint.summary() if hint else "",
+                    engine.name)
 
 
 def run_scan(request: ScanRequest, keys: Mapping[str, str], start_time: float,
              view: ScanView) -> int:
-    """Scan every target, show the summary, export (asked, or ``--export``); the exit code."""
+    """Scan every target, show the summary, export (asked, or ``--export``); the exit code:
+    1 when the engine could not scan a target (the others are still scanned), else 0."""
     intel = Intel(keys, request.use_ai)
+    view.engine_notice(describe(request.engine, request.nmap_options))
     view.lookups_notice(online_plan(request, keys))
 
     entries: list[ReportEntry] = []
+    code = 0
     for target in request.targets:
-        entries.extend(scan_target(target, request, intel, view))
+        try:
+            entries.extend(scan_target(target, request, intel, view))
+        except (NmapMissing, NmapFailed) as error:
+            view.scan_failed(target, str(error))
+            code = 1
         view.target_done()
 
     failed = [f"{e['port']}/{e['protocol']} {error}" for e in entries
@@ -297,13 +327,13 @@ def run_scan(request: ScanRequest, keys: Mapping[str, str], start_time: float,
     if not entries:
         if request.interactive or request.export:
             view.nothing_to_export()
-        return 0
+        return code
     fmt = request.export
     if request.interactive:
         fmt = view.ask_export()
         if fmt is not None and fmt not in EXPORT_FORMATS:
             view.unknown_format()
-            return 0
+            return code
     if fmt:
         view.exported(export_results(entries, fmt))
-    return 0
+    return code
