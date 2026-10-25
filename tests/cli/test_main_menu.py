@@ -220,6 +220,22 @@ def test_entry_points_from_the_project_folder(repo_root, entry):
     assert "invalid choice: 'bogus'" in wrong.stderr
 
 
+def test_walkthrough_web_check_counts_only_its_own_server(repo_root):
+    """5.1 gate (found in 1.5h): a taken port or a page that never answers fails the check
+    (it used to crash with UnboundLocalError, or count a page from another server), and the
+    pages are fetched without any HTTP_PROXY."""
+    script = (repo_root / "scripts/menu_walkthrough.py").read_text(encoding="utf-8")
+    tree = ast.parse(script)
+    web_check = next(node for node in tree.body
+                     if isinstance(node, ast.FunctionDef) and node.name == "web_check")
+    body = ast.get_source_segment(script, web_check)
+    assert 'expect(f"http://127.0.0.1:{PORT}/", "is already in use", timeout=120) == 1' in body
+    assert "status = None" in body and "if status != 200:" in body
+    assert body.count("fail(") == 2
+    assert "LOCAL.open(" in body and "urlopen(" not in script
+    assert "LOCAL = urllib.request.build_opener(urllib.request.ProxyHandler({}))" in script
+
+
 def test_walkthrough_script_waits_only_for_prompts_the_tools_print(repo_root):
     """scripts/menu_walkthrough.py (the release gate) follows the flat menu: every prompt
     it waits for is in the toolkit's code, and none of the removed menus is."""

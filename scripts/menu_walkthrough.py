@@ -151,23 +151,40 @@ def finish(label, reader, since):
         raise SystemExit(f"{label} failed: {checks[-1]}")
 
 
+LOCAL = urllib.request.build_opener(urllib.request.ProxyHandler({}))  # 127.0.0.1: no proxy
+
+
+def fail(message):
+    """Stop the launcher and end the walk-through with exit code 1 and the transcript tail."""
+    proc.kill()
+    raise SystemExit(f"{message}\n--- tail ---\n{text()[-1500:]}")
+
+
 def web_check(label):
-    """Wait for the web trainer, fetch both pages, then stop its process."""
-    expect(f"http://127.0.0.1:{PORT}/", timeout=120)
-    for page in ("/", "/dynamic_ids"):
-        for _ in range(60):
-            try:
-                status = urllib.request.urlopen(f"http://127.0.0.1:{PORT}{page}", timeout=5).status
-                break
-            except OSError:
-                time.sleep(0.5)
-        checks.append(f"{label}: GET {page} -> {status}")
-    pids = _listening_pids(PORT)
-    for pid in pids:
-        if platform.system() == "Windows":
-            subprocess.run(["taskkill", "/PID", pid, "/F"], capture_output=True)
-        else:
-            os.kill(int(pid), signal.SIGTERM)
+    """Wait for the web trainer, fetch both pages, then stop its process. A port already in
+    use or a page that never answers is a failed check, so a page from another server that
+    holds the port is never counted."""
+    if expect(f"http://127.0.0.1:{PORT}/", "is already in use", timeout=120) == 1:
+        fail(f"{label} failed: port {PORT} is already in use (another server holds it)")
+    try:
+        for page in ("/", "/dynamic_ids"):
+            status = None
+            for _ in range(60):
+                try:
+                    status = LOCAL.open(f"http://127.0.0.1:{PORT}{page}", timeout=5).status
+                    break
+                except OSError:
+                    time.sleep(0.5)
+            checks.append(f"{label}: GET {page} -> {status}")
+            if status != 200:
+                fail(f"{label} failed: {checks[-1]}")
+    finally:
+        pids = _listening_pids(PORT)
+        for pid in pids:
+            if platform.system() == "Windows":
+                subprocess.run(["taskkill", "/PID", pid, "/F"], capture_output=True)
+            else:
+                os.kill(int(pid), signal.SIGTERM)
     checks.append(f"{label}: server stopped (pid {', '.join(sorted(pids))})")
 
 
