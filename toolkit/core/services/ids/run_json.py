@@ -24,7 +24,9 @@ from .profiles import ProfileMatch
 from .split import SplitResult
 
 
-def jsonable(value: Any) -> Any:
+# C901 kept: one isinstance test per kind of value, in order; a dispatch table would only
+# hide the order
+def jsonable(value: Any) -> Any:  # noqa: C901
     if value is None or isinstance(value, (bool, int, str)):
         return value
     if isinstance(value, float):

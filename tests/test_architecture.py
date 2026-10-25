@@ -125,42 +125,60 @@ def _import_problems(module, here, name):
     return problems
 
 
+def _import_violations(module, is_package, tree):
+    """The import rules ``module`` breaks: old names, interfaces and layers, the web
+    framework, argparse, and the outside world outside the data layer."""
+    here = place(module)
+    interface, layer, _ = here
+    found = []
+    for name, line in _imported(tree, module, is_package):
+        top = name.split(".")[0]
+        if _within(name, OLD_NAMES):
+            found.append(f"{module}:{line} imports the old name {name}")
+            continue
+        if top == "toolkit":
+            found += [f"{module}:{line} {problem}"
+                      for problem in _import_problems(module, here, name)]
+        if top in WEB_FRAMEWORK and (interface, layer) != ("web", "controllers"):
+            found.append(f"{module}:{line} imports the web framework ({name})")
+        if top == "argparse" and (interface, layer) != ("cli", "controllers") and \
+                module not in ARGPARSE_OUTSIDE_CLI:
+            found.append(f"{module}:{line} imports argparse")
+        if top in OUTSIDE and layer != "data":
+            found.append(f"{module}:{line} imports {name}: only the data layer goes outside")
+    return found
+
+
+def _call_violations(module, tree):
+    """The call rules ``module`` breaks: print() and input() outside the UI, files opened
+    outside the data layer."""
+    _, layer, _ = place(module)
+    found = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        func = node.func
+        if isinstance(func, ast.Name) and func.id in ("print", "input") and layer != "ui":
+            found.append(f"{module}:{node.lineno} calls {func.id}(): only the UI talks to "
+                         "the user")
+        if layer != "data" and (
+                (isinstance(func, ast.Name) and func.id == "open")
+                or (isinstance(func, ast.Attribute) and func.attr in FILE_METHODS)):
+            what = func.id if isinstance(func, ast.Name) else func.attr
+            found.append(f"{module}:{node.lineno} calls {what}(): only the data layer "
+                         "reads or writes files")
+    return found
+
+
 def layer_violations(root: Path) -> list[str]:
-    """Every broken interface or layer rule in ``root/toolkit``, as readable messages."""
+    """Every broken interface or layer rule in ``root/toolkit``, as readable messages (per
+    file: its imports, then its calls)."""
     found = []
     for path in sorted((root / "toolkit").rglob("*.py")):
         module, is_package = _module_name(path, root)
         tree = ast.parse(path.read_text(encoding="utf-8"))
-        here = place(module)
-        interface, layer, _ = here
-        for name, line in _imported(tree, module, is_package):
-            top = name.split(".")[0]
-            if _within(name, OLD_NAMES):
-                found.append(f"{module}:{line} imports the old name {name}")
-                continue
-            if top == "toolkit":
-                found += [f"{module}:{line} {problem}"
-                          for problem in _import_problems(module, here, name)]
-            if top in WEB_FRAMEWORK and (interface, layer) != ("web", "controllers"):
-                found.append(f"{module}:{line} imports the web framework ({name})")
-            if top == "argparse" and (interface, layer) != ("cli", "controllers") and \
-                    module not in ARGPARSE_OUTSIDE_CLI:
-                found.append(f"{module}:{line} imports argparse")
-            if top in OUTSIDE and layer != "data":
-                found.append(f"{module}:{line} imports {name}: only the data layer goes outside")
-        for node in ast.walk(tree):
-            if not isinstance(node, ast.Call):
-                continue
-            func = node.func
-            if isinstance(func, ast.Name) and func.id in ("print", "input") and layer != "ui":
-                found.append(f"{module}:{node.lineno} calls {func.id}(): only the UI talks to "
-                             "the user")
-            if layer != "data" and (
-                    (isinstance(func, ast.Name) and func.id == "open")
-                    or (isinstance(func, ast.Attribute) and func.attr in FILE_METHODS)):
-                what = func.id if isinstance(func, ast.Name) else func.attr
-                found.append(f"{module}:{node.lineno} calls {what}(): only the data layer "
-                             "reads or writes files")
+        found += _import_violations(module, is_package, tree)
+        found += _call_violations(module, tree)
     return found
 
 

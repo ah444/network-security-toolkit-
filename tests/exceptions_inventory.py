@@ -28,6 +28,12 @@ SUPPRESSIONS = [
      "unreachable: the generic profile matches every file, the line only documents that"),
     ("toolkit/core/services/ids/registry.py", "type: ignore[misc]", 1,
      "SelectKBest has no type information (an untyped base class)"),
+    ("toolkit/core/services/ids/balancing.py", "noqa[C901]", 1,
+     "_rule is one ordered decision table (the first case that holds wins); split, the order "
+     "of its cases would be spread over functions"),
+    ("toolkit/core/services/ids/run_json.py", "noqa[C901]", 1,
+     "jsonable is one isinstance test per kind of value, in order; a dispatch table would "
+     "only hide the order"),
 ]
 
 # (table, key, value, reason): a setting in pyproject.toml that switches checking off.
@@ -40,3 +46,8 @@ CONFIGURATION = [
 
 # Ruff's per-file-ignores (pattern -> codes); empty since v5.2 step 2.3a, and only shrinks.
 PER_FILE_IGNORES: dict[str, tuple[str, ...]] = {}
+
+# file -> (lines, reason): a Python or JavaScript file of toolkit/ allowed above
+# tests/test_file_sizes.py's limit (v5.2 step 2.3o). The count is the file's exact length, a
+# ceiling: the file may not grow, and when it shrinks the count is lowered with it.
+LONG_FILES: dict[str, tuple[int, str]] = {}

@@ -49,8 +49,10 @@ def _size(rows: int) -> str:
     return "very_large"
 
 
-def _rule(severity: str, size: str, dimensionality: str, classes: int, rows: int, ratio: float,
-          minority: int, features: int) -> tuple[str, str, str, tuple[str, ...]]:
+# C901 kept: one ordered decision table (the first case that holds wins); split, the order
+# of the cases would be spread over functions
+def _rule(severity: str, size: str, dimensionality: str, classes: int, rows: int,  # noqa: C901
+          ratio: float, minority: int, features: int) -> tuple[str, str, str, tuple[str, ...]]:
     """(recommended, reason code, reason, alternatives), in v4's order of cases."""
     severe = severity in ("severe", "extreme")
     multiclass = classes > 2
