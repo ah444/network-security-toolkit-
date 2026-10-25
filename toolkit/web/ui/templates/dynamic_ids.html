@@ -63,14 +63,21 @@
         <h3>Upload Dataset</h3>
         <p class="section-description">One CSV/TXT file, several parts of the same dataset, or an official train file plus its test file (a file name containing "test", e.g. NSL-KDD's KDDTest+.txt).</p>
         <form id="uploadForm" enctype="multipart/form-data">
-          <div class="form-group">
-            <label for="dataset" class="label">Select CSV or TXT File:</label>
-            <div class="file-input-wrapper">
-              <input type="file" id="dataset" name="dataset" accept=".csv,.txt" multiple required>
-              <div class="file-input-placeholder">Choose file(s)...</div>
+          <div class="form-group dropzone-group">
+            <label for="dataset" class="label">Select CSV or TXT File</label>
+            <!-- The input lies invisible over the whole box: click, drop or choose with the keyboard -->
+            <div class="file-input-wrapper dropzone">
+              <input type="file" id="dataset" name="dataset" accept=".csv,.txt" multiple required aria-describedby="datasetChosen">
+              <div class="file-input-placeholder">
+                <span class="dropzone-icon" aria-hidden="true">
+                  <svg class="icon" viewBox="0 0 24 24" focusable="false"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>
+                </span>
+                <span class="dropzone-title" id="datasetChosen">Choose file(s)...</span>
+                <span class="chip-list" id="datasetChips" hidden></span>
+              </div>
             </div>
           </div>
-          <button type="submit" class="btn">Upload File</button>
+          <button type="submit" class="btn btn-inline">Upload File</button>
         </form>
         <div id="uploadResult" class="message" role="status"></div>
       </div>

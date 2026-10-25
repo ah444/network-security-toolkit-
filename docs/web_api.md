@@ -57,6 +57,34 @@ computer (`127.0.0.1`).
 | GET | `/api/v1/workspace` | none | what the session holds, to resume after a reload (see below) |
 | DELETE | `/api/v1/workspace` | none | the session's dataset and models are forgotten |
 
+## Dataset upload
+
+`POST /api/v1/dataset` reads every uploaded file into the session's workspace (each file
+is on disk only while it is read). The answer:
+
+```json
+{"message": "Successfully processed 2 file(s). Total rows: 125973. KDDTest+.txt is used as the official test file (22544 rows). Memory used: 23.1 MB.",
+ "columns": ["duration", "protocol_type", ...],
+ "dataset": {"files": ["KDDTrain+.txt", "KDDTest+.txt"], "rows": 125973, "memory_mb": 23.1,
+             "test_file": "KDDTest+.txt", "test_rows": 22544,
+             "profile": {"name": "nsl_kdd", "variant": "full", "label_column": "attack",
+                         "split_strategy": "official", "blocked_columns": ["level"],
+                         "warnings": []}}}
+```
+
+- `message`: one sentence for people; clients should read the fields below, not parse it.
+- `dataset.files`: the uploaded file names as given (without folders). They come from the
+  user's computer: show them as text, never as HTML.
+- `dataset.rows`: rows of the training data (the official test file's rows not counted);
+  `memory_mb`: the memory the data takes on the server, one decimal.
+- `dataset.test_file`, `test_rows`: the official test file (an NSL-KDD pair with a file
+  named `*test*`), else `null`.
+- `dataset.profile`: what was recognised. `label_column` is `null` when none was found;
+  `split_strategy` is the profile's split (training may fall back to another; the run
+  says which); `blocked_columns` are never used as features (label-derived, IDs, time).
+
+`GET /api/v1/workspace` repeats this answer as `dataset` after a reload.
+
 ## Batch prediction (v5.1 step 1.4f)
 
 `POST /api/v1/run/predict-file` and `/api/v1/bundle/predict-file` label every row of an

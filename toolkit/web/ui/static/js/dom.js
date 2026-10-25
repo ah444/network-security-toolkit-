@@ -95,6 +95,29 @@ export function watchFileInput(input, placeholder, emptyText) {
   });
 }
 
+// Line icons, drawn by the stylesheet's .icon (the colour of the text around them); the
+// paths are fixed here, never taken from data
+const SVG = "http://www.w3.org/2000/svg";
+const ICONS = {
+  check: ["M22 11.08V12a10 10 0 1 1-5.93-9.14", "M22 4 12 14.01l-3-3"],
+  alert: ["M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z", "M12 8v4", "M12 16h.01"],
+};
+
+// A decorative icon: hidden from screen readers, the words next to it say what it means
+export function icon(name) {
+  const svg = document.createElementNS(SVG, "svg");
+  svg.setAttribute("class", "icon");
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("aria-hidden", "true");
+  svg.setAttribute("focusable", "false");
+  for (const d of ICONS[name]) {
+    const path = document.createElementNS(SVG, "path");
+    path.setAttribute("d", d);
+    svg.append(path);
+  }
+  return svg;
+}
+
 // A box that scrolls (a wide or long table): the keyboard can reach it to scroll it with
 // the arrow keys, and its name tells it apart (v5.2 step 2.2b)
 export function scrollBox(label, ...children) {

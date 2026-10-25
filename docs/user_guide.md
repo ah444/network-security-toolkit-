@@ -244,9 +244,13 @@ Here it is NSL-KDD: a sample of `KDDTrain+` and a sample of `KDDTest+`, whose na
 
 ![Two files chosen for upload](user-guide/02-upload.jpg)
 
-After **Upload File** the trainer says what it recognised: the dataset (`nsl_kdd`), the
-label column (`attack`), the split (`official`: the test file is the test split) and the
-columns it will never use as features (`level` is derived from the label).
+The box lists the chosen files (with more than six, the first five and how many more);
+you can also drop files on it. After **Upload File** the trainer says what it recognised,
+one fact per tile: the dataset (`nsl_kdd`), the label column (`attack`), the split
+(`official`: the test file is the test split), the official test file and its rows, the
+files read, the rows, the memory used, and the columns it will never use as features
+(`level` is derived from the label; "None" when there are none). If a file can't be read,
+the same place says **Upload failed** and why, and the last result is gone.
 
 ![The upload result](user-guide/03-upload-done.jpg)
 

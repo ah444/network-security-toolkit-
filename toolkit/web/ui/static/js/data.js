@@ -3,20 +3,37 @@
 
 import { getJSON, send } from "./api.js";
 import { byId, el, scrollBox, setContent, show, table, watchFileInput } from "./dom.js";
-import { fmt } from "./format.js";
+import { fmt, wholeNumber } from "./format.js";
 import { emit, on } from "./state.js";
+import { chips, code, quiet, statTile, summaryPanel } from "./summary.js";
 
-// Reset a form's file inputs and their "Choose file..." placeholders
+const NO_FILES = "Choose file(s)...";
+const UPLOAD_LABEL = "Upload File";
+const EXCLUDED_NOTE = "Columns that are label-derived, IDs or time are never used as features.";
+
+// Reset a form's file inputs; their change listeners put back the "Choose file..." texts
 function resetFileInputs(formId) {
   const form = byId(formId);
   form.reset();
   form.querySelectorAll('input[type="file"]').forEach(input => {
     input.value = "";
-    const placeholder = input.parentNode.querySelector(".file-input-placeholder");
-    if (placeholder) {
-      placeholder.textContent = input.multiple ? "Choose file(s)..." : "Choose file...";
-    }
+    input.dispatchEvent(new Event("change"));
   });
+}
+
+// The dropzone: "N file(s) selected" and a chip per chosen file. The input lies over the
+// chips, so it carries the full names as its own tooltip.
+function showChosenFiles() {
+  const input = byId("dataset");
+  const names = Array.from(input.files, file => file.name);
+  setContent(byId("datasetChosen"), names.length === 0 ? NO_FILES : `${names.length} file(s) selected`);
+  setContent(byId("datasetChips"), chips(names));
+  show(byId("datasetChips"), names.length > 0);
+  if (names.length > 0) {
+    input.title = names.join("\n");
+  } else {
+    input.removeAttribute("title");
+  }
 }
 
 // Show the upload path or the bundle path; the steps start again from Data
@@ -69,35 +86,87 @@ async function fetchDataPreview() {
   }
 }
 
+// The upload's panel, from the answer's structured fields only (``dataset``, see
+// docs/web_api.md); the tile of the official test file only when there is one
+export function datasetSummary(dataset) {
+  const profile = dataset.profile;
+  const excluded = profile.blocked_columns;
+  return summaryPanel({
+    id: "uploadSummary",
+    title: "Uploaded successfully",
+    tiles: [
+      statTile("Dataset", [code(profile.name), " ", quiet(`(${profile.variant})`)]),
+      statTile("Label column", profile.label_column ? code(profile.label_column) : quiet("not detected")),
+      statTile("Split", profile.split_strategy),
+      dataset.test_file ? statTile("Official test file", code(dataset.test_file),
+                                   `${wholeNumber(dataset.test_rows)} rows`) : null,
+      statTile("Files processed", wholeNumber(dataset.files.length)),
+      statTile("Total rows", wholeNumber(dataset.rows)),
+      statTile("Memory used", `${fmt(dataset.memory_mb, 1)} MB`),
+      statTile("Excluded from features", excluded.length > 0 ? code(excluded.join(", ")) : quiet("None")),
+    ],
+    foot: EXCLUDED_NOTE,
+  });
+}
+
+// A failed upload: the server's message, as text; announced at once (role="alert")
+export function uploadError(message) {
+  return summaryPanel({ id: "uploadError", kind: "error", title: "Upload failed",
+                        body: el("p", {}, message) });
+}
+
 // The upload's answer (also after a reload, from GET /api/v1/workspace)
 function showDataset(result) {
-  const profile = result.dataset.profile;
-  setContent(byId("uploadResult"),
-    el("p", {}, result.message),
-    el("p", {}, "Detected dataset: ", el("strong", {}, profile.name), ` (${profile.variant}); label column: `,
-       el("strong", {}, profile.label_column || "not detected"), `; split: ${profile.split_strategy}.`),
-    profile.blocked_columns.length > 0 &&
-      el("p", {}, "Never used as features (label-derived, IDs or time): " + profile.blocked_columns.join(", ")));
+  setContent(byId("uploadResult"), datasetSummary(result.dataset));
   emit("dataset:loaded", { columns: result.columns, dataset: result.dataset });
   show(byId("dataPreviewSection"));
   fetchDataPreview();
 }
 
+// While a file is sent the button is off and says so; the result area is busy (its screen
+// reader announcement waits for the answer) and the old result is gone, so results never stack
+function uploadButton() {
+  return byId("uploadForm").querySelector('button[type="submit"]');
+}
+
+function setUploading(busy) {
+  const button = uploadButton();
+  button.disabled = busy;
+  setContent(button, busy ? "Uploading…" : UPLOAD_LABEL);
+  [button, byId("uploadResult")].forEach(node =>
+    busy ? node.setAttribute("aria-busy", "true") : node.removeAttribute("aria-busy"));
+}
+
+let uploading = false;
+
 async function uploadDataset(event) {
   event.preventDefault();
   const uploadResult = byId("uploadResult");
   const files = byId("dataset").files;
+  if (uploading) {
+    return;  // a second submit (Enter twice) while the first upload runs
+  }
   if (files.length === 0) {
-    setContent(uploadResult, "Error: No files selected.");
+    setContent(uploadResult, uploadError("No files selected."));
     return;
   }
-  setContent(uploadResult, "Uploading and reading the file(s)...");
+  // A disabled button loses the keyboard focus: it gets it back after, if it had it
+  const focused = document.activeElement === uploadButton();
+  uploading = true;
+  setUploading(true);
+  setContent(uploadResult);
   const formData = new FormData();
   Array.from(files).forEach(file => formData.append("dataset", file));
   try {
     showDataset(await send("/api/v1/dataset", "POST", formData));
   } catch (error) {
-    uploadResult.textContent = "Error: " + error.message;
+    setContent(uploadResult, uploadError(error.message));
+  } finally {
+    uploading = false;
+    setUploading(false);
+    if (focused && document.activeElement === document.body) {
+      uploadButton().focus();
+    }
   }
 }
 
@@ -161,8 +230,7 @@ export function setup() {
   byId("optionTrained").addEventListener("change", toggleSections);
   byId("optionNotTrained").addEventListener("change", toggleSections);
   toggleSections();
-  watchFileInput(byId("dataset"), byId("dataset").parentNode.querySelector(".file-input-placeholder"),
-                 "Choose files...");
+  byId("dataset").addEventListener("change", showChosenFiles);
   watchFileInput(byId("modelFile"), byId("modelFilePlaceholder"), "Choose file...");
   byId("uploadForm").addEventListener("submit", uploadDataset);
   byId("refreshPreviewBtn").addEventListener("click", fetchDataPreview);

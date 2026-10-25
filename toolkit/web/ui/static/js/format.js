@@ -5,6 +5,11 @@ export function fmt(value, digits) {
   return value === null || value === undefined || isNaN(value) ? "n/a" : Number(value).toFixed(digits);
 }
 
+// A count with thousands separators (125,973), the same in every browser language
+export function wholeNumber(value) {
+  return Number(value).toLocaleString("en-US");
+}
+
 // Feature score for display: the server sends "inf" for a feature with one value per class
 export function scoreText(score) {
   return score === "inf" ? "∞" : fmt(score, 2);

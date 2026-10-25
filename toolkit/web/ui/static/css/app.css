@@ -83,6 +83,11 @@
   --danger: var(--red-700);
   --warning: var(--yellow-900);
   --info: var(--cyan-900);
+  /* names for the result panels (the Upload Dataset card, the scan results): they follow
+     the theme tokens they point to, so the dark blocks below need no copy of them */
+  --muted: var(--placeholder);
+  --surface-inset: var(--bg);
+  --border: var(--list-border);
 
   /* the same in both themes */
   --accent: var(--indigo-500);
@@ -101,6 +106,7 @@
 
   /* shape */
   --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
   --radius-sm: 4px;
   --radius: 6px;
   --radius-md: 8px;
@@ -587,6 +593,101 @@ textarea:focus-visible,
   color: var(--accent);
 }
 
+/* The Upload Dataset dropzone: an icon, "N file(s) selected" and a chip per file; the
+   input still lies over the whole box, so clicking and dropping work as before */
+.dropzone-group {
+  max-width: none; /* the box is as wide as the card: the chips need the room */
+}
+
+.dropzone .file-input-placeholder {
+  display: grid;
+  grid-template-columns: 2.75rem minmax(0, 1fr);
+  grid-template-areas: "icon title" "icon chips";
+  align-items: center;
+  column-gap: 1rem;
+  padding: 1.25rem 1.5rem;
+  border: 1.5px dashed var(--border);
+  text-align: start;
+  color: var(--text);
+  transition: border-color 0.3s; /* not "all": the text took the old theme's colour a while */
+}
+
+.dropzone:hover .file-input-placeholder {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.dropzone-icon {
+  grid-area: icon;
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 10px;
+  background: var(--surface-inset);
+  color: var(--muted);
+}
+
+.dropzone-title {
+  grid-area: title;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.chip-list {
+  grid-area: chips;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+/* A file name: cut with "..." when long (its full name is the input's tooltip) */
+.chip {
+  max-width: 16rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0.25rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-inset);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+}
+
+.chip-more {
+  font-family: var(--font);
+  color: var(--muted);
+}
+
+/* Line icons (dom.js icon(), or written in the template): the colour of their text */
+.icon {
+  width: 1.375rem;
+  height: 1.375rem;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* A button as wide as its text, on the left edge of the field above it */
+.btn.btn-inline {
+  width: auto;
+  max-width: none;
+  min-width: 10rem;
+  min-height: 46px;
+  margin: 0;
+  padding: 0 1.75rem;
+  border-radius: 10px;
+  font-size: 0.9375rem;
+}
+
 /* ---------- Messages ---------- */
 .message {
   margin-top: 1rem;
@@ -622,6 +723,126 @@ textarea:focus-visible,
 .status-warning { color: var(--warning); }
 .status-success { color: var(--success); }
 .status-info { color: var(--info); }
+
+/* ---------- Result panels (summary.js): a heading with an icon, label/value tiles and a
+   footnote. The upload's answer uses them; the scan results will too ---------- */
+#uploadResult {
+  margin-top: 1.75rem;
+  padding: 0; /* the panel has its own; its left edge is the button's */
+  text-align: start;
+}
+
+.summary-panel {
+  display: grid;
+  gap: 1.25rem;
+  padding: 1.5rem;
+  background: var(--surface-inset);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  text-align: start;
+  font-weight: 400;
+}
+
+.summary-panel-error {
+  border-color: var(--danger);
+}
+
+.summary-panel p {
+  margin: 0;
+}
+
+/* Success is the icon and the words, not only the colour */
+.summary-head {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--success);
+}
+
+.summary-panel-error .summary-head {
+  color: var(--danger);
+}
+
+.summary-head .icon {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.75rem 1.375rem;
+  margin: 0;
+}
+
+.stat-tile {
+  min-width: 0;
+}
+
+.stat-tile dt {
+  margin-bottom: 0.375rem;
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+
+.stat-tile dd {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+/* A second line under a value (e.g. the test file's rows) */
+.stat-note {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.8125rem;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+/* Names from the data (datasets, columns, files) */
+.mono {
+  font-family: var(--font-mono);
+}
+
+/* A remark next to a value, e.g. "(full)" or "None" */
+.quiet {
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.summary-foot {
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+
+/* Four tiles a row where the card has about 900 px of room */
+@media (min-width: 1024px) {
+  .stat-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+/* No movement for those who asked their system for less */
+@media (prefers-reduced-motion: reduce) {
+  .section,
+  .btn,
+  .file-input-placeholder {
+    transition: none;
+  }
+
+  .section:hover,
+  .btn:hover {
+    transform: none;
+  }
+}
 
 /* ---------- Data preview ---------- */
 .stats-box {
@@ -1182,5 +1403,28 @@ textarea:focus-visible,
 
   .features-grid {
     grid-template-columns: 1fr;
+  }
+
+  /* the dropzone: the icon and the title on one row, the chips under both */
+  .dropzone .file-input-placeholder {
+    grid-template-areas: "icon title" "chips chips";
+    padding: 1rem;
+  }
+
+  .chip {
+    max-width: 100%;
+  }
+
+  .btn.btn-inline {
+    width: 100%;
+    min-height: 48px;
+  }
+
+  .summary-panel {
+    padding: 1.25rem 1rem;
+  }
+
+  .stat-grid {
+    gap: 1.25rem 1.125rem;
   }
 }
