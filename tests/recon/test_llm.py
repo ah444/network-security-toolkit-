@@ -55,7 +55,7 @@ def test_no_ai_request_without_consent_or_key(fake_session, nvd_openssh,
         assert found["ai_explanation"] == "" and found["errors"] == []
 
 
-def test_ai_consent_is_asked_in_the_scan(scan_service, scanner, monkeypatch, capsys):
+def test_ai_consent_is_asked_in_the_scan(fake_ports, scan_service, scanner, monkeypatch, capsys):
     monkeypatch.setenv("OPENROUTER_API_KEY", "or-test-key")
     prompts = []
     answers = iter(["127.0.0.1", "1", "1", "tcp", "yes", "n", "n"])
@@ -66,7 +66,7 @@ def test_ai_consent_is_asked_in_the_scan(scan_service, scanner, monkeypatch, cap
 
     monkeypatch.setattr(builtins, "input", answer)
     monkeypatch.setattr(scan_service, "ping_host", lambda host, timeout=1: (True, 128))
-    monkeypatch.setattr(scan_service, "scan_ports", lambda *args, **kwargs: [])
+    fake_ports(lambda *args, **kwargs: [])
     assert scanner.main([]) == 0
     question = next(p for p in prompts if "OpenRouter" in p)
     assert "never the raw banner" in question

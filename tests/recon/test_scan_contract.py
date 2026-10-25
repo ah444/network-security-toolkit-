@@ -24,7 +24,7 @@ AUTHORIZE = "authorised to scan"
 
 
 @pytest.fixture
-def net(scan_service, scanner, fake_session, no_nvd_wait, monkeypatch):
+def net(fake_ports, scan_service, scanner, fake_session, no_nvd_wait, monkeypatch):
     """Every step that could reach the network, in order: ``dns``, ``authorize``, ``ping``,
     ``scan``, ``http`` (with what was sent). Answers come from ``answers`` (prompt prefix →
     answer); any other question fails the test."""
@@ -65,7 +65,7 @@ def net(scan_service, scanner, fake_session, no_nvd_wait, monkeypatch):
     monkeypatch.setattr(socket, "getaddrinfo", getaddrinfo)
     monkeypatch.setattr(builtins, "input", ask)
     monkeypatch.setattr(scan_service, "ping_host", ping)
-    monkeypatch.setattr(scan_service, "scan_ports", scan)
+    fake_ports(scan)
     monkeypatch.setattr(scan_service, "Intel", intel)
     monkeypatch.setattr(scanner, "load_api_keys", lambda: state["keys"])
     return state

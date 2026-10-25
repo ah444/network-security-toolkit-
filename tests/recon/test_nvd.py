@@ -169,7 +169,8 @@ def test_pages_stop_at_the_limit_and_at_an_empty_page(no_nvd_wait):
         _cve(f"CVE-2011-{start:05d}", 5.0)]} for start in range(0, nvd.MAX_CVES, nvd.PAGE)})
     recon_intel.Intel({}, session=endless).lookup("Apache 2.2.8")
     assert len(endless.params) == nvd.MAX_CVES // nvd.PAGE, "at most MAX_CVES per CPE name"
-    lying = ByQuery({(name, 0): {"totalResults": 10**6, "vulnerabilities": [_cve("CVE-2011-0001", 5)]}})
+    lying = ByQuery({(name, 0): {"totalResults": 10**6,
+                                 "vulnerabilities": [_cve("CVE-2011-0001", 5)]}})
     recon_intel.Intel({}, session=lying).lookup("Apache 2.2.8")
     assert [p.get("startIndex") for p in lying.params] == [0, 500], "an empty page ends it"
 

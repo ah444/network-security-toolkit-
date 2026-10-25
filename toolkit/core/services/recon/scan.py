@@ -22,9 +22,10 @@ from ...data.recon.scan_files import EXPORT_FORMATS as EXPORT_FORMATS
 from ...data.recon.scan_files import ReportEntry as ReportEntry  # what the UI shows
 from ...data.recon.scan_files import export_results
 from ...data.recon.scanner import PortResult as PortResult
-from ...data.recon.scanner import Progress, scan_ports
+from ...data.recon.scanner import Progress
 from ...data.recon.text import one_line as one_line  # network text, shown on one line
 from ...data.settings import ScanConfig
+from .engines import DEFAULT_ENGINE, engine_named
 from .intel import Intel, LookupResult
 from .os_guess import OsHint as OsHint  # what the UI shows
 from .os_guess import guess_os, os_hint
@@ -50,6 +51,7 @@ class ScanRequest:
     scan_unresponsive: bool = False
     export: str | None = None
     interactive: bool = False
+    engine: str = DEFAULT_ENGINE  # a name in engines.ENGINES (step N1)
 
 
 @dataclass(frozen=True)
@@ -260,8 +262,8 @@ def scan_target(target: str, request: ScanRequest, intel: Intel,
         return []
     view.scanning(target, ttl, guess_os(ttl))
 
-    results = scan_ports(target, request.ports, request.protocols,
-                         view.progress() if request.verbose else None)
+    results = engine_named(request.engine).scan(target, request.ports, request.protocols,
+                                                view.progress() if request.verbose else None)
     open_ports = [r for r in results if r.state == "open"]
     silent_udp = [r.port for r in results if r.state == "open|filtered"]
     if silent_udp:

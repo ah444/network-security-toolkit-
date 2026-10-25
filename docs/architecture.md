@@ -70,7 +70,7 @@ no Flask, no argparse. Read by `cli/` and `web/`, it imports neither
 |---|---|---|
 | `toolkit/core/__init__.py` | - | what both tools share (v5.2 step 2.3b): `core/services/` and `core/data/` |
 | `toolkit/core/services/__init__.py` | services | the shared services |
-| `toolkit/core/services/ports.py` | services | the three ports: `ModelStore`, `IntelProvider`, `ProgressSink` |
+| `toolkit/core/services/ports.py` | services | the four ports: `ModelStore`, `IntelProvider`, `ProgressSink`, `ScanEngine` |
 | `toolkit/core/services/ids/__init__.py` | services | the ML core: no web framework, no `print()`, no network |
 | `toolkit/core/services/ids/datasets.py` | services | a CSV/TXT dataset understood: encoding, separator, profile, header, dtypes, a load report |
 | `toolkit/core/services/ids/profiles.py` | services | recognises CIC-IDS2017, NSL-KDD or a generic file from its content |
@@ -95,6 +95,7 @@ no Flask, no argparse. Read by `cli/` and `web/`, it imports neither
 | `toolkit/core/services/recon/targets.py` | services | targets, port lists and scan limits |
 | `toolkit/core/services/recon/scan.py` | services | a scan, start to end, through a `ScanView` (what it shows and asks) |
 | `toolkit/core/services/recon/intel.py` | services | `Intel`: the lookups for open ports, in parallel, each product once |
+| `toolkit/core/services/recon/engines.py` | services | the scan engines by name: the built-in one (the toolkit's own scanner) |
 | `toolkit/core/services/recon/os_guess.py` | services | the OS guess from the TTL, the banners and the open ports, with its evidence; this computer said |
 | `toolkit/core/services/recon/report.py` | services | one report entry per open port, its network text cleaned |
 | `toolkit/core/data/__init__.py` | data | the shared data: files, the network, the environment |
@@ -274,7 +275,7 @@ type checking only (`if TYPE_CHECKING`), so at run time the ports import no othe
 services rules again, from the ML core's side: `tests/ml/test_core_rules.py`. `mypy
 --strict` checks the whole package (`tests/test_type_check.py`).
 
-## 4. The three ports
+## 4. The four ports
 
 Interfaces exist only where an implementation really is swapped or faked in tests
 (`toolkit/core/services/ports.py`, all `typing.Protocol`):
@@ -284,6 +285,7 @@ Interfaces exist only where an implementation really is swapped or faked in test
 | `ModelStore` | web trainer, IDS command line | `BundleStore` (`toolkit/core/services/ids/exports.py`, over `toolkit/core/data/ids/bundle_files.py`): signed bundles in `instance/bundles/` | a scratch instance folder |
 | `IntelProvider` | `Intel` in the scanner | `NvdProvider`, `OpenRouterProvider`, `AbuseIpdbProvider` (`toolkit/core/data/recon/`) | fake providers; recorded NVD answers in `tests/fixtures/` |
 | `ProgressSink` | `train()`, `evaluate()`, `scan_ports()` | a web job (`toolkit/web/services/jobs.py`), the scanner's verbose line (`toolkit/cli/ui/scan.py`) | `NullProgress` or a recorder |
+| `ScanEngine` | `scan_target` in the scanner, by the request's `engine` name | `BuiltinEngine` (`toolkit/core/services/recon/engines.py`, over `scan_ports` in `toolkit/core/data/recon/scanner.py`); nmap when installed (steps N2-N4) | the `fake_ports` fixture (`tests/recon/conftest.py`), an engine put in `ENGINES` |
 
 Everything else is plain functions and dict registries.
 
@@ -412,7 +414,8 @@ screen and every question goes through the `ScanView` (`ConsoleScan` in
  OS guess from the TTL                                          core/services/recon/os_guess.py
      |
      v
- scan_ports: TCP connect / UDP probe per port                   core/data/recon/scanner.py
+ the engine (ScanRequest.engine)                                core/services/recon/engines.py
+ builtin: TCP connect / UDP probe per port                      core/data/recon/scanner.py
      |       banner read with the port's probe                  core/data/recon/probes.py
      |       the service from the answer, else "usual?"         core/data/recon/services.py
      v
@@ -501,6 +504,7 @@ stays in its folder.
 | add a model, balancer or feature selector | a `ModelSpec`, `BalancerSpec` or `SelectorSpec` in `MODELS`, `BALANCERS` or `SELECTORS` (`toolkit/core/services/ids/registry.py`); the page and `/api/v1/models` list it from there | [model_card.md](model_card.md) if it changes what the card says | `tests/ml/test_pipeline.py`, `tests/ml/test_evaluation.py` |
 | recognise a new dataset | a `DatasetProfile` in `PROFILES` (`toolkit/core/services/ids/profiles.py`) with the real column names, never guessed; a sample cut from the real file by `tests/fixtures/make_fixtures.py` | [datasets.md](datasets.md), [tests/fixtures/README.md](../tests/fixtures/README.md) | `tests/ml/test_profiles.py`, `tests/ml/test_loader.py` |
 | read another port's banner | a `Probe` in `PROBES` (and a reader in `READERS` if none fits) in `toolkit/core/data/recon/probes.py` | - | `tests/recon/test_probes.py` |
+| add a scan engine | a class with `name`, `available()` and `scan(host, ports, protocols, progress, stop)` (the `ScanEngine` port, `toolkit/core/services/ports.py`), named in `ENGINES` (`toolkit/core/services/recon/engines.py`); it fills `PortResult`'s `product`, `version`, `cpe`, `reason`, `scripts` if it knows them, and raises `ScanStopped` once `stop` is set | - | `tests/recon/test_engines.py` |
 | recognise another service from its answer | a pattern in `RULES` (`toolkit/core/data/recon/services.py`); the port's usual name, when no list has it, in `PORT_NAMES` | - | `tests/recon/test_services.py` |
 | recognise another sign of an OS | a pattern in `BANNER_WORDS` or a port in `PORT_SIGNS` (`toolkit/core/services/recon/os_guess.py`); a new family also needs `agree()` to know which families it fits | - | `tests/recon/test_os_detect.py` |
 | match another product's CVEs by version | its NVD `vendor:product` in `CPE_PRODUCTS` (`toolkit/core/data/recon/nvd.py`), under the name `software.product_version` gives, lower case; check it against NVD with a version known to have CVEs | the list in [README.md](../README.md) | `tests/recon/test_nvd.py` |

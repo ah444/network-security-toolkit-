@@ -156,10 +156,11 @@ class RecordingView:
 
 @pytest.mark.parametrize(("own", "expect"), [(False, os_guess.CONFLICT),
                                               (True, "this computer (Windows 10)")])
-def test_the_scan_shows_the_hint_after_the_ports(scan_service, monkeypatch, own, expect):
+def test_the_scan_shows_the_hint_after_the_ports(fake_ports, scan_service, monkeypatch, own,
+                                                  expect):
     ports = [PortResult(80, "tcp", "open", "http", "Apache (Ubuntu)")]  # no version: no lookup
     monkeypatch.setattr(scan_service, "ping_host", lambda host: (True, 128))
-    monkeypatch.setattr(scan_service, "scan_ports", lambda *args: list(ports))
+    fake_ports(lambda *args: list(ports))
     monkeypatch.setattr(scan_service, "is_this_computer", lambda address: own)
     monkeypatch.setattr(scan_service, "this_os", lambda: "Windows 10")
     request = scan_service.ScanRequest("10.0.0.5", ["10.0.0.5"], [80], ["tcp"])
@@ -172,9 +173,9 @@ def test_the_scan_shows_the_hint_after_the_ports(scan_service, monkeypatch, own,
     assert entries[0]["os_hint"] == hint.summary()
 
 
-def test_no_open_ports_still_says_this_computer(scan_service, monkeypatch):
+def test_no_open_ports_still_says_this_computer(fake_ports, scan_service, monkeypatch):
     monkeypatch.setattr(scan_service, "ping_host", lambda host: (True, 128))
-    monkeypatch.setattr(scan_service, "scan_ports", lambda *args: [])
+    fake_ports(lambda *args: [])
     monkeypatch.setattr(scan_service, "is_this_computer", lambda address: True)
     request = scan_service.ScanRequest("127.0.0.1", ["127.0.0.1"], [80], ["tcp"])
     view = RecordingView()
@@ -184,10 +185,12 @@ def test_no_open_ports_still_says_this_computer(scan_service, monkeypatch):
 
 def test_the_report_files_carry_the_hint(tmp_path):
     entry = {"target": "10.0.0.5", "port": 22, "protocol": "tcp", "service": "ssh",
-             "banner": "SSH-2.0-OpenSSH_8.9p1 Ubuntu", "software": "OpenSSH 8.9", "cves": [], "cve_source": "",
-             "max_cvss": None, "severity": "NO KNOWN CVE", "ai_explanation": "",
-             "lookup_errors": [], "os_hint": "Linux (Ubuntu): Linux (Ubuntu) (the banner of 22/tcp)"}
-    saved = {fmt: scan_files.export_results([entry], fmt, tmp_path) for fmt in ("json", "csv", "txt")}
+             "banner": "SSH-2.0-OpenSSH_8.9p1 Ubuntu", "software": "OpenSSH 8.9", "cves": [],
+             "cve_source": "", "max_cvss": None, "severity": "NO KNOWN CVE",
+             "ai_explanation": "", "lookup_errors": [],
+             "os_hint": "Linux (Ubuntu): Linux (Ubuntu) (the banner of 22/tcp)"}
+    saved = {fmt: scan_files.export_results([entry], fmt, tmp_path)
+             for fmt in ("json", "csv", "txt")}
     assert json.loads(saved["json"].read_text(encoding="utf-8"))[0]["os_hint"] == entry["os_hint"]
     rows = list(csv.reader(saved["csv"].open(encoding="utf-8", newline="")))
     assert rows[0][-2] == "OS hint" and rows[1][-2] == entry["os_hint"]

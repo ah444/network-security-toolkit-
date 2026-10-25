@@ -1,5 +1,5 @@
 """The toolkit's ports (plan §2): interfaces only where an implementation really is swapped
-or faked in tests. There are exactly three; everything else is plain functions and dict
+or faked in tests. There are exactly four; everything else is plain functions and dict
 registries.
 
 - ``ModelStore``: where trained models are kept (signed bundles on disk:
@@ -7,18 +7,24 @@ registries.
 - ``IntelProvider``: an online (or offline, or fake) source of facts about a detected
   product or an IP address (NVD, OpenRouter, AbuseIPDB).
 - ``ProgressSink``: where a long task reports progress (the console, a web job, a test).
+- ``ScanEngine``: what checks a host's ports (the toolkit's own scanner,
+  ``toolkit.core.services.recon.engines.BuiltinEngine``; nmap, when installed, steps N2-N4).
 
 Ports are structural (``typing.Protocol``): an adapter only needs the right methods.
 """
 
 from __future__ import annotations
 
+from collections.abc import Iterable, Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 if TYPE_CHECKING:  # types only: the ports themselves import no layer
     from .ids.exports import BundleInfo, SavedBundle
+    import threading
+
     from ..data.recon.findings import IntelFinding
+    from ..data.recon.scanner import PortResult
     from .ids.bundle import Bundle
     from .ids.runs import TrainingRun
 
@@ -71,6 +77,24 @@ class ProgressSink(Protocol):
 
     def finish(self) -> None:
         """The task ended (also after an error or a cancel); called once."""
+
+
+@runtime_checkable
+class ScanEngine(Protocol):
+    """Checks a host's ports (step N1). ``name`` picks it; ``available`` says why it can't run on
+    this computer (None: it can). ``scan`` gives every port of ``host`` for each protocol,
+    sorted by port, reports each finished check to ``progress`` and stops once ``stop`` is set
+    (``toolkit.core.data.recon.scanner.ScanStopped``)."""
+
+    name: str
+
+    def available(self) -> str | None:
+        """None when this engine can run here, else why not (to show the user)."""
+
+    def scan(self, host: str, ports: Iterable[int], protocols: Sequence[str],
+             progress: ProgressSink | None = None,
+             stop: threading.Event | None = None) -> list[PortResult]:
+        """The port checks of ``host`` (an address already checked and authorised)."""
 
 
 class NullProgress:

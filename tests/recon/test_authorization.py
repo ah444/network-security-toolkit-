@@ -37,7 +37,7 @@ def test_scan_requires_confirmation(scan_screen, scanner, monkeypatch, no_networ
     assert scan_screen.confirm_authorized("10.0.0.1")
 
 
-def test_flag_skips_the_question(scan_service, scanner, monkeypatch):
+def test_flag_skips_the_question(fake_ports, scan_service, scanner, monkeypatch):
     prompts = []
     answers = {"Enter target": "127.0.0.1", "Enter start ": "1", "Enter end po": "1",
                "Select proto": "tcp"}
@@ -48,7 +48,7 @@ def test_flag_skips_the_question(scan_service, scanner, monkeypatch):
 
     monkeypatch.setattr(builtins, "input", answer)
     monkeypatch.setattr(scan_service, "ping_host", lambda host, timeout=1: (True, 128))
-    monkeypatch.setattr(scan_service, "scan_ports", lambda *args, **kwargs: [])
+    fake_ports(lambda *args, **kwargs: [])
     assert scanner.main(["--i-am-authorized"]) == 0
     assert not any("authorised" in p for p in prompts)
 

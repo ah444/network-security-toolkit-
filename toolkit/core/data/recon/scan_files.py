@@ -17,7 +17,8 @@ from .text import csv_cell
 
 EXPORT_FORMATS = ("txt", "json", "csv")
 CSV_HEADER = ["Target", "Port", "Protocol", "Service", "Banner", "Software", "Severity (CVSS)",
-              "Max CVSS", "CVEs (NVD)", "AI explanation (may be wrong)", "Lookup errors", "OS hint", "CVE source"]
+              "Max CVSS", "CVEs (NVD)", "AI explanation (may be wrong)", "Lookup errors",
+              "OS hint", "CVE source"]
 
 
 class ReportEntry(TypedDict):
