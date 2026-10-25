@@ -118,7 +118,8 @@ def test_reads_need_no_token(client):
 
 
 def test_same_origin_upload_with_token_allowed(client):
-    response = _upload(client, headers={"Origin": "http://localhost"})
+    origin = f"http://{client.application.config['SERVER_NAME']}"  # the app's own address
+    response = _upload(client, headers={"Origin": origin})
     assert response.status_code == 200, response.get_json()
 
 

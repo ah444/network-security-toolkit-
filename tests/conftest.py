@@ -52,6 +52,7 @@ def fake_platform(monkeypatch):
 # ---- Web IDS app fixtures (toolkit.web, v5.1 step 1.2a) ----
 
 STATE_CHANGING = {"POST", "PUT", "PATCH", "DELETE"}
+APP_ADDRESS = "127.0.0.1"  # where the test clients send their requests (the Host check)
 
 
 def _token_client_class():
@@ -74,6 +75,13 @@ def _token_client_class():
                 token = re.search(r'<meta name="csrf-token" content="([^"]+)">', page).group(1)
             return token
 
+        # the cookies are the app's address's (``SERVER_NAME``, see ``make_app``)
+        def get_cookie(self, key, domain=APP_ADDRESS, path="/"):
+            return super().get_cookie(key, domain, path)
+
+        def set_cookie(self, key, value="", *, domain=APP_ADDRESS, **kwargs):
+            super().set_cookie(key, value, domain=domain, **kwargs)
+
         def open(self, *args, **kwargs):
             if self.send_token and kwargs.get("method", "GET").upper() in STATE_CHANGING:
                 headers = Headers(kwargs.get("headers"))
@@ -95,6 +103,9 @@ def make_app():
     def _make(config=None):
         app = create_app(config)
         app.config["TESTING"] = True
+        # The test clients' address, as a browser on the app sends it (the Host check, v5.2
+        # step 2.4a); since Flask 3.1 it doesn't limit which hosts the routes answer.
+        app.config["SERVER_NAME"] = f"{APP_ADDRESS}:{app.extensions['toolkit'].config.port}"
         app.test_client_class = _token_client_class()
         return app
 

@@ -20,6 +20,7 @@ UNREADABLE_FILE = "UNREADABLE_FILE"
 TRAINING_FAILED = "TRAINING_FAILED"
 CANCELLED = "CANCELLED"  # a job cancelled by the user (in the job, not an HTTP answer)
 TIME_LIMIT = "TIME_LIMIT"  # a job stopped by TOOLKIT_JOB_MAX_MIN
+BAD_HOST = "BAD_HOST"  # 400: the Host header isn't this app's (an IP address or localhost)
 CROSS_SITE = "CROSS_SITE"  # 403
 CSRF_TOKEN = "CSRF_TOKEN"  # 403: the X-CSRF-Token header is missing or not this session's
 NOT_FOUND = "NOT_FOUND"  # 404

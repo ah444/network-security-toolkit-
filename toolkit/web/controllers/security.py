@@ -1,19 +1,24 @@
-"""Security headers, the CSRF token and the cross-site check on every request (S5, S10),
-and safe names for uploaded and exported files (S2-S4)."""
+"""Security headers, the Host check, the CSRF token and the cross-site check on every request
+(S5, S10, v5.2 step 2.4a), and safe names for uploaded and exported files (S2-S4)."""
 
 from __future__ import annotations
 
 import hmac
+import ipaddress
+import logging
 import re
 import secrets
+from collections.abc import Callable
 from pathlib import PureWindowsPath
 from uuid import uuid4
 
 from flask import Flask, Response, request, session
 from werkzeug.utils import secure_filename
 
-from ..services.errors import CROSS_SITE, CSRF_TOKEN
+from ..services.errors import BAD_HOST, CROSS_SITE, CSRF_TOKEN
 from .api import error_response
+
+log = logging.getLogger(__name__)
 
 CONTENT_SECURITY_POLICY = "; ".join([
     "default-src 'self'",
@@ -51,6 +56,59 @@ def _security_headers(response: Response) -> Response:
     return response
 
 
+DEFAULT_PORTS = {"http": 80, "https": 443}  # a Host without a port names the scheme's own
+MAX_HOSTS_LOGGED = 20  # each refused Host is logged once, up to this many
+
+
+def is_own_host(host: str, port: int, scheme: str = "http") -> bool:
+    """Whether a request's Host header names this app (step 2.4a): an IP address (IPv6 in
+    brackets) or ``localhost``, on the app's ``port``. Any other name is refused: a page on
+    another site whose name was made to point at 127.0.0.1 (DNS rebinding) would be the same
+    site as this app to the browser, so the Origin check and the CSRF token alone can't stop
+    it; its requests carry that name."""
+    if host.startswith("["):  # [IPv6] or [IPv6]:port
+        name, bracket, rest = host[1:].partition("]")
+        if not bracket or (rest and not rest.startswith(":")):
+            return False
+        given, versions = rest[1:], (6,)
+    else:  # IPv4, localhost or a name, with or without :port
+        name, _, given = host.partition(":")
+        versions = (4,)
+    if not given:
+        given = str(DEFAULT_PORTS.get(scheme, 0))
+    if given != str(port):  # also a second ":" (an IPv6 address without brackets)
+        return False
+    if versions == (4,) and name.lower() == "localhost":
+        return True
+    if "%" in name:  # an IPv6 zone: never this app's address
+        return False
+    try:
+        return ipaddress.ip_address(name).version in versions
+    except ValueError:
+        return False
+
+
+def _host_check(port: int) -> Callable[[], Response | tuple[Response, int] | None]:
+    """The before-request check of the Host header (``is_own_host``): 400 ``BAD_HOST``,
+    as JSON for the API, else as a line of text with the address to open."""
+    logged: set[str] = set()
+
+    def check() -> Response | tuple[Response, int] | None:
+        host = request.host
+        if is_own_host(host, port, request.scheme):
+            return None
+        if host not in logged and len(logged) < MAX_HOSTS_LOGGED:
+            logged.add(host)
+            log.warning("Refused a request for the host %r: not this app's address", host[:100])
+        message = (f"This address isn't the toolkit's: open http://127.0.0.1:{port}/ "
+                   "instead.")
+        if request.path.startswith("/api/"):
+            return error_response(message, 400, BAD_HOST)
+        return Response(message + "\n", 400, mimetype="text/plain")
+
+    return check
+
+
 CSRF_HEADER = "X-CSRF-Token"
 STATE_CHANGING_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
 
@@ -83,10 +141,12 @@ def _check_state_changing_request() -> tuple[Response, int] | None:
     return None
 
 
-def register_security(app: Flask) -> None:
-    """Adds the security headers to every answer and the origin and CSRF check to every
+def register_security(app: Flask, port: int) -> None:
+    """Adds the security headers to every answer, the Host check (the app on ``port``) to
+    every request, before anything else, and the origin and CSRF check to every
     state-changing request; templates get ``csrf_token``."""
     app.after_request(_security_headers)
+    app.before_request(_host_check(port))
     app.before_request(_check_state_changing_request)
     app.jinja_env.globals["csrf_token"] = csrf_token
 

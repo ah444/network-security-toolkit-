@@ -165,7 +165,7 @@ The page, its routes and jobs, and the `web` command; it never imports the comma
 | `toolkit/web/controllers/resume.py` | controllers | `GET /api/v1/workspace`, so the page resumes after a reload |
 | `toolkit/web/controllers/workspace.py` | controllers | the calling session's workspace (the cookie holds its ID), locked for the request |
 | `toolkit/web/controllers/state.py` | controllers | what one app keeps between requests (no module globals) |
-| `toolkit/web/controllers/security.py` | controllers | security headers, the CSRF token, the cross-site check, safe file names |
+| `toolkit/web/controllers/security.py` | controllers | security headers, the Host check (against DNS rebinding), the CSRF token, the cross-site check, safe file names |
 | `toolkit/web/controllers/schemas.py` | controllers | one small request schema per route |
 | `toolkit/web/controllers/api.py` | controllers | request and error helpers; the HTTP status of each `ServiceError` |
 | `toolkit/web/services/__init__.py` | services | the web trainer's services |
@@ -370,7 +370,8 @@ The manifest embeds the TrainingRun. Nothing is unpickled until the size, layout
      |  GET /, /dynamic_ids               HTML; CSP, no inline script
      |  /api/v1/... with X-CSRF-Token     JSON in, JSON out
      v
- web/controllers/security.py:  CSRF token and cross-site check on every change
+ web/controllers/security.py:  the Host check on every request; CSRF token and cross-site
+                               check on every change
      v
  web/controllers routes:  datasets | training | bundles | resume | workspace
      |   request checked (schemas.py), the session's workspace found by its

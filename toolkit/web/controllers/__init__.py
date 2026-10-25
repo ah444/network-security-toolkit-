@@ -61,7 +61,7 @@ def create_app(config: WebConfig | None = None) -> Flask:
         jobs=JobRunner(),
     )
     register_error_handlers(app)
-    register_security(app)
+    register_security(app, config.port)
     for blueprint in BLUEPRINTS:
         app.register_blueprint(blueprint)
     return app

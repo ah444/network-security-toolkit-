@@ -22,6 +22,12 @@ computer (`127.0.0.1`).
   `TOOLKIT_WORKSPACE_IDLE_MIN` minutes (default 240) are dropped, checked every 5 minutes.
 - **Security token:** every `POST`/`DELETE` must send the session's token in an
   `X-CSRF-Token` header, otherwise it is refused (`CSRF_TOKEN`, 403). See below.
+- **The address:** every request (pages, static files, the API) must name the app by an IP
+  address or `localhost`, on its port, in its `Host` header, as a browser on
+  `http://127.0.0.1:5000/` does; any other name is refused (`BAD_HOST`, 400; a page gets a
+  line of text with the address to open). A website whose own name was made to point at
+  127.0.0.1 (DNS rebinding) would otherwise be the same site as the app to the browser, and
+  could read the security token. Each refused name is logged once (`web.log`).
 - **Cross-site requests:** a `POST`/`DELETE` whose `Origin` header names another site is
   refused (`CROSS_SITE`, 403).
 - **Caching:** every API answer (the bundle download too) and the trainer page are sent
@@ -189,6 +195,7 @@ Every error answer has the same shape; `details` is present only when there is m
 | `NOT_TRAINED` | 400 (404 for the download) | no model trained or exported yet in this session |
 | `NO_MODEL_LOADED` | 400 | no bundle loaded yet in this session |
 | `NOT_A_BUNDLE`, `BAD_SIGNATURE`, `EMPTY`, ... | 400 | a bundle was refused before anything in it was loaded |
+| `BAD_HOST` | 400 | the `Host` header isn't the app's address (an IP address or `localhost`, on its port) |
 | `CROSS_SITE` | 403 | the request came from another site |
 | `CSRF_TOKEN` | 403 | the `X-CSRF-Token` header is missing or isn't this session's token (reload the page) |
 | `NOT_FOUND` | 404 | no such API route |
