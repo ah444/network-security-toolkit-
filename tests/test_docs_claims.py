@@ -12,7 +12,8 @@ def test_readme_has_no_withdrawn_claims_or_placeholders(repo_root):
     assert "High accuracy (~97%)" not in text
     assert "yourusername" not in text
     assert '"# network-security-toolkit-"' not in text
-    assert "](LICENSE)" not in text  # no link to a file that doesn't exist
+    # 5.0: no link to the missing LICENSE; since step 1.5g it exists and is linked
+    assert "](LICENSE)" in text and (repo_root / "LICENSE").is_file()
 
 
 def test_readme_states_leakage_and_limitations(repo_root):

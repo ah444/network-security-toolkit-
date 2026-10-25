@@ -78,6 +78,18 @@ def test_build_backend_package_and_command(pyproject):
     assert pyproject["tool"]["setuptools"]["packages"]["find"]["include"] == ["toolkit*"]
 
 
+def test_licence_is_mit_in_the_authors_name(repo_root, pyproject):
+    """The code's licence (step 1.5g): the LICENSE file, and the wheel's metadata names it."""
+    project = pyproject["project"]
+    assert project["license"] == "MIT"
+    assert project["license-files"] == ["LICENSE"]
+    assert project["authors"] == [{"name": "Ahmed Mohamed Abdalrazek"}]
+    text = (repo_root / "LICENSE").read_text(encoding="utf-8")
+    assert text.startswith("The MIT License (MIT)\n\nCopyright (c) 2025-2026 Ahmed Mohamed "
+                           "Abdalrazek\n\nPermission is hereby granted, free of charge,")
+    assert 'THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND' in text
+
+
 def test_package_data_covers_every_file_the_web_trainer_serves(repo_root, pyproject):
     """The templates and static files (CSS, JS modules) are in the wheel."""
     patterns = pyproject["tool"]["setuptools"]["package-data"]
