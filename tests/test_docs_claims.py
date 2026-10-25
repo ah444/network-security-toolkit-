@@ -1,5 +1,7 @@
 """Step 0.2: published claims must match the measured baseline (docs/baseline/)."""
 
+import pytest
+
 MODELS_README = "docs/ids_cli_models.md"
 
 
@@ -48,11 +50,13 @@ def test_dataset_licences_recorded(repo_root):
     assert "UNSW" not in fixtures, "UNSW-NB15 rows may not be redistributed"
 
 
-def test_section8_audit_names_real_tests(repo_root):
-    """5.0 final: every test the §8 audit points to exists (no stale references)."""
+@pytest.mark.parametrize("audit_path", ["docs/release/5.0-section8-audit.md",
+                                        "docs/release/5.1-section8-audit.md"])
+def test_section8_audit_names_real_tests(repo_root, audit_path):
+    """5.0 final and 5.1: every test the §8 audit points to exists (no stale references)."""
     import re
 
-    audit = _read(repo_root, "docs/release/5.0-section8-audit.md")
+    audit = _read(repo_root, audit_path)
     missing = []
     for line in audit.splitlines():
         current = None

@@ -5,12 +5,22 @@ All notable changes to this project. Versions follow the roadmap in
 [docs/V5.1_CHECKLIST.md](docs/V5.1_CHECKLIST.md) (v5.1) and
 [docs/V5.0_CHECKLIST.md](docs/V5.0_CHECKLIST.md) (v5.0).
 
-## [5.1] — not released yet
+## [5.1] — 2026-10-25
 
 v5.1 "clean architecture": the same three tools as one package with one command, a
 versioned web API, training jobs you can follow and cancel, and the documentation
-(steps 1.1–1.5 of the [checklist](docs/V5.1_CHECKLIST.md)). Project version: `5.1.0.dev0`.
-The test result is added when 5.1 is tagged.
+(steps 1.1–1.5 of the [checklist](docs/V5.1_CHECKLIST.md)). Project version: `5.1.0`.
+
+**Test result:** 803 automated tests pass; `ruff`, `mypy` and `pip-audit` are clean. The v5.1
+checks of the plan's §8 pass: a cancelled training on the full NSL-KDD files stops, frees its
+memory and keeps nothing; the progress bar, Cancel and a reload during training work; the whole
+flow works with the keyboard only; a fresh install on Windows passes every menu path ([gate
+record](docs/release/5.1-gate.md), every §8 check mapped to its tests in the
+[audit](docs/release/5.1-section8-audit.md)). The web and the CLI label the full `KDDTest+`
+file the same, byte for byte. The ML report on the v5.1 code gives the 5.0 numbers: one run of
+each of the six cases, all 1,246 values equal.
+Windows 10 Enterprise LTSC 2021, Python 3.14.3 (an install on Python 3.11.0 checked too),
+scikit-learn 1.8.0.
 
 ### Added
 - **One command** (1.4b): `python -m toolkit` opens a flat menu (the banner once, the
@@ -78,6 +88,12 @@ The test result is added when 5.1 is tagged.
   models that nobody chose (1.2d).
 - `OPENROUTER_MODEL` was not read from `.env` as documented (1.1b).
 - A bad `TOOLKIT_LOG_LEVEL` crashed `scan`, `ids` and `web` with a traceback (1.5e).
+- Keyboard focus fell to the page when Train and then Cancel were disabled during a
+  training; it now moves to the status, Cancel, the progress and the result (5.1 gate).
+- `scripts/menu_walkthrough.py` counted a page from another server when its own web trainer
+  couldn't take the port, and crashed when no page answered (5.1 gate).
+- The README's install steps now say what to do when PowerShell refuses `Activate.ps1`, and
+  to upgrade setuptools on Python 3.11 (5.1 gate).
 
 ### Removed
 - The `tools/` folder (1.4a): the tools live in `toolkit/`.
@@ -100,12 +116,16 @@ The test result is added when 5.1 is tagged.
   with the old module names, and two real exports made before 5.0).
 
 ### Known limitations
-See **Known limitations** in the [README](README.md). Open for 5.1:
-- The v5.1 checks of the plan's §8 (cancellation, progress and cancel in the page, the
-  whole flow with the keyboard only, a fresh install on Windows through every menu path)
-  are run at the step check (1.5h), before the tag.
+See **Known limitations** in the [README](README.md). New in this release:
 - Bundles still load only on the install that made them; importing them on another
   computer is not part of 5.1.
+- A bundle is held in memory two to three times while it loads, so the 1.98 GB random
+  forest export of 5.0 doesn't load on a PC with 8 GB of memory.
+- Open, recorded in the [checklist](docs/V5.1_CHECKLIST.md): long checkbox lists take one
+  Tab stop per item; a native `confirm()` before Clear workspace; after a reload a session
+  with a dataset and a loaded bundle shows the dataset path; the navbar takes about a
+  quarter of the screen at 375 px; `--json` prints every digit of the confidence; `ids` with a missing file
+  shows Python's own `[Errno 2]` message.
 - Linux and macOS are not tested on real machines.
 
 ## [5.0.1] — 2026-10-21
