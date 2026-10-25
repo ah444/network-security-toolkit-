@@ -7,8 +7,9 @@ from typing import Any
 
 from flask import Blueprint, jsonify
 
-from .api import Answer
+from .api import Answer, query
 from ..services.jobs import FINISHED, QUEUED, RUNNING, Job, JobRunner
+from .schemas import JobRequest, load
 from .state import state
 from ..services.workspace import Workspace
 from .workspace import with_workspace
@@ -19,9 +20,10 @@ bp = Blueprint("jobs", __name__, url_prefix="/api/v1")
 @bp.route("/jobs/<job_id>", methods=["GET"])
 @with_workspace()
 def job_status(ws: Workspace, job_id: str) -> Answer:
-    """State, progress and, at the end, the result (or the error) of this session's job."""
+    """State, progress and, at the end, the result (or the error) of this session's job; a
+    logged job's log from line ``since`` on."""
     job = ws.job(job_id)
-    return jsonify(job_view(job, state().runner(job.kind)))
+    return jsonify(job_view(job, state().runner(job.kind), load(JobRequest, query()).since))
 
 
 @bp.route("/jobs/<job_id>", methods=["DELETE"])
@@ -35,8 +37,9 @@ def cancel_job(ws: Workspace, job_id: str) -> Answer:
     return jsonify(job_view(job, runner)), 202
 
 
-def job_view(job: Job, runner: JobRunner) -> dict[str, Any]:
-    """What ``GET /api/v1/jobs/<id>`` answers."""
+def job_view(job: Job, runner: JobRunner, since: int = 0) -> dict[str, Any]:
+    """What ``GET /api/v1/jobs/<id>`` answers; a logged kind's (a scan's) also has ``log``, its
+    lines from line ``since`` on, and ``log_size``, how many it has."""
     state = job.state
     if state == RUNNING and job.cancel_requested.is_set():
         state = "cancelling"
@@ -55,6 +58,8 @@ def job_view(job: Job, runner: JobRunner) -> dict[str, Any]:
         view["queue_position"] = runner.position(job)
         if view["queue_position"] == 0:  # submitted, the worker has not picked it up yet
             view["phase"] = "Starting"
+    if job.kind.logged:
+        view["log"], view["log_size"] = job.log_from(since)
     if job.result is not None:
         view["result"] = job.result
     if job.error is not None:

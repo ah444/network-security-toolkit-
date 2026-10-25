@@ -161,7 +161,8 @@ The page, its routes and jobs, and the `web` command; it never imports the comma
 | `toolkit/web/controllers/pages.py` | controllers | the two HTML pages |
 | `toolkit/web/controllers/datasets.py` | controllers | upload, preview, class filter and the analyses before training |
 | `toolkit/web/controllers/training.py` | controllers | the model list, a training job started, its results |
-| `toolkit/web/controllers/jobs.py` | controllers | any job's state, progress and cancel (`GET`/`DELETE /api/v1/jobs/<id>`) |
+| `toolkit/web/controllers/jobs.py` | controllers | any job's state, progress and cancel (`GET`/`DELETE /api/v1/jobs/<id>`), a scan's log |
+| `toolkit/web/controllers/scan.py` | controllers | the port scan's routes: its options, a scan started (the authorization checked first), the session's scan, the report download |
 | `toolkit/web/controllers/bundles.py` | controllers | export, download and load bundles; predictions, one row or a CSV file |
 | `toolkit/web/controllers/resume.py` | controllers | `GET /api/v1/workspace`, so the page resumes after a reload |
 | `toolkit/web/controllers/workspace.py` | controllers | the calling session's workspace (the cookie holds its ID), locked for the request |

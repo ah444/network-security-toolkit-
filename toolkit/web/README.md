@@ -18,7 +18,8 @@ web/
     pages.py         the two HTML pages
     datasets.py      upload, preview, class filter, the analyses before training
     training.py      the model list, a training job started, its results
-    jobs.py          any job's state, progress and cancel
+    jobs.py          any job's state, progress and cancel (a scan's log too)
+    scan.py          the port scan: its options, a scan started, the report download
     bundles.py       export, download and load bundles; predictions
     resume.py        GET /api/v1/workspace, so a reload resumes
     workspace.py     the calling session's workspace, locked for the request

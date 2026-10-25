@@ -125,8 +125,12 @@ class Job:
 
     def notes(self, since: int = 0) -> list[str]:
         """The log's lines from line ``since`` (0: all)."""
+        return self.log_from(since)[0]
+
+    def log_from(self, since: int) -> tuple[list[str], int]:
+        """The log's lines from line ``since`` and how many lines it has, read together."""
         with self._log_lock:
-            return self.log[max(0, since):]
+            return self.log[max(0, since):], len(self.log)
 
     # --- What the page shows ------------------------------------------------------------
     def phase(self) -> str:

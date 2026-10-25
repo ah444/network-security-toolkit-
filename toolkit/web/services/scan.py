@@ -181,15 +181,21 @@ def _targets(text: str, ports: Sequence[int], protocols: Sequence[str], limits: 
     return targets
 
 
+def require_authorized(choices: ScanChoices) -> None:
+    """NOT_AUTHORIZED unless the user confirmed being authorised to scan the target: the first
+    check of every scan, before anything else is done."""
+    if not choices.authorized:
+        raise _refuse("Confirm that you are authorised to scan this target: only scan systems "
+                      "you own or have written permission to test.", NOT_AUTHORIZED)
+
+
 def start_scan(ws: Workspace, choices: ScanChoices, runner: JobRunner,
                limits: ScanConfig) -> Job:
     """Check a scan and queue it as a job of the session ``ws``; the job's result is its answer
     and the session keeps it (``ws.scan``). The order is the contract: the authorization first,
     nothing sent before it (module docstring). One scan at a time per session (else BUSY); its
     lock and a lease are held until the job ends."""
-    if not choices.authorized:
-        raise _refuse("Confirm that you are authorised to scan this target: only scan systems "
-                      "you own or have written permission to test.", NOT_AUTHORIZED)
+    require_authorized(choices)
     keys = load_api_keys()
     ports, protocols, options = _checked(choices, keys)
     if not ws.scanning.acquire(blocking=False):

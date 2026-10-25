@@ -1,120 +1,30 @@
 """v5.2 step 2.4d: the web scan's service - the scan contract (nothing sent before the
 authorization, not even DNS), the checks, the job (one scan per session, cancel, the time
-limit), what the page sees while it runs, the answer and the report download.
-
-The network is faked: the ping, the engine, the DNS query and the online lookups record
-what they were asked; nothing leaves this computer.
+limit), what the page sees while it runs, the answer and the report download. The network is
+faked (``web_scan.fake_network``): nothing leaves this computer.
 """
 
 import logging
 import os
-import threading
 import time
 
 import pytest
 
 from toolkit.core.data import logs
-from toolkit.core.data.recon.findings import IntelFinding
-from toolkit.core.data.recon.scanner import PortResult
 from toolkit.core.data.settings import ScanConfig
-from toolkit.core.services.recon import engines, targets
+from toolkit.core.services.recon import targets
 from toolkit.core.services.recon import scan as core_scan
-from toolkit.core.services.recon.intel import Intel
 from toolkit.web.services import jobs, scan, scan_view
 from toolkit.web.services.errors import ServiceError
 from toolkit.web.services.workspace import Workspace
+from web_scan import fake_network
 
-OPEN = [PortResult(22, "tcp", "open", "ssh", "SSH-2.0-OpenSSH_8.9p1"),
-        PortResult(8080, "tcp", "open", "http", "\x1b[31mServer: nginx/1.25.3\x1b[0m")]
 LIMITS = ScanConfig()
-
-
-class Recorder:
-    """What reached the network, by kind."""
-
-    def __init__(self):
-        self.sent = {"dns": [], "ping": [], "scan": [], "cves": [], "reputation": [],
-                     "nmap_check": []}
-        self.release = threading.Event()
-        self.release.set()
-        self.entered = threading.Event()
-        self.down = set()
-
-    def touched(self):
-        return {kind: items for kind, items in self.sent.items() if items}
-
-
-def _checks(rec, ports, progress, stop):
-    """The fake engine's port checks: each counted, the stop looked at, then held until
-    ``rec.release``."""
-    rec.entered.set()
-    progress.start(len(ports))
-    for _ in ports:
-        if stop is not None and stop.is_set():
-            raise core_scan.ScanStopped()
-        progress.advance()
-    while not rec.release.wait(0.01):
-        if stop is not None and stop.is_set():
-            raise core_scan.ScanStopped()
-    return list(OPEN)
-
-
-class FakeEngine(engines.BuiltinEngine):
-    rec = None
-
-    def scan(self, host, ports, protocols, progress=None, stop=None):
-        self.rec.sent["scan"].append(host)
-        return _checks(self.rec, list(ports), progress, stop)
-
-
-class FakeCves:
-    name, kind = "Offline", "cves"
-
-    def __init__(self, rec):
-        self.rec = rec
-
-    def lookup(self, subject):
-        self.rec.sent["cves"].append(subject)
-        return IntelFinding(cves=({"id": "CVE-2023-1", "cvss": 7.5, "cvss_version": "3.1",
-                                   "severity": "HIGH"},), source="offline")
-
-
-class FakeReputation(FakeCves):
-    name, kind = "AbuseIPDB", "ip_reputation"
-
-    def lookup(self, subject):
-        self.rec.sent["reputation"].append(subject)
-        return IntelFinding(data={"abuseConfidenceScore": 3, "totalReports": 1,
-                                  "isp": "]0;ownedExample ISP"})
 
 
 @pytest.fixture
 def net(monkeypatch):
-    rec = Recorder()
-    rec.keys = {"openrouter": "", "abuseipdb": "", "nvd": ""}
-    real_intel, real_problem = Intel, scan.engine_problem
-
-    def ping(host):
-        rec.sent["ping"].append(host)
-        return host not in rec.down, 64
-
-    def resolve(name):
-        rec.sent["dns"].append(name)
-        return "10.0.0.9"
-
-    def engine_problem(*args):
-        rec.sent["nmap_check"].append(args)
-        return real_problem(*args)
-
-    monkeypatch.setattr(FakeEngine, "rec", rec)
-    monkeypatch.setitem(engines.ENGINES, "builtin", FakeEngine)
-    monkeypatch.setattr(core_scan, "ping_host", ping)
-    monkeypatch.setattr(core_scan, "Intel", lambda keys, use_ai=False, stop=None: real_intel(
-        keys, use_ai, providers=[FakeCves(rec), FakeReputation(rec)], stop=stop))
-    monkeypatch.setattr(targets, "first_address", resolve)
-    monkeypatch.setattr(scan, "engine_problem", engine_problem)
-    monkeypatch.setattr(scan, "load_api_keys", lambda: dict(rec.keys))
-    return rec
+    return fake_network(monkeypatch)
 
 
 @pytest.fixture

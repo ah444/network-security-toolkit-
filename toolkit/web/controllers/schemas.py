@@ -2,7 +2,8 @@
 
 ``load(Schema, source)`` reads a JSON body or a query string: it converts each field
 to its declared type, refuses missing required fields and wrong types with a message
-naming the field, clamps numbers that have a range, and caps lists and texts. Checks
+naming the field, clamps numbers that have a range, and caps lists and texts; a yes/no
+field takes only JSON's true or false. Checks
 that need the dataset (does this column exist?) stay in the routes.
 """
 
@@ -50,6 +51,10 @@ def _convert(name: str, value: Any, kind: Any, metadata: Mapping[str, Any]) -> A
     if origin in (Union, types.UnionType):  # "X | None": None was handled by load()
         kind = next(arg for arg in get_args(kind) if arg is not type(None))
         origin = get_origin(kind)
+    if kind is bool:
+        if not isinstance(value, bool):
+            raise ApiError(f"'{name}' must be true or false.")
+        return value
     if kind is int or kind is float:
         return _number(name, value, kind, metadata)
     if kind is str:
@@ -183,6 +188,18 @@ class TrainRequest:
     models: list[str] | None = None
     balancing: str = ""
     test_size: float = dataclasses.field(default=DEFAULT_TEST_SIZE, metadata=TEST_SIZE)
+
+
+@dataclasses.dataclass(frozen=True)
+class JobRequest:
+    """``GET /jobs/<id>``: a logged job's log from this line on (0: all of it)."""
+    since: int = dataclasses.field(default=0, metadata=clamp(0, 10**9))
+
+
+@dataclasses.dataclass(frozen=True)
+class ScanReportRequest:
+    """``GET /scan/report``: the file's format (txt, json or csv)."""
+    format: str = "txt"
 
 
 @dataclasses.dataclass(frozen=True)
