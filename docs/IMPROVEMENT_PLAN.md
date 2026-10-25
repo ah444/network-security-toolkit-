@@ -16,7 +16,7 @@ Each problem is written as **problem → options → pros/cons → recommendatio
 | Change | Where |
 |---|---|
 | The CLI model is now **trained in the (fixed) web trainer** and exported as a bundle the CLI loads. No separate notebook or script is needed | D12, D5 |
-| The roadmap is split into **three releases**: v5.0 correct & safe → v5.1 clean architecture → v5.2+ features. No feature work starts until the v5.0 checks pass | §7 |
+| The roadmap is split into **three releases**: v5.0 correct & safe → v5.1 clean architecture → v5.2+ features *(2026-10-25: v5.2 became the user's improvements, the features moved to v5.3+)*. No feature work starts until the v5.0 checks pass | §7 |
 | **Tests first, then fix, then migrate callers one at a time.** The new folder layout is the end state, not the first step | §7 |
 | Abstractions (ports) only at **real boundaries**: model storage, dataset loading, intel providers, job progress. Everything else stays plain code *(dataset loading later demoted, Rev 4)* | §2 |
 | Signing rule made precise: **never deserialize an unsigned or untrusted bundle**. joblib is not "safe" by itself. Added a pinned hash for bundled models and a cross-device import path | D11 |
@@ -32,7 +32,7 @@ Each problem is written as **problem → options → pros/cons → recommendatio
 | Trust policy narrowed: v5.0 loads **only** locally signed bundles and the repo-pinned default. The "trust this file" option is removed. Cross-device/third-party import moves to v5.1+ (own-key import, `skops`/ONNX) | D11 |
 | `split_strategy` (official / temporal / group / stratified) is declared **per dataset profile** and recorded in the TrainingRun; generic stratified is only a fallback with a warning | D9, D16, D21 |
 | New invariant: the test set never influences selection, balancing (incl. the recommender), tuning, thresholds or model choice; scored once | D9, §8 |
-| Basic leaderboard (F2) moved forward into 0.4d as evidence that the ML redesign works; full UI stays in v5.2 | §7 |
+| Basic leaderboard (F2) moved forward into 0.4d as evidence that the ML redesign works; full UI stays in v5.2 *(now v5.3)* | §7 |
 | Wording: `ids_core` is the "ML core layer", not "domain" in the strict DDD sense | §2, §3.5 |
 | Tests: correct-behaviour tests for bugs (fail first) plus characterization tests for behaviour to keep | §7 |
 
@@ -774,10 +774,18 @@ A checkpoint that fails any of these isn't tagged.
 | 1.4 CLI & launcher | flat menu + subcommands, browser auto-open, batch/JSON prediction, parallel intel lookups | D4, R3, R9, B16, F1 |
 | 1.5 Packaging & docs | pyproject + extras, architecture doc, API reference, user guide, LICENSE, CHANGELOG | D18, D20, §4.6 |
 
-### v5.2+ — Impressive features (only after the v5.0 + v5.1 checks pass)
+### v5.2 — The user's improvements (asked by the user, 2026-10-25)
+| Step | Scope |
+|---|---|
+| 2.1 Theme button | Auto / Light / Dark in the navbar of both pages, saved in the browser |
+| 2.2 Responsive pages | 2.2a phones and tablets, 2.2b large screens and long content (D2) |
+| 2.3 The code arranged by interface | `cli/`, `web/`, `core/`, the same layers inside each |
+| 2.4 The port scan in the web app | a job with progress and cancel; 127.0.0.1 by default, `--host` behind a warning |
+| Gate 5.2 | full files, fresh install, layout and contrast audits, keyboard only, `pip-audit`; see [V5.2_CHECKLIST.md](V5.2_CHECKLIST.md) |
+
+### v5.3+ — Impressive features (moved from v5.2 on 2026-10-25)
 | Order | Features |
 |---|---|
-| Before (asked by the user, 2026-10-25) | 2.1 theme button (Auto / Light / Dark), 2.2 the code arranged by interface (`cli/`, `web/`, `core/`), 2.3 the port scan in the web app; see [V5.2_CHECKLIST.md](V5.2_CHECKLIST.md) |
 | First | F2 full leaderboard UI (charts, run-to-run comparison; the basic table already ships in 0.4d), F3 explainability, F5 scan reports, F6 history (built on TrainingRun) |
 | Next | F7 recon→IDS dashboard, F9 tuning UI, F10 dashboard home |
 | Stretch | F8 PCAP/live detection, F11 scheduled scans, F12 Arabic/RTL, F13 offline CVE, D13-B asyncio scanner |

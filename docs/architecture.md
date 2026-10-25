@@ -405,7 +405,7 @@ The plan's §2 "Target structure" was written before the code. What was built di
 | `services/` with TrainingService, ScanService, PredictionService classes | `services/` (step 1.5d) with one folder per tool and plain functions: `services/web/training.py`, `services/recon/scan.py`, `services/ids/prediction.py` | a class with one method per use case would add nothing; the layer rules are what keep it clean |
 | presentation and core only | four layers (`ui/`, `controllers/`, `services/`, `data/`, step 1.5d) | each kind of code has one place: a new route, flag, rule or file format has an obvious home |
 | `ids_core/ports.py` | `toolkit/services/ports.py` | the ports serve the scanner too, not only the ML core |
-| `ids_core/explain.py` (feature importance, SHAP) | not built | explainability (F3) is planned for v5.2 |
+| `ids_core/explain.py` (feature importance, SHAP) | not built | explainability (F3) is planned for v5.3 |
 | `recon/probes/` with one file per service | one `toolkit/data/recon/probes.py` with a registry | each probe is a table entry plus a few shared readers |
 | `recon/report.py` with HTML/PDF | `toolkit/services/recon/report.py` (the entries) and `toolkit/data/recon/scan_files.py` (JSON, CSV, TXT) | HTML/PDF reports (F5) are later features |
 | `.github/workflows/ci.yml` | none | checks run locally (`python -m pytest`, ruff, mypy, the pre-commit hook), as plan D19 decided |
