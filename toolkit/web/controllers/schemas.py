@@ -53,23 +53,34 @@ def _convert(name: str, value: Any, kind: Any, metadata: Mapping[str, Any]) -> A
     if kind is str:
         return _text(name, value)
     if origin is list:
-        if not isinstance(value, list):
-            raise ApiError(f"'{name}' must be a list.")
-        if len(value) > MAX_ITEMS:
-            raise ApiError(f"'{name}' has too many items (max {MAX_ITEMS:,}).")
-        return [_text(name, _scalar(name, item)) for item in value]
+        return _list_field(name, value)
     if origin is dict:
-        if not isinstance(value, dict):
-            raise ApiError(f"'{name}' must be an object.")
-        if len(value) > MAX_ITEMS:
-            raise ApiError(f"'{name}' has too many entries (max {MAX_ITEMS:,}).")
-        checked = {}
-        for key, item in value.items():
-            _text(name, key)
-            item = _scalar(name, item, allow_none=True)
-            checked[key] = _text(name, item) if isinstance(item, str) else item
-        return checked
+        return _dict_field(name, value)
     raise TypeError(f"schema field {name!r}: unsupported type {kind!r}")  # a programming error
+
+
+def _list_field(name: str, value: Any) -> list[str]:
+    """A list of at most ``MAX_ITEMS`` texts or numbers, each returned as capped text."""
+    if not isinstance(value, list):
+        raise ApiError(f"'{name}' must be a list.")
+    if len(value) > MAX_ITEMS:
+        raise ApiError(f"'{name}' has too many items (max {MAX_ITEMS:,}).")
+    return [_text(name, _scalar(name, item)) for item in value]
+
+
+def _dict_field(name: str, value: Any) -> dict[str, Any]:
+    """An object of at most ``MAX_ITEMS`` entries: text keys, values text (capped), a
+    number or null."""
+    if not isinstance(value, dict):
+        raise ApiError(f"'{name}' must be an object.")
+    if len(value) > MAX_ITEMS:
+        raise ApiError(f"'{name}' has too many entries (max {MAX_ITEMS:,}).")
+    checked = {}
+    for key, item in value.items():
+        _text(name, key)
+        item = _scalar(name, item, allow_none=True)
+        checked[key] = _text(name, item) if isinstance(item, str) else item
+    return checked
 
 
 def _number(name: str, value: Any, kind: type, metadata: Mapping[str, Any]) -> int | float:
