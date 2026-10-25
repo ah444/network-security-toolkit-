@@ -110,26 +110,64 @@ def check_scan(targets: Sequence[str], ports: Sequence[int], protocols: Sequence
         raise ValueError(problem)
 
 
+def _reputation(target: str, request: ScanRequest, intel: Intel, view: ScanView) -> None:
+    """AbuseIPDB, for a public address only (a private one is never sent): with a key, when
+    the user says yes (asked) or passed ``--abuseipdb``; asked without a key, the skip is
+    shown. Runs before the ping, so nothing reaches the host before this decision."""
+    if not is_public_ip(target):
+        return
+    has_key = bool(intel.keys.get("abuseipdb"))
+    if request.interactive and not has_key:
+        view.abuse_skipped(target)
+    elif has_key and (view.ask_abuse(target) if request.interactive else request.abuseipdb):
+        data, error = intel.abuse_report(target)
+        view.abuse_report(target, data, error)
+
+
+def _ping_decision(target: str, request: ScanRequest, view: ScanView) -> tuple[bool, int | None]:
+    """Ping the host: whether to scan it, and the reply's TTL. A host that doesn't answer is
+    scanned only if the user says so (asked) or passed ``--scan-unresponsive``."""
+    alive, ttl = ping_host(target)
+    if alive:
+        return True, ttl
+    view.host_down(target)
+    if request.interactive:
+        return view.ask_scan_anyway(), ttl
+    if not request.scan_unresponsive:
+        view.unresponsive_skipped()
+        return False, ttl
+    return True, ttl
+
+
+def _entries(target: str, open_ports: list[PortResult], intel: Intel,
+             view: ScanView) -> list[ReportEntry]:
+    """The report entry of each open port, with its product's lookup (each product once, in
+    parallel, step 1.4e; a port without a product gets an empty one); each shown as made."""
+    view.open_ports(open_ports)
+    products = [product_version(result.banner) for result in open_ports]
+    distinct = [software for software in dict.fromkeys(products) if software]
+    if distinct:
+        view.looking_up(len(distinct), INTEL_WORKERS)
+    looked_up = intel.lookup_many(distinct)
+    entries: list[ReportEntry] = []
+    for result, software in zip(open_ports, products, strict=True):
+        found: LookupResult = (
+            looked_up[software] if software else
+            {"cves": [], "max_cvss": None, "severity": "UNKNOWN", "ai_explanation": "",
+             "errors": []})
+        entry = make_entry(target, result, software, found)
+        view.entry(entry, first=not entries)
+        entries.append(entry)
+    return entries
+
+
 def scan_target(target: str, request: ScanRequest, intel: Intel,
                 view: ScanView) -> list[ReportEntry]:
     """Scan one host and look up its open ports; returns the report entries."""
-    if is_public_ip(target):
-        has_key = bool(intel.keys.get("abuseipdb"))
-        if request.interactive and not has_key:
-            view.abuse_skipped(target)
-        elif has_key and (view.ask_abuse(target) if request.interactive else request.abuseipdb):
-            data, error = intel.abuse_report(target)
-            view.abuse_report(target, data, error)
-
-    alive, ttl = ping_host(target)
-    if not alive:
-        view.host_down(target)
-        if request.interactive:
-            if not view.ask_scan_anyway():
-                return []
-        elif not request.scan_unresponsive:
-            view.unresponsive_skipped()
-            return []
+    _reputation(target, request, intel, view)
+    scan, ttl = _ping_decision(target, request, view)
+    if not scan:
+        return []
     view.scanning(target, ttl, guess_os(ttl))
 
     results = scan_ports(target, request.ports, request.protocols,
@@ -141,23 +179,7 @@ def scan_target(target: str, request: ScanRequest, intel: Intel,
     if not open_ports:
         view.no_open_ports(target)
         return []
-
-    view.open_ports(open_ports)
-    products = [product_version(result.banner) for result in open_ports]
-    distinct = [software for software in dict.fromkeys(products) if software]
-    if distinct:
-        view.looking_up(len(distinct), INTEL_WORKERS)
-    looked_up = intel.lookup_many(distinct)  # each product once, in parallel (step 1.4e)
-    entries: list[ReportEntry] = []
-    for result, software in zip(open_ports, products, strict=True):
-        found: LookupResult = (
-            looked_up[software] if software else
-            {"cves": [], "max_cvss": None, "severity": "UNKNOWN", "ai_explanation": "",
-             "errors": []})
-        entry = make_entry(target, result, software, found)
-        view.entry(entry, first=not entries)
-        entries.append(entry)
-    return entries
+    return _entries(target, open_ports, intel, view)
 
 
 def run_scan(request: ScanRequest, keys: Mapping[str, str], start_time: float,
