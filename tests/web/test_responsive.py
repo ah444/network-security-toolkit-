@@ -1,7 +1,13 @@
 """v5.2 step 2.2a: the pages on phones and tablets. At 768 px and less the navbar is one
 row (the logo and a Menu button that opens the links and the Theme button), the padding is
 smaller under 600 px, and the step bar is one row that scrolls sideways. ``navbar.js`` is a
-classic script right after the navbar; without JavaScript the links show as before."""
+classic script right after the navbar; without JavaScript the links show as before.
+
+v5.2 step 2.2b: large screens and long content. The trainer is 1200 px wide with text lines
+and fields kept to a readable size, checkbox lists and the one-row form are columns, a long
+one-row form starts closed, the confusion matrix scrolls inside its own box with the class
+names in view, every scroll box can be reached with the keyboard, and the home page's four
+cards are 1, 2 or 4 columns."""
 
 import re
 
@@ -175,3 +181,113 @@ def test_layout_audit_script_exists():
     for measure in ("pageScrollX", "outOfScreen", "smallTargets", "tinyText", "stickyShare",
                     "sectionContent", "stepper", "screens"):
         assert measure in audit, measure
+
+
+# ---------- v5.2 step 2.2b: large screens and long content ----------
+
+def _form(name):
+    html = TEMPLATE.read_text(encoding="utf-8")
+    return re.search(r'<form id="' + name + r'".*?</form>', html, re.S).group(0)
+
+
+def test_the_trainer_is_as_wide_as_the_home_page(css):
+    """It stopped at 670 px of content from 1024 px up (35 % of a 1920 px screen)."""
+    assert _top_level(css, ".container")["max-width"] == "1200px"
+    assert "max-width" not in _top_level(css, ".container-wide")
+
+
+def test_text_lines_and_fields_keep_a_readable_size(css):
+    for text in (".section-description", ".balancing-hint"):
+        assert _top_level(css, text)["max-width"] == "75ch", text
+    assert _top_level(css, ".form-group")["max-width"] == "40rem"
+    assert _top_level(css, ".training-progress")["max-width"] == "40rem"
+    # a full-width button ends where the fields do (its margins are 0.5rem)
+    assert _top_level(css, ".btn")["max-width"] == "39rem"
+
+
+def test_checkbox_lists_are_columns_where_there_is_room(css):
+    lists = _top_level(css, ".checkbox-list")
+    assert lists["display"] == "grid"
+    assert lists["grid-template-columns"] == "repeat(auto-fill, minmax(14rem, 1fr))"
+    assert lists["max-height"] == "240px"
+
+
+@pytest.mark.parametrize("form, select, inputs", [
+    ("predictionForm", "algorithmSelect", "dynamicInputs"),
+    ("predictLoadedForm", "loadedAlgorithmSelect", "loadedDynamicInputs"),
+])
+def test_the_one_row_form_is_in_a_details_element(form, select, inputs):
+    """The model choice stays outside: the CSV file prediction uses it too."""
+    html = _form(form)
+    details = re.search(r'<details class="row-entry">.*?</details>', html, re.S).group(0)
+    assert re.match(r'<details class="row-entry">\s*<summary>Enter one row by hand</summary>', details)
+    assert f'<div id="{inputs}" class="field-grid"></div>' in details
+    assert '<button type="submit" class="btn">Predict</button>' in details
+    assert html.index(f'id="{select}"') < html.index("<details")
+
+
+def test_a_long_one_row_form_starts_closed():
+    predict = js_sources()["predict.js"]
+    assert "const OPEN_UP_TO = 12;" in predict
+    build = re.search(r"function buildPredictionForm\(.*?\n\}", predict, re.S).group(0)
+    assert 'const details = container.closest("details");' in build
+    assert "details.open = featuresInfo.length <= OPEN_UP_TO;" in build
+    assert "`Enter one row by hand (${featuresInfo.length} features)`" in build
+
+
+def test_the_one_row_form_is_columns_and_its_summary_easy_to_tap(css):
+    grid = _top_level(css, ".field-grid")
+    assert grid["display"] == "grid"
+    assert grid["grid-template-columns"] == "repeat(auto-fill, minmax(14rem, 1fr))"
+    assert _top_level(css, ".row-entry > summary")["min-height"] == "44px"
+
+
+def test_every_scroll_box_can_be_reached_with_the_keyboard(css):
+    """A box that scrolls needs focus to scroll with the arrow keys, and a name to be told apart."""
+    dom = js_sources()["dom.js"]
+    helper = re.search(r"export function scrollBox\(label, \.\.\.children\) \{.*?\n\}", dom, re.S).group(0)
+    assert ('el("div", { class: "table-container", tabindex: "0", role: "region", '
+            '"aria-label": label }, children)') in helper
+    for name, code in js_sources().items():
+        if name != "dom.js":
+            assert '"table-container"' not in code, name
+    html = TEMPLATE.read_text(encoding="utf-8")
+    assert ('<div id="dataPreviewTable" class="table-container" tabindex="0" role="region" '
+            'aria-label="Dataset preview"></div>') in html
+    assert "class=\"table-container\"" not in html.replace('id="dataPreviewTable" class="table-container"', "")
+    focus = re.search(r"([^{}]*)\{\s*outline: 3px solid var\(--focus\);\s*outline-offset: 2px;", css).group(1)
+    assert '[tabindex="0"]:focus-visible' in focus and "summary:focus-visible" in focus
+
+
+def test_the_matrix_scrolls_inside_its_box_with_the_names_in_view(css):
+    train = js_sources()["train.js"]
+    assert 'scrollBox("Confusion matrix of " + modelTitle(modelName),' in train
+    assert re.search(r'el\("thead", \{\}, el\("tr", \{\}, el\("th", \{ scope: "col" \}, '
+                     r'"Actual ↓", el\("br"\), "Predicted →"\)', train)
+    assert 'el("th", { scope: "row", title: names[i] }, shortLabel(names[i]))' in train
+    assert "overflow-x" not in _top_level(css, ".confusion-matrix-container")
+    assert _top_level(css, ".confusion-matrix-container .table-container")["max-height"] == "70vh"
+    header = _top_level(css, ".confusion-matrix thead th")
+    names = _top_level(css, ".confusion-matrix tbody th")
+    corner = _top_level(css, ".confusion-matrix thead th:first-child")
+    assert (header["position"], header["top"]) == ("sticky", "0")
+    assert (names["position"], names["left"]) == ("sticky", "0")
+    assert corner["left"] == "0" and int(corner["z-index"]) > int(header["z-index"])
+
+
+def test_a_big_matrix_has_smaller_cells(css):
+    train = js_sources()["train.js"]
+    assert "const COMPACT_ABOVE = 15;" in train
+    assert 'matrix.length > COMPACT_ABOVE ? " cm-compact" : ""' in train
+    compact = _top_level(css, ".cm-compact td")
+    assert compact == _top_level(css, ".cm-compact th")
+    assert compact["min-width"] == "2.5rem" and compact["padding"] == "4px 6px"
+    assert compact["font-size"] == "0.8rem"  # 12.8 px: no text under 12 px
+
+
+def test_home_cards_are_1_2_or_4_columns(css):
+    """Four cards: never 3 columns with one card alone on the last row."""
+    assert _top_level(css, ".features-grid")["grid-template-columns"] == "repeat(2, 1fr)"
+    assert _media(css, "max-width: 600px")[".features-grid"]["grid-template-columns"] == "1fr"
+    assert _media(css, "min-width: 1100px")[".features-grid"]["grid-template-columns"] == "repeat(4, 1fr)"
+    assert ".features-grid" not in _media(css, "max-width: 768px")

@@ -83,7 +83,7 @@
           <button id="refreshPreviewBtn" class="btn btn-sm">Refresh Preview</button>
         </div>
         <div id="dataStats" class="stats-box"></div>
-        <div id="dataPreviewTable" class="table-container"></div>
+        <div id="dataPreviewTable" class="table-container" tabindex="0" role="region" aria-label="Dataset preview"></div>
       </div>
 
       <div class="section" id="loadModelSection" hidden>
@@ -255,8 +255,11 @@
             <label for="algorithmSelect" class="label">Choose The Algorithm:</label>
             <select id="algorithmSelect" name="algorithmSelect" required></select>
           </div>
-          <div id="dynamicInputs"></div>
-          <button type="submit" class="btn">Predict</button>
+          <details class="row-entry">
+            <summary>Enter one row by hand</summary>
+            <div id="dynamicInputs" class="field-grid"></div>
+            <button type="submit" class="btn">Predict</button>
+          </details>
         </form>
         <div id="predictionResult" class="message" role="status"></div>
         <div class="predict-file">
@@ -297,8 +300,11 @@
             <label for="loadedAlgorithmSelect" class="label">Choose The Algorithm:</label>
             <select id="loadedAlgorithmSelect" name="loadedAlgorithmSelect" required></select>
           </div>
-          <div id="loadedDynamicInputs"></div>
-          <button type="submit" class="btn">Predict</button>
+          <details class="row-entry">
+            <summary>Enter one row by hand</summary>
+            <div id="loadedDynamicInputs" class="field-grid"></div>
+            <button type="submit" class="btn">Predict</button>
+          </details>
         </form>
         <div id="loadedPredictionResult" class="message" role="status"></div>
         <div class="predict-file">

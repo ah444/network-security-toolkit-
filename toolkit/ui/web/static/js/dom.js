@@ -95,6 +95,12 @@ export function watchFileInput(input, placeholder, emptyText) {
   });
 }
 
+// A box that scrolls (a wide or long table): the keyboard can reach it to scroll it with
+// the arrow keys, and its name tells it apart (v5.2 step 2.2b)
+export function scrollBox(label, ...children) {
+  return el("div", { class: "table-container", tabindex: "0", role: "region", "aria-label": label }, children);
+}
+
 // A table with a header row: headers are texts, rows are arrays of cell texts or nodes
 export function table(className, headers, rows) {
   return el("table", { class: className },

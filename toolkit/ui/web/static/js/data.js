@@ -2,7 +2,7 @@
 // clearing the workspace.
 
 import { getJSON, send } from "./api.js";
-import { byId, el, setContent, show, table, watchFileInput } from "./dom.js";
+import { byId, el, scrollBox, setContent, show, table, watchFileInput } from "./dom.js";
 import { fmt } from "./format.js";
 import { emit, on } from "./state.js";
 
@@ -106,7 +106,7 @@ function showBundle(result) {
   setContent(byId("loadModelResult"),
     el("p", {}, result.message),
     el("p", {}, `Trained on ${result.dataset || "unknown data"} at ${result.created_at}.`),
-    el("div", { class: "table-container" },
+    scrollBox("Models in the bundle",
       table("metrics-table", ["Model", "CV macro-F1", "Test macro-F1"], result.models.map(model => [
         model.name + (model.id === result.selected ? " (selected)" : ""),
         fmt(model.cv_macro_f1, 3), fmt(model.test_macro_f1, 3)]))),

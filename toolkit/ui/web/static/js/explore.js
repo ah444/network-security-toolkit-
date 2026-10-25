@@ -3,7 +3,7 @@
 // them use the training split only.
 
 import { getJSON, send } from "./api.js";
-import { byId, checkedValues, el, fillCheckboxList, fillSelect, message, setChecked, setContent, table } from "./dom.js";
+import { byId, checkedValues, el, fillCheckboxList, fillSelect, message, scrollBox, setChecked, setContent, table } from "./dom.js";
 import { BALANCING_HINTS, INFINITE_SCORE_HINT, balancingName, ratioText, scoreText } from "./format.js";
 import { emit, on, state, testSize } from "./state.js";
 
@@ -95,7 +95,7 @@ async function analyzeClasses(event) {
     showBalancingHint(result.recommendation.recommended, "");
     setContent(resultDiv,
       el("strong", {}, "Class Distribution (whole dataset):"), el("br"),
-      el("div", { class: "table-container" }, el("table", {}, el("tbody", {},
+      scrollBox("Class distribution", el("table", {}, el("tbody", {},
         el("tr", {}, el("th", {}, "Class"), el("th", {}, "Count"), el("th", {}, "Percentage")),
         result.sorted_classes.map(([className, percentage]) => el("tr", {},
           el("td", {}, className), el("td", {}, result.class_counts[className].toLocaleString()),
@@ -146,7 +146,7 @@ async function previewBalancing() {
       el("p", {}, el("strong", {}, balancingName(result.balancer)),
          ` on ${result.rows.toLocaleString()} training rows`,
          result.sampled && ` (a stratified sample of ${result.train_rows.toLocaleString()})`, ":"),
-      el("div", { class: "table-container" },
+      scrollBox("Classes before and after balancing",
         table("metrics-table", ["Class", "Before", "After"], Object.keys(result.before).map(cls => [
           cls, result.before[cls].toLocaleString(), (result.after[cls] || 0).toLocaleString()]))),
       !result.changes_rows && el("p", {}, "The number of rows does not change with this method."));

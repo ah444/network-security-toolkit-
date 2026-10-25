@@ -2,7 +2,7 @@
 // the results (split, leakage guard, leaderboard) and the confusion matrices.
 
 import { getJSON, send } from "./api.js";
-import { byId, checkedValues, el, fillCheckboxList, fillSelect, message, setContent, show } from "./dom.js";
+import { byId, checkedValues, el, fillCheckboxList, fillSelect, message, scrollBox, setContent, show } from "./dom.js";
 import { balancingName, fmt, splitMessage } from "./format.js";
 import { emit, modelTitle, on, state, testSize } from "./state.js";
 
@@ -41,6 +41,9 @@ function shortLabel(label) {
   return typeof label === "string" && label.length > 12 ? label.substring(0, 10) + "..." : label;
 }
 
+// A matrix with more classes than this gets smaller cells (v5.2 step 2.2b)
+const COMPACT_ABOVE = 15;
+
 function displayConfusionMatrix(matrix, labels, modelName) {
   const container = byId("confusionMatrixDisplay");
   if (!matrix || matrix.length === 0) {
@@ -51,7 +54,7 @@ function displayConfusionMatrix(matrix, labels, modelName) {
   const rows = matrix.map((row, i) => {
     const rowTotal = row.reduce((sum, value) => sum + value, 0);
     return el("tr", {},
-      el("th", { title: names[i] }, shortLabel(names[i])),
+      el("th", { scope: "row", title: names[i] }, shortLabel(names[i])),
       row.map((value, j) => {
         const share = rowTotal > 0 ? value / rowTotal : 0;
         const level = shade(share);
@@ -60,12 +63,15 @@ function displayConfusionMatrix(matrix, labels, modelName) {
                           title: `${value} (${(share * 100).toFixed(1)}%)` }, value);
       }));
   });
+  const compact = matrix.length > COMPACT_ABOVE ? " cm-compact" : "";
   setContent(container,
     el("div", { class: "cm-header" }, el("strong", {}, modelTitle(modelName)), " - Test Set"),
-    el("table", { class: "confusion-matrix" }, el("tbody", {},
-      el("tr", {}, el("th"), el("th", { colspan: matrix.length }, "Predicted")),
-      el("tr", {}, el("th"), names.map(name => el("th", { title: name }, shortLabel(name)))),
-      rows)),
+    // the box scrolls both ways; the header row and the class names stay in view (app.css)
+    scrollBox("Confusion matrix of " + modelTitle(modelName),
+      el("table", { class: "confusion-matrix" + compact },
+        el("thead", {}, el("tr", {}, el("th", { scope: "col" }, "Actual ↓", el("br"), "Predicted →"),
+          names.map(name => el("th", { scope: "col", title: name }, shortLabel(name))))),
+        el("tbody", {}, rows))),
     el("div", { class: "cm-legend" },
       el("span", { class: "cm-correct" }, "■ Correct"), " ", el("span", { class: "cm-incorrect" }, "■ Incorrect")));
 }
@@ -102,7 +108,7 @@ function trainingResult(result) {
       warning("Left out by the leakage guard: " + result.leakage.blocked.map(b => b.column + " (" + b.reason + ")").join(", ")),
     el("p", {}, `Balancing: ${balancingName(result.balancing.method)}${result.balancing.requested === "recommended" ? " (recommended from the training split)" : ""}.`),
     el("strong", {}, "Leaderboard"), " (ranked by CV macro-F1; ★ = selected):", el("br"),
-    el("div", { class: "table-container" }, el("table", { class: "metrics-table" },
+    scrollBox("Leaderboard", el("table", { class: "metrics-table" },
       el("thead", {}, el("tr", {}, ["Model", "CV macro-F1", "Test macro-F1", "Test balanced acc.",
                                     "Test accuracy", "Weakest class recall", "Fit time"].map(text => el("th", {}, text)))),
       el("tbody", {}, result.leaderboard.map(row => el("tr", {},

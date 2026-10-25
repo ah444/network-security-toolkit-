@@ -2,12 +2,20 @@
 // CSV file), and exporting the run as a signed bundle.
 
 import { send } from "./api.js";
-import { byId, el, fillSelect, setContent, show, table, watchFileInput } from "./dom.js";
+import { byId, el, fillSelect, scrollBox, setContent, show, table, watchFileInput } from "./dom.js";
 import { on } from "./state.js";
+
+// A one-row form with more features than this starts closed: a CSV file is the quicker
+// way to give many values (v5.2 step 2.2b)
+const OPEN_UP_TO = 12;
 
 // One input per feature: a number box, a list of the known categories, or a text box
 function buildPredictionForm(containerId, idPrefix, featuresInfo) {
-  setContent(byId(containerId), featuresInfo.map((feature, index) => {
+  const container = byId(containerId);
+  const details = container.closest("details");
+  details.querySelector("summary").textContent = `Enter one row by hand (${featuresInfo.length} features)`;
+  details.open = featuresInfo.length <= OPEN_UP_TO;
+  setContent(container, featuresInfo.map((feature, index) => {
     let input;
     if (feature.type === "numeric") {
       input = el("input", { type: "number", step: "any" });
@@ -61,7 +69,7 @@ const percent = share => (share * 100).toFixed(1) + "%";
 // Rows per predicted class, largest first, each with a bar: a <meter>, so no inline style
 // is needed (S10); the numbers are in the table, the bar is only a picture of them.
 function batchTable(counts) {
-  return el("div", { class: "table-container" }, table("batch-table", ["Class", "Rows", "Share"],
+  return scrollBox("Rows per predicted class", table("batch-table", ["Class", "Rows", "Share"],
     counts.map(row => [row.label, count(row.count),
       el("span", { class: "batch-share" }, percent(row.share),
          el("meter", { class: "batch-bar", min: 0, max: 1, value: row.share, "aria-hidden": "true" }))])));

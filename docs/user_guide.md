@@ -319,13 +319,16 @@ file doesn't have, so no model can recognise them and the test scores are low
 ![The leaderboard](user-guide/12-leaderboard.jpg)
 
 **Show Matrix** shows a model's confusion matrix on the test split: rows are the true
-classes, columns the predicted ones, the diagonal is correct.
+classes, columns the predicted ones, the diagonal is correct. A big matrix scrolls inside
+its own box, and the class names stay in view.
 
 ![The confusion matrix](user-guide/13-confusion-matrix.jpg)
 
 ### 4.6 Step 6: Use
 
-**Make a Prediction** takes one row: choose the model and fill in each feature. Here a
+**Make a Prediction** takes one row: choose the model and fill in each feature under
+**Enter one row by hand** (with more than 12 features it starts closed; for many rows,
+**Predict a CSV File** is quicker). Here a
 real `neptune` row from `KDDTest+`, predicted as `neptune`.
 
 ![A prediction for one row](user-guide/14-predict-row.jpg)
