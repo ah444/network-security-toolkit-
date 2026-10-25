@@ -6,9 +6,8 @@ import re
 
 import pytest
 
-from web_js import JS_DIR, TEMPLATE, js_sources
+from web_js import JS_DIR, TEMPLATES, js_sources
 
-TEMPLATES = sorted(TEMPLATE.parent.glob("*.html"))
 THEME_SCRIPT = "<script src=\"{{ url_for('static', filename='js/theme.js') }}\"></script>"
 
 

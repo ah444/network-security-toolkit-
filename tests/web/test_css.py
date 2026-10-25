@@ -7,11 +7,10 @@ import re
 
 import pytest
 
-from web_js import JS_DIR, TEMPLATE, js_sources
+from web_js import JS_DIR, TEMPLATES, js_sources
 
 CSS_DIR = JS_DIR.parent / "css"
 APP_CSS = CSS_DIR / "app.css"
-TEMPLATES = sorted(TEMPLATE.parent.glob("*.html"))
 DARK = "@media (prefers-color-scheme: dark)"
 SYSTEM_DARK = ':root:not([data-theme="light"])'
 CHOSEN_DARK = ':root[data-theme="dark"]'

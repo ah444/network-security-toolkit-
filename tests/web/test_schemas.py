@@ -78,3 +78,14 @@ def test_prediction_values():
 
 def test_none_means_missing():
     assert load(TrainRequest, {"target": None, "features": None}) == TrainRequest()
+
+
+@dataclasses.dataclass(frozen=True)
+class _Unsupported:
+    raw: bytes
+
+
+def test_an_unsupported_field_type_is_a_programming_error():
+    """v5.2 step 2.3a: pinned before ``_convert`` is split (a schema bug, not a bad request)."""
+    with pytest.raises(TypeError, match="schema field 'raw': unsupported type"):
+        load(_Unsupported, {"raw": "x"})

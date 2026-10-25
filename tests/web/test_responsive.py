@@ -13,9 +13,8 @@ import re
 
 import pytest
 
-from web_js import JS_DIR, REPO_ROOT, TEMPLATE, js_sources
+from web_js import JS_DIR, REPO_ROOT, TEMPLATE, TEMPLATES, js_sources
 
-TEMPLATES = sorted(TEMPLATE.parent.glob("*.html"))
 APP_CSS = JS_DIR.parent / "css" / "app.css"
 NAVBAR_SCRIPT = "<script src=\"{{ url_for('static', filename='js/navbar.js') }}\"></script>"
 MENU_BUTTON = ('<button type="button" id="navToggle" class="nav-link nav-toggle" '

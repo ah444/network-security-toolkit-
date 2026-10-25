@@ -56,8 +56,9 @@ def test_templates_have_no_inline_scripts_or_handlers(repo_root):
     """Keeps the strict script-src from breaking the page."""
     import re
 
-    templates = (repo_root / "toolkit/ui/web/templates").glob("*.html")
-    for template in templates:
+    from web_js import TEMPLATES
+
+    for template in TEMPLATES:
         html = template.read_text(encoding="utf-8")
         assert not re.search(r"<script(?![^>]*\bsrc=)", html), template.name
         assert not re.search(r"\son[a-z]+\s*=", html), template.name
