@@ -4,16 +4,16 @@
 ``TrainingRun``: the fitted models plus everything needed to explain or repeat them
 (dataset SHA-256, profile, split and its reason codes, guard decisions and overrides,
 features, preprocessing, balancing, model parameters, ``EvaluationResult``, package
-versions, re-run tolerance). ``to_dict()`` is the plain-JSON form; the caller saves it
-(``exports``, over ``toolkit.core.data.ids.run_files``), the core never writes files. ``rerun(record, frame)`` trains
-again with the recorded settings and ``compare_metrics`` checks the result.
+versions, re-run tolerance). ``to_dict()`` is the plain-JSON form (``run_json.py``); the
+caller saves it (``exports``, over ``toolkit.core.data.ids.run_files``), the core never
+writes files. ``rerun(record, frame)`` trains again with the recorded settings and
+``compare_metrics`` checks the result.
 """
 
 from __future__ import annotations
 
 import dataclasses
 import importlib.metadata
-import math
 import platform
 import secrets
 from collections.abc import Mapping, Sequence
@@ -21,7 +21,6 @@ from dataclasses import dataclass, field, fields
 from datetime import datetime, timezone
 from typing import Any
 
-import numpy as np
 import pandas as pd
 
 from ...data.settings import (
@@ -36,8 +35,8 @@ from . import registry
 from .datasets import LoadedDataset
 from .evaluation import EvaluationResult, evaluate
 from .leakage import LeakageReport, check_leakage
-from .pipeline import TrainingOutcome
 from .profiles import ProfileMatch
+from .run_json import jsonable, models_dict, profile_dict, split_dict, training_dict
 from .split import SplitResult, split_dataset
 
 SCHEMA_VERSION = 1
@@ -118,122 +117,29 @@ class TrainingRun:
             "schema_version": self.schema_version,
             "run_id": self.run_id,
             "created_at": self.created_at,
-            "dataset": _jsonable(self.dataset),
-            "test_dataset": _jsonable(self.test_dataset),
-            "profile": _profile_dict(self.profile),
-            "settings": _jsonable(self.settings),
-            "split": _split_dict(self.split),
-            "leakage": _jsonable(self.leakage),
+            "dataset": jsonable(self.dataset),
+            "test_dataset": jsonable(self.test_dataset),
+            "profile": profile_dict(self.profile),
+            "settings": jsonable(self.settings),
+            "split": split_dict(self.split),
+            "leakage": jsonable(self.leakage),
             "features": list(self.evaluation.training.features),
             "balancing": {
                 "requested": self.settings.balancer,
                 "method": self.evaluation.balancer,
-                "recommendation": _jsonable(self.evaluation.balancer_recommendation),
+                "recommendation": jsonable(self.evaluation.balancer_recommendation),
             },
             "selection": {"selector": self.evaluation.selector,
                           "k_features": self.evaluation.k_features},
-            "training": _training_dict(self.evaluation.training),
-            "models": _models_dict(self.evaluation.training),
-            "evaluation": {f.name: _jsonable(getattr(self.evaluation, f.name))
+            "training": training_dict(self.evaluation.training),
+            "models": models_dict(self.evaluation.training),
+            "evaluation": {f.name: jsonable(getattr(self.evaluation, f.name))
                            for f in fields(self.evaluation) if f.name != "training"},
             "versions": dict(self.versions),
             "reproducibility": {"workers": self.settings.workers,
                                 "metric_tolerance": self.metric_tolerance},
             "bundle_sha256": self.bundle_sha256,
         }
-
-
-# --- JSON form ---------------------------------------------------------------------
-
-def _jsonable(value: Any) -> Any:
-    if value is None or isinstance(value, (bool, int, str)):
-        return value
-    if isinstance(value, float):
-        return value if math.isfinite(value) else None
-    if isinstance(value, np.generic):
-        return _jsonable(value.item())
-    if isinstance(value, np.ndarray):
-        return _jsonable(value.tolist())
-    if dataclasses.is_dataclass(value) and not isinstance(value, type):
-        data = {f.name: _jsonable(getattr(value, f.name)) for f in fields(value)}
-        for name, attribute in vars(type(value)).items():  # e.g. CVSummary.macro_f1_mean
-            if isinstance(attribute, property):
-                data[name] = _jsonable(getattr(value, name))
-        return data
-    if isinstance(value, Mapping):
-        return {str(k): _jsonable(v) for k, v in value.items()}
-    if isinstance(value, (list, tuple)):
-        return [_jsonable(v) for v in value]
-    if isinstance(value, (set, frozenset)):
-        return sorted(_jsonable(v) for v in value)
-    if isinstance(value, (datetime, pd.Timestamp)):
-        return value.isoformat()
-    if isinstance(value, type):
-        return value.__name__
-    return repr(value)
-
-
-def _profile_dict(match: ProfileMatch | None) -> dict[str, Any] | None:
-    if match is None:
-        return None
-    return {
-        "name": match.profile.name, "title": match.profile.title, "variant": match.variant,
-        "has_header": match.has_header, "columns": len(match.column_names),
-        "label_column": match.label_column, "blocked_columns": list(match.blocked_columns),
-        "split_strategy": match.split_strategy, "time_column": match.time_column,
-        "group_column": match.group_column, "warnings": list(match.warnings),
-    }
-
-
-def _split_dict(split: SplitResult) -> dict[str, Any]:
-    data = {f.name: _jsonable(getattr(split, f.name)) for f in fields(split)
-            if f.name not in ("train", "test")}
-    data["train_rows"], data["test_rows"] = len(split.train), len(split.test)
-    return data
-
-
-def _training_dict(outcome: TrainingOutcome) -> dict[str, Any]:
-    return {
-        "train_rows": outcome.train_rows, "classes": list(outcome.classes),
-        "class_counts": _jsonable(outcome.class_counts),
-        "numeric_features": list(outcome.numeric_features),
-        "categorical_features": list(outcome.categorical_features),
-        "failures": _jsonable(outcome.failures), "skipped": _jsonable(outcome.skipped),
-        "notes": list(outcome.notes), "seed": outcome.seed, "workers": outcome.workers,
-    }
-
-
-def _models_dict(outcome: TrainingOutcome) -> dict[str, Any]:
-    models: dict[str, Any] = {}
-    for name, fitted in outcome.models.items():
-        steps = fitted.pipeline.named_steps
-        numeric = "inf → missing, median imputation"
-        if fitted.scaled:
-            numeric += ", signed log, standard scaling"
-        if not outcome.categorical_features:
-            categorical = "none"
-        elif fitted.encoding == "onehot":
-            categorical = "one-hot (unknown categories ignored)"
-        else:
-            categorical = "ordinal (unknown → -1, missing → -2)"
-        models[name] = {
-            "steps": [step for step, _ in fitted.pipeline.steps],
-            "numeric": numeric if outcome.numeric_features else "none",
-            "categorical": categorical,
-            "select": _step_dict(steps["select"]),
-            "sample": _step_dict(steps["sample"]),
-            "estimator": type(steps["model"]).__name__,
-            "params": _jsonable(steps["model"].get_params(deep=False)),
-            "fit_seconds": fitted.fit_seconds,
-            "notes": list(fitted.notes),
-        }
-    return models
-
-
-def _step_dict(step: Any) -> dict[str, Any] | None:
-    if step is None or step == "passthrough":
-        return None
-    return {"class": type(step).__name__, "params": _jsonable(step.get_params(deep=False))}
 
 
 def package_versions() -> dict[str, str | None]:

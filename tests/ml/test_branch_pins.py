@@ -1,7 +1,8 @@
 """v5.2 step 2.3a: branches of the functions step 2.3 refactors that no other test reached
 (measured with ``sys.monitoring`` over the whole suite), pinned on the code before the
 refactor: ``split_dataset``, ``check_time_column``, ``load_dataset``, ``check_leakage`` and
-``runs._jsonable``. They describe today's behaviour; the refactor must keep it.
+``run_json.jsonable`` (``runs._jsonable`` before step 2.3h). They describe today's
+behaviour; the refactor must keep it.
 """
 
 import dataclasses
@@ -17,7 +18,7 @@ from toolkit.core.data.settings import SplitConfig
 from toolkit.core.services.ids import split as split_module
 from toolkit.core.services.ids.datasets import load_dataset
 from toolkit.core.services.ids.leakage import check_leakage
-from toolkit.core.services.ids.runs import _jsonable
+from toolkit.core.services.ids.run_json import jsonable as _jsonable
 from toolkit.core.services.ids.split import SOURCE_GROUP, TimeCheck, check_time_column, split_dataset
 
 
@@ -228,7 +229,7 @@ def test_one_class_gets_no_score_findings():
     assert report.features == ("x", "y", "copy")
 
 
-# --- runs._jsonable ----------------------------------------------------------------
+# --- run_json.jsonable -------------------------------------------------------------
 
 @dataclasses.dataclass(frozen=True)
 class _Pair:
