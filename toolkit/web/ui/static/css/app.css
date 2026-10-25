@@ -1128,6 +1128,11 @@ textarea:focus-visible,
   overflow-wrap: anywhere;
 }
 
+/* the lines too: the base rule gives every element the page's font */
+.scan-log li {
+  font-family: var(--font-mono);
+}
+
 .scan-log li + li {
   margin-top: 0.25rem;
 }

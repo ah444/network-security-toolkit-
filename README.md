@@ -58,6 +58,7 @@ A comprehensive network security tool combining **Network Reconnaissance** and *
 - 🔐 CVE lookup via the NVD CVE API 2.0, with CVSS scores; severity comes from CVSS only
 - 🤖 Optional AI explanation (OpenRouter), only after you agree; it receives the software name and version only, and its reply is shown as plain text marked "may be wrong"
 - 📊 IP reputation check (via AbuseIPDB), only after you agree
+- 🖱️ The same scanner from the web app's **Port Scanner** page (`/scan`): a form, a live log, Cancel, a card per open port and the report as TXT, JSON or CSV ([user guide 3.6](docs/user_guide.md#36-scan-from-the-web-page))
 - 📁 Export results to JSON/CSV/TXT (UTF-8, in `instance/scans/`, never overwritten, safe to open in a spreadsheet)
 
 ### 2. Intrusion Detection System (CLI)
@@ -162,7 +163,7 @@ Every tool can also be started directly with a command:
 |---|---|
 | `python -m toolkit scan` | Network reconnaissance |
 | `python -m toolkit ids` | IDS CLI |
-| `python -m toolkit web` | IDS web interface |
+| `python -m toolkit web` | IDS web interface and the Port Scanner page |
 
 `python -m toolkit --help` lists them and `python -m toolkit <command> --help` shows a tool's options.
 
@@ -218,7 +219,8 @@ python -m toolkit web
 python -m toolkit web --port 5001 --no-browser
 ```
 
-The page is `http://127.0.0.1:5000/` (the address is always printed); Ctrl+C stops the server.
+The page is `http://127.0.0.1:5000/` (the address is always printed), the port scanner
+`http://127.0.0.1:5000/scan`; Ctrl+C stops the server.
 If the port is already in use (for example, the trainer is already running), it says so and
 stops: start it on another port with `--port`. `TOOLKIT_NO_BROWSER=1` never opens the browser.
 

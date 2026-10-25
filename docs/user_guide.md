@@ -363,6 +363,65 @@ Elapsed time: 9.19 seconds
   nmap can't scan a target, the scanner says why, goes on with the next one, and the
   command ends with exit code 1.
 
+### 3.6 Scan from the web page
+
+The same scanner works from the browser. Start the web app (`python -m toolkit web`, see
+section 4) and open **Port Scanner** in the menu bar, or `http://127.0.0.1:5000/scan`.
+
+1. **Fill in the form.** The target and the ports are written as on the command line.
+   Choose TCP, UDP or both, and the engine: the built-in one, or nmap when it is installed
+   (when it isn't, the nmap choice is greyed out and the page says how to install it). With
+   nmap you also choose its service detection, timing, the toolkit's 8 scripts and OS
+   detection; the page shows the same note about nmap's own version scripts as section 3.5.
+   AbuseIPDB and the AI explanation can only be ticked when their key is set (section 1).
+2. **Tick the authorization.** It names your target: "I own 192.168.1.10 or have written
+   permission to scan it." Changing the target unticks it, so it is asked again for each
+   target, and the server refuses a scan without it before sending anything, not even a
+   DNS query for a host name. A target on the internet (not in a private network) gets one
+   more warning.
+3. **Start scan.** The bar shows each host's share of the scan and what it is doing ("Host 2
+   of 4: checking the ports of 10.0.0.2"); the **Scan log** below shows each step as it
+   happens. **Cancel scan** stops it at once: no more packets and no more lookups; nothing
+   is kept from a cancelled scan. One scan runs at a time on the server, and a second one
+   waits for it; a scan never waits for a training.
+4. **Read the results.** A summary (the target, the engine, the ports, the time and the
+   requests sent online), each host with its OS guess, and a card per open port. Click a
+   card (or press Enter on it) to open its banner, software, CVEs (the 10 worst, with their
+   CVSS scores), how they were found, and the AI's explanation if you asked for one.
+5. **Download the report** as TXT, JSON or CSV: the same files as `--export` on the command
+   line. The results stay in your browser session (in memory, nothing is saved on the
+   server) until you scan again, clear the workspace or close the web app; a reload shows
+   them again.
+
+This was taken on 2026-10-26 with two test programs on this computer: port 10822, which
+answers like OpenSSH 8.9, and port 10880, which answers like nginx 1.25.3. The form asked
+for `127.0.0.1`, ports `130-140,440-450,10822,10880`, TCP, the built-in engine. The scan
+log:
+
+```
+Scan engine: built-in (the toolkit's own scanner: a TCP connection or a UDP probe per port, nothing installed)
+Online: NVD on, the software name and version only; no NVD_API_KEY, so one request every 6 s; AI off: no OPENROUTER_API_KEY; AbuseIPDB off: no public address (a private one is never sent)
+Scanning 127.0.0.1
+OS guess from TTL 128: Windows (about 0 hops away; only a guess)
+Open: 135/tcp epmap?, 445/tcp microsoft-ds?, 10822/tcp ssh, 10880/tcp http
+OS: this computer (Windows 10)
+Looking up 2 product(s) online...
+135/tcp epmap?: -: software not recognised (no CVE lookup)
+445/tcp microsoft-ds?: -: software not recognised (no CVE lookup)
+10822/tcp ssh: OpenSSH 8.9: 32 CVE(s), CRITICAL
+10880/tcp http: nginx 1.25.3: 1 CVE(s), MEDIUM
+Done: 1 host(s), 4 open port(s), 0 failed lookup(s), 8.2 s
+```
+
+The results then said "Scanned 1 host(s): 4 open port(s).", 24 ports in 8.2 s, NVD 2
+requests, and four cards: `135/tcp epmap? · software not recognised · no lookup`,
+`445/tcp microsoft-ds?` the same, `10822/tcp ssh · OpenSSH 8.9 · CRITICAL · 32 CVEs` (its
+worst: CVE-2023-28531 and CVE-2023-38408, CVSS 9.8) and
+`10880/tcp http · nginx 1.25.3 · MEDIUM · 1 CVE`. The same scan with nmap (service
+detection light, the scripts and OS detection) added the CPE names, such as
+`cpe:/a:openbsd:openssh:8.9p1`, and nmap's OS match, "Microsoft Windows 10 1809 - 21H2 (nmap
+OS detection, a 100% match)".
+
 ## 4. Train a model in the web trainer
 
 ```
