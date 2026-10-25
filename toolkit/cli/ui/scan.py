@@ -11,7 +11,7 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
-from ...core.services.recon.scan import PROTOCOLS, PortResult, ReportEntry, one_line
+from ...core.services.recon.scan import PROTOCOLS, OsHint, PortResult, ReportEntry, one_line
 
 AUTHORIZATION = ("\nOnly scan systems you own or have written permission to test. Scanning "
                  "other systems can be illegal.\nType 'yes' if you are authorised to scan "
@@ -251,6 +251,20 @@ class ConsoleScan:
     def open_ports(self, results: Sequence[PortResult]) -> None:
         """Shows the open ports as a table."""
         print_table(results, "OPEN PORTS")
+
+    def os_hint(self, target: str, hint: OsHint) -> None:
+        """Shows the OS verdict (or that the target is this computer), each piece of evidence
+        and why some of it may disagree; a guess is said to be one."""
+        if hint.this_computer:
+            print(f"\nOS: {hint.verdict}, as {target} is one of its own addresses")
+        else:
+            print(f"\nOS guess from all the evidence: {hint.verdict}")
+        for evidence in hint.evidence:
+            print(f"  - {evidence.says}: {evidence.seen}")
+        if hint.note:
+            print(f"  {hint.note}")
+        if not hint.this_computer:
+            print("  (only a guess: TTLs can be set and banners can lie)")
 
     def looking_up(self, products: int, workers: int) -> None:
         """Says how many products will be looked up online."""

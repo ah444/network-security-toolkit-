@@ -17,7 +17,7 @@ from .text import csv_cell
 
 EXPORT_FORMATS = ("txt", "json", "csv")
 CSV_HEADER = ["Target", "Port", "Protocol", "Service", "Banner", "Software", "Severity (CVSS)",
-              "Max CVSS", "CVEs (NVD)", "AI explanation (may be wrong)", "Lookup errors"]
+              "Max CVSS", "CVEs (NVD)", "AI explanation (may be wrong)", "Lookup errors", "OS hint"]
 
 
 class ReportEntry(TypedDict):
@@ -34,6 +34,7 @@ class ReportEntry(TypedDict):
     severity: str
     ai_explanation: str
     lookup_errors: list[str]
+    os_hint: str  # the host's OS guess and its evidence, the same on each of its entries
 
 
 def _cve_list(entry: ReportEntry) -> str:
@@ -56,13 +57,14 @@ def _write_csv(entries: Sequence[ReportEntry], handle: TextIO) -> None:
         writer.writerow([csv_cell(v) for v in (
             e["target"], e["port"], e["protocol"], e["service"], e["banner"], e["software"],
             e["severity"], e["max_cvss"], _cve_list(e), e["ai_explanation"],
-            "; ".join(e["lookup_errors"]))])
+            "; ".join(e["lookup_errors"]), e["os_hint"])])
 
 
 def _write_txt(entries: Sequence[ReportEntry], handle: TextIO) -> None:
     """A block of lines per entry, separated by a dashed line."""
     for e in entries:
-        handle.write(f"Target: {e['target']}\nPort: {e['port']}/{e['protocol']}\n"
+        handle.write(f"Target: {e['target']}\nOS hint: {e['os_hint'] or 'none'}\n"
+                     f"Port: {e['port']}/{e['protocol']}\n"
                      f"Service: {e['service']}\nBanner: {e['banner']}\n"
                      f"Software: {e['software']}\nSeverity (CVSS): {e['severity']}\n"
                      f"CVEs (NVD): {_cve_list(e) or 'none'}\n"

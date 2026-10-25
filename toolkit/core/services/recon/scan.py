@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol
 
+from ...data.recon.local import is_this_computer, this_os
 from ...data.recon.lookup import INTEL_WORKERS
 from ...data.recon.ping import ping_host
 from ...data.recon.software import product_version
@@ -23,7 +24,8 @@ from ...data.recon.scanner import Progress, scan_ports
 from ...data.recon.text import one_line as one_line  # network text, shown on one line
 from ...data.settings import ScanConfig
 from .intel import Intel, LookupResult
-from .os_guess import guess_os
+from .os_guess import OsHint as OsHint  # what the UI shows
+from .os_guess import guess_os, os_hint
 from .report import make_entry
 from .targets import check_limits, is_ip_literal, is_public_ip, parse_target
 
@@ -94,6 +96,10 @@ class ScanView(Protocol):
     def open_ports(self, results: Sequence[PortResult]) -> None:
         """The open ports, before their lookups; ``service`` and ``banner`` come from the network:
         show them cleaned (``one_line``)."""
+
+    def os_hint(self, target: str, hint: OsHint) -> None:
+        """After the port checks (step A3): what the TTL, the banners and the open ports say about
+        the OS of ``target``, or that it is this computer; its text is the scanner's own words."""
 
     def looking_up(self, products: int, workers: int) -> None:
         """``products`` distinct products (at least one) are about to be looked up online, up to
@@ -180,11 +186,11 @@ def _ping_decision(target: str, request: ScanRequest, view: ScanView) -> tuple[b
     return True, ttl
 
 
-def _entries(target: str, open_ports: list[PortResult], intel: Intel,
-             view: ScanView) -> list[ReportEntry]:
+def _entries(target: str, open_ports: list[PortResult], intel: Intel, view: ScanView,
+             os_text: str) -> list[ReportEntry]:
     """The report entry of each open port, with its product's lookup (each product once, in
-    parallel, step 1.4e; a port without a product gets an empty one); each shown as made."""
-    view.open_ports(open_ports)
+    parallel, step 1.4e; a port without a product gets an empty one) and the host's OS hint
+    (``os_text``); each shown as made."""
     products = [product_version(result.banner) for result in open_ports]
     distinct = [software for software in dict.fromkeys(products) if software]
     if distinct:
@@ -196,7 +202,7 @@ def _entries(target: str, open_ports: list[PortResult], intel: Intel,
             looked_up[software] if software else
             {"cves": [], "max_cvss": None, "severity": "UNKNOWN", "ai_explanation": "",
              "errors": []})
-        entry = make_entry(target, result, software, found)
+        entry = make_entry(target, result, software, found, os_text)
         view.entry(entry, first=not entries)
         entries.append(entry)
     return entries
@@ -217,10 +223,14 @@ def scan_target(target: str, request: ScanRequest, intel: Intel,
     silent_udp = [r.port for r in results if r.state == "open|filtered"]
     if silent_udp:
         view.silent_udp(silent_udp)
-    if not open_ports:
+    if open_ports:
+        view.open_ports(open_ports)
+    else:
         view.no_open_ports(target)
-        return []
-    return _entries(target, open_ports, intel, view)
+    hint = os_hint(ttl, open_ports, is_this_computer(target), this_os())
+    if hint:
+        view.os_hint(target, hint)
+    return _entries(target, open_ports, intel, view, hint.summary() if hint else "")
 
 
 def run_scan(request: ScanRequest, keys: Mapping[str, str], start_time: float,

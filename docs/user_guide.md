@@ -111,6 +111,11 @@ OPEN PORTS
 | 47822/tcp |  open   |      ssh       | SSH-2.0-OpenSSH_8.9p1 Ubuntu-3ubu... |
 +-----------------------------------------------------------------------------+
 
+OS: this computer (Windows 10), as 127.0.0.1 is one of its own addresses
+  - Windows: TTL 128, about 0 hops away
+  - Linux (Ubuntu): the banner of 47822/tcp
+  This computer's ports may lead to a VM, a container or WSL (a forwarded port): the services that disagree run there.
+
 Looking up 1 product online...
 
 Vulnerability details per open port:
@@ -146,8 +151,16 @@ Results exported to <project>\instance\scans\scan-20261024T185841Z.json
 - **Software:** the product and version read from the banner, here `OpenSSH 8.9`.
 - **CVEs:** known vulnerabilities of that version, with their CVSS scores, from the NVD
   database. `Severity` is the highest score's level.
-- **OS guess:** from the time-to-live of the ping reply. It is only a hint: a system can
-  change it.
+- **OS:** the first line is the guess from the time-to-live (TTL) of the ping reply alone.
+  After the ports, the scanner weighs all it saw: the TTL, words in the banners
+  (`Ubuntu`, `Debian`, `Microsoft-IIS`, `OpenSSH_for_Windows`, ...) and open ports only
+  one OS has (135, Microsoft RPC), each with where it was seen. When they disagree it
+  says so: the ping may be answered by another device than the services (NAT, a
+  forwarded port). When the target is your own computer (127.0.0.1, or one of its
+  addresses, such as a VirtualBox adapter's 192.168.56.1) it says that instead of
+  guessing; here the SSH server on 47822 says Ubuntu, as one in a VM, a container or WSL
+  behind a forwarded port would. To check a VM, scan the VM's own address. It is only a
+  guess: a system can change its TTL and its banners.
 - **Failed lookups:** a lookup that didn't answer (for example `NVD: timed out`) is listed
   and the scan goes on. Run the scan again later, or set an NVD key
   ([reference.md, section 7.2](reference.md#72-api-keys-and-the-ai-model)), which allows
@@ -175,6 +188,11 @@ OPEN PORTS
 +-----------------------------------------------------------------------------+
 | 47822/tcp |  open   |      ssh       | SSH-2.0-OpenSSH_8.9p1 Ubuntu-3ubu... |
 +-----------------------------------------------------------------------------+
+
+OS: this computer (Windows 10), as 127.0.0.1 is one of its own addresses
+  - Windows: TTL 128, about 0 hops away
+  - Linux (Ubuntu): the banner of 47822/tcp
+  This computer's ports may lead to a VM, a container or WSL (a forwarded port): the services that disagree run there.
 
 Looking up 1 product online...
 

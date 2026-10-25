@@ -8,8 +8,9 @@ from ...data.recon.text import clean_text, one_line
 
 
 def make_entry(target: str, result: PortResult, software: str | None,
-               intel: LookupResult) -> ReportEntry:
-    """One open port for the report; every text from the network is cleaned here."""
+               intel: LookupResult, os_hint: str = "") -> ReportEntry:
+    """One open port for the report, with its host's OS hint (``OsHint.summary``); every text
+    from the network is cleaned here."""
     return {
         "target": target,
         "port": result.port,
@@ -22,4 +23,5 @@ def make_entry(target: str, result: PortResult, software: str | None,
         "severity": intel["severity"],
         "ai_explanation": intel["ai_explanation"],
         "lookup_errors": intel["errors"],
+        "os_hint": os_hint,
     }

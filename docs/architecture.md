@@ -95,7 +95,7 @@ no Flask, no argparse. Read by `cli/` and `web/`, it imports neither
 | `toolkit/core/services/recon/targets.py` | services | targets, port lists and scan limits |
 | `toolkit/core/services/recon/scan.py` | services | a scan, start to end, through a `ScanView` (what it shows and asks) |
 | `toolkit/core/services/recon/intel.py` | services | `Intel`: the lookups for open ports, in parallel, each product once |
-| `toolkit/core/services/recon/os_guess.py` | services | the OS guess from a ping reply's TTL |
+| `toolkit/core/services/recon/os_guess.py` | services | the OS guess from the TTL, the banners and the open ports, with its evidence; this computer said |
 | `toolkit/core/services/recon/report.py` | services | one report entry per open port, its network text cleaned |
 | `toolkit/core/data/__init__.py` | data | the shared data: files, the network, the environment |
 | `toolkit/core/data/settings.py` | data | every tunable setting, the `TOOLKIT_*` variables, the data folder, `.env` reading |
@@ -113,6 +113,7 @@ no Flask, no argparse. Read by `cli/` and `web/`, it imports neither
 | `toolkit/core/data/recon/software.py` | data | the product and version in a banner (the only part of it looked up online) |
 | `toolkit/core/data/recon/ping.py` | data | ping (per-OS flags) and the TTL of the reply |
 | `toolkit/core/data/recon/resolve.py` | data | host names to addresses |
+| `toolkit/core/data/recon/local.py` | data | whether an address is this computer's own (nothing sent), and its OS |
 | `toolkit/core/data/recon/text.py` | data | makes text from the network safe to show and export |
 | `toolkit/core/data/recon/scan_files.py` | data | scan report files as JSON, CSV or TXT in `instance/scans/` |
 | `toolkit/core/data/recon/findings.py` | data | what the intel gateways return (`CveEntry`, `IntelFinding`) |
@@ -295,6 +296,7 @@ Everything else is plain functions and dict registries.
 | feature selectors | `SELECTORS`, same file | all chosen features, ANOVA F-test, mutual information | a `SelectorSpec` |
 | dataset profiles | `PROFILES` in `toolkit/core/services/ids/profiles.py` | CIC-IDS2017, NSL-KDD, generic | a `DatasetProfile` with the real column names (never guessed) |
 | banner probes | `PROBES` and `READERS` in `toolkit/core/data/recon/probes.py` | 34 ports (8 of them printers, which get nothing sent), 7 ways to read a banner | a `Probe` for the port |
+| signs of an OS | `BANNER_WORDS` and `PORT_SIGNS` in `toolkit/core/services/recon/os_guess.py` | 11 banner words (Windows, 7 Linux distributions, 3 BSDs), 1 port (135, Microsoft RPC) | a pattern or a port, its family and what it says |
 | services an answer shows | `RULES` in `toolkit/core/data/recon/services.py` | SSH, HTTP, VNC, POP3, IMAP, FTP, SMTP, Redis, Memcached, MySQL, MongoDB, AMQP | a pattern and the service's name |
 | software in a banner | `RULES` in `toolkit/core/data/recon/software.py` | SSH, MariaDB, Redis, Memcached; then the generic "Name/1.2" | a `Rule`: a pattern and how its match is named |
 | scan export formats | `WRITERS` in `toolkit/core/data/recon/scan_files.py` | JSON, CSV, TXT | a writer function |
@@ -413,6 +415,9 @@ screen and every question goes through the `ScanView` (`ConsoleScan` in
      |       banner read with the port's probe                  core/data/recon/probes.py
      |       the service from the answer, else "usual?"         core/data/recon/services.py
      v
+ OS hint: the TTL, the banners, the open ports; this PC?        core/services/recon/os_guess.py
+     |
+     v
  products from the banners, each one once                       core/data/recon/software.py
      |
      v
@@ -492,6 +497,7 @@ stays in its folder.
 | recognise a new dataset | a `DatasetProfile` in `PROFILES` (`toolkit/core/services/ids/profiles.py`) with the real column names, never guessed; a sample cut from the real file by `tests/fixtures/make_fixtures.py` | [datasets.md](datasets.md), [tests/fixtures/README.md](../tests/fixtures/README.md) | `tests/ml/test_profiles.py`, `tests/ml/test_loader.py` |
 | read another port's banner | a `Probe` in `PROBES` (and a reader in `READERS` if none fits) in `toolkit/core/data/recon/probes.py` | - | `tests/recon/test_probes.py` |
 | recognise another service from its answer | a pattern in `RULES` (`toolkit/core/data/recon/services.py`); the port's usual name, when no list has it, in `PORT_NAMES` | - | `tests/recon/test_services.py` |
+| recognise another sign of an OS | a pattern in `BANNER_WORDS` or a port in `PORT_SIGNS` (`toolkit/core/services/recon/os_guess.py`); a new family also needs `agree()` to know which families it fits | - | `tests/recon/test_os_detect.py` |
 | recognise another product in a banner | a `Rule` in `RULES` (`toolkit/core/data/recon/software.py`), before the generic pattern; what it returns is looked up online, so never an address or free text | - | `tests/recon/test_software.py` |
 | add a scan export format | a writer in `WRITERS` and its name in `EXPORT_FORMATS` (`toolkit/core/data/recon/scan_files.py`; the `--export` choices and the question come from there) | [reference.md](reference.md) | `tests/recon/test_export.py` |
 | add an online lookup | an `IntelProvider` in `toolkit/core/data/recon/`, added to `Intel`'s providers (`toolkit/core/services/recon/intel.py`) only after consent or a flag | what leaves the computer: section 9 here and the README's privacy notes | `tests/recon/test_scan_contract.py`, `tests/recon/test_intel_providers.py` |
