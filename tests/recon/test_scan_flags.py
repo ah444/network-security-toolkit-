@@ -38,6 +38,10 @@ class FakeIntel:
         self.abuse_checked.append(ip)
         return {"ipAddress": ip, "abuseConfidenceScore": 0}, None
 
+    def sent(self):
+        return {"NVD": len(self.looked_up), "AI (OpenRouter)": 0,
+                "AbuseIPDB": len(self.abuse_checked)}
+
 
 @pytest.fixture
 def fake(scan_service, scanner, monkeypatch, tmp_path):
@@ -285,3 +289,17 @@ def test_interactive_mode_unchanged(scan_service, scanner, monkeypatch, capsys):
                        "\nOnly scan s", "Enable verbo", "Do you want ", "Enter desire"]
     assert scans == [([20, 21, 22], ["tcp", "udp"])]
     assert "Results exported to report.txt" in capsys.readouterr().out
+
+
+def test_every_scan_says_what_goes_online(scanner, fake, capsys):
+    """Step A5: the plan before the first target, the requests at the end."""
+    assert scanner.main(["127.0.0.1", "-p", "22", AUTHORIZED, "--ai", "--abuseipdb"]) == 0
+    out = capsys.readouterr().out
+    assert ("Online in this scan:\n"
+            "  NVD (CVEs, services.nvd.nist.gov): on, the software name and version only; "
+            "no NVD_API_KEY, so one request every 6 s\n"
+            "  AI explanation (OpenRouter): off: no OPENROUTER_API_KEY\n"
+            "  IP reputation (AbuseIPDB): off: no public address (a private one is never sent)\n"
+            ) in out
+    assert out.index("Online in this scan:") < out.index("Scanning target")
+    assert "Requests sent online: NVD 1, AI (OpenRouter) 0, AbuseIPDB 0\n" in out

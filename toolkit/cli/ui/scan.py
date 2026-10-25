@@ -11,7 +11,14 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
-from ...core.services.recon.scan import PROTOCOLS, OsHint, PortResult, ReportEntry, one_line
+from ...core.services.recon.scan import (
+    PROTOCOLS,
+    OnlinePlan,
+    OsHint,
+    PortResult,
+    ReportEntry,
+    one_line,
+)
 
 AUTHORIZATION = ("\nOnly scan systems you own or have written permission to test. Scanning "
                  "other systems can be illegal.\nType 'yes' if you are authorised to scan "
@@ -282,23 +289,26 @@ class ConsoleScan:
             print("\nVulnerability details per open port:")
         print_entry(entry)
 
-    def lookups_notice(self) -> None:
-        """Says what the CVE lookups send to NVD."""
-        print("CVE lookups send only the detected software name and version to the NVD API "
-              "(services.nvd.nist.gov).")
+    def lookups_notice(self, online: OnlinePlan) -> None:
+        """Says what this scan may send to each online service, or why it sends nothing."""
+        print("Online in this scan:")
+        print(f"  NVD (CVEs, services.nvd.nist.gov): {online.nvd}")
+        print(f"  AI explanation (OpenRouter): {online.ai}")
+        print(f"  IP reputation (AbuseIPDB): {online.abuseipdb}")
 
     def target_done(self) -> None:
         """A line under the target."""
         print("=" * 60)
 
-    def summary(self, targets: int, entries: int, failed: Sequence[str],
-                seconds: float) -> None:
-        """Shows the summary report."""
+    def summary(self, targets: int, entries: int, failed: Sequence[str], seconds: float,
+                sent: Mapping[str, int]) -> None:
+        """Shows the summary report, with the requests sent online."""
         print("\nScan Summary Report")
         print("-------------------")
         print(f"Total targets scanned: {targets}")
         print(f"Total open ports found: {entries}")
         print(f"Failed lookups: {len(failed)}" + (f" ({'; '.join(failed)})" if failed else ""))
+        print("Requests sent online: " + ", ".join(f"{name} {n}" for name, n in sent.items()))
         print(f"Elapsed time: {seconds:.2f} seconds")
 
     def nothing_to_export(self) -> None:

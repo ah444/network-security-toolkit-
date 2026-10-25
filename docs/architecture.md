@@ -120,7 +120,7 @@ no Flask, no argparse. Read by `cli/` and `web/`, it imports neither
 | `toolkit/core/data/recon/nvd.py` | data | CVEs and CVSS scores from the NVD API, by version (CPE names) or by keyword (an `IntelProvider`) |
 | `toolkit/core/data/recon/openrouter.py` | data | the optional AI explanation through OpenRouter (an `IntelProvider`) |
 | `toolkit/core/data/recon/abuseipdb.py` | data | the optional IP reputation from AbuseIPDB (an `IntelProvider`) |
-| `toolkit/core/data/recon/lookup.py` | data | the HTTP session, lookup time limits, expected failures and their names |
+| `toolkit/core/data/recon/lookup.py` | data | the HTTP session (it counts the requests to each host), lookup time limits, expected failures and their names |
 
 ### `cli/`: the command line
 
@@ -464,8 +464,11 @@ exit code 130.
  +------------------------------------+
 ```
 
-"or yes" is the scanner's question when it runs without flags. Each optional lookup prints
-one line saying what is sent, or that its key is missing.
+"or yes" is the scanner's question when it runs without flags. Each scan prints, before the
+first target, what it may send to each service or why it sends nothing (`online_plan` in
+`toolkit/core/services/recon/scan.py`: no key, not asked for, the answer no, no public
+address), and in its summary how many requests went to each (`Intel.sent`, counted by the
+scan's `Session` in `toolkit/core/data/recon/lookup.py`).
 
 ## 10. Where this differs from the plan's target structure
 

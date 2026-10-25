@@ -12,8 +12,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol
 
+from ...data.keys import KEY_VARIABLES
 from ...data.recon.local import is_this_computer, this_os
 from ...data.recon.lookup import INTEL_WORKERS
+from ...data.recon.nvd import NVD_INTERVAL
 from ...data.recon.ping import ping_host
 from ...data.recon.software import product_version
 from ...data.recon.scan_files import EXPORT_FORMATS as EXPORT_FORMATS
@@ -48,6 +50,45 @@ class ScanRequest:
     scan_unresponsive: bool = False
     export: str | None = None
     interactive: bool = False
+
+
+@dataclass(frozen=True)
+class OnlinePlan:
+    """What a scan may send to each online service, or why it sends nothing (step A5)."""
+
+    nvd: str
+    ai: str
+    abuseipdb: str
+
+
+def _ai_plan(request: ScanRequest, keys: Mapping[str, str]) -> str:
+    """The AI explanation: on, or why not (no key, not asked for, the answer no)."""
+    if request.use_ai:
+        return "on, the software name and version only"
+    if not keys.get("openrouter"):
+        return f"off: no {KEY_VARIABLES['openrouter']}"
+    return "off: you said no" if request.interactive else "off: not asked for (--ai)"
+
+
+def _abuse_plan(request: ScanRequest, keys: Mapping[str, str]) -> str:
+    """The AbuseIPDB check: for the public addresses only, or why not."""
+    if not any(is_public_ip(target) for target in request.targets):
+        return "off: no public address (a private one is never sent)"
+    if not keys.get("abuseipdb"):
+        return f"off: no {KEY_VARIABLES['abuseipdb']}"
+    if request.interactive:
+        return "asked before each public address"
+    return "on, the public addresses only" if request.abuseipdb else \
+        "off: not asked for (--abuseipdb)"
+
+
+def online_plan(request: ScanRequest, keys: Mapping[str, str]) -> OnlinePlan:
+    """What this scan may send online and why not, from the request (the flags or the answers)
+    and the keys that are set."""
+    pace = "" if keys.get("nvd") else (
+        f"; no {KEY_VARIABLES['nvd']}, so one request every {NVD_INTERVAL[False]:g} s")
+    return OnlinePlan(f"on, the software name and version only{pace}",
+                      _ai_plan(request, keys), _abuse_plan(request, keys))
 
 
 class ScanView(Protocol):
@@ -108,16 +149,18 @@ class ScanView(Protocol):
     def entry(self, entry: ReportEntry, first: bool) -> None:
         """One open port's report entry, in port order; ``first`` for the target's first entry."""
 
-    def lookups_notice(self) -> None:
-        """Once, before the first target: what the CVE lookups send online."""
+    def lookups_notice(self, online: OnlinePlan) -> None:
+        """Once, before the first target: what this scan may send to each online service, or why
+        it sends nothing (step A5)."""
 
     def target_done(self) -> None:
         """After each target, scanned or skipped."""
 
-    def summary(self, targets: int, entries: int, failed: Sequence[str],
-                seconds: float) -> None:
+    def summary(self, targets: int, entries: int, failed: Sequence[str], seconds: float,
+                sent: Mapping[str, int]) -> None:
         """After the last target: the targets, the entries, the failed lookups (as ``port/protocol
-        error``) and the seconds since the command started."""
+        error``), the seconds since the command started and the requests sent to each online
+        service (``Intel.sent``)."""
 
     def nothing_to_export(self) -> None:
         """No entries, and an export was asked for (interactive or ``--export``)."""
@@ -237,7 +280,7 @@ def run_scan(request: ScanRequest, keys: Mapping[str, str], start_time: float,
              view: ScanView) -> int:
     """Scan every target, show the summary, export (asked, or ``--export``); the exit code."""
     intel = Intel(keys, request.use_ai)
-    view.lookups_notice()
+    view.lookups_notice(online_plan(request, keys))
 
     entries: list[ReportEntry] = []
     for target in request.targets:
@@ -246,7 +289,8 @@ def run_scan(request: ScanRequest, keys: Mapping[str, str], start_time: float,
 
     failed = [f"{e['port']}/{e['protocol']} {error}" for e in entries
               for error in e["lookup_errors"]]
-    view.summary(len(request.targets), len(entries), failed, time.time() - start_time)
+    view.summary(len(request.targets), len(entries), failed, time.time() - start_time,
+                 intel.sent())
 
     if not entries:
         if request.interactive or request.export:

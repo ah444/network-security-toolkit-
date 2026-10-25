@@ -195,3 +195,15 @@ def test_udp_ports_with_no_reply_are_listed_and_not_looked_up(scanner, net, caps
     assert "UDP ports with no reply (open|filtered): 1 (53)" in out
     assert "No open ports found on 10.0.0.9" in out
     assert _http(net["events"], "") == []
+
+
+def test_an_interactive_scan_says_why_nothing_else_goes_online(scanner, net, capsys):
+    """Step A5: without keys the AI question is never asked; the plan says why it is off."""
+    net["answers"] = {"Enter target": "8.8.8.8", "Enter start": "22", "Enter end": "22",
+                      "Select protocol": "tcp", AUTHORIZE: "yes", "verbose": "n",
+                      "export the results": "n"}
+    assert scanner.main([]) == 0
+    out = capsys.readouterr().out
+    assert "  AI explanation (OpenRouter): off: no OPENROUTER_API_KEY\n" in out
+    assert "  IP reputation (AbuseIPDB): off: no ABUSEIPDB_API_KEY\n" in out
+    assert _http(net["events"], "openrouter") == [] and _http(net["events"], "abuseipdb") == []

@@ -99,7 +99,10 @@ Select protocol for scanning (TCP/UDP/both): tcp
 Only scan systems you own or have written permission to test. Scanning other systems can be illegal.
 Type 'yes' if you are authorised to scan 127.0.0.1: yes
 Enable verbose mode? (Y/N): n
-CVE lookups send only the detected software name and version to the NVD API (services.nvd.nist.gov).
+Online in this scan:
+  NVD (CVEs, services.nvd.nist.gov): on, the software name and version only; no NVD_API_KEY, so one request every 6 s
+  AI explanation (OpenRouter): off: no OPENROUTER_API_KEY
+  IP reputation (AbuseIPDB): off: no public address (a private one is never sent)
 
 Scanning target: 127.0.0.1
 OS guess from TTL 128: Windows (about 0 hops away; TTLs can be changed, so this is only a guess)
@@ -134,6 +137,7 @@ Scan Summary Report
 Total targets scanned: 1
 Total open ports found: 1
 Failed lookups: 0
+Requests sent online: NVD 1, AI (OpenRouter) 0, AbuseIPDB 0
 Elapsed time: 2.40 seconds
 Do you want to export the results to a file? (Y/N): y
 Enter desired file extension (txt, json, csv): json
@@ -183,7 +187,10 @@ choice is a flag. `--i-am-authorized` answers that question too (for scripts).
 > python -m toolkit scan 127.0.0.1 -p 47820-47824 --export csv
 Only scan systems you own or have written permission to test. Scanning other systems can be illegal.
 Type 'yes' if you are authorised to scan 127.0.0.1: yes
-CVE lookups send only the detected software name and version to the NVD API (services.nvd.nist.gov).
+Online in this scan:
+  NVD (CVEs, services.nvd.nist.gov): on, the software name and version only; no NVD_API_KEY, so one request every 6 s
+  AI explanation (OpenRouter): off: no OPENROUTER_API_KEY
+  IP reputation (AbuseIPDB): off: no public address (a private one is never sent)
 
 Scanning target: 127.0.0.1
 OS guess from TTL 128: Windows (about 0 hops away; TTLs can be changed, so this is only a guess)
@@ -218,6 +225,7 @@ Scan Summary Report
 Total targets scanned: 1
 Total open ports found: 1
 Failed lookups: 0
+Requests sent online: NVD 1, AI (OpenRouter) 0, AbuseIPDB 0
 Elapsed time: 2.29 seconds
 Results exported to <project>\instance\scans\scan-20261024T185851Z.csv
 ```
@@ -228,6 +236,11 @@ answer ping), `--ai`, `--abuseipdb`, `--i-am-authorized`. Their defaults are in
 [reference.md, section 3](reference.md#3-scan-the-port-scanner).
 
 ### 3.4 What leaves your computer
+
+Every scan says first, under `Online in this scan`, what it may send to each service or
+why it sends nothing (`off: no OPENROUTER_API_KEY`, `off: not asked for (--ai)`, `off: you
+said no`, `off: no public address`), and at the end, under `Requests sent online`, how many
+requests went to each.
 
 - **The CVE lookup** sends only the software name and version (here `OpenSSH 8.9`, or
   as NVD names it, `cpe:2.3:a:openbsd:openssh:8.9`) to the public NVD API, never the

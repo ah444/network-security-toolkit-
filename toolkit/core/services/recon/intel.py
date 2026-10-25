@@ -9,11 +9,22 @@ from typing import Any, TypedDict
 
 from ...data.recon.findings import CveEntry, IntelFinding
 from ..ports import IntelProvider
-from ...data.recon.abuseipdb import AbuseIpdbProvider
+from ...data.recon.abuseipdb import ABUSEIPDB_URL, AbuseIpdbProvider
 from ...data.keys import ai_model
-from ...data.recon.openrouter import OpenRouterProvider
-from ...data.recon.lookup import INTEL_TIMEOUT, INTEL_WORKERS, LOOKUP_ERRORS, Session, describe
-from ...data.recon.nvd import NvdProvider
+from ...data.recon.openrouter import OPENROUTER_API_URL, OpenRouterProvider
+from ...data.recon.lookup import (
+    INTEL_TIMEOUT,
+    INTEL_WORKERS,
+    LOOKUP_ERRORS,
+    Session,
+    describe,
+    host_of,
+)
+from ...data.recon.nvd import NVD_URL, NvdProvider
+
+# The online services a scan may ask, by host, and their names in its totals (step A5)
+SERVICES = {host_of(url): name for url, name in (
+    (NVD_URL, "NVD"), (OPENROUTER_API_URL, "AI (OpenRouter)"), (ABUSEIPDB_URL, "AbuseIPDB"))}
 
 
 class LookupResult(TypedDict):
@@ -109,6 +120,15 @@ class Intel:
                 executor.shutdown(wait=False, cancel_futures=True)
                 raise
         return {product: results[product] for product in distinct}
+
+    def sent(self) -> dict[str, int]:
+        """The requests this scan sent to each online service, counted by its session: every
+        service in ``SERVICES`` by name (0 if none), any other host by itself; all 0 with a
+        session that doesn't count (tests)."""
+        counted: Mapping[str, int] = getattr(self.session, "sent", {})
+        totals = {name: counted.get(host, 0) for host, name in SERVICES.items()}
+        totals.update({host: n for host, n in counted.items() if host not in SERVICES})
+        return totals
 
     def abuse_report(self, ip: str) -> tuple[dict[str, Any] | None, str | None]:
         """(AbuseIPDB's data for ``ip``, None), or (None, why it failed); without a key
