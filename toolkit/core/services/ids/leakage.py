@@ -147,6 +147,61 @@ def _single_feature(x: np.ndarray, y: np.ndarray, leaves: int, config: LeakageCo
     return float(cross_val_score(tree, x, y, cv=folds, scoring="balanced_accuracy").mean())
 
 
+def _checked_overrides(allow: Mapping[str, str] | None, candidates: list[str]) -> dict[str, str]:
+    """The user's overrides (column -> reason): each names a candidate and gives a reason."""
+    allow = dict(allow or {})
+    for column, note in allow.items():
+        if column not in candidates:
+            raise ValueError(f"Override for unknown column: {column!r}")
+        if not str(note).strip():
+            raise ValueError(f"Override for {column!r} needs a reason")
+    return allow
+
+
+def _rule_findings(train: pd.DataFrame, candidates: list[str], profile_blocked: Sequence[str],
+                   config: LeakageConfig) -> list[ColumnFinding]:
+    """The three checks that need no model, per column in order: the profile, the name,
+    ID-like values."""
+    findings: list[ColumnFinding] = []
+    for column in candidates:
+        if column in profile_blocked:
+            findings.append(ColumnFinding(column, "block", "PROFILE_BLOCKED",
+                                          "the dataset profile lists it"))
+        pattern = name_pattern(column)
+        if pattern:
+            findings.append(ColumnFinding(column, "block", "NAME_PATTERN", f"word '{pattern}'"))
+        id_detail = _id_like(train[column], config)
+        if id_detail:
+            findings.append(ColumnFinding(column, "block", "ID_LIKE", id_detail))
+    return findings
+
+
+def _score_findings(sample: pd.DataFrame, label: str, columns: list[str],
+                    config: LeakageConfig) -> list[ColumnFinding]:
+    """The single-feature rule on ``columns`` (those no rule found), on the sample: a
+    one-feature tree's cross-validated score, then how many values each class has."""
+    y = sample[label].astype(str).to_numpy()
+    classes = np.unique(y)
+    if len(classes) < 2:
+        return []
+    leaves = max(config.tree_leaves, math.ceil(config.relabel_max_values_per_class * len(classes)))
+    findings: list[ColumnFinding] = []
+    for column in columns:
+        score = _single_feature(_as_number(sample[column]), y, leaves, config)
+        if score < config.warn_score:
+            continue
+        per_class = float(sample.groupby(y, observed=True)[column].nunique(dropna=False).mean())
+        relabel = per_class <= config.relabel_max_values_per_class
+        if score >= config.block_score and relabel:
+            findings.append(ColumnFinding(column, "block", "LABEL_RELABELLING",
+                                          "about one value per class", score, per_class))
+        else:
+            findings.append(ColumnFinding(column, "warn", "STRONG_SINGLE_FEATURE",
+                                          "predicts the label alone; may be legitimate",
+                                          score, per_class))
+    return findings
+
+
 def check_leakage(
     train: pd.DataFrame,
     label: str,
@@ -162,48 +217,12 @@ def check_leakage(
     """
     config = config or LeakageConfig()
     candidates = [c for c in (features if features is not None else train.columns) if c != label]
-    allow = dict(allow or {})
-    for column, note in allow.items():
-        if column not in candidates:
-            raise ValueError(f"Override for unknown column: {column!r}")
-        if not str(note).strip():
-            raise ValueError(f"Override for {column!r} needs a reason")
-
-    findings: list[ColumnFinding] = []
-    for column in candidates:
-        if column in profile_blocked:
-            findings.append(ColumnFinding(column, "block", "PROFILE_BLOCKED",
-                                          "the dataset profile lists it"))
-        pattern = name_pattern(column)
-        if pattern:
-            findings.append(ColumnFinding(column, "block", "NAME_PATTERN", f"word '{pattern}'"))
-        id_detail = _id_like(train[column], config)
-        if id_detail:
-            findings.append(ColumnFinding(column, "block", "ID_LIKE", id_detail))
-
+    allow = _checked_overrides(allow, candidates)
+    findings = _rule_findings(train, candidates, profile_blocked, config)
     sample, rare = _sample(train[[*candidates, label]], label, config)
-    y = sample[label].astype(str).to_numpy()
-    classes = np.unique(y)
     already = {f.column for f in findings}
-    if len(classes) >= 2:
-        leaves = max(config.tree_leaves,
-                     math.ceil(config.relabel_max_values_per_class * len(classes)))
-        for column in candidates:
-            if column in already:
-                continue
-            score = _single_feature(_as_number(sample[column]), y, leaves, config)
-            if score < config.warn_score:
-                continue
-            per_class = float(sample.groupby(y, observed=True)[column]
-                              .nunique(dropna=False).mean())
-            relabel = per_class <= config.relabel_max_values_per_class
-            if score >= config.block_score and relabel:
-                findings.append(ColumnFinding(column, "block", "LABEL_RELABELLING",
-                                              "about one value per class", score, per_class))
-            else:
-                findings.append(ColumnFinding(column, "warn", "STRONG_SINGLE_FEATURE",
-                                              "predicts the label alone; may be legitimate",
-                                              score, per_class))
+    findings += _score_findings(sample, label, [c for c in candidates if c not in already],
+                                config)
 
     overrides = tuple(Override(f.column, f.action, f.reason, f.score, allow[f.column].strip())
                       for f in findings if f.column in allow)
