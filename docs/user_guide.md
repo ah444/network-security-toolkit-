@@ -422,6 +422,51 @@ detection light, the scripts and OS detection) added the CPE names, such as
 `cpe:/a:openbsd:openssh:8.9p1`, and nmap's OS match, "Microsoft Windows 10 1809 - 21H2 (nmap
 OS detection, a 100% match)".
 
+### 3.7 Scan from another computer
+
+The web app listens on this computer only. To use it from another computer, for example to
+scan your virtual machines from the computer they run on, open it to the network with an
+address of this computer:
+
+```
+python -m toolkit web --host 192.168.56.1
+```
+
+Do this **only on a network you trust**, such as VirtualBox's host-only network: anyone who
+can reach the toolkit and has its access token can upload data, train models and run port
+scans *from this computer*, and the connection is plain HTTP. `--host 0.0.0.0` listens on
+all of this computer's addresses. A host name is refused, and there is no setting that
+opens it for you: you choose it at every start. This was printed on 2026-10-26:
+
+```
+IDS web app running at http://127.0.0.1:5091/  (press Ctrl+C to stop)
+========================================================================
+WARNING: the toolkit is open to your network, not only to this computer.
+Anyone who can reach it and has the access token can upload data, train models
+and run port scans FROM THIS COMPUTER. The connection is plain HTTP: someone who
+can read your network's traffic could take over a session. Use it only on a
+network you trust (such as your virtual machines' host-only network), and stop
+it with Ctrl+C when you are done.
+
+Other computers open:
+  http://192.168.56.1:5091/
+Access token (typed once in each of their browsers): LSMT-PYWK-8PVT-GN5L
+This computer's own browser, at 127.0.0.1, needs no token.
+========================================================================
+```
+
+- **On the other computer**, open the address shown. Every page first sends you to
+  **Unlock the toolkit**: type the access token (capitals, spaces and dashes don't matter)
+  and press **Unlock**; that browser then works until the toolkit stops. The token is new at
+  every start, so last time's no longer works. Five wrong tokens within a minute are refused
+  for the rest of the minute.
+- **On this computer**, the browser at `http://127.0.0.1:...` needs no token.
+- **Every page** shows a yellow banner while the toolkit is open to the network.
+- `TOOLKIT_DEBUG=1` is refused with `--host`, and an address this computer doesn't have is
+  a message (both exit code 2). On Windows the firewall may ask, the first time, whether
+  Python may accept connections; allow it for private networks only.
+- Stop it with Ctrl+C when you are done.
+
 ## 4. Train a model in the web trainer
 
 ```
