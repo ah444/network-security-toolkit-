@@ -7,6 +7,7 @@ import re
 
 import pytest
 
+from web_contrast import colour, contrast, themes
 from web_js import JS_DIR, TEMPLATES, js_sources
 
 CSS_DIR = JS_DIR.parent / "css"
@@ -141,3 +142,14 @@ def test_no_web_font_dependency(css):
 def test_focus_is_visible(css):
     assert ":focus-visible" in css
     assert not re.search(r"outline\s*:\s*none", css)
+
+
+@pytest.mark.parametrize("around", ["--surface", "--bg", "--input-bg"])
+def test_a_fields_edge_is_visible_in_both_themes(around):
+    """Gate 5.2 (WCAG 1.4.11): a text field's or a list's border, the only thing that shows
+    where it is, is at least 3:1 against the card, the page and the field itself (it was
+    1.23:1 in light and 1.59:1 in dark)."""
+    light, dark = themes()
+    for name, theme in (("light", light), ("dark", dark)):
+        ratio = contrast(colour("--input-border", theme, light), colour(around, theme, light))
+        assert ratio >= 3, (name, around, round(ratio, 2))

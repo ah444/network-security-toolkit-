@@ -8,9 +8,9 @@ import re
 
 import pytest
 
-from web_js import JS_DIR, SCAN_TEMPLATE, TEMPLATES, js_sources
+from web_contrast import colour, contrast, stylesheet, themes
+from web_js import SCAN_TEMPLATE, TEMPLATES, js_sources
 
-APP_CSS = JS_DIR.parent / "css" / "app.css"
 SCAN_LINK = '<a href="/scan" class="nav-link"'
 
 
@@ -90,43 +90,14 @@ def test_the_downloads_are_the_report_route(page):
                      for fmt in ("TXT", "JSON", "CSV")]
 
 
-def _tokens(css, block_start):
-    start = css.index(block_start) + len(block_start)
-    depth, end = 1, start
-    while depth:
-        depth += {"{": 1, "}": -1}.get(css[end], 0)
-        end += 1
-    return dict(re.findall(r"(--[\w-]+)\s*:\s*([^;]+);", css[start:end]))
-
-
-def _colour(name, tokens, light):
-    value = tokens.get(name, light.get(name))
-    while value.startswith("var("):
-        inner = value[4:-1]
-        value = tokens.get(inner, light.get(inner))
-    return value
-
-
-def _luminance(hex_colour):
-    channels = [int(hex_colour[i:i + 2], 16) / 255 for i in (1, 3, 5)]
-    linear = [c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4 for c in channels]
-    return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2]
-
-
-def _contrast(one, two):
-    high, low = sorted((_luminance(one), _luminance(two)), reverse=True)
-    return (high + 0.05) / (low + 0.05)
-
-
 def test_every_cvss_level_is_readable_in_both_themes(modules):
-    css = re.sub(r"/\*.*?\*/", "", APP_CSS.read_text(encoding="utf-8"), flags=re.S)
+    css = stylesheet()
     levels = re.findall(r"\.cvss-(\w+) \{ --cvss-colour: var\((--[\w-]+)\); \}", css)
     built = re.search(r"const SEVERITY_CLASS = \{(.*?)\};", modules["scanresults.js"], re.S)
     assert sorted(name for name, _ in levels) == sorted(re.findall(r':\s*"(\w+)"', built.group(1)))
-    light = _tokens(css, ":root {")
-    dark = _tokens(css, ':root[data-theme="dark"] {')
+    light, dark = themes()
     for theme in (light, dark):
         for _, token in levels:
             for surface in ("--surface", "--surface-inset"):
-                ratio = _contrast(_colour(token, theme, light), _colour(surface, theme, light))
+                ratio = contrast(colour(token, theme, light), colour(surface, theme, light))
                 assert ratio >= 4.5, (token, surface, round(ratio, 2))
