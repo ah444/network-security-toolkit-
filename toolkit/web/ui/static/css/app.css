@@ -1237,7 +1237,7 @@ textarea:focus-visible,
   width: 100%;
   min-height: 44px;
   padding: 10px 15px;
-  border: 2px solid var(--table-border);
+  border: 2px solid var(--input-border); /* a field's edge, like the others (Gate 5.2) */
   border-radius: var(--radius-md);
   background: var(--table-bg);
   color: var(--table-text);

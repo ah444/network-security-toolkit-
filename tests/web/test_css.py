@@ -153,3 +153,11 @@ def test_a_fields_edge_is_visible_in_both_themes(around):
     for name, theme in (("light", light), ("dark", dark)):
         ratio = contrast(colour("--input-border", theme, light), colour(around, theme, light))
         assert ratio >= 3, (name, around, round(ratio, 2))
+
+
+def test_every_field_uses_the_field_border(css):
+    """Gate 5.2: the balancing list had its own border (--table-border, 1.23:1 in light)."""
+    for selector in ('input[type="text"],\ninput[type="number"],\nselect', "#balancingMethod"):
+        rule = css[css.index(selector + " {"):]
+        body = rule[:rule.index("}")]
+        assert re.search(r"border: \d+px solid var\(--input-border\)", body), selector
