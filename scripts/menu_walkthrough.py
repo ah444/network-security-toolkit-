@@ -211,7 +211,12 @@ def scan(label, end_port, protocol, verbose):
     answer("Enter start port: ", "65500")
     answer("Enter end port: ", end_port)
     answer("Select protocol for scanning (TCP/UDP/both): ", protocol)
-    answer("if you are authorised to scan", "yes")  # S16
+    # step N4: the engine is asked only when nmap is installed; Enter keeps the built-in one
+    if expect("Scan engine: the toolkit's own scanner or nmap?",
+              "if you are authorised to scan") == 0:
+        send("")
+        expect("if you are authorised to scan")
+    send("yes")  # S16
     answer("Enable verbose mode? (Y/N): ", verbose)
     if expect("scan this host anyway? (Y/N): ", "Scan Summary Report") == 0:
         send("y")
