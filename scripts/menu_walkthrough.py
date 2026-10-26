@@ -161,13 +161,14 @@ def fail(message):
 
 
 def web_check(label):
-    """Wait for the web trainer, fetch both pages, then stop its process. A port already in
+    """Wait for the web trainer, fetch its pages (the port scanner's and its options too, v5.2),
+    then stop its process. A port already in
     use or a page that never answers is a failed check, so a page from another server that
     holds the port is never counted."""
     if expect(f"http://127.0.0.1:{PORT}/", "is already in use", timeout=120) == 1:
         fail(f"{label} failed: port {PORT} is already in use (another server holds it)")
     try:
-        for page in ("/", "/dynamic_ids"):
+        for page in ("/", "/dynamic_ids", "/scan", "/api/v1/scan/options"):
             status = None
             for _ in range(60):
                 try:
