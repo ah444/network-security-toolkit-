@@ -48,7 +48,10 @@ def make_export():
     included)."""
     from toolkit.web.controllers import create_app
 
-    client = create_app().test_client()
+    app = create_app()
+    # the app answers only its own address (v5.2 step 2.4a): the test client names it
+    app.config["SERVER_NAME"] = f"127.0.0.1:{app.extensions['toolkit'].config.port}"
+    client = app.test_client()
     page = client.get("/dynamic_ids").get_data(as_text=True)
     headers = {"X-CSRF-Token": re.search(r'<meta name="csrf-token" content="([^"]+)">',
                                          page).group(1)}
