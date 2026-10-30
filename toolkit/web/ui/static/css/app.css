@@ -27,6 +27,7 @@
   --indigo-500: #4361ee;
   --indigo-600: #3f37c9;
   --indigo-800: #3a0ca3;
+  --indigo-300: #a5b4fc;
   --green-700: #15803d;
   --green-300: #4ade80;
   --red-700: #b91c1c;
@@ -91,6 +92,9 @@
   --cvss-critical: var(--red-700);
   --cvss-high: var(--orange-800);
   --cvss-medium: var(--yellow-900);
+  /* the charts' marks (v5.3 F2d): each >= 3:1 on the cards */
+  --chart-cv: var(--indigo-600);
+  --chart-test: var(--orange-800);
   /* names for the result panels (the Upload Dataset card, the scan results): they follow
      the theme tokens they point to, so the dark blocks below need no copy of them */
   --muted: var(--placeholder);
@@ -149,6 +153,8 @@
     --cvss-critical: var(--red-300);
     --cvss-high: var(--orange-300);
     --cvss-medium: var(--amber-400);
+    --chart-cv: var(--indigo-300);
+    --chart-test: var(--orange-300);
   }
 }
 
@@ -174,6 +180,8 @@
   --cvss-critical: var(--red-300);
   --cvss-high: var(--orange-300);
   --cvss-medium: var(--amber-400);
+  --chart-cv: var(--indigo-300);
+  --chart-test: var(--orange-300);
 }
 
 /* ---------- Base ---------- */
@@ -1422,6 +1430,75 @@ textarea:focus-visible,
   padding: 4px 6px;
   min-width: 2.5rem;
   font-size: 0.8rem;
+}
+
+/* ---------- Charts of a run (v5.3 F2d) ---------- */
+/* charts.js draws them as SVG at their own size (the text stays 13 px); a narrow screen
+   scrolls the box. The marks' colours are tokens, so both themes work. */
+.run-charts {
+  margin-top: 1rem;
+}
+
+.run-charts > summary {
+  min-height: 44px;
+  padding: 0.625rem 0;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.chart {
+  margin-top: 1rem;
+}
+
+.chart figcaption {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.chart-note {
+  font-size: 0.875rem;
+  margin-bottom: 0.5rem;
+}
+
+.chart-drawing {
+  display: block;
+  max-width: none;
+}
+
+.chart-drawing text {
+  font-size: 13px;
+  fill: var(--text);
+}
+
+/* dashed so it stays light, at the fields' edge colour so it is >= 3:1 on the card */
+.chart-grid {
+  stroke: var(--input-border);
+  stroke-width: 1;
+  stroke-dasharray: 2 4;
+}
+
+.chart-spread {
+  stroke: var(--chart-cv);
+  stroke-width: 2;
+}
+
+.chart-mean {
+  stroke: var(--text);
+  stroke-width: 3;
+}
+
+.chart-fold {
+  fill: none;
+  stroke: var(--chart-cv);
+  stroke-width: 1.5;
+}
+
+.chart-cv {
+  fill: var(--chart-cv);
+}
+
+.chart-test {
+  fill: var(--chart-test);
 }
 
 /* ---------- Use: one row by hand (v5.2 step 2.2b) ---------- */

@@ -2,6 +2,7 @@
 // the results (split, leakage guard, leaderboard) and the confusion matrices.
 
 import { getJSON, send } from "./api.js";
+import { runCharts } from "./charts.js";
 import { byId, checkedValues, el, fillCheckboxList, fillSelect, message, scrollBox, setContent, show } from "./dom.js";
 import { balancingName, fmt, splitMessage } from "./format.js";
 import { emit, modelTitle, on, state, testSize } from "./state.js";
@@ -116,6 +117,7 @@ function trainingResult(result) {
          `${fmt(row.cv_macro_f1_mean, 3)} ± ${fmt(row.cv_macro_f1_std, 3)}`,
          fmt(row.test_macro_f1, 3), fmt(row.test_balanced_accuracy, 3), fmt(row.test_accuracy, 3),
          fmt(row.test_min_recall, 3), `${fmt(row.fit_seconds, 1)} s`].map(text => el("td", {}, text))))))),
+    runCharts(result.leaderboard, result.folds),
     result.failures.map(failure => warning(`${modelTitle(failure.name)} failed and was left out.`)),
     result.skipped.map(([name, reason]) => warning(`${modelTitle(name)} skipped: ${reason}`)),
     result.classes_only_in_test.length > 0 &&
