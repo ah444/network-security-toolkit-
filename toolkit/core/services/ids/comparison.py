@@ -219,6 +219,9 @@ def saved_runs(before: str | None = None, limit: int = PAGE_SIZE,
 
 
 def compare_saved(a: str, b: str, directory: str | Path | None = None) -> dict[str, Any]:
-    """``compare`` of two saved runs (the same errors as ``saved_run``)."""
+    """``compare`` of two saved runs (the same errors as ``saved_run``; both ids are checked
+    before either record is looked for)."""
+    if not (is_run_id(a) and is_run_id(b)):
+        raise NotARun("That is not a run id.")
     return compare(saved_run(a, directory), saved_run(b, directory))
 

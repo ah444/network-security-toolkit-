@@ -209,6 +209,19 @@ class UnlockRequest:
 
 
 @dataclasses.dataclass(frozen=True)
+class RunsRequest:
+    """``GET /runs``: the list starts after this run id (the next page); empty: the newest."""
+    before: str = ""
+
+
+@dataclasses.dataclass(frozen=True)
+class CompareRequest:
+    """``GET /runs/compare``: the two saved runs, by run id."""
+    a: str
+    b: str
+
+
+@dataclasses.dataclass(frozen=True)
 class ConfusionRequest:
     """``GET /run/confusion``: the model whose confusion matrix to show."""
     model: str = ""

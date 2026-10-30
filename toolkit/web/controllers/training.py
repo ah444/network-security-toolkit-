@@ -10,6 +10,7 @@ from typing import Any
 from flask import Blueprint, jsonify
 
 from ...core.services.ids import registry
+from ...core.services.ids.comparison import folds
 from ...core.services.ids.pipeline import FittedModel
 from ...core.services.ids.runs import TrainingRun
 from ..services.datasets import require_data
@@ -90,6 +91,7 @@ def run_result(run: TrainingRun) -> dict[str, Any]:
         "selected": evaluation.selected,
         "selection_metric": evaluation.selection_metric,
         "leaderboard": result["leaderboard"],
+        "folds": folds(record),  # each model's CV macro-F1 per fold, for the charts (F2c)
         "split": record["split"],
         "cv": {"folds": evaluation.cv_folds, "rows": evaluation.cv_rows,
                "sampled": evaluation.cv_sampled},

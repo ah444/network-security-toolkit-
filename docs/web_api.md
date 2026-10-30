@@ -69,6 +69,9 @@ the network").
 | GET | `/api/v1/scan` | none | the session's scan still queued or running, and its last finished one |
 | POST | `/api/v1/unlock` | `token` | another computer's session unlocked, when `--host` opened the toolkit to the network (see Opened to the network) |
 | GET | `/api/v1/scan/report` | `format`: `txt` (default), `json` or `csv` | the last finished scan as a download (404 `NO_SCAN` before one) |
+| GET | `/api/v1/runs` | `before`: a run id (the next page; default: the newest) | the saved runs' summaries, newest first, 50 at a time (see Saved runs) |
+| GET | `/api/v1/runs/<run_id>` | none | one saved run: its summary, its leaderboard and each model's CV folds |
+| GET | `/api/v1/runs/compare` | `a`, `b`: two run ids | the two runs side by side; the differences only when they scored the same test rows |
 
 ## Dataset upload
 
@@ -118,6 +121,29 @@ label column. `GET /api/v1/predictions` downloads the labelled CSV with the colu
 `python -m toolkit ids --csv`: `row, prediction, confidence[, true_label]` (both are made
 by `toolkit.core.services.ids.batch`). Only the last result is kept, in the session's workspace;
 `GET /api/v1/workspace` repeats its answer as `predictions`.
+
+## Saved runs (v5.3 F2)
+
+A run is saved, as its TrainingRun record in `instance/runs/<run id>.json`, when it is
+exported. These three routes only read those records, never a bundle (nothing is unpickled),
+and need no session: they answer the same whichever browser asks (another computer needs the
+access token first, as for every route). A run id has the form the toolkit writes,
+`20261030T120000Z-7cf3ced5`; anything else is refused (400) before a file name is made from it,
+and an id with no record is `NOT_FOUND` (404).
+
+`GET /api/v1/runs` answers `{"runs": [...], "more": true, "left_out": 0}`: each run's id, time,
+dataset (name and rows), test file, profile, label, split and its row counts, balancing,
+models, and the selected model with its CV and test macro-F1. `more` says there are older runs
+(ask again with `before` = the last id); `left_out` counts the files met that are not readable
+TrainingRun records (an edited file, a newer schema), which are skipped, not an error.
+
+`GET /api/v1/runs/compare?a=...&b=...` answers both summaries, `comparable` and `reasons`,
+each model of both runs with its numbers in `a` and `b`, the recall of the classes in both, the
+models of one run only (`only_in_a`, `only_in_b`) and the settings that differ (features,
+models, balancing, selection). Two runs are comparable when they scored the same test rows;
+otherwise `reasons` lists what differs (`DIFFERENT_DATASET`, `DIFFERENT_TEST_FILE`,
+`DIFFERENT_LABEL`, `DIFFERENT_SPLIT`, `DIFFERENT_ROWS`) and every `delta` is null. A `delta` is
+b − a. A finished training's result (`GET /api/v1/jobs/<id>`) carries `folds` too.
 
 ## Security token
 

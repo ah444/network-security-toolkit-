@@ -79,6 +79,9 @@ def test_another_computers_pages_go_to_the_unlock_page(open_app, url):
 
 @pytest.mark.parametrize("method, url", [("GET", "/api/v1/scan/options"),
                                          ("GET", "/api/v1/workspace"),
+                                         ("GET", "/api/v1/runs"),
+                                         ("GET", "/api/v1/runs/20261030T120000Z-0000000a"),
+                                         ("GET", "/api/v1/runs/compare"),
                                          ("POST", "/api/v1/jobs/scan"),
                                          ("DELETE", "/api/v1/workspace")])
 def test_another_computers_api_is_locked(open_app, method, url):
