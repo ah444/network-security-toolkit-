@@ -6,10 +6,10 @@ import pandas as pd
 import pytest
 from sklearn.base import BaseEstimator, ClassifierMixin
 
-from toolkit.data.settings import EvaluationConfig
-from toolkit.services.ids import balancing, evaluation, pipeline, registry
-from toolkit.services.ids.evaluation import evaluate, leaderboard_table
-from toolkit.services.ids.split import split_dataset
+from toolkit.core.data.settings import EvaluationConfig
+from toolkit.core.services.ids import balancing, evaluation, pipeline, registry
+from toolkit.core.services.ids.evaluation import evaluate, leaderboard_table
+from toolkit.core.services.ids.split import split_dataset
 
 CLASSES = ("BENIGN", "DoS", "PortScan")
 FEATURES = ["a", "b", "proto"]

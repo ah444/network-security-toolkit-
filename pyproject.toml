@@ -10,7 +10,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "network-security-toolkit"
-version = "5.1.0"
+version = "5.2.0"
 description = "Network reconnaissance + ML intrusion detection toolkit"
 requires-python = ">=3.11"
 # The code's licence (step 1.5g); the datasets keep their own terms (docs/datasets.md).
@@ -46,15 +46,19 @@ dev = [
 ]
 
 [project.scripts]
-toolkit = "toolkit.controllers.cli.main:main"
+toolkit = "toolkit.start:main"
 
 # Only toolkit/ is the package (the project folder also holds data/, docs/, scripts/, tests/).
 [tool.setuptools.packages.find]
 include = ["toolkit*"]
 
-# The web trainer's page templates and static files.
+# The web trainer's page templates and static files; the folders' READMEs (v5.2 step 2.3e).
 [tool.setuptools.package-data]
-"toolkit.ui.web" = ["templates/*", "static/**/*"]
+"toolkit" = ["README.md"]
+"toolkit.core" = ["README.md"]
+"toolkit.cli" = ["README.md"]
+"toolkit.web" = ["README.md"]
+"toolkit.web.ui" = ["templates/*", "static/**/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -67,17 +71,24 @@ addopts = "-ra"
 # Pythons without installing them (plan D19, Python policy B).
 target-version = "py311"
 line-length = 100
-extend-exclude = [".venv", "./data"]  # the local datasets, not toolkit/data/
+extend-exclude = [".venv", "./data"]  # the local datasets, not the toolkit's data/ layers
 
 [tool.ruff.lint]
-select = ["E4", "E7", "E9", "F", "B", "S602", "S604", "PLW1514"]
+# RUF100: a noqa that no longer suppresses anything fails (v5.2 step 2.3a); every
+# suppression is listed with its reason in tests/exceptions_inventory.py.
+# C901: a function more complex than below fails (v5.2 step 2.3o), to make us look at it:
+# split it when that helps, or keep it with a noqa and its reason.
+select = ["E4", "E7", "E9", "F", "B", "S602", "S604", "PLW1514", "RUF100", "C901"]
 preview = true
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
 
 # Legacy findings in the original files, frozen at the baseline import.
 # New code must be clean. Remove a code from this list in the same commit
-# that fixes it (ratchet: the list only ever shrinks).
+# that fixes it (ratchet: the list only ever shrinks). Empty since v5.2 step 2.3a
+# ("tests/**" = ["S101"] suppressed a rule that is not selected).
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = ["S101"]
 
 # Strict typing for the whole toolkit package (v5.1 steps 1.1e-1.5a); a new module is checked
 # from its first commit. Run:  python -m mypy

@@ -11,23 +11,23 @@ A comprehensive network security tool combining **Network Reconnaissance** and *
 
 ## ⚠️ Project status — read first
 
-**v5.1 ("clean architecture")** is released (tag `5.1`), after **v5.0 ("correct & safe")** (tags `5.0` and `5.0.1`). See [docs/IMPROVEMENT_PLAN.md](docs/IMPROVEMENT_PLAN.md), the day-to-day [docs/V5.1_CHECKLIST.md](docs/V5.1_CHECKLIST.md) (and [docs/V5.0_CHECKLIST.md](docs/V5.0_CHECKLIST.md) for v5.0), and what changed in each version in the [CHANGELOG](CHANGELOG.md). A measured baseline of the original version, v4 ([docs/baseline/FINDINGS.md](docs/baseline/FINDINGS.md)), showed that **earlier accuracy claims were not valid**:
+**v5.2 ("the user's improvements")** is released (tag `5.2`), after **v5.1 ("clean architecture")** (tag `5.1`) and **v5.0 ("correct & safe")** (tags `5.0` and `5.0.1`). See [docs/IMPROVEMENT_PLAN.md](docs/IMPROVEMENT_PLAN.md), the day-to-day [docs/V5.2_CHECKLIST.md](docs/V5.2_CHECKLIST.md) (and [docs/V5.1_CHECKLIST.md](docs/V5.1_CHECKLIST.md) and [docs/V5.0_CHECKLIST.md](docs/V5.0_CHECKLIST.md) for the earlier versions), and what changed in each version in the [CHANGELOG](CHANGELOG.md). A measured baseline of the original version, v4 ([docs/baseline/FINDINGS.md](docs/baseline/FINDINGS.md)), showed that **earlier accuracy claims were not valid**:
 
 - **IDS CLI model (v4):** it uses `Attempted Category`, a feature derived from the attack label itself. Changing only that value flips the prediction (e.g. `-1` turns every sample into BENIGN), and none of the CLI's 4 built-in sample flows is classified as intended. **The previously stated ~97–98 % accuracy is withdrawn.** Its files were deleted in v5.0 step 0.5: the CLI now uses the models you train and export in the fixed web trainer, and shows each one's real metrics from its training record (see the CLI's [model card](docs/ids_cli_models.md)).
 - **Web IDS trainer (v4):** its results were **optimistic**. "Apply SMOTE" and "Recommend Features" ran on the *whole* dataset before the train/test split, duplicate rows could land in both train and test, and label-derived columns (e.g. NSL-KDD `level`) were not blocked. The recommender even ranked `level` among the top 10 features. The app reported accuracy and weighted F1 only, which hide weak minority classes: on NSL-KDD, random forest showed 99.8 % accuracy but 76.6 % macro-F1. **Since 5.0-rc1 (step 0.4g) the web trainer runs on the leakage-free ML core** described under "ML core" below. The same datasets and scenarios re-run on that core, before vs after, are in the **ML report**: [docs/report/FINDINGS.md](docs/report/FINDINGS.md).
 
 ### Known limitations (current version)
 - Web trainer scores on CIC-IDS2017 come from a stratified (random) split, because the file has no time column: flows of the same attack can be on both sides, so the scores may still be optimistic (the app says so). NSL-KDD uses its official test file.
-- Exported models are signed **`.bundle`** files that load only on the toolkit install that made them. The signing key is created in `instance/signing.key` on the first export: back up the `instance/` folder. If the key is lost, the bundles can't be loaded any more; retrain from the run's record in `instance/runs/`. Loading bundles from another computer is not part of v5.1.
+- Exported models are signed **`.bundle`** files that load only on the toolkit install that made them. The signing key is created in `instance/signing.key` on the first export: back up the `instance/` folder. If the key is lost, the bundles can't be loaded any more; retrain from the run's record in `instance/runs/`. Loading bundles from another computer is not part of v5.2.
 - Training runs as a background job with a progress bar and a **Cancel training** button. The server trains one job at a time; others wait in a queue. Cancel takes effect after the model being fitted at that moment, so on the full CIC file it can take a while; a job is also stopped after 180 minutes (`TOOLKIT_JOB_MAX_MIN`). A cancelled or failed job keeps nothing. On the full CIC file training takes many minutes and about 6 GB of memory.
 - Web trainer data lives in memory, one workspace per browser session (tabs of the same browser share it). It is lost when the app restarts, removed after 240 minutes without use (`TOOLKIT_WORKSPACE_IDLE_MIN`), or with the **Clear workspace** button. Only one training runs at a time per workspace, and the dataset can't be changed while it runs. At most 4 workspaces (`TOOLKIT_MAX_WORKSPACES`) and 4,096 MB of loaded datasets (`TOOLKIT_MAX_DATA_MB`; trained models not counted) are kept: the least recently used other session's workspace makes room first. The upload message reports how much memory the dataset takes. If you serve the app over HTTPS, set `TOOLKIT_HTTPS=1` so the session cookie is marked `Secure`. The page sends a per-session security token with every change (CSRF protection); after the app restarts, reload the page before going on.
-- Port scanner, what leaves your computer: CVE lookups send the detected software name and version (for example `OpenSSH 8.9`) to the public NVD API. The optional AI explanation (OpenRouter) and the AbuseIPDB check run only after you agree in that scan (or pass `--ai` / `--abuseipdb`), and the AI gets the same software name only, never the raw banner.
-- CVEs come from an NVD **keyword search** on that name and version, so the list can include CVEs that don't affect the exact build, or miss some. Severity comes from the CVSS scores only. Lookups run up to 4 at a time with a 15 s timeout each, and each product is looked up once per scan (a failed lookup is tried again on the next host). Without an NVD key, NVD allows about one request every 6 seconds and that spacing is kept, so CVE lookups for many different products stay slow; with a key (`NVD_API_KEY`) the limit is one every 0.6 s, and the AI explanations always run in parallel.
-- The OS guess comes from the ping TTL, so it is only a rough family guess (Windows, Linux/macOS/BSD, network device). Hosts that don't answer ping, and IPv6 targets on Windows (no TTL shown), get no guess. On Windows, closed and firewalled TCP ports look the same, so both are reported as closed. A UDP port that doesn't answer is reported as `open|filtered`.
+- Port scanner, what leaves your computer: CVE lookups send the detected software name and version (for example `OpenSSH 8.9`) to the public NVD API. The optional AI explanation (OpenRouter) and the AbuseIPDB check run only after you agree in that scan (or pass `--ai` / `--abuseipdb`), and the AI gets the same software name only, never the raw banner. Every scan says first what it may send to each service, or why it sends nothing (no key, not asked for, a private address), and at the end how many requests went to each.
+- CVEs come from NVD. For about 20 products (OpenSSH, Apache, nginx, IIS, MySQL, MariaDB, Redis, ...) they are matched **by version** (the CVEs whose affected versions, as NVD records them, include it); any other product, or one the version match found nothing for, gets a **keyword search** on its name and version, which can include CVEs that don't affect the exact build, or miss some. Each report says which (`CVE source`). Severity comes from the CVSS scores only. Lookups run up to 4 at a time with a 15 s timeout each, and each product is looked up once per scan (a failed lookup is tried again on the next host). Without an NVD key, NVD allows about one request every 6 seconds and that spacing is kept, so CVE lookups for many different products stay slow; with a key (`NVD_API_KEY`) the limit is one every 0.6 s, and the AI explanations always run in parallel.
+- The OS guess weighs the ping TTL, words in the banners and open ports only one OS has, and lists each with where it was seen; it is still only a guess (Windows, a Linux distribution, BSD, network device). It says when they disagree (the ping may be answered by NAT or a forwarded port) and when the target is this computer (whose ports may lead to a VM, a container or WSL). Hosts that don't answer ping, and IPv6 targets on Windows (no TTL shown), are guessed from their banners only. On Windows, closed and firewalled TCP ports look the same, so both are reported as closed. A UDP port that doesn't answer is reported as `open|filtered`.
 - Scans are limited to 256 hosts and 65,536 host×port checks (`TOOLKIT_SCAN_MAX_HOSTS`, `TOOLKIT_SCAN_MAX_PROBES`), and each one asks you to confirm you are authorised (`--i-am-authorized` in scripts).
 - No model is shipped with the project: train and export one in the web trainer first. The CLI lists the exports in `instance/bundles` and opens only bundles exported on this install. Large models (for example Random Forest on the full CIC file, about 2 GB) take minutes to load and need several times their size in memory. A bundle made with a different scikit-learn, imbalanced-learn, XGBoost or LightGBM minor version is refused (retrain it); smaller version differences are shown as a warning.
 - The web trainer opens in your default browser once it is ready and prints its address (`http://127.0.0.1:5000/`; `--no-browser` or `TOOLKIT_NO_BROWSER=1` to not open it); stop it with Ctrl+C (from the launcher menu, that brings the menu back).
-- Tested on Windows with Python 3.14 (803 automated tests at 5.1, a fresh install followed by a scripted walk-through of every menu path, `scripts/menu_walkthrough.py`, and a browser session through the whole web trainer on real CIC-IDS2017 and NSL-KDD data, see `docs/release/`); an install on Python 3.11 was checked too. **Linux and macOS are not tested on real machines:** the OS-specific logic (ping options, paths, file encodings) is unit-tested only.
+- Tested on Windows with Python 3.14 (1,484 automated tests at 5.2, a fresh install followed by a scripted walk-through of every menu path, `scripts/menu_walkthrough.py`, and browser sessions through the whole web trainer on real CIC-IDS2017 and NSL-KDD data and through the port scanner, see `docs/release/`); an install on Python 3.11 was checked at 5.1. **Linux and macOS are not tested on real machines:** the OS-specific logic (ping options, paths, file encodings) is unit-tested only.
 - Only scan systems you are authorised to scan.
 
 ---
@@ -51,13 +51,14 @@ A comprehensive network security tool combining **Network Reconnaissance** and *
 ## 🎯 Features
 
 ### 1. Network Reconnaissance (Port Scanner)
-- 🔍 TCP/UDP port scanning
-- 🖥️ OS detection via TTL analysis
+- 🔍 TCP/UDP port scanning, with the toolkit's own scanner or, if it is installed and you ask for it, nmap (`--engine nmap`: service detection, OS detection, 8 allowed scripts)
+- 🖥️ OS guess from the TTL, the banners and the open ports, with the evidence
 - 🏷️ Service banner grabbing
 - 🌐 IPv4, IPv6, networks (CIDR) and domain names
 - 🔐 CVE lookup via the NVD CVE API 2.0, with CVSS scores; severity comes from CVSS only
 - 🤖 Optional AI explanation (OpenRouter), only after you agree; it receives the software name and version only, and its reply is shown as plain text marked "may be wrong"
 - 📊 IP reputation check (via AbuseIPDB), only after you agree
+- 🖱️ The same scanner from the web app's **Port Scanner** page (`/scan`): a form, a live log, Cancel, a card per open port and the report as TXT, JSON or CSV ([user guide 3.6](docs/user_guide.md#36-scan-from-the-web-page)); from another computer with `toolkit web --host`, behind an access token ([3.7](docs/user_guide.md#37-scan-from-another-computer))
 - 📁 Export results to JSON/CSV/TXT (UTF-8, in `instance/scans/`, never overwritten, safe to open in a spreadsheet)
 
 ### 2. Intrusion Detection System (CLI)
@@ -162,7 +163,7 @@ Every tool can also be started directly with a command:
 |---|---|
 | `python -m toolkit scan` | Network reconnaissance |
 | `python -m toolkit ids` | IDS CLI |
-| `python -m toolkit web` | IDS web interface |
+| `python -m toolkit web` | IDS web interface and the Port Scanner page |
 
 `python -m toolkit --help` lists them and `python -m toolkit <command> --help` shows a tool's options.
 
@@ -218,7 +219,8 @@ python -m toolkit web
 python -m toolkit web --port 5001 --no-browser
 ```
 
-The page is `http://127.0.0.1:5000/` (the address is always printed); Ctrl+C stops the server.
+The page is `http://127.0.0.1:5000/` (the address is always printed), the port scanner
+`http://127.0.0.1:5000/scan`; Ctrl+C stops the server.
 If the port is already in use (for example, the trainer is already running), it says so and
 stops: start it on another port with `--port`. `TOOLKIT_NO_BROWSER=1` never opens the browser.
 
@@ -395,7 +397,7 @@ Project/
 11. **Export / Load** - signed `.bundle` (see Known limitations)
 
 ### ML core (v5.0)
-`toolkit/services/ids` (named `toolkit/ids_core` until v5.1 step 1.5d) is the leakage-free pipeline. It has no web or network code; the web trainer uses it since 5.0-rc1 and the CLI since step 0.5.
+`toolkit/core/services/ids` (named `toolkit/ids_core` until v5.1 step 1.5d) is the leakage-free pipeline. It has no web or network code; the web trainer uses it since 5.0-rc1 and the CLI since step 0.5.
 
 1. **Load** (`datasets.load_dataset`): encoding and separator sniffed, header spaces stripped, exact dtype downcast, SHA-256; the dataset family (CIC-IDS2017, NSL-KDD or generic) is recognised from the content, not the file name.
 2. **Split** (`split.split_dataset`): exact copies removed first, then the profile's split: `official` (NSL-KDD's own files, kept as published), `temporal` / `temporal_per_class` (validated time column), `group`, or `stratified` with an "optimistic" warning. Every fallback has a reason code.
@@ -404,10 +406,10 @@ Project/
 5. **Evaluate** (`evaluation.evaluate`): cross-validation on the training split, the model chosen by CV macro-F1 **before** the test split is used, then the test split scored once; macro-F1, balanced accuracy, per-class recall and a leaderboard.
 
 ```python
-from toolkit.services.ids.datasets import load_dataset
-from toolkit.services.ids.split import split_dataset
-from toolkit.services.ids.leakage import check_leakage
-from toolkit.services.ids.evaluation import evaluate, leaderboard_table
+from toolkit.core.services.ids.datasets import load_dataset
+from toolkit.core.services.ids.split import split_dataset
+from toolkit.core.services.ids.leakage import check_leakage
+from toolkit.core.services.ids.evaluation import evaluate, leaderboard_table
 
 data = load_dataset("data/raw/CIC-2017.csv")
 split = split_dataset(data.frame, "Label", profile=data.profile)

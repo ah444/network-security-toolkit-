@@ -5,14 +5,16 @@ import re
 
 import pytest
 
-from toolkit.controllers.cli import ids, scan, web
-from toolkit.data.keys import DEFAULT_AI_MODEL, KEY_VARIABLES
-from toolkit.data.settings import COMMAND_SETTINGS, SHARED_SETTINGS, ScanConfig, WebConfig
+from toolkit.cli.controllers import ids, scan
+from toolkit.web.controllers import command as web
+from toolkit.core.data.keys import DEFAULT_AI_MODEL, KEY_VARIABLES
+from toolkit.core.data.settings import COMMAND_SETTINGS, SHARED_SETTINGS, ScanConfig, WebConfig
 
 PARSERS = {"scan": scan.build_parser, "ids": ids.build_parser, "web": web.build_parser}
 DEFAULTS = {  # the settings table's default column, from the code
     "TOOLKIT_SCAN_MAX_HOSTS": ScanConfig.max_hosts,
     "TOOLKIT_SCAN_MAX_PROBES": ScanConfig.max_probes,
+    "TOOLKIT_SCAN_MAX_MIN": ScanConfig.max_minutes,
     "TOOLKIT_PORT": WebConfig.port,
     "TOOLKIT_MAX_UPLOAD_MB": WebConfig.max_upload_mb,
     "TOOLKIT_MAX_PREDICT_MB": WebConfig.max_predict_mb,

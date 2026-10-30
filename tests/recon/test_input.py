@@ -4,8 +4,8 @@ import builtins
 
 import pytest
 
-from toolkit.services.recon import targets
-from toolkit.data.recon import scanner as recon_scanner
+from toolkit.core.services.recon import targets
+from toolkit.core.data.recon import scanner as recon_scanner
 
 
 def test_empty_range_no_crash(scan_screen, scanner, monkeypatch, capsys):

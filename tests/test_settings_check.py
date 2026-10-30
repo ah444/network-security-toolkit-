@@ -7,9 +7,9 @@ import sys
 
 import pytest
 
-from toolkit.controllers.cli import main as cli
-from toolkit.data import settings
-from toolkit.data.settings import (COMMAND_SETTINGS, check_settings, max_workers,
+from toolkit import start
+from toolkit.core.data import settings
+from toolkit.core.data.settings import (COMMAND_SETTINGS, check_settings, max_workers,
                                    scan_limits, switch, web_config, whole_number)
 
 WEB_NUMBERS = ("TOOLKIT_MAX_UPLOAD_MB", "TOOLKIT_MAX_PREDICT_MB", "TOOLKIT_WORKSPACE_IDLE_MIN",
@@ -89,13 +89,15 @@ def test_every_setting_with_rules_is_checked(repo_root):
     assert checked <= named
 
 
-@pytest.mark.parametrize("command", ["scan", "ids", "web"])
-def test_a_bad_setting_stops_the_command_with_exit_code_2(command, monkeypatch, capsys):
+@pytest.mark.parametrize("command, module", [("scan", "toolkit.cli.controllers.scan"),
+                                             ("ids", "toolkit.cli.controllers.ids"),
+                                             ("web", "toolkit.web.controllers.command")])
+def test_a_bad_setting_stops_the_command_with_exit_code_2(command, module, monkeypatch, capsys):
     started = []
-    monkeypatch.setattr(f"toolkit.controllers.cli.{command}.run",
+    monkeypatch.setattr(f"{module}.run",
                         lambda argv, prog: started.append(argv))
     monkeypatch.setenv("TOOLKIT_LOG_LEVEL", "verbose")
-    assert cli.main([command]) == 2
+    assert start.main([command]) == 2
     assert started == [], "the command must not start"
     assert capsys.readouterr().out == ("TOOLKIT_LOG_LEVEL must be one of DEBUG, INFO, WARNING, "
                                        "ERROR, not 'verbose'\n")
@@ -103,19 +105,19 @@ def test_a_bad_setting_stops_the_command_with_exit_code_2(command, monkeypatch, 
 
 def test_help_works_with_a_bad_setting(monkeypatch, capsys):
     monkeypatch.setenv("TOOLKIT_MAX_WORKSPACES", "0")
-    monkeypatch.setattr("toolkit.controllers.cli.web.run_server",
+    monkeypatch.setattr("toolkit.web.controllers.command.run_server",
                         lambda config=None: pytest.fail("--help must not start the server"))
     with pytest.raises(SystemExit) as stop:
-        cli.main(["web", "--help"])
+        start.main(["web", "--help"])
     assert stop.value.code == 0
     assert capsys.readouterr().out.startswith("usage: python -m toolkit web ")
 
 
 def test_another_tools_typo_does_not_stop_a_command(monkeypatch):
     started = []
-    monkeypatch.setattr("toolkit.controllers.cli.ids.run", lambda argv, prog: started.append(argv))
+    monkeypatch.setattr("toolkit.cli.controllers.ids.run", lambda argv, prog: started.append(argv))
     monkeypatch.setenv("TOOLKIT_MAX_UPLOAD_MB", "abc")
-    assert cli.main(["ids", "--list"]) == 0
+    assert start.main(["ids", "--list"]) == 0
     assert started == [["--list"]]
 
 

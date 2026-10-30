@@ -6,8 +6,12 @@ import re
 
 import pytest
 
-from toolkit.controllers.cli import ids, scan, web
-from toolkit.controllers.cli.main import COMMANDS
+from toolkit.cli.controllers import ids, scan
+from toolkit.web.controllers import command as web
+from toolkit.cli.controllers.main import COMMANDS as CLI_COMMANDS
+from toolkit.cli.controllers.main import OTHER_COMMANDS
+
+COMMANDS = {*CLI_COMMANDS, *OTHER_COMMANDS}  # what toolkit.start runs
 
 PARSERS = {"scan": scan.build_parser, "ids": ids.build_parser, "web": web.build_parser}
 MAX_PICTURE_BYTES = 200_000

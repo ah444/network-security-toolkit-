@@ -1,0 +1,305 @@
+"""TrainingRun: one immutable record of how a model was made (plan D21, step 0.4e).
+
+``train(frame, …)`` runs the whole core (split → leakage guard → evaluate) and returns a
+``TrainingRun``: the fitted models plus everything needed to explain or repeat them
+(dataset SHA-256, profile, split and its reason codes, guard decisions and overrides,
+features, preprocessing, balancing, model parameters, ``EvaluationResult``, package
+versions, re-run tolerance). ``to_dict()`` is the plain-JSON form (``run_json.py``); the
+caller saves it (``exports``, over ``toolkit.core.data.ids.run_files``), the core never
+writes files. ``rerun(record, frame)`` trains again with the recorded settings and
+``compare_metrics`` checks the result.
+"""
+
+from __future__ import annotations
+
+import dataclasses
+import importlib.metadata
+import platform
+import secrets
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass, field, fields
+from datetime import datetime, timezone
+from typing import Any
+
+import pandas as pd
+
+from ...data.settings import (
+    EvaluationConfig,
+    LeakageConfig,
+    PipelineConfig,
+    SplitConfig,
+    max_workers,
+)
+from ..ports import NullProgress, ProgressSink
+from . import registry
+from .datasets import LoadedDataset
+from .evaluation import EvaluationResult, evaluate
+from .leakage import LeakageReport, check_leakage
+from .profiles import ProfileMatch
+from .run_json import jsonable, models_dict, profile_dict, split_dict, training_dict
+from .split import SplitResult, split_dataset
+
+SCHEMA_VERSION = 1
+VERSIONED_PACKAGES = ("scikit-learn", "numpy", "pandas", "scipy", "imbalanced-learn", "xgboost",
+                      "lightgbm", "joblib", "threadpoolctl")
+_CONFIGS = {"split": SplitConfig, "leakage": LeakageConfig, "pipeline": PipelineConfig,
+            "evaluation": EvaluationConfig}
+
+
+@dataclass(frozen=True)
+class DatasetRef:
+    """Which file a run used: the SHA-256 is what ties a run to its data."""
+
+    name: str
+    sha256: str
+    rows: int
+    columns: int
+
+    @classmethod
+    def from_loaded(cls, name: str, loaded: LoadedDataset) -> DatasetRef:
+        """The reference of a file loaded by ``load_dataset``, under ``name``."""
+        return cls(name, loaded.report.sha256, loaded.report.rows, loaded.report.columns)
+
+
+@dataclass(frozen=True)
+class TrainSettings:
+    """Everything the user chose for a run (defaults come from the profile and config)."""
+
+    label: str | None = None  # default: the profile's label column
+    strategy: str | None = None  # split strategy; default: the profile's
+    time_column: str | None = None
+    group_column: str | None = None
+    features: tuple[str, ...] | None = None  # candidates; default: every other column
+    allow: Mapping[str, str] = field(default_factory=dict)  # leakage overrides: column -> reason
+    models: tuple[str, ...] | None = None  # default: registry.default_models()
+    balancer: str = "none"  # or "recommended"
+    selector: str = "none"
+    k_features: int | None = None
+    split: SplitConfig = field(default_factory=SplitConfig)
+    leakage: LeakageConfig = field(default_factory=LeakageConfig)
+    pipeline: PipelineConfig = field(default_factory=PipelineConfig)
+    evaluation: EvaluationConfig = field(default_factory=EvaluationConfig)
+    workers: int | None = None  # default: max_workers(); the record keeps the number used
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> TrainSettings:
+        """The settings back from a record's ``settings`` (the configs, the tuples and the overrides
+        rebuilt), for ``rerun``."""
+        values = dict(data)
+        for key, config in _CONFIGS.items():
+            values[key] = config(**values[key])
+        for key in ("features", "models"):
+            if values[key] is not None:
+                values[key] = tuple(values[key])
+        values["allow"] = dict(values["allow"])
+        return cls(**values)
+
+
+@dataclass(frozen=True, eq=False)
+class TrainingRun:
+    """One training, everything needed to explain and repeat it: the settings as used, the data's
+    SHA-256, the profile, the split, the leakage report, the evaluation with the fitted models, and
+    the library versions. ``to_dict`` is its record."""
+    run_id: str
+    created_at: str  # UTC, ISO 8601
+    settings: TrainSettings  # as used (workers resolved)
+    dataset: DatasetRef | None
+    test_dataset: DatasetRef | None  # official split: the separate test file
+    profile: ProfileMatch | None
+    split: SplitResult
+    leakage: LeakageReport
+    evaluation: EvaluationResult  # includes the fitted models (``evaluation.training``)
+    versions: dict[str, str | None]
+    bundle_sha256: str | None = None  # set when the run is saved as a bundle (0.4f)
+    schema_version: int = SCHEMA_VERSION
+
+    @property
+    def metric_tolerance(self) -> float:
+        """How far a re-run's metrics may differ: 0 with one worker (exact), else the evaluation
+        config's tolerance for parallel runs."""
+        return 0.0 if self.settings.workers == 1 else self.settings.evaluation.parallel_metric_tolerance
+
+    def to_dict(self) -> dict[str, Any]:
+        """The record as plain JSON types (no fitted objects, no NaN)."""
+        return {
+            "schema_version": self.schema_version,
+            "run_id": self.run_id,
+            "created_at": self.created_at,
+            "dataset": jsonable(self.dataset),
+            "test_dataset": jsonable(self.test_dataset),
+            "profile": profile_dict(self.profile),
+            "settings": jsonable(self.settings),
+            "split": split_dict(self.split),
+            "leakage": jsonable(self.leakage),
+            "features": list(self.evaluation.training.features),
+            "balancing": {
+                "requested": self.settings.balancer,
+                "method": self.evaluation.balancer,
+                "recommendation": jsonable(self.evaluation.balancer_recommendation),
+            },
+            "selection": {"selector": self.evaluation.selector,
+                          "k_features": self.evaluation.k_features},
+            "training": training_dict(self.evaluation.training),
+            "models": models_dict(self.evaluation.training),
+            "evaluation": {f.name: jsonable(getattr(self.evaluation, f.name))
+                           for f in fields(self.evaluation) if f.name != "training"},
+            "versions": dict(self.versions),
+            "reproducibility": {"workers": self.settings.workers,
+                                "metric_tolerance": self.metric_tolerance},
+            "bundle_sha256": self.bundle_sha256,
+        }
+
+
+def package_versions() -> dict[str, str | None]:
+    """Python, the platform and the versions of ``VERSIONED_PACKAGES`` (None if absent)."""
+    versions: dict[str, str | None] = {"python": platform.python_version(),
+                                       "platform": platform.platform()}
+    for package in VERSIONED_PACKAGES:
+        try:
+            versions[package] = importlib.metadata.version(package)
+        except importlib.metadata.PackageNotFoundError:
+            versions[package] = None
+    return versions
+
+
+# --- train / re-run ------------------------------------------------------------------
+
+def train(
+    frame: pd.DataFrame,
+    *,
+    profile: ProfileMatch | None = None,
+    settings: TrainSettings | None = None,
+    test_frame: pd.DataFrame | None = None,
+    source: DatasetRef | None = None,
+    test_source: DatasetRef | None = None,
+    sources: Sequence[str] | pd.Series | None = None,
+    progress: ProgressSink | None = None,
+) -> TrainingRun:
+    """Split, guard, train and evaluate; returns the run (nothing is written).
+
+    ``progress`` (v5.1 step 1.2d) gets ``start(total_steps(...))``: one step for the split,
+    one for the leakage guard, then one per model per CV fold and per final fit; then
+    ``finish()``, also after an error. An exception raised by ``advance()`` (a cancelled
+    job) stops the training; nothing is returned or written."""
+    settings = settings or TrainSettings()
+    label = settings.label or (profile.label_column if profile else None)
+    if not label:
+        raise ValueError("No label column: set TrainSettings.label or pass a profile that has one")
+    settings = dataclasses.replace(settings, workers=settings.workers or max_workers())
+    now = datetime.now(timezone.utc)
+    progress = progress or NullProgress()
+    progress.start(total_steps(settings))
+    try:
+        return _train(frame, label, settings, now, profile, test_frame, source, test_source,
+                      sources, progress)
+    finally:
+        progress.finish()
+
+
+def total_steps(settings: TrainSettings) -> int:
+    """Progress steps of ``train``: split + leakage guard + models x (CV folds + final fit)."""
+    models = settings.models or registry.default_models()
+    return 2 + len(models) * (settings.evaluation.cv_folds + 1)
+
+
+def _train(frame: pd.DataFrame, label: str, settings: TrainSettings, now: datetime,
+           profile: ProfileMatch | None, test_frame: pd.DataFrame | None,
+           source: DatasetRef | None, test_source: DatasetRef | None,
+           sources: Sequence[str] | pd.Series | None, progress: ProgressSink) -> TrainingRun:
+    """``train`` after its checks: the split, the leakage guard and the evaluation, each advancing
+    ``progress``; the run, with a new id from the time and 4 random bytes."""
+    split = split_dataset(frame, label, profile=profile, strategy=settings.strategy,
+                          time_column=settings.time_column, group_column=settings.group_column,
+                          test_frame=test_frame, sources=sources, config=settings.split)
+    progress.advance()
+    guard = check_leakage(split.train, label, features=settings.features,
+                          profile_blocked=profile.blocked_columns if profile else (),
+                          allow=settings.allow, config=settings.leakage)
+    progress.advance()
+    evaluation = evaluate(split.train, split.test, label, features=guard.features,
+                          models=settings.models, balancer=settings.balancer,
+                          selector=settings.selector, k_features=settings.k_features,
+                          config=settings.evaluation, pipeline_config=settings.pipeline,
+                          workers=settings.workers, progress=progress)
+    return TrainingRun(
+        run_id=f"{now:%Y%m%dT%H%M%SZ}-{secrets.token_hex(4)}",
+        created_at=now.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        settings=settings,
+        dataset=source,
+        test_dataset=test_source,
+        profile=profile,
+        split=split,
+        leakage=guard,
+        evaluation=evaluation,
+        versions=package_versions(),
+    )
+
+
+def _check_source(recorded: Mapping[str, Any] | None, given: DatasetRef | None, what: str) -> None:
+    """ValueError unless ``given`` is the file the run recorded (its SHA-256); no check when the run
+    recorded none."""
+    if recorded is None:
+        return
+    if given is None:
+        raise ValueError(f"The run used {recorded['name']}: pass its DatasetRef so the SHA-256 "
+                         "can be checked")
+    if given.sha256 != recorded["sha256"]:
+        raise ValueError(f"The {what} SHA-256 differs from the one in the run "
+                         f"({given.sha256[:12]}… vs {recorded['sha256'][:12]}…)")
+
+
+def rerun(
+    record: Mapping[str, Any],
+    frame: pd.DataFrame,
+    *,
+    profile: ProfileMatch | None = None,
+    test_frame: pd.DataFrame | None = None,
+    source: DatasetRef | None = None,
+    test_source: DatasetRef | None = None,
+) -> TrainingRun:
+    """Train again with a saved run's settings, on the same data (checked by SHA-256)."""
+    _check_source(record.get("dataset"), source, "dataset")
+    _check_source(record.get("test_dataset"), test_source, "test file")
+    recorded_profile = record.get("profile")
+    if recorded_profile and (profile is None or profile.profile.name != recorded_profile["name"]
+                             or profile.variant != recorded_profile["variant"]):
+        raise ValueError(f"The run used the {recorded_profile['name']} / "
+                         f"{recorded_profile['variant']} profile: load the dataset again with "
+                         "load_dataset and pass its profile")
+    return train(frame, profile=profile, settings=TrainSettings.from_dict(record["settings"]),
+                 test_frame=test_frame, source=source, test_source=test_source)
+
+
+_TEST_METRICS = ("accuracy", "balanced_accuracy", "macro_f1", "weighted_f1")
+_CV_METRICS = ("macro_f1", "balanced_accuracy", "accuracy")
+
+
+def compare_metrics(first: Mapping[str, Any], second: Mapping[str, Any],
+                    tolerance: float | None = None) -> list[str]:
+    """Differences between two run records' results, larger than ``tolerance`` (default:
+    the larger of the two recorded tolerances; 0 means exact, confusion matrices included)."""
+    if tolerance is None:
+        tolerance = max(first["reproducibility"]["metric_tolerance"],
+                        second["reproducibility"]["metric_tolerance"])
+    differences = []
+    a, b = first["evaluation"], second["evaluation"]
+    if a["selected"] != b["selected"]:
+        differences.append(f"selected model: {a['selected']} vs {b['selected']}")
+    other = {m["name"]: m for m in b["models"]}
+    for model in a["models"]:
+        name = model["name"]
+        if name not in other:
+            differences.append(f"{name}: missing in the second run")
+            continue
+        pairs = [(f"test.{k}", model["test"][k], other[name]["test"][k]) for k in _TEST_METRICS]
+        pairs += [(f"cv.{k}[{i}]", x, y) for k in _CV_METRICS
+                  for i, (x, y) in enumerate(zip(model["cv"][k], other[name]["cv"][k], strict=True))]
+        pairs += [(f"test.recall[{x['label']}]", x["recall"], y["recall"])
+                  for x, y in zip(model["test"]["per_class"], other[name]["test"]["per_class"],
+                                  strict=True)]
+        for key, x, y in pairs:
+            if abs(x - y) > tolerance:
+                differences.append(f"{name} {key}: {x} vs {y}")
+        if tolerance == 0 and model["test"]["confusion"] != other[name]["test"]["confusion"]:
+            differences.append(f"{name} test.confusion differs")
+    return differences

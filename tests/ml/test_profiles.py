@@ -5,8 +5,8 @@ import random
 
 import pytest
 
-from toolkit.services.ids import profiles
-from toolkit.services.ids.datasets import inspect_dataset, load_dataset
+from toolkit.core.services.ids import profiles
+from toolkit.core.services.ids.datasets import inspect_dataset, load_dataset
 
 REAL_FIXTURES = ["cic2017_original_sample.csv", "cic_ddos_sample.csv",
                  "nslkdd_train_sample.txt", "nslkdd_test_sample_noheader.txt"]

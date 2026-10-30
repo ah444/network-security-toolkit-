@@ -3,7 +3,7 @@
 import socket
 import threading
 
-from toolkit.data.recon import scanner as recon_scanner
+from toolkit.core.data.recon import scanner as recon_scanner
 
 
 def test_silent_udp_open_filtered():

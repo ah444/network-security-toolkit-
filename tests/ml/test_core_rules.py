@@ -8,8 +8,10 @@ FORBIDDEN_IMPORTS = {"flask", "werkzeug", "requests", "socket", "urllib", "http"
 
 
 def _core_files(repo_root):
-    files = sorted((repo_root / "toolkit" / "services").rglob("*.py"))
-    assert files, "toolkit/services is missing"
+    """The services of every interface (toolkit/core/services, the web's services)."""
+    files = sorted(p for p in (repo_root / "toolkit").rglob("*.py")
+                   if "services" in p.relative_to(repo_root / "toolkit").parts)
+    assert len(files) > 25, "the services moved?"
     return files
 
 

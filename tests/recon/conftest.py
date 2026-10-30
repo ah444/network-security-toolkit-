@@ -5,28 +5,42 @@ import threading
 
 import pytest
 
-from toolkit.controllers.cli import scan as scan_command
-from toolkit.services.recon import scan as scan_service_module
-from toolkit.ui.cli import scan as scan_ui
-from toolkit.data.recon import nvd
-from toolkit.data import keys as intel_keys
+from toolkit.cli.controllers import scan as scan_command
+from toolkit.core.services.recon import engines
+from toolkit.core.services.recon import scan as scan_service_module
+from toolkit.cli.ui import scan as scan_ui
+from toolkit.core.data.recon import nvd
+from toolkit.core.data import keys as intel_keys
 
 
 @pytest.fixture(scope="module")
 def scanner():
-    """The scan command (``toolkit/controllers/cli/scan.py`` since v5.1 step 1.5d)."""
+    """The scan command (``toolkit/cli/controllers/scan.py`` since v5.1 step 1.5d)."""
     return scan_command
 
 
 @pytest.fixture(scope="module")
 def scan_service():
-    """The scan itself (``toolkit/services/recon/scan.py``): ping, ports, lookups, export."""
+    """The scan itself (``toolkit/core/services/recon/scan.py``): ping, ports, lookups, export."""
     return scan_service_module
+
+
+@pytest.fixture
+def fake_ports(monkeypatch):
+    """Puts ``checks(host, ports, protocols, progress)`` in place of the built-in engine's port
+    checks (step N1: the scan goes through ``engines.ENGINES``)."""
+    def use(checks):
+        class FakeEngine(engines.BuiltinEngine):
+            def scan(self, host, ports, protocols, progress=None, stop=None):
+                return checks(host, ports, protocols, progress)
+
+        monkeypatch.setitem(engines.ENGINES, "builtin", FakeEngine)
+    return use
 
 
 @pytest.fixture(scope="module")
 def scan_screen():
-    """What the scanner shows and asks (``toolkit/ui/cli/scan.py``)."""
+    """What the scanner shows and asks (``toolkit/cli/ui/scan.py``)."""
     return scan_ui
 
 

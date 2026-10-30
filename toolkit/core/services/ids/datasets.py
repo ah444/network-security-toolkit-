@@ -1,0 +1,293 @@
+"""Dataset loader: CSV/TXT files -> a clean, typed DataFrame plus a report of what was done.
+
+Steps (plan D16, B17, R7):
+1. Read only the start of the file to find the encoding (BOM, UTF-8, else cp1252) and
+   the separator (the one that splits the sample rows into the same number of fields).
+2. Recognise the dataset from that sample (``profiles.detect_profile``); this also
+   decides whether the first line is a header and gives names to headerless files.
+3. Read the file with pandas' C engine in chunks; narrow each chunk's dtypes so the
+   peak memory stays near the final size.
+4. Strip header spaces, drop ``X.1`` columns that duplicate ``X``, normalise label
+   values the profile asks for, and record everything in a ``LoadReport``.
+
+Values are not "cleaned" here: ``inf`` and empty cells are counted, not changed.
+What to do with them is a pipeline decision (step 0.4c).
+"""
+
+from __future__ import annotations
+
+import codecs
+import csv
+import io
+import logging
+import re
+from collections import Counter
+from dataclasses import dataclass, field
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+
+from ...data.ids.dataset_files import DatasetError as DatasetError  # the callers' error
+from ...data.ids.dataset_files import file_sha256, read_chunks, read_sample
+from .profiles import ProfileMatch, detect_profile
+
+log = logging.getLogger(__name__)
+
+SAMPLE_ROWS = 200
+SEPARATORS = (",", ";", "\t", "|")
+DEFAULT_CHUNK_ROWS = 200_000
+# Text columns with at most this share of distinct values become 'category'.
+CATEGORY_MAX_SHARE = 0.5
+_SUFFIXED = re.compile(r"^(?P<base>.+)\.(?P<n>\d+)$")
+
+
+@dataclass(frozen=True)
+class DatasetInfo:
+    """Format and profile of a file, found from its first ``SAMPLE_BYTES`` only."""
+
+    encoding: str
+    separator: str
+    raw_header: tuple[str, ...] | None  # the header line as written, if there is one
+    profile: ProfileMatch
+
+
+@dataclass(frozen=True)
+class LoadReport:
+    """What loading did to the file, for the user and the run record: its SHA-256, how it was read,
+    its size, the columns renamed, dropped or narrowed, the missing and infinite values counted, the
+    labels fixed, and the warnings."""
+    sha256: str
+    encoding: str
+    separator: str
+    has_header: bool
+    rows: int
+    columns: int
+    renamed_columns: dict[str, str] = field(default_factory=dict)  # as written -> stripped
+    dropped_duplicate_columns: tuple[str, ...] = ()
+    downcast: dict[str, str] = field(default_factory=dict)  # column -> narrower dtype
+    missing_values: int = 0
+    infinite_values: int = 0
+    label_values_normalised: int = 0  # rows whose label text was fixed
+    warnings: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class LoadedDataset:
+    """A loaded file: its frame, the profile it matched and the load report."""
+    frame: pd.DataFrame
+    profile: ProfileMatch
+    report: LoadReport
+
+
+# --- Sniffing ----------------------------------------------------------------------
+
+def _detect_encoding(sample: bytes) -> str:
+    """The encoding from the sample: a BOM if there is one, else UTF-8 when it decodes (a character
+    cut at the sample's end allowed), else cp1252."""
+    if sample.startswith(codecs.BOM_UTF8):
+        return "utf-8-sig"
+    if sample.startswith((codecs.BOM_UTF16_LE, codecs.BOM_UTF16_BE)):
+        return "utf-16"
+    try:
+        # A multi-byte character may be cut at the end of the sample.
+        sample.decode("utf-8")
+    except UnicodeDecodeError as error:
+        if error.start < len(sample) - 3:
+            return "cp1252"
+    return "utf-8"
+
+
+def _sample_text(sample: bytes, encoding: str, complete: bool) -> str:
+    """The sample as text, without its last line when the file goes on (it may be cut)."""
+    text = sample.decode(encoding, errors="replace")
+    if not complete and "\n" in text:
+        text = text[: text.rindex("\n")]  # drop the last, possibly cut, line
+    return text
+
+
+def _sniff_separator(lines: list[str]) -> str:
+    """The separator that splits the sample lines most consistently into > 1 fields.
+
+    Ranked by: every line has the same field count, then how many lines share the
+    most common count, then that count. Ties keep the order of ``SEPARATORS``.
+    """
+    def score(separator: str) -> tuple[bool, int, int]:
+        counts = [len(row) for row in csv.reader(lines, delimiter=separator)]
+        common, freq = Counter(counts).most_common(1)[0]
+        if common < 2:
+            return (False, 0, 0)
+        return (freq == len(counts), freq, common)
+
+    return max(SEPARATORS, key=score)
+
+
+def inspect_dataset(path: str | Path) -> DatasetInfo:
+    """Find encoding, separator and profile from the start of the file."""
+    sample, complete = read_sample(path)
+    if not sample.strip():
+        raise DatasetError("The file is empty.")
+    encoding = _detect_encoding(sample)
+    text = _sample_text(sample, encoding, complete)
+    lines = [line for line in text.splitlines() if line.strip()][:SAMPLE_ROWS]
+    if not lines:
+        raise DatasetError("The file is empty.")
+    separator = _sniff_separator(lines)
+    rows = list(csv.reader(io.StringIO("\n".join(lines)), delimiter=separator))
+    match = detect_profile(rows)
+    raw_header = tuple(rows[0]) if match.has_header else None
+    return DatasetInfo(encoding, separator, raw_header, match)
+
+
+# --- Loading -----------------------------------------------------------------------
+
+def _narrow(frame: pd.DataFrame) -> pd.DataFrame:
+    """Smallest exact numeric dtypes: ints shrink, floats become float32 only if lossless."""
+    for name in frame.columns:
+        column = frame[name]
+        if column.dtype.kind in "iu":
+            frame[name] = pd.to_numeric(column, downcast="integer")
+        elif column.dtype == np.float64:
+            narrow = column.to_numpy(dtype=np.float32)
+            if np.array_equal(narrow.astype(np.float64), column.to_numpy(), equal_nan=True):
+                frame[name] = narrow
+    return frame
+
+
+def _unify_text(column: pd.Series) -> pd.Series:
+    """A column read as numbers in one chunk and text in another: make it one type."""
+    values = column.dropna()
+    if values.map(lambda v: isinstance(v, str)).all():
+        return column
+    numbers = pd.to_numeric(column, errors="coerce")
+    if numbers.notna().sum() == len(values):
+        return numbers
+    return column.map(lambda v: v if pd.isna(v) or isinstance(v, str) else str(v))
+
+
+def _read_frame(path: Path, info: DatasetInfo, encoding: str, chunk_rows: int) -> pd.DataFrame:
+    """The whole file in chunks, each narrowed as it is read so the peak memory stays low;
+    DatasetError when there are no data rows."""
+    chunks = read_chunks(path, separator=info.separator, names=info.profile.column_names,
+                         skip_header=info.profile.has_header, encoding=encoding,
+                         chunk_rows=chunk_rows)
+    parts = [_narrow(chunk) for chunk in chunks]
+    if not parts or not any(len(part) for part in parts):
+        raise DatasetError("The file has a header but no data rows.")
+    return pd.concat(parts, ignore_index=True)
+
+
+def _read_table(path: Path, info: DatasetInfo, chunk_rows: int,
+                warnings: list[str]) -> tuple[pd.DataFrame, str]:
+    """Step 3: the whole file, and the encoding it was read with. A file that is valid UTF-8
+    in the sample but not after it is read again as cp1252 (recorded in ``warnings``); a
+    file pandas can't read as a table is a ``DatasetError``."""
+    encoding = info.encoding
+    try:
+        try:
+            return _read_frame(path, info, encoding, chunk_rows), encoding
+        except UnicodeDecodeError:
+            if encoding != "utf-8":
+                raise
+            warnings.append("ENCODING_FALLBACK_CP1252")  # invalid UTF-8 after the sample
+            return _read_frame(path, info, "cp1252", chunk_rows), "cp1252"
+    except (pd.errors.ParserError, UnicodeDecodeError, ValueError) as error:
+        if isinstance(error, DatasetError):
+            raise
+        raise DatasetError(f"Could not read the file as a table: {error}") from None
+
+
+def _unify_columns(frame: pd.DataFrame) -> None:
+    """Step 3, after the chunks: one type per text column, then the dtypes narrowed again
+    (chunks may have narrowed differently). Changes ``frame`` in place."""
+    for name in frame.columns:
+        if frame[name].dtype == object:
+            frame[name] = _unify_text(frame[name])
+    _narrow(frame)
+
+
+def _drop_duplicate_columns(frame: pd.DataFrame, warnings: list[str]) -> list[str]:
+    """Step 4: drop each ``X.1`` column equal to ``X`` (pandas' name for a repeated header)
+    in place; one that differs is kept and recorded in ``warnings``. Returns the dropped."""
+    dropped: list[str] = []
+    for name in list(frame.columns):
+        found = _SUFFIXED.match(name)
+        if found and found["base"] in frame.columns:
+            if frame[name].equals(frame[found["base"]]):
+                dropped.append(name)
+            else:
+                warnings.append("SUFFIXED_COLUMN_DIFFERS")
+    if dropped:
+        log.info("Dropped duplicate columns: %s", dropped)
+        frame.drop(columns=dropped, inplace=True)
+    return dropped
+
+
+def _normalise_labels(frame: pd.DataFrame, match: ProfileMatch) -> int:
+    """Step 4: the label text fixes the profile asks for, in place; how many rows changed."""
+    label = match.label_column
+    if label not in frame.columns or not match.label_replacements or frame[label].dtype != object:
+        return 0
+    before = frame[label]
+    after = before
+    for old, new in match.label_replacements:
+        after = after.str.replace(old, new, regex=False)
+    normalised = int(((before != after) & before.notna()).sum())
+    frame[label] = after
+    return normalised
+
+
+def _categories(frame: pd.DataFrame, label: str | None) -> dict[str, str]:
+    """Step 4: the label and text columns with few distinct values become ``category`` in
+    place; returns every column now narrower than 64 bits, with its dtype."""
+    downcast: dict[str, str] = {}
+    for name in frame.columns:
+        column = frame[name]
+        if column.dtype == object:
+            distinct = column.nunique(dropna=True)
+            if name == label or distinct <= max(1, CATEGORY_MAX_SHARE * len(column)):
+                frame[name] = column.astype("category")
+                downcast[name] = "category"
+        elif column.dtype.kind in "iuf" and column.dtype.itemsize < 8:
+            downcast[name] = str(column.dtype)
+    return downcast
+
+
+def _renamed(info: DatasetInfo) -> dict[str, str]:
+    """The header names that stripping changed, as written -> stripped."""
+    if info.raw_header is None:
+        return {}
+    # the names come from the header, so the lengths match
+    return {raw: clean for raw, clean in zip(info.raw_header, info.profile.column_names,
+                                             strict=True) if raw != clean}
+
+
+def load_dataset(path: str | Path, *, chunk_rows: int = DEFAULT_CHUNK_ROWS) -> LoadedDataset:
+    """Read a CSV/TXT dataset; see the module docstring for the steps."""
+    path = Path(path)
+    info = inspect_dataset(path)
+    match = info.profile
+    warnings: list[str] = []
+    frame, encoding = _read_table(path, info, chunk_rows, warnings)
+    _unify_columns(frame)
+    dropped = _drop_duplicate_columns(frame, warnings)
+    normalised = _normalise_labels(frame, match)
+    downcast = _categories(frame, match.label_column)
+    infinite = sum(int(np.isinf(frame[name].to_numpy()).sum())
+                   for name in frame.columns if frame[name].dtype.kind == "f")
+    report = LoadReport(
+        sha256=file_sha256(path),
+        encoding=encoding,
+        separator=info.separator,
+        has_header=match.has_header,
+        rows=len(frame),
+        columns=frame.shape[1],
+        renamed_columns=_renamed(info),
+        dropped_duplicate_columns=tuple(dropped),
+        downcast=downcast,
+        missing_values=int(frame.isna().sum().sum()),
+        infinite_values=infinite,
+        label_values_normalised=normalised,
+        warnings=tuple(dict.fromkeys(warnings)),
+    )
+    return LoadedDataset(frame, match, report)

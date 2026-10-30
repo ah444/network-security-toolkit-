@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  <title>Port Scanner - Intrusion Detection System</title>
+  <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+  <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/app.css') }}">
+</head>
+<body>
+  <!-- Nav Bar -->
+  <nav class="navbar">
+    <a href="/" class="nav-logo">Intrusion Detection System</a>
+    <button type="button" id="navToggle" class="nav-link nav-toggle" aria-expanded="false" aria-controls="navMenu" hidden>Menu</button>
+    <ul class="nav-menu" id="navMenu">
+      <li class="nav-item"><a href="/" class="nav-link">Home</a></li>
+      <li class="nav-item"><a href="/dynamic_ids" class="nav-link">Dynamic Intrusion Detection System</a></li>
+      <li class="nav-item"><a href="/scan" class="nav-link" aria-current="page">Port Scanner</a></li>
+      <li class="nav-item"><button type="button" id="themeToggle" class="nav-link theme-toggle" hidden>Theme: Auto</button></li>
+    </ul>
+  </nav>
+  <script src="{{ url_for('static', filename='js/navbar.js') }}"></script>
+  {% if network_banner %}<p class="network-banner" role="note">{{ network_banner }}</p>{% endif %}
+
+  <div class="container">
+    <h1>Port Scanner</h1>
+    <p class="warning-message">Only scan systems you own or have written permission to test.
+      Scanning other people's systems can be illegal.</p>
+
+    <!-- The form (v5.2 step 2.4e): its choices come from GET /api/v1/scan/options -->
+    <section class="section" aria-labelledby="scanFormTitle">
+      <h2 class="section-title" id="scanFormTitle">New scan</h2>
+      <form id="scanForm">
+        <div class="form-group">
+          <label for="scanTarget" class="label">Target</label>
+          <input type="text" id="scanTarget" name="target" required maxlength="1000" autocomplete="off" spellcheck="false" aria-describedby="scanTargetHint">
+          <p id="scanTargetHint" class="field-hint">An IPv4 or IPv6 address, a network such as 192.168.1.0/24, or a host name.</p>
+        </div>
+        <div class="form-group">
+          <label for="scanPortList" class="label">Ports</label>
+          <input type="text" id="scanPortList" name="ports" value="1-1024" required maxlength="1000" autocomplete="off" spellcheck="false" aria-describedby="scanPortsHint">
+          <p id="scanPortsHint" class="field-hint">80, 1-1024 or a list such as 22,80,8000-8100. <span id="scanLimits"></span></p>
+        </div>
+        <fieldset class="form-group choice-group">
+          <legend class="label">Protocol</legend>
+          <label class="choice"><input type="radio" name="protocol" id="protocolTcp" value="tcp" checked> TCP</label>
+          <label class="choice"><input type="radio" name="protocol" id="protocolUdp" value="udp"> UDP</label>
+          <label class="choice"><input type="radio" name="protocol" id="protocolBoth" value="both"> Both</label>
+        </fieldset>
+        <fieldset class="form-group choice-group">
+          <legend class="label">Scan engine</legend>
+          <label class="choice"><input type="radio" name="engine" id="engineBuiltin" value="builtin" checked> Built-in: the toolkit's own scanner (nothing installed)</label>
+          <label class="choice"><input type="radio" name="engine" id="engineNmap" value="nmap" disabled aria-describedby="nmapStatus"> nmap</label>
+          <p id="nmapStatus" class="field-hint"></p>
+        </fieldset>
+        <fieldset id="nmapOptions" class="form-group choice-group" hidden>
+          <legend class="label">nmap's choices</legend>
+          <label for="nmapDetection">Service detection: how hard to try</label>
+          <select id="nmapDetection"></select>
+          <label for="nmapTiming">Timing</label>
+          <select id="nmapTiming"></select>
+          <label class="choice"><input type="checkbox" id="nmapScripts" aria-describedby="nmapScriptNames"> Also run the toolkit's allowed nmap scripts</label>
+          <p id="nmapScriptNames" class="field-hint"></p>
+          <label class="choice"><input type="checkbox" id="nmapOsDetect"> Detect the OS (-O, raw packets)</label>
+          <p id="nmapRawNote" class="field-hint" hidden></p>
+          <p id="nmapVersionNote" class="field-hint"></p>
+        </fieldset>
+        <fieldset class="form-group choice-group">
+          <legend class="label">Hosts and online lookups</legend>
+          <label class="choice"><input type="checkbox" id="scanUnresponsive"> Scan hosts that don't answer ping</label>
+          <p class="field-hint">CVE lookups (NVD) always get the detected software name and version only, never the banner or the address.</p>
+          <label class="choice"><input type="checkbox" id="scanAbuse" aria-describedby="scanAbuseNote"> Check public addresses with AbuseIPDB (never a private one)</label>
+          <p id="scanAbuseNote" class="field-hint"></p>
+          <label class="choice"><input type="checkbox" id="scanAi" aria-describedby="scanAiNote"> Explain each software's CVEs with AI (OpenRouter: the name and version only; may be wrong)</label>
+          <p id="scanAiNote" class="field-hint"></p>
+        </fieldset>
+        <p id="publicTargetWarning" class="warning-message" hidden>This target is on the internet, not in a private network: make sure you are allowed to scan it.</p>
+        <label class="choice authorize"><input type="checkbox" id="scanAuthorized" required> <span id="scanAuthorizedText">I own this target or have written permission to scan it.</span></label>
+        <button type="submit" id="scanStart" class="btn">Start scan</button>
+        <div id="scanProgress" class="training-progress" hidden tabindex="-1">
+          <progress id="scanProgressBar" max="100" value="0" aria-label="Scan progress"></progress>
+          <span id="scanProgressText"></span>
+          <button type="button" id="scanCancel" class="btn" disabled>Cancel scan</button>
+        </div>
+      </form>
+      <div id="scanStatus" class="message" role="status" tabindex="-1"></div>
+    </section>
+
+    <!-- What the scan did, step by step: one line per step, text from the network cleaned
+         by the server and shown as text only -->
+    <section class="section" id="scanLogSection" aria-labelledby="scanLogTitle" hidden>
+      <h2 class="section-title" id="scanLogTitle">Scan log</h2>
+      <ol id="scanLog" class="scan-log" tabindex="0" role="log" aria-live="off" aria-labelledby="scanLogTitle"></ol>
+    </section>
+
+    <section class="section" id="scanResults" aria-labelledby="scanResultsTitle" hidden>
+      <h2 class="section-title" id="scanResultsTitle" tabindex="-1">Results</h2>
+      <div id="scanSummary"></div>
+      <h3>Hosts</h3>
+      <ul id="scanHosts" class="host-list"></ul>
+      <h3>Open ports</h3>
+      <div id="scanPortCards" class="port-cards"></div>
+      <h3>Download the report</h3>
+      <p class="field-hint">The last finished scan of this browser session, kept in memory only: nothing is saved on the server.</p>
+      <div class="button-group">
+        <a class="custom-btn" href="/api/v1/scan/report?format=txt" download>TXT</a>
+        <a class="custom-btn" href="/api/v1/scan/report?format=json" download>JSON</a>
+        <a class="custom-btn" href="/api/v1/scan/report?format=csv" download>CSV</a>
+      </div>
+    </section>
+  </div>
+  <script type="module" src="{{ url_for('static', filename='js/scan.js') }}"></script>
+</body>
+</html>

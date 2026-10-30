@@ -7,7 +7,7 @@ import pytest
 
 from web_js import js_sources
 
-TEMPLATES = "toolkit/ui/web/templates"
+TEMPLATES = "toolkit/web/ui/templates"
 
 
 class _FormScanner(HTMLParser):
@@ -46,7 +46,7 @@ def _scan(repo_root, name):
     return scanner
 
 
-@pytest.mark.parametrize("name", ["home.html", "dynamic_ids.html"])
+@pytest.mark.parametrize("name", ["home.html", "dynamic_ids.html", "scan.html"])
 def test_viewport_lang_and_labels(repo_root, name):
     page = _scan(repo_root, name)
     assert page.html_lang == "en", f"{name}: <html lang> missing"

@@ -1,0 +1,151 @@
+"""Port scanning: TCP and UDP checks of one host (R1, R2, B8, B9).
+
+One connection per TCP port, always closed; its banner is read over that connection
+(see ``probes``), and the service is the one its answer showed (``services``, step
+A2). A UDP port that doesn't answer is ``open|filtered``. Progress goes to
+an object with ``start``, ``advance`` and ``finish`` (none by default),
+such as a ``toolkit.core.services.ports.ProgressSink``; a set ``stop`` event ends the scan
+before its next check (``ScanStopped``). This is the built-in engine
+(``toolkit.core.services.recon.engines``).
+"""
+
+import logging
+import os
+import socket
+import threading
+from collections.abc import Callable, Iterable, Sequence
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from dataclasses import dataclass
+from typing import Protocol
+
+from .probes import Reply, banner_text, read_banner, udp_payload
+from .services import service_label, usual_name
+
+log = logging.getLogger(__name__)
+
+SCAN_TIMEOUT = 1  # seconds per port
+
+
+class ScanStopped(Exception):
+    """The scan's ``stop`` event was set: the checks already running finished, no other ran."""
+
+
+class Progress(Protocol):
+    """What the scanner reports to (``toolkit.core.services.ports.ProgressSink`` fits)."""
+
+    def start(self, total: int) -> None:
+        """``total`` checks are about to run."""
+
+    def advance(self, done: int = 1) -> None:
+        """``done`` more checks finished; called from the worker threads."""
+
+    def finish(self) -> None:
+        """The checks ended (also after Ctrl+C); called once."""
+
+
+class _NoProgress:
+    """The progress of a scan nobody watches."""
+    def start(self, total: int) -> None:
+        """Does nothing."""
+        pass
+
+    def advance(self, done: int = 1) -> None:
+        """Does nothing."""
+        pass
+
+    def finish(self) -> None:
+        """Does nothing."""
+        pass
+
+
+@dataclass
+class PortResult:
+    """One port's check. ``service`` is the service the answer showed, or (TCP) the port's usual
+    name with a "?" (``services.service_label``; UDP: the usual name); ``banner`` what the service
+    sent: text from the network, to be cleaned before it is shown or saved. The other fields are
+    what an engine that recognises software tells (nmap, step N3; empty from this scanner)."""
+    port: int
+    protocol: str  # "tcp" or "udp"
+    state: str  # "open", "closed" (TCP: closed or filtered) or (UDP) "open|filtered"
+    service: str = ""
+    banner: str = ""
+    product: str = ""  # the software, as the engine named it
+    version: str = ""
+    cpe: tuple[str, ...] = ()  # its CPE names, as the engine gave them
+    reason: str = ""  # why the port is in its state ("syn-ack", "conn-refused", ...)
+    scripts: tuple[tuple[str, str], ...] = ()  # (script, its output): text from the network
+
+
+def scan_tcp_port(host: str, port: int, timeout: float = SCAN_TIMEOUT) -> PortResult:
+    """One connection per port, always closed, also when reading the banner fails (R1)."""
+    try:
+        sock = socket.create_connection((host, port), timeout=timeout)
+    except OSError:  # refused or no answer (Windows retries a refused connection for about
+        return PortResult(port, "tcp", "closed")  # 2 s, past the timeout: both time out)
+    with sock:
+        try:
+            reply = read_banner(sock, host, port)
+        except OSError as error:  # includes TLS errors: the port is still open
+            log.debug("Banner of %s:%s failed: %s", host, port, error)
+            reply = Reply()
+    return PortResult(port, "tcp", "open", service_label(port, reply.service), reply.text)
+
+
+def scan_udp_port(host: str, port: int, timeout: float = SCAN_TIMEOUT) -> PortResult:
+    """A reply means open; no reply is "open|filtered", not "closed" (B8), because many UDP
+    services stay silent. "closed" only when the host reports the port unreachable."""
+    family, _, _, _, address = socket.getaddrinfo(host, port, type=socket.SOCK_DGRAM)[0]
+    with socket.socket(family, socket.SOCK_DGRAM) as sock:
+        sock.settimeout(timeout)
+        try:
+            sock.connect(address)
+            sock.send(udp_payload(port))
+            data = sock.recv(1024)
+        except TimeoutError:
+            return PortResult(port, "udp", "open|filtered", usual_name(port, "udp"))
+        except (ConnectionRefusedError, ConnectionResetError):
+            return PortResult(port, "udp", "closed")
+        except OSError as error:
+            log.debug("UDP %s:%s failed: %s", host, port, error)
+            return PortResult(port, "udp", "closed")
+    return PortResult(port, "udp", "open", usual_name(port, "udp"), banner_text(data))
+
+
+Scan = Callable[[str, int], PortResult]
+
+
+def scan_ports(host: str, ports: Iterable[int], protocols: Sequence[str],
+               progress: Progress | None = None,
+               stop: threading.Event | None = None) -> list[PortResult]:
+    """Every port of ``host`` for each protocol, sorted by port; each finished check is
+    reported to ``progress`` (default none). ``ScanStopped`` once ``stop`` is set: the checks
+    already running finish, the others don't start."""
+    sink = progress or _NoProgress()
+    scanners: dict[str, Scan] = {"tcp": scan_tcp_port, "udp": scan_udp_port}
+    tasks = [(scanners[protocol], port) for port in ports for protocol in protocols]
+    if not tasks:
+        return []
+
+    def run(scan: Scan, port: int) -> PortResult:
+        if stop is not None and stop.is_set():
+            raise ScanStopped(f"the scan of {host} was stopped")
+        try:
+            return scan(host, port)
+        finally:
+            sink.advance()
+
+    results: list[PortResult] = []
+    workers = min(100, len(tasks), (os.cpu_count() or 1) * 4)
+    sink.start(len(tasks))
+    try:
+        with ThreadPoolExecutor(max_workers=workers) as executor:
+            futures = [executor.submit(run, scan, port) for scan, port in tasks]
+            try:
+                for future in as_completed(futures):
+                    results.append(future.result())
+            except BaseException:  # Ctrl+C or stop: only the checks already running finish
+                executor.shutdown(wait=False, cancel_futures=True)
+                raise
+    finally:
+        sink.finish()
+    return sorted(results, key=lambda r: (r.port, r.protocol))

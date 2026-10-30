@@ -1,15 +1,15 @@
 """v5.1 step 1.4f (plan F1): "Predict a CSV file" with the session's run or a loaded bundle;
-the labelled CSV is the CLI's (``toolkit.services.ids.batch``)."""
+the labelled CSV is the CLI's (``toolkit.core.services.ids.batch``)."""
 
 import io
 
 import pandas as pd
 import pytest
 
-from toolkit.data.ids import bundle_files
-from toolkit.data.settings import WebConfig
-from toolkit.services.ids.batch import prediction_summary
-from toolkit.services.ids.datasets import load_dataset
+from toolkit.core.data.ids import bundle_files
+from toolkit.core.data.settings import WebConfig
+from toolkit.core.services.ids.batch import prediction_summary
+from toolkit.core.services.ids.datasets import load_dataset
 from web_jobs import train_and_wait
 
 CIC = "cic_ddos_sample.csv"
@@ -126,7 +126,7 @@ def test_bundle_predict_file_same_as_run(client, trained, fixtures_dir):
 
 def test_web_file_is_the_cli_file(client, trained, fixtures_dir, tmp_path, capsys):
     """The same bundle and rows give the same bytes from the web and from --csv."""
-    from toolkit.controllers.cli import ids as cli
+    from toolkit.cli.controllers import ids as cli
 
     exported = client.post("/api/v1/run/export", json={"name": "m"}).get_json()
     bundle_path = bundle_files.bundles_dir() / exported["file"]
@@ -215,7 +215,7 @@ def test_summary_order_and_matches():
 
 
 def test_page_has_the_forms(repo_root):
-    page = (repo_root / "toolkit/ui/web/templates/dynamic_ids.html").read_text(encoding="utf-8")
+    page = (repo_root / "toolkit/web/ui/templates/dynamic_ids.html").read_text(encoding="utf-8")
     for prefix in ("predict", "loadedPredict"):
         assert f'id="{prefix}FileForm"' in page and f'for="{prefix}File"' in page
         assert f'id="{prefix}FileResult" class="message" role="status"' in page

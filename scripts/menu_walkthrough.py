@@ -35,7 +35,7 @@ if not os.environ.get("TOOLKIT_INSTANCE_DIR", "").strip():
     os.environ["TOOLKIT_INSTANCE_DIR"] = tempfile.mkdtemp(prefix="toolkit-walkthrough-")
 INSTANCE = os.environ["TOOLKIT_INSTANCE_DIR"]
 sys.path.insert(0, str(ROOT))
-from toolkit.services.ids.exports import list_bundles  # noqa: E402
+from toolkit.core.services.ids.exports import list_bundles  # noqa: E402
 
 
 def usable_exports():
@@ -46,9 +46,12 @@ def usable_exports():
 def make_export():
     """Train 2 models on the 15-class fixture and export them, as the page does (token
     included)."""
-    from toolkit.controllers.web import create_app
+    from toolkit.web.controllers import create_app
 
-    client = create_app().test_client()
+    app = create_app()
+    # the app answers only its own address (v5.2 step 2.4a): the test client names it
+    app.config["SERVER_NAME"] = f"127.0.0.1:{app.extensions['toolkit'].config.port}"
+    client = app.test_client()
     page = client.get("/dynamic_ids").get_data(as_text=True)
     headers = {"X-CSRF-Token": re.search(r'<meta name="csrf-token" content="([^"]+)">',
                                          page).group(1)}
@@ -161,13 +164,14 @@ def fail(message):
 
 
 def web_check(label):
-    """Wait for the web trainer, fetch both pages, then stop its process. A port already in
+    """Wait for the web trainer, fetch its pages (the port scanner's and its options too, v5.2),
+    then stop its process. A port already in
     use or a page that never answers is a failed check, so a page from another server that
     holds the port is never counted."""
     if expect(f"http://127.0.0.1:{PORT}/", "is already in use", timeout=120) == 1:
         fail(f"{label} failed: port {PORT} is already in use (another server holds it)")
     try:
-        for page in ("/", "/dynamic_ids"):
+        for page in ("/", "/dynamic_ids", "/scan", "/api/v1/scan/options"):
             status = None
             for _ in range(60):
                 try:
@@ -207,7 +211,12 @@ def scan(label, end_port, protocol, verbose):
     answer("Enter start port: ", "65500")
     answer("Enter end port: ", end_port)
     answer("Select protocol for scanning (TCP/UDP/both): ", protocol)
-    answer("if you are authorised to scan", "yes")  # S16
+    # step N4: the engine is asked only when nmap is installed; Enter keeps the built-in one
+    if expect("Scan engine: the toolkit's own scanner or nmap?",
+              "if you are authorised to scan") == 0:
+        send("")
+        expect("if you are authorised to scan")
+    send("yes")  # S16
     answer("Enable verbose mode? (Y/N): ", verbose)
     if expect("scan this host anyway? (Y/N): ", "Scan Summary Report") == 0:
         send("y")

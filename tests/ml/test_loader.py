@@ -6,9 +6,9 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from toolkit.services.ids import datasets
-from toolkit.data.ids.dataset_files import DatasetError
-from toolkit.services.ids.datasets import load_dataset
+from toolkit.core.services.ids import datasets
+from toolkit.core.data.ids.dataset_files import DatasetError
+from toolkit.core.services.ids.datasets import load_dataset
 
 
 def _write(path, text, encoding="utf-8"):

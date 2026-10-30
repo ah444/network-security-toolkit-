@@ -38,7 +38,9 @@ or an error in it. Ctrl+C at the menu itself says "Goodbye!" and leaves.
 permission to test.
 
 - Without a `TARGET` it asks its questions: the target, the first and last port, the
-  protocol, the authorization, the progress line and the AI explanation (only with a key);
+  protocol, the engine (only when nmap is installed; for nmap its service detection, its
+  scripts and, with raw packets, OS detection), the authorization, the progress line and
+  the AI explanation (only with a key);
   during the scan, the AbuseIPDB check of a public IP (only with a key) and whether to scan
   a host that doesn't answer ping; at the end, the export.
 - With a `TARGET` it asks nothing but the authorization question, and sends nothing online
@@ -57,13 +59,38 @@ permission to test.
 | `--scan-unresponsive` | off | also scans hosts that don't answer ping |
 | `--export {txt,json,csv}` | none | saves the report in `instance/scans/` (a new file, never overwritten) |
 | `--i-am-authorized` | off | confirms you are authorised to scan the target (for scripts) |
+| `--engine {builtin,nmap}` | `builtin` | the toolkit's own scanner, or nmap when it is installed (version 7.80 or newer); with `nmap` and no nmap found, the scan stops before anything is sent and says how to install it (never falls back to the built-in engine) |
+| `--service-detection {light,normal,all}` | `normal` | nmap only: how hard `-sV` tries (`--version-intensity` 2, 7 or 9) |
+| `--timing {polite,normal,aggressive}` | `normal` | nmap only: `-T2`, `-T3` or `-T4` |
+| `--scripts {safe}` | none | nmap only: also runs the toolkit's 8 allowed scripts (`banner`, `http-title`, `http-server-header`, `ssl-cert`, `ssh-hostkey`, `smb-protocols`, `smb2-time`, `rdp-ntlm-info`) |
+| `--os-detect` | off | nmap only: OS detection (`-O`); needs raw packets |
 
-The flags other than `--i-am-authorized` work only with a `TARGET`. Limits:
-`TOOLKIT_SCAN_MAX_HOSTS` hosts and `TOOLKIT_SCAN_MAX_PROBES` host×port checks (TCP and UDP
-count separately).
+The flags other than `--i-am-authorized` work only with a `TARGET`, and the four nmap-only
+flags only with `--engine nmap`. Limits: `TOOLKIT_SCAN_MAX_HOSTS` hosts and
+`TOOLKIT_SCAN_MAX_PROBES` host×port checks (TCP and UDP count separately); nmap also stops
+after `TOOLKIT_SCAN_MAX_MIN` minutes per host.
+
+With `--engine nmap`:
+
+- nmap is run by its full path (`TOOLKIT_NMAP_PATH`, else the folders on `PATH`, else its
+  install folder), never through a shell, with only the options above (`-n -Pn`, no DNS and
+  no ping of its own).
+- nmap's service detection (`-sV`) also runs nmap's own version scripts (48 in nmap 7.992,
+  such as `rpcinfo`), each only on a service it recognised; nmap can't turn them off. One,
+  `iec61850-mms`, is in nmap's "intrusive" category: it talks to IEC 61850 industrial devices
+  on port 102. The scan's opening notice says so every time.
+- Raw packets (the SYN scan, UDP, `-O`): on Windows Npcap usable by this user (it comes with
+  nmap's installer; an administrator's prompt if Npcap is set to administrators only), on
+  Linux and macOS root. Without them nmap does a TCP connect scan, and UDP or `--os-detect`
+  stops before anything is sent.
+- What is looked up in NVD is nmap's product and version, cleaned with the same rules as a
+  banner (for example `OpenSSH for_Windows_8.1` → `OpenSSH 8.1`, `Apache httpd 2.4.49` →
+  `Apache 2.4.49`); the report also carries the engine and nmap's CPE names (not looked
+  up), and nmap's OS match joins the OS hint.
 
 ```
 python -m toolkit scan 192.168.1.10 -p 1-1024 --protocol both --export csv
+python -m toolkit scan 127.0.0.1 -p 1-1024 --engine nmap --scripts safe
 ```
 
 ## 4. `ids`: intrusion detection with an export
@@ -96,16 +123,39 @@ python -m toolkit ids --json rows.json
 A bundle above 500 MB says first that loading takes a while: large models can take minutes
 and need several times their size in memory.
 
-## 5. `web`: the web trainer
+## 5. `web`: the web trainer and the port scanner
 
-`python -m toolkit web [flags]`: serves the trainer on this computer only (`127.0.0.1`),
-prints its address and opens it in the default browser once the port answers. Ctrl+C
+`python -m toolkit web [flags]`: serves the trainer (`/dynamic_ids`) and the port scanner
+(`/scan`) on this computer only (`127.0.0.1`) unless `--host` opens them to the network,
+prints the address and opens it in the default browser once the port answers. Ctrl+C
 stops it ("Web trainer stopped.").
 
 | Flag | Default | What it does |
 |---|---|---|
 | `--port PORT` | `TOOLKIT_PORT`, else `5000` | the port (1-65535) |
 | `--no-browser` | off | doesn't open the browser (also `TOOLKIT_NO_BROWSER=1`) |
+| `--host ADDRESS` | `127.0.0.1` | also listens on this IP address of this computer (`0.0.0.0`: all of its IPv4 addresses), so other computers on your network can use the toolkit: see below. A host name is refused. No environment variable sets it: it is chosen at every start |
+
+**Opened to the network (`--host`).** Only on a network you trust, such as your virtual
+machines' host-only network: anyone who can reach the toolkit and has its access token can
+upload data, train models and run port scans **from this computer**, and the connection is
+plain HTTP, so someone who can read the network's traffic could take over a session.
+
+- At the start the terminal prints a warning, the addresses other computers open and an
+  **access token** such as `K7QX-M2PD-9RTA-W4HE`: 16 letters and digits (no 0, O, 1 or I),
+  new at every start, shown only there (never in a log). Every page shows a banner while
+  the toolkit is open to the network.
+- Another computer's browser is sent to `/unlock`, where the token is typed once (spaces,
+  dashes and case don't matter); its session stays unlocked until the toolkit stops. The
+  API answers it `LOCKED` (401) before that. Five wrong tokens from one address within a
+  minute are refused with `TOO_MANY_TRIES` (429) for the rest of the minute; each wrong
+  try is logged with its address. The token is never in an address (URL).
+- This computer's own browser, at `127.0.0.1` (which stays bound), never needs the token.
+  The address of a request is its connection's: `X-Forwarded-For` is never trusted.
+- `TOOLKIT_DEBUG=1` is refused with `--host` (exit code 2): the debug server's debugger can
+  run any code on this computer.
+- An address this computer doesn't have is a message and exit code 2. On Windows the
+  firewall may ask, the first time, whether to let Python accept connections.
 
 A port already in use is a message naming the next port to try. Its settings are
 `TOOLKIT_*` variables (section 7); the pages and API are in [`web_api.md`](web_api.md).
@@ -115,7 +165,8 @@ A port already in use is a message naming the next port to try. Its settings are
 | Code | `scan` | `ids` | `web` | the menu, `toolkit` |
 |---|---|---|---|---|
 | 0 | the scan ended (also with nothing found) | done; also Ctrl+C or "5. Exit" | stopped with Ctrl+C | left the menu; `--help` |
-| 2 | a bad flag or setting, a bad target or port list, over a limit, not authorised | a bad flag or setting, no export, a bundle refused (signature, format), an unknown model, a missing or unreadable file, an output file that exists | a bad flag or setting, a bad port, the port in use | an unknown command |
+| 1 | nmap could not scan a target (missing or failed; the other targets were still scanned) | | | |
+| 2 | a bad flag or setting, a bad target or port list, over a limit, not authorised | a bad flag or setting, no export, a bundle refused (signature, format), an unknown model, a missing or unreadable file, an output file that exists | a bad flag or setting, a bad port, the port in use, an address this computer doesn't have, `TOOLKIT_DEBUG=1` with `--host` | an unknown command |
 | 130 | cancelled (Ctrl+C, or the end of input at a question) | | | |
 
 `--help` exits with 0 everywhere. A bad flag is reported by the command's own parser with
@@ -141,6 +192,8 @@ doesn't stop a scan, and `--help` always works.
 | `TOOLKIT_INSTANCE_DIR` | all | a folder | `instance/` in the project folder (installed: section 7.3) | where exports, runs, the signing key, scans and logs are kept |
 | `TOOLKIT_SCAN_MAX_HOSTS` | `scan` | whole number | `256` | hosts in one scan (one /24 network) |
 | `TOOLKIT_SCAN_MAX_PROBES` | `scan` | whole number | `65536` | host×port checks in one scan |
+| `TOOLKIT_SCAN_MAX_MIN` | `scan` | whole number | `60` | minutes the nmap engine may spend on one host (nmap's `--host-timeout`) |
+| `TOOLKIT_NMAP_PATH` | `scan` | a full path (nmap or its folder) | `PATH`'s folders, then where nmap's installer puts it; never the current folder | the nmap the nmap engine runs |
 | `TOOLKIT_PORT` | `web` | 1-65535 | `5000` | the web trainer's port (`--port` wins) |
 | `TOOLKIT_NO_BROWSER` | `web` | on/off | off | `1`: don't open the browser |
 | `TOOLKIT_MAX_UPLOAD_MB` | `web` | whole number | `2048` | the largest dataset upload |

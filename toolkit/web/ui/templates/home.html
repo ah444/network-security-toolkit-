@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Home - Intrusion Detection System</title>
+  <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+  <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/app.css') }}">
+</head>
+<body>
+  <!-- Nav Bar -->
+  <nav class="navbar">
+    <a href="/" class="nav-logo">Intrusion Detection System</a>
+    <button type="button" id="navToggle" class="nav-link nav-toggle" aria-expanded="false" aria-controls="navMenu" hidden>Menu</button>
+    <ul class="nav-menu" id="navMenu">
+      <li class="nav-item"><a href="/dynamic_ids" class="nav-link">Dynamic Intrusion Detection System</a></li>
+      <li class="nav-item"><a href="/scan" class="nav-link">Port Scanner</a></li>
+      <li class="nav-item"><button type="button" id="themeToggle" class="nav-link theme-toggle" hidden>Theme: Auto</button></li>
+    </ul>
+  </nav>
+  <script src="{{ url_for('static', filename='js/navbar.js') }}"></script>
+  {% if network_banner %}<p class="network-banner" role="note">{{ network_banner }}</p>{% endif %}
+
+  <!-- Page Content -->
+  <div class="container container-wide">
+    <h1>Welcome to IDS System</h1>
+    
+    <div class="section">
+      <h2>Dynamic IDS Model Trainer</h2>
+      <p>Train and customize your own Intrusion Detection System models with our advanced ML training platform.</p>
+      <div class="features-grid">
+        <div class="feature-card">
+          <h3>Custom Dataset Training</h3>
+          <p>Upload and train models using your own network traffic datasets in CSV or TXT format.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Model Export</h3>
+          <p>Export a run as one signed .bundle file (its models plus how they were made).</p>
+        </div>
+        <div class="feature-card">
+          <h3>Feature Selection</h3>
+          <p>Choose specific features for training and get recommendations for optimal feature sets.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Model Loading</h3>
+          <p>Load a bundle exported by this toolkit on this computer to make predictions; any other file is refused before it is opened.</p>
+        </div>
+      </div>
+      <div class="cta-buttons">
+        <a href="/dynamic_ids" class="custom-btn">Start Training</a>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Port Scanner</h2>
+      <p>Scan your own computers and networks for open TCP and UDP ports, the software that answers on them and its known CVEs (from NVD, by version), with the toolkit's own scanner or with nmap when it is installed. Only scan systems you own or have written permission to test.</p>
+      <div class="cta-buttons">
+        <a href="/scan" class="custom-btn">Start a Scan</a>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

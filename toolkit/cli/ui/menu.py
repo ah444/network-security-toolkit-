@@ -1,0 +1,53 @@
+"""What the menu shows and asks (``toolkit.cli.controllers.main`` runs it)."""
+
+BANNER = r"""
+ _       __       __
+| |     / /___   / /_____ ____   ____ ___   ___
+| | /| / // _ \ / // ___// __ \ / __ `__ \ / _ \
+| |/ |/ //  __// // /__ / /_/ // / / / / //  __/
+|__/|__/ \___//_/ \___/ \____//_/ /_/ /_/ \___/
+
+Network Recon and Detection Tool
+Your one-stop solution for network recon and intrusion detection using Machine Learning.
+Let's secure your network with these tools."""
+
+MENU = ("1. Network Recon", "2. Intrusion Detection (CLI)", "3. Intrusion Detection (Web)",
+        "4. Exit")
+
+
+def show_banner() -> None:
+    """The banner, once when the menu starts."""
+    print(BANNER)
+
+
+def ask_choice() -> str:
+    """The menu, then the user's choice (lower case)."""
+    print()
+    print("\n".join(MENU))
+    return input("Enter your choice [1-4]: ").strip().lower()
+
+
+def not_a_choice(choice: str) -> None:
+    """Says what the menu accepts."""
+    print(f"{choice!r} is not a choice: enter 1, 2, 3 or 4 (q also exits).")
+
+
+def goodbye(after_interrupt: bool = False) -> None:
+    """The last line; on a new line after Ctrl+C or the end of input."""
+    print("\nGoodbye!" if after_interrupt else "Goodbye!")
+
+
+def stopped() -> None:
+    """A tool was stopped with Ctrl+C; the menu comes back."""
+    print("\nStopped.")
+
+
+def bad_settings(problems: list[str]) -> None:
+    """Each bad TOOLKIT_* setting, one line each."""
+    for problem in problems:
+        print(problem)
+
+
+def could_not_start(command: str, error: OSError) -> None:
+    """The tool's process could not be started, and why."""
+    print(f"Could not start {command}: {error}")

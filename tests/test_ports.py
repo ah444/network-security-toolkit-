@@ -4,11 +4,11 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from toolkit.services.ids import exports as core_exports
-from toolkit.services import ports
-from toolkit.services.ids import bundle
-from toolkit.data.ids.bundle_files import BundleError
-from toolkit.services.ids.runs import DatasetRef, TrainSettings, train
+from toolkit.core.services.ids import exports as core_exports
+from toolkit.core.services import ports
+from toolkit.core.services.ids import bundle
+from toolkit.core.data.ids.bundle_files import BundleError
+from toolkit.core.services.ids.runs import DatasetRef, TrainSettings, train
 
 # --- ModelStore ------------------------------------------------------------------------------
 

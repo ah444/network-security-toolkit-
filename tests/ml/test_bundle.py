@@ -11,12 +11,12 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from toolkit.data.ids import bundle_files
-from toolkit.services.ids import exports as core_exports
-from toolkit.services.ids import bundle
-from toolkit.data.ids.bundle_files import BundleError
-from toolkit.services.ids.bundle import BundleVersionWarning, pack, unpack
-from toolkit.services.ids.runs import DatasetRef, TrainSettings, train
+from toolkit.core.data.ids import bundle_files
+from toolkit.core.services.ids import exports as core_exports
+from toolkit.core.services.ids import bundle
+from toolkit.core.data.ids.bundle_files import BundleError
+from toolkit.core.services.ids.bundle import BundleVersionWarning, pack, unpack
+from toolkit.core.services.ids.runs import DatasetRef, TrainSettings, train
 
 KEY = bytes(range(32))
 OTHER_KEY = bytes(range(1, 33))

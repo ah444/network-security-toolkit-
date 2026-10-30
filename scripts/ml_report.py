@@ -2,7 +2,7 @@
 
 The "before" numbers are the v4 web trainer's, saved by ``scripts/baseline_v4.py`` in
 ``docs/baseline/``. This script runs the same datasets, models and scenarios through the
-v5 core (``toolkit.services.ids.runs.train``) three times each, on one core like the
+v5 core (``toolkit.core.services.ids.runs.train``) three times each, on one core like the
 baseline, and writes the results to ``docs/report/`` (one JSON file per dataset and
 scenario plus a generated README comparing them with the baseline).
 
@@ -46,8 +46,8 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from toolkit.services.ids.datasets import load_dataset  # noqa: E402
-from toolkit.services.ids.runs import (  # noqa: E402
+from toolkit.core.services.ids.datasets import load_dataset  # noqa: E402
+from toolkit.core.services.ids.runs import (  # noqa: E402
     DatasetRef,
     TrainSettings,
     package_versions,

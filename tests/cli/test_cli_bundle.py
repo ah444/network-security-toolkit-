@@ -15,15 +15,15 @@ import joblib
 import pandas as pd
 import pytest
 
-from toolkit.data.ids import bundle_files
-from toolkit.services.ids import exports as core_exports
-from toolkit.services.ids import bundle as core_bundle
-from toolkit.services.ids.datasets import load_dataset
+from toolkit.core.data.ids import bundle_files
+from toolkit.core.services.ids import exports as core_exports
+from toolkit.core.services.ids import bundle as core_bundle
+from toolkit.core.services.ids.datasets import load_dataset
 from web_jobs import train_and_wait
 
-CLI_DIRS = ("toolkit/controllers/cli", "toolkit/ui/cli")
-CLI_FILES = ("toolkit/controllers/cli/ids.py", "toolkit/ui/cli/ids.py",
-             "toolkit/services/ids/prediction.py")
+CLI_DIRS = ("toolkit/cli/controllers", "toolkit/cli/ui")
+CLI_FILES = ("toolkit/cli/controllers/ids.py", "toolkit/cli/ui/ids.py",
+             "toolkit/core/services/ids/prediction.py")
 MODELS_README = "docs/ids_cli_models.md"
 CIC = "cic_ddos_sample.csv"
 TARGET = "Label"

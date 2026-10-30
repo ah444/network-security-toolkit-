@@ -60,7 +60,7 @@ env/
 !tests/fixtures/*.csv
 
 # Local datasets (never committed; see docs/datasets.md). Only the project folder's data/:
-# toolkit/data/ is the data layer (code).
+# toolkit/core/data/, toolkit/cli/data/ and toolkit/web/data/ are data layers (code).
 /data/
 
 # Web IDS: uploaded files and exported models are runtime data

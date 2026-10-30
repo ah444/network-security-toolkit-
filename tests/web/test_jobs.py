@@ -13,10 +13,10 @@ import weakref
 import pytest
 from imblearn.pipeline import Pipeline
 
-from toolkit.data.settings import WebConfig
-from toolkit.services.web import jobs
-from toolkit.services.web import training
-from toolkit.controllers.web import training as web_training
+from toolkit.core.data.settings import WebConfig
+from toolkit.web.services import jobs
+from toolkit.web.services import training
+from toolkit.web.controllers import jobs as web_jobs
 from web_jobs import TRAIN_URL, train_and_wait, wait_for
 from web_js import js_sources
 
@@ -105,10 +105,11 @@ def test_second_session_waits_in_the_queue(web_app, client, columns, gate, fixtu
 
 def test_a_job_with_nothing_ahead_is_starting():
     """Step 1.3d: submitted, not yet picked up by the worker: "Starting", not "0 ahead"."""
-    runner = jobs.JobRunner()
-    job = jobs.Job(work=lambda job: {}, on_end=lambda: None, max_seconds=60, models=1, folds=3)
+    runner = jobs.JobRunner(jobs.TRAINING)
+    job = jobs.Job(kind=jobs.TRAINING, work=lambda job: {}, on_end=lambda: None, max_seconds=60,
+                   steps=training.training_steps(1, 3))
     runner._waiting.append(job)  # what submit() does before the worker takes it
-    view = web_training.job_view(job, runner)
+    view = web_jobs.job_view(job, runner)
     assert (view["state"], view["queue_position"], view["phase"]) == ("queued", 0, "Starting")
     train_js = js_sources()["train.js"]
     assert '"Starting..."' in train_js and "ahead of this one" not in train_js

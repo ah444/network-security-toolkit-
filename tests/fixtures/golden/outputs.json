@@ -1,0 +1,6612 @@
+{
+ "files": {
+  "cic2017_original_sample.csv": {
+   "balancing": {
+    "alternatives": [
+     "class_weight"
+    ],
+    "classes": 15,
+    "dimensionality": "medium",
+    "features": 77,
+    "imbalance_ratio": 0.5455,
+    "majority_count": 11,
+    "minority_count": 6,
+    "reason": "The classes are fairly balanced (ratio 54.55%); balancing may not be needed.",
+    "reason_code": "MILD_IMBALANCE",
+    "recommended": "none",
+    "severity": "mild",
+    "size": "small",
+    "train_rows": 95
+   },
+   "dtypes": {
+    "ACK Flag Count": "int8",
+    "Active Max": "int32",
+    "Active Mean": "float64",
+    "Active Min": "int32",
+    "Active Std": "float64",
+    "Average Packet Size": "float64",
+    "Avg Bwd Segment Size": "float64",
+    "Avg Fwd Segment Size": "float64",
+    "Bwd Avg Bulk Rate": "int8",
+    "Bwd Avg Bytes/Bulk": "int8",
+    "Bwd Avg Packets/Bulk": "int8",
+    "Bwd Header Length": "int32",
+    "Bwd IAT Max": "int32",
+    "Bwd IAT Mean": "float64",
+    "Bwd IAT Min": "int32",
+    "Bwd IAT Std": "float64",
+    "Bwd IAT Total": "int32",
+    "Bwd PSH Flags": "int8",
+    "Bwd Packet Length Max": "int16",
+    "Bwd Packet Length Mean": "float64",
+    "Bwd Packet Length Min": "int8",
+    "Bwd Packet Length Std": "float64",
+    "Bwd Packets/s": "float64",
+    "Bwd URG Flags": "int8",
+    "CWE Flag Count": "int8",
+    "Destination Port": "int32",
+    "Down/Up Ratio": "int8",
+    "ECE Flag Count": "int8",
+    "FIN Flag Count": "int8",
+    "Flow Bytes/s": "float64",
+    "Flow Duration": "int32",
+    "Flow IAT Max": "int32",
+    "Flow IAT Mean": "float64",
+    "Flow IAT Min": "int32",
+    "Flow IAT Std": "float64",
+    "Flow Packets/s": "float64",
+    "Fwd Avg Bulk Rate": "int8",
+    "Fwd Avg Bytes/Bulk": "int8",
+    "Fwd Avg Packets/Bulk": "int8",
+    "Fwd Header Length": "int32",
+    "Fwd IAT Max": "int32",
+    "Fwd IAT Mean": "float64",
+    "Fwd IAT Min": "int32",
+    "Fwd IAT Std": "float64",
+    "Fwd IAT Total": "int32",
+    "Fwd PSH Flags": "int8",
+    "Fwd Packet Length Max": "int16",
+    "Fwd Packet Length Mean": "float64",
+    "Fwd Packet Length Min": "int16",
+    "Fwd Packet Length Std": "float64",
+    "Fwd Packets/s": "float64",
+    "Fwd URG Flags": "int8",
+    "Idle Max": "int32",
+    "Idle Mean": "float32",
+    "Idle Min": "int32",
+    "Idle Std": "float64",
+    "Init_Win_bytes_backward": "int32",
+    "Init_Win_bytes_forward": "int16",
+    "Label": "category",
+    "Max Packet Length": "int16",
+    "Min Packet Length": "int16",
+    "PSH Flag Count": "int8",
+    "Packet Length Mean": "float64",
+    "Packet Length Std": "float64",
+    "Packet Length Variance": "float64",
+    "RST Flag Count": "int8",
+    "SYN Flag Count": "int8",
+    "Subflow Bwd Bytes": "int32",
+    "Subflow Bwd Packets": "int16",
+    "Subflow Fwd Bytes": "int32",
+    "Subflow Fwd Packets": "int16",
+    "Total Backward Packets": "int16",
+    "Total Fwd Packets": "int16",
+    "Total Length of Bwd Packets": "int32",
+    "Total Length of Fwd Packets": "int32",
+    "URG Flag Count": "int8",
+    "act_data_pkt_fwd": "int16",
+    "min_seg_size_forward": "int8"
+   },
+   "frame_sha256": "1f530160b280a23113a00eb7943db9f2780ac814c3327d09df4b25ea1324c973",
+   "leakage": {
+    "blocked": [],
+    "config": null,
+    "excluded_classes": [],
+    "features": [
+     "Destination Port",
+     "Flow Duration",
+     "Total Fwd Packets",
+     "Total Backward Packets",
+     "Total Length of Fwd Packets",
+     "Total Length of Bwd Packets",
+     "Fwd Packet Length Max",
+     "Fwd Packet Length Min",
+     "Fwd Packet Length Mean",
+     "Fwd Packet Length Std",
+     "Bwd Packet Length Max",
+     "Bwd Packet Length Min",
+     "Bwd Packet Length Mean",
+     "Bwd Packet Length Std",
+     "Flow Bytes/s",
+     "Flow Packets/s",
+     "Flow IAT Mean",
+     "Flow IAT Std",
+     "Flow IAT Max",
+     "Flow IAT Min",
+     "Fwd IAT Total",
+     "Fwd IAT Mean",
+     "Fwd IAT Std",
+     "Fwd IAT Max",
+     "Fwd IAT Min",
+     "Bwd IAT Total",
+     "Bwd IAT Mean",
+     "Bwd IAT Std",
+     "Bwd IAT Max",
+     "Bwd IAT Min",
+     "Fwd PSH Flags",
+     "Bwd PSH Flags",
+     "Fwd URG Flags",
+     "Bwd URG Flags",
+     "Fwd Header Length",
+     "Bwd Header Length",
+     "Fwd Packets/s",
+     "Bwd Packets/s",
+     "Min Packet Length",
+     "Max Packet Length",
+     "Packet Length Mean",
+     "Packet Length Std",
+     "Packet Length Variance",
+     "FIN Flag Count",
+     "SYN Flag Count",
+     "RST Flag Count",
+     "PSH Flag Count",
+     "ACK Flag Count",
+     "URG Flag Count",
+     "CWE Flag Count",
+     "ECE Flag Count",
+     "Down/Up Ratio",
+     "Average Packet Size",
+     "Avg Fwd Segment Size",
+     "Avg Bwd Segment Size",
+     "Fwd Avg Bytes/Bulk",
+     "Fwd Avg Packets/Bulk",
+     "Fwd Avg Bulk Rate",
+     "Bwd Avg Bytes/Bulk",
+     "Bwd Avg Packets/Bulk",
+     "Bwd Avg Bulk Rate",
+     "Subflow Fwd Packets",
+     "Subflow Fwd Bytes",
+     "Subflow Bwd Packets",
+     "Subflow Bwd Bytes",
+     "Init_Win_bytes_forward",
+     "Init_Win_bytes_backward",
+     "act_data_pkt_fwd",
+     "min_seg_size_forward",
+     "Active Mean",
+     "Active Std",
+     "Active Max",
+     "Active Min",
+     "Idle Mean",
+     "Idle Std",
+     "Idle Max",
+     "Idle Min"
+    ],
+    "findings": [],
+    "overrides": [],
+    "rows": 95,
+    "sample_rows": 95,
+    "warned": []
+   },
+   "profile": "cic_ids2017",
+   "report": {
+    "columns": 78,
+    "downcast": {
+     "ACK Flag Count": "int8",
+     "Active Max": "int32",
+     "Active Min": "int32",
+     "Bwd Avg Bulk Rate": "int8",
+     "Bwd Avg Bytes/Bulk": "int8",
+     "Bwd Avg Packets/Bulk": "int8",
+     "Bwd Header Length": "int32",
+     "Bwd IAT Max": "int32",
+     "Bwd IAT Min": "int32",
+     "Bwd IAT Total": "int32",
+     "Bwd PSH Flags": "int8",
+     "Bwd Packet Length Max": "int16",
+     "Bwd Packet Length Min": "int8",
+     "Bwd URG Flags": "int8",
+     "CWE Flag Count": "int8",
+     "Destination Port": "int32",
+     "Down/Up Ratio": "int8",
+     "ECE Flag Count": "int8",
+     "FIN Flag Count": "int8",
+     "Flow Duration": "int32",
+     "Flow IAT Max": "int32",
+     "Flow IAT Min": "int32",
+     "Fwd Avg Bulk Rate": "int8",
+     "Fwd Avg Bytes/Bulk": "int8",
+     "Fwd Avg Packets/Bulk": "int8",
+     "Fwd Header Length": "int32",
+     "Fwd IAT Max": "int32",
+     "Fwd IAT Min": "int32",
+     "Fwd IAT Total": "int32",
+     "Fwd PSH Flags": "int8",
+     "Fwd Packet Length Max": "int16",
+     "Fwd Packet Length Min": "int16",
+     "Fwd URG Flags": "int8",
+     "Idle Max": "int32",
+     "Idle Mean": "float32",
+     "Idle Min": "int32",
+     "Init_Win_bytes_backward": "int32",
+     "Init_Win_bytes_forward": "int16",
+     "Label": "category",
+     "Max Packet Length": "int16",
+     "Min Packet Length": "int16",
+     "PSH Flag Count": "int8",
+     "RST Flag Count": "int8",
+     "SYN Flag Count": "int8",
+     "Subflow Bwd Bytes": "int32",
+     "Subflow Bwd Packets": "int16",
+     "Subflow Fwd Bytes": "int32",
+     "Subflow Fwd Packets": "int16",
+     "Total Backward Packets": "int16",
+     "Total Fwd Packets": "int16",
+     "Total Length of Bwd Packets": "int32",
+     "Total Length of Fwd Packets": "int32",
+     "URG Flag Count": "int8",
+     "act_data_pkt_fwd": "int16",
+     "min_seg_size_forward": "int8"
+    },
+    "dropped_duplicate_columns": [
+     "Fwd Header Length.1"
+    ],
+    "encoding": "utf-8",
+    "has_header": true,
+    "infinite_values": 11,
+    "label_values_normalised": 24,
+    "missing_values": 3,
+    "renamed_columns": {
+     " ACK Flag Count": "ACK Flag Count",
+     " Active Max": "Active Max",
+     " Active Min": "Active Min",
+     " Active Std": "Active Std",
+     " Average Packet Size": "Average Packet Size",
+     " Avg Bwd Segment Size": "Avg Bwd Segment Size",
+     " Avg Fwd Segment Size": "Avg Fwd Segment Size",
+     " Bwd Avg Bytes/Bulk": "Bwd Avg Bytes/Bulk",
+     " Bwd Avg Packets/Bulk": "Bwd Avg Packets/Bulk",
+     " Bwd Header Length": "Bwd Header Length",
+     " Bwd IAT Max": "Bwd IAT Max",
+     " Bwd IAT Mean": "Bwd IAT Mean",
+     " Bwd IAT Min": "Bwd IAT Min",
+     " Bwd IAT Std": "Bwd IAT Std",
+     " Bwd PSH Flags": "Bwd PSH Flags",
+     " Bwd Packet Length Mean": "Bwd Packet Length Mean",
+     " Bwd Packet Length Min": "Bwd Packet Length Min",
+     " Bwd Packet Length Std": "Bwd Packet Length Std",
+     " Bwd Packets/s": "Bwd Packets/s",
+     " Bwd URG Flags": "Bwd URG Flags",
+     " CWE Flag Count": "CWE Flag Count",
+     " Destination Port": "Destination Port",
+     " Down/Up Ratio": "Down/Up Ratio",
+     " ECE Flag Count": "ECE Flag Count",
+     " Flow Duration": "Flow Duration",
+     " Flow IAT Max": "Flow IAT Max",
+     " Flow IAT Mean": "Flow IAT Mean",
+     " Flow IAT Min": "Flow IAT Min",
+     " Flow IAT Std": "Flow IAT Std",
+     " Flow Packets/s": "Flow Packets/s",
+     " Fwd Avg Bulk Rate": "Fwd Avg Bulk Rate",
+     " Fwd Avg Packets/Bulk": "Fwd Avg Packets/Bulk",
+     " Fwd Header Length": "Fwd Header Length",
+     " Fwd Header Length.1": "Fwd Header Length.1",
+     " Fwd IAT Max": "Fwd IAT Max",
+     " Fwd IAT Mean": "Fwd IAT Mean",
+     " Fwd IAT Min": "Fwd IAT Min",
+     " Fwd IAT Std": "Fwd IAT Std",
+     " Fwd Packet Length Max": "Fwd Packet Length Max",
+     " Fwd Packet Length Mean": "Fwd Packet Length Mean",
+     " Fwd Packet Length Min": "Fwd Packet Length Min",
+     " Fwd Packet Length Std": "Fwd Packet Length Std",
+     " Fwd URG Flags": "Fwd URG Flags",
+     " Idle Max": "Idle Max",
+     " Idle Min": "Idle Min",
+     " Idle Std": "Idle Std",
+     " Init_Win_bytes_backward": "Init_Win_bytes_backward",
+     " Label": "Label",
+     " Max Packet Length": "Max Packet Length",
+     " Min Packet Length": "Min Packet Length",
+     " PSH Flag Count": "PSH Flag Count",
+     " Packet Length Mean": "Packet Length Mean",
+     " Packet Length Std": "Packet Length Std",
+     " Packet Length Variance": "Packet Length Variance",
+     " RST Flag Count": "RST Flag Count",
+     " SYN Flag Count": "SYN Flag Count",
+     " Subflow Bwd Bytes": "Subflow Bwd Bytes",
+     " Subflow Bwd Packets": "Subflow Bwd Packets",
+     " Subflow Fwd Bytes": "Subflow Fwd Bytes",
+     " Total Backward Packets": "Total Backward Packets",
+     " Total Fwd Packets": "Total Fwd Packets",
+     " Total Length of Bwd Packets": "Total Length of Bwd Packets",
+     " URG Flag Count": "URG Flag Count",
+     " act_data_pkt_fwd": "act_data_pkt_fwd",
+     " min_seg_size_forward": "min_seg_size_forward"
+    },
+    "rows": 126,
+    "separator": ",",
+    "sha256": "",
+    "warnings": []
+   },
+   "split_default": {
+    "coverage": [
+     {
+      "label": "BENIGN",
+      "test": 3,
+      "train": 11
+     },
+     {
+      "label": "Bot",
+      "test": 2,
+      "train": 6
+     },
+     {
+      "label": "DDoS",
+      "test": 2,
+      "train": 6
+     },
+     {
+      "label": "DoS GoldenEye",
+      "test": 2,
+      "train": 6
+     },
+     {
+      "label": "DoS Hulk",
+      "test": 2,
+      "train": 6
+     },
+     {
+      "label": "DoS Slowhttptest",
+      "test": 2,
+      "train": 6
+     },
+     {
+      "label": "DoS slowloris",
+      "test": 2,
+      "train": 6
+     },
+     {
+      "label": "FTP-Patator",
+      "test": 1,
+      "train": 6
+     },
+     {
+      "label": "Heartbleed",
+      "test": 2,
+      "train": 6
+     },
+     {
+      "label": "Infiltration",
+      "test": 2,
+      "train": 6
+     },
+     {
+      "label": "PortScan",
+      "test": 2,
+      "train": 6
+     },
+     {
+      "label": "SSH-Patator",
+      "test": 1,
+      "train": 6
+     },
+     {
+      "label": "Web Attack - Brute Force",
+      "test": 2,
+      "train": 6
+     },
+     {
+      "label": "Web Attack - Sql Injection",
+      "test": 2,
+      "train": 6
+     },
+     {
+      "label": "Web Attack - XSS",
+      "test": 2,
+      "train": 6
+     }
+    ],
+    "dedupe": {
+     "applied": true,
+     "compared_columns": 78,
+     "conflicting_rows": 0,
+     "copies_found": 2,
+     "ignored_columns": [],
+     "removed": 2,
+     "removed_per_class": [
+      [
+       "FTP-Patator",
+       1
+      ],
+      [
+       "SSH-Patator",
+       1
+      ]
+     ],
+     "rows_after": 124,
+     "rows_before": 126,
+     "test_copies": 0,
+     "test_overlap": 0,
+     "test_removed": 0,
+     "test_rows_before": 0
+    },
+    "group_column": null,
+    "official_mode": null,
+    "overridden": false,
+    "profile_strategy": "stratified",
+    "reason_codes": [],
+    "requested": "stratified",
+    "rows_without_label": 0,
+    "seed": 42,
+    "strategy": "stratified",
+    "test": {
+     "index_sha256": "50be5d9adc951c8ae3ff5571d06b5d66236fff3c09ed13936fca6888b22706a6",
+     "rows": 29
+    },
+    "test_size": 0.2,
+    "time_check": null,
+    "time_column": null,
+    "train": {
+     "index_sha256": "3efc7e132864136ee32fec32b7cad0f7575d849495609f69bdee47c13d3b0e89",
+     "rows": 95
+    },
+    "warnings": [
+     "STRATIFIED_SCORES_MAY_BE_OPTIMISTIC"
+    ]
+   },
+   "split_stratified": {
+    "coverage": [
+     {
+      "label": "BENIGN",
+      "test": 3,
+      "train": 11
+     },
+     {
+      "label": "Bot",
+      "test": 2,
+      "train": 6
+     },
+     {
+      "label": "DDoS",
+      "test": 2,
+      "train": 6
+     },
+     {
+      "label": "DoS GoldenEye",
+      "test": 2,
+      "train": 6
+     },
+     {
+      "label": "DoS Hulk",
+      "test": 2,
+      "train": 6
+     },
+     {
+      "label": "DoS Slowhttptest",
+      "test": 2,
+      "train": 6
+     },
+     {
+      "label": "DoS slowloris",
+      "test": 2,
+      "train": 6
+     },
+     {
+      "label": "FTP-Patator",
+      "test": 1,
+      "train": 6
+     },
+     {
+      "label": "Heartbleed",
+      "test": 2,
+      "train": 6
+     },
+     {
+      "label": "Infiltration",
+      "test": 2,
+      "train": 6
+     },
+     {
+      "label": "PortScan",
+      "test": 2,
+      "train": 6
+     },
+     {
+      "label": "SSH-Patator",
+      "test": 1,
+      "train": 6
+     },
+     {
+      "label": "Web Attack - Brute Force",
+      "test": 2,
+      "train": 6
+     },
+     {
+      "label": "Web Attack - Sql Injection",
+      "test": 2,
+      "train": 6
+     },
+     {
+      "label": "Web Attack - XSS",
+      "test": 2,
+      "train": 6
+     }
+    ],
+    "dedupe": {
+     "applied": true,
+     "compared_columns": 78,
+     "conflicting_rows": 0,
+     "copies_found": 2,
+     "ignored_columns": [],
+     "removed": 2,
+     "removed_per_class": [
+      [
+       "FTP-Patator",
+       1
+      ],
+      [
+       "SSH-Patator",
+       1
+      ]
+     ],
+     "rows_after": 124,
+     "rows_before": 126,
+     "test_copies": 0,
+     "test_overlap": 0,
+     "test_removed": 0,
+     "test_rows_before": 0
+    },
+    "group_column": null,
+    "official_mode": null,
+    "overridden": false,
+    "profile_strategy": "stratified",
+    "reason_codes": [],
+    "requested": "stratified",
+    "rows_without_label": 0,
+    "seed": 42,
+    "strategy": "stratified",
+    "test": {
+     "index_sha256": "50be5d9adc951c8ae3ff5571d06b5d66236fff3c09ed13936fca6888b22706a6",
+     "rows": 29
+    },
+    "test_size": 0.2,
+    "time_check": null,
+    "time_column": null,
+    "train": {
+     "index_sha256": "3efc7e132864136ee32fec32b7cad0f7575d849495609f69bdee47c13d3b0e89",
+     "rows": 95
+    },
+    "warnings": [
+     "STRATIFIED_SCORES_MAY_BE_OPTIMISTIC"
+    ]
+   },
+   "variant": "original"
+  },
+  "cic_ddos_sample.csv": {
+   "balancing": {
+    "alternatives": [
+     "class_weight"
+    ],
+    "classes": 2,
+    "dimensionality": "low",
+    "features": 14,
+    "imbalance_ratio": 0.9875,
+    "majority_count": 80,
+    "minority_count": 79,
+    "reason": "The classes are fairly balanced (ratio 98.75%); balancing may not be needed.",
+    "reason_code": "MILD_IMBALANCE",
+    "recommended": "none",
+    "severity": "mild",
+    "size": "small",
+    "train_rows": 159
+   },
+   "dtypes": {
+    "Average Packet Size": "float64",
+    "Avg Bwd Segment Size": "float64",
+    "Bwd Packet Length Max": "int16",
+    "Bwd Packet Length Mean": "float64",
+    "Bwd Packet Length Std": "float64",
+    "Flow IAT Max": "int32",
+    "Fwd IAT Std": "float64",
+    "Idle Max": "int32",
+    "Idle Mean": "float64",
+    "Idle Min": "int32",
+    "Label": "category",
+    "Max Packet Length": "int16",
+    "Packet Length Mean": "float64",
+    "Packet Length Std": "float64",
+    "Packet Length Variance": "float64"
+   },
+   "frame_sha256": "5d07ea5222ca74990af6587b0d51af5d13346964750f62eee2d5e2fe432d38b7",
+   "leakage": {
+    "blocked": [],
+    "config": null,
+    "excluded_classes": [],
+    "features": [
+     "Bwd Packet Length Max",
+     "Bwd Packet Length Mean",
+     "Bwd Packet Length Std",
+     "Flow IAT Max",
+     "Fwd IAT Std",
+     "Max Packet Length",
+     "Packet Length Mean",
+     "Packet Length Std",
+     "Packet Length Variance",
+     "Average Packet Size",
+     "Avg Bwd Segment Size",
+     "Idle Mean",
+     "Idle Max",
+     "Idle Min"
+    ],
+    "findings": [
+     {
+      "action": "warn",
+      "column": "Average Packet Size",
+      "detail": "predicts the label alone; may be legitimate",
+      "reason": "STRONG_SINGLE_FEATURE",
+      "score": 0.9617758784425451,
+      "values_per_class": 35.0
+     }
+    ],
+    "overrides": [],
+    "rows": 159,
+    "sample_rows": 159,
+    "warned": [
+     "Average Packet Size"
+    ]
+   },
+   "profile": "cic_ids2017",
+   "report": {
+    "columns": 15,
+    "downcast": {
+     "Bwd Packet Length Max": "int16",
+     "Flow IAT Max": "int32",
+     "Idle Max": "int32",
+     "Idle Min": "int32",
+     "Label": "category",
+     "Max Packet Length": "int16"
+    },
+    "dropped_duplicate_columns": [],
+    "encoding": "utf-8",
+    "has_header": true,
+    "infinite_values": 0,
+    "label_values_normalised": 0,
+    "missing_values": 0,
+    "renamed_columns": {
+     " Average Packet Size": "Average Packet Size",
+     " Avg Bwd Segment Size": "Avg Bwd Segment Size",
+     " Bwd Packet Length Mean": "Bwd Packet Length Mean",
+     " Bwd Packet Length Std": "Bwd Packet Length Std",
+     " Flow IAT Max": "Flow IAT Max",
+     " Fwd IAT Std": "Fwd IAT Std",
+     " Idle Max": "Idle Max",
+     " Idle Min": "Idle Min",
+     " Label": "Label",
+     " Max Packet Length": "Max Packet Length",
+     " Packet Length Mean": "Packet Length Mean",
+     " Packet Length Std": "Packet Length Std",
+     " Packet Length Variance": "Packet Length Variance"
+    },
+    "rows": 200,
+    "separator": ",",
+    "sha256": "",
+    "warnings": []
+   },
+   "split_default": {
+    "coverage": [
+     {
+      "label": "BENIGN",
+      "test": 20,
+      "train": 79
+     },
+     {
+      "label": "DDoS",
+      "test": 20,
+      "train": 80
+     }
+    ],
+    "dedupe": {
+     "applied": true,
+     "compared_columns": 15,
+     "conflicting_rows": 0,
+     "copies_found": 1,
+     "ignored_columns": [],
+     "removed": 1,
+     "removed_per_class": [
+      [
+       "BENIGN",
+       1
+      ]
+     ],
+     "rows_after": 199,
+     "rows_before": 200,
+     "test_copies": 0,
+     "test_overlap": 0,
+     "test_removed": 0,
+     "test_rows_before": 0
+    },
+    "group_column": null,
+    "official_mode": null,
+    "overridden": false,
+    "profile_strategy": "stratified",
+    "reason_codes": [],
+    "requested": "stratified",
+    "rows_without_label": 0,
+    "seed": 42,
+    "strategy": "stratified",
+    "test": {
+     "index_sha256": "6fe694da5347b22f0d7bf7720cb8874d99968bde113a8c0c1f87505dc894736a",
+     "rows": 40
+    },
+    "test_size": 0.2,
+    "time_check": null,
+    "time_column": null,
+    "train": {
+     "index_sha256": "4bdb9b83e957e751cde147da51a76538eb3b3399b7099b9ddfa5896deaf54a0f",
+     "rows": 159
+    },
+    "warnings": [
+     "STRATIFIED_SCORES_MAY_BE_OPTIMISTIC"
+    ]
+   },
+   "split_stratified": {
+    "coverage": [
+     {
+      "label": "BENIGN",
+      "test": 20,
+      "train": 79
+     },
+     {
+      "label": "DDoS",
+      "test": 20,
+      "train": 80
+     }
+    ],
+    "dedupe": {
+     "applied": true,
+     "compared_columns": 15,
+     "conflicting_rows": 0,
+     "copies_found": 1,
+     "ignored_columns": [],
+     "removed": 1,
+     "removed_per_class": [
+      [
+       "BENIGN",
+       1
+      ]
+     ],
+     "rows_after": 199,
+     "rows_before": 200,
+     "test_copies": 0,
+     "test_overlap": 0,
+     "test_removed": 0,
+     "test_rows_before": 0
+    },
+    "group_column": null,
+    "official_mode": null,
+    "overridden": false,
+    "profile_strategy": "stratified",
+    "reason_codes": [],
+    "requested": "stratified",
+    "rows_without_label": 0,
+    "seed": 42,
+    "strategy": "stratified",
+    "test": {
+     "index_sha256": "6fe694da5347b22f0d7bf7720cb8874d99968bde113a8c0c1f87505dc894736a",
+     "rows": 40
+    },
+    "test_size": 0.2,
+    "time_check": null,
+    "time_column": null,
+    "train": {
+     "index_sha256": "4bdb9b83e957e751cde147da51a76538eb3b3399b7099b9ddfa5896deaf54a0f",
+     "rows": 159
+    },
+    "warnings": [
+     "STRATIFIED_SCORES_MAY_BE_OPTIMISTIC"
+    ]
+   },
+   "variant": "original_subset"
+  },
+  "label_leak.csv": {
+   "balancing": {
+    "alternatives": [
+     "class_weight"
+    ],
+    "classes": 3,
+    "dimensionality": "low",
+    "features": 7,
+    "imbalance_ratio": 1.0,
+    "majority_count": 80,
+    "minority_count": 80,
+    "reason": "The classes are fairly balanced (ratio 100.00%); balancing may not be needed.",
+    "reason_code": "MILD_IMBALANCE",
+    "recommended": "none",
+    "severity": "mild",
+    "size": "small",
+    "train_rows": 240
+   },
+   "dtypes": {
+    "Idle Mean": "float64",
+    "Label": "category",
+    "enc_col": "int8",
+    "f_noise": "float64",
+    "f_strong": "float64",
+    "pre_col": "category",
+    "row_id": "int16",
+    "xyz_col": "category"
+   },
+   "frame_sha256": "dc92a238778fa90227297584cf5560048e0f810ecce54f7f15bfe56fa345128f",
+   "leakage": {
+    "blocked": [
+     "row_id",
+     "xyz_col",
+     "enc_col",
+     "pre_col"
+    ],
+    "config": null,
+    "excluded_classes": [],
+    "features": [
+     "f_noise",
+     "f_strong",
+     "Idle Mean"
+    ],
+    "findings": [
+     {
+      "action": "block",
+      "column": "row_id",
+      "detail": "word 'id'",
+      "reason": "NAME_PATTERN",
+      "score": null,
+      "values_per_class": null
+     },
+     {
+      "action": "block",
+      "column": "row_id",
+      "detail": "strictly increasing in row order",
+      "reason": "ID_LIKE",
+      "score": null,
+      "values_per_class": null
+     },
+     {
+      "action": "warn",
+      "column": "f_strong",
+      "detail": "predicts the label alone; may be legitimate",
+      "reason": "STRONG_SINGLE_FEATURE",
+      "score": 1.0,
+      "values_per_class": 80.0
+     },
+     {
+      "action": "block",
+      "column": "xyz_col",
+      "detail": "about one value per class",
+      "reason": "LABEL_RELABELLING",
+      "score": 1.0,
+      "values_per_class": 1.0
+     },
+     {
+      "action": "block",
+      "column": "enc_col",
+      "detail": "about one value per class",
+      "reason": "LABEL_RELABELLING",
+      "score": 1.0,
+      "values_per_class": 1.0
+     },
+     {
+      "action": "block",
+      "column": "pre_col",
+      "detail": "about one value per class",
+      "reason": "LABEL_RELABELLING",
+      "score": 1.0,
+      "values_per_class": 1.0
+     }
+    ],
+    "overrides": [],
+    "rows": 240,
+    "sample_rows": 240,
+    "warned": [
+     "f_strong"
+    ]
+   },
+   "profile": "generic",
+   "report": {
+    "columns": 8,
+    "downcast": {
+     "Label": "category",
+     "enc_col": "int8",
+     "pre_col": "category",
+     "row_id": "int16",
+     "xyz_col": "category"
+    },
+    "dropped_duplicate_columns": [],
+    "encoding": "utf-8",
+    "has_header": true,
+    "infinite_values": 0,
+    "label_values_normalised": 0,
+    "missing_values": 0,
+    "renamed_columns": {},
+    "rows": 300,
+    "separator": ",",
+    "sha256": "",
+    "warnings": []
+   },
+   "split_default": {
+    "coverage": [
+     {
+      "label": "BENIGN",
+      "test": 20,
+      "train": 80
+     },
+     {
+      "label": "DDoS",
+      "test": 20,
+      "train": 80
+     },
+     {
+      "label": "PortScan",
+      "test": 20,
+      "train": 80
+     }
+    ],
+    "dedupe": {
+     "applied": true,
+     "compared_columns": 7,
+     "conflicting_rows": 0,
+     "copies_found": 0,
+     "ignored_columns": [
+      "row_id"
+     ],
+     "removed": 0,
+     "removed_per_class": [],
+     "rows_after": 300,
+     "rows_before": 300,
+     "test_copies": 0,
+     "test_overlap": 0,
+     "test_removed": 0,
+     "test_rows_before": 0
+    },
+    "group_column": null,
+    "official_mode": null,
+    "overridden": false,
+    "profile_strategy": "stratified",
+    "reason_codes": [],
+    "requested": "stratified",
+    "rows_without_label": 0,
+    "seed": 42,
+    "strategy": "stratified",
+    "test": {
+     "index_sha256": "de21ec983b175237f0064334388b10fdc3879a5d99d02268000aa2a5e83c6870",
+     "rows": 60
+    },
+    "test_size": 0.2,
+    "time_check": null,
+    "time_column": null,
+    "train": {
+     "index_sha256": "a0dec19e4c96aec181bbaaa1d0be6b27d005422c3dc7b0566ca2cb60612a3c1c",
+     "rows": 240
+    },
+    "warnings": [
+     "STRATIFIED_SCORES_MAY_BE_OPTIMISTIC"
+    ]
+   },
+   "split_stratified": {
+    "coverage": [
+     {
+      "label": "BENIGN",
+      "test": 20,
+      "train": 80
+     },
+     {
+      "label": "DDoS",
+      "test": 20,
+      "train": 80
+     },
+     {
+      "label": "PortScan",
+      "test": 20,
+      "train": 80
+     }
+    ],
+    "dedupe": {
+     "applied": true,
+     "compared_columns": 7,
+     "conflicting_rows": 0,
+     "copies_found": 0,
+     "ignored_columns": [
+      "row_id"
+     ],
+     "removed": 0,
+     "removed_per_class": [],
+     "rows_after": 300,
+     "rows_before": 300,
+     "test_copies": 0,
+     "test_overlap": 0,
+     "test_removed": 0,
+     "test_rows_before": 0
+    },
+    "group_column": null,
+    "official_mode": null,
+    "overridden": false,
+    "profile_strategy": "stratified",
+    "reason_codes": [],
+    "requested": "stratified",
+    "rows_without_label": 0,
+    "seed": 42,
+    "strategy": "stratified",
+    "test": {
+     "index_sha256": "de21ec983b175237f0064334388b10fdc3879a5d99d02268000aa2a5e83c6870",
+     "rows": 60
+    },
+    "test_size": 0.2,
+    "time_check": null,
+    "time_column": null,
+    "train": {
+     "index_sha256": "a0dec19e4c96aec181bbaaa1d0be6b27d005422c3dc7b0566ca2cb60612a3c1c",
+     "rows": 240
+    },
+    "warnings": [
+     "STRATIFIED_SCORES_MAY_BE_OPTIMISTIC"
+    ]
+   },
+   "variant": "generic"
+  },
+  "nslkdd_test_sample_noheader.txt": {
+   "balancing": {
+    "alternatives": [
+     "random_undersample"
+    ],
+    "classes": 14,
+    "dimensionality": "medium",
+    "features": 42,
+    "imbalance_ratio": 0.0345,
+    "majority_count": 29,
+    "minority_count": 1,
+    "reason": "The smallest class has only 1 rows, too few for SMOTE (needs 6 or more). Class weights are the safest option; consider removing very small classes.",
+    "reason_code": "SMALLEST_CLASS_TOO_SMALL_FOR_SMOTE",
+    "recommended": "class_weight",
+    "severity": "severe",
+    "size": "small",
+    "train_rows": 77
+   },
+   "dtypes": {
+    "attack": "category",
+    "count": "int16",
+    "diff_srv_rate": "float64",
+    "dst_bytes": "int16",
+    "dst_host_count": "int16",
+    "dst_host_diff_srv_rate": "float64",
+    "dst_host_rerror_rate": "float64",
+    "dst_host_same_src_port_rate": "float64",
+    "dst_host_same_srv_rate": "float64",
+    "dst_host_serror_rate": "float64",
+    "dst_host_srv_count": "int16",
+    "dst_host_srv_diff_host_rate": "float64",
+    "dst_host_srv_rerror_rate": "float64",
+    "dst_host_srv_serror_rate": "float64",
+    "duration": "int16",
+    "flag": "category",
+    "hot": "int8",
+    "is_guest_login": "int8",
+    "is_host_login": "int8",
+    "land": "int8",
+    "level": "int8",
+    "logged_in": "int8",
+    "num_access_files": "int8",
+    "num_compromised": "int8",
+    "num_failed_logins": "int8",
+    "num_file_creations": "int8",
+    "num_outbound_cmds": "int8",
+    "num_root": "int8",
+    "num_shells": "int8",
+    "protocol_type": "category",
+    "rerror_rate": "float64",
+    "root_shell": "int8",
+    "same_srv_rate": "float64",
+    "serror_rate": "float64",
+    "service": "category",
+    "src_bytes": "int32",
+    "srv_count": "int16",
+    "srv_diff_host_rate": "float64",
+    "srv_rerror_rate": "float64",
+    "srv_serror_rate": "float64",
+    "su_attempted": "int8",
+    "urgent": "int8",
+    "wrong_fragment": "int8"
+   },
+   "frame_sha256": "00f8919e67d62c77d9633e465e31cd8f84191fc8bf6484e48899edefe7c9b418",
+   "leakage": {
+    "blocked": [
+     "level"
+    ],
+    "config": null,
+    "excluded_classes": [
+     "apache2",
+     "back",
+     "httptunnel",
+     "pod",
+     "processtable",
+     "satan",
+     "smurf",
+     "snmpgetattack",
+     "snmpguess"
+    ],
+    "features": [
+     "duration",
+     "protocol_type",
+     "service",
+     "flag",
+     "src_bytes",
+     "dst_bytes",
+     "land",
+     "wrong_fragment",
+     "urgent",
+     "hot",
+     "num_failed_logins",
+     "logged_in",
+     "num_compromised",
+     "root_shell",
+     "su_attempted",
+     "num_root",
+     "num_file_creations",
+     "num_shells",
+     "num_access_files",
+     "num_outbound_cmds",
+     "is_host_login",
+     "is_guest_login",
+     "count",
+     "srv_count",
+     "serror_rate",
+     "srv_serror_rate",
+     "rerror_rate",
+     "srv_rerror_rate",
+     "same_srv_rate",
+     "diff_srv_rate",
+     "srv_diff_host_rate",
+     "dst_host_count",
+     "dst_host_srv_count",
+     "dst_host_same_srv_rate",
+     "dst_host_diff_srv_rate",
+     "dst_host_same_src_port_rate",
+     "dst_host_srv_diff_host_rate",
+     "dst_host_serror_rate",
+     "dst_host_srv_serror_rate",
+     "dst_host_rerror_rate",
+     "dst_host_srv_rerror_rate"
+    ],
+    "findings": [
+     {
+      "action": "block",
+      "column": "level",
+      "detail": "the dataset profile lists it",
+      "reason": "PROFILE_BLOCKED",
+      "score": null,
+      "values_per_class": null
+     },
+     {
+      "action": "block",
+      "column": "level",
+      "detail": "word 'level'",
+      "reason": "NAME_PATTERN",
+      "score": null,
+      "values_per_class": null
+     }
+    ],
+    "overrides": [],
+    "rows": 77,
+    "sample_rows": 66,
+    "warned": []
+   },
+   "profile": "nsl_kdd",
+   "report": {
+    "columns": 43,
+    "downcast": {
+     "attack": "category",
+     "count": "int16",
+     "dst_bytes": "int16",
+     "dst_host_count": "int16",
+     "dst_host_srv_count": "int16",
+     "duration": "int16",
+     "flag": "category",
+     "hot": "int8",
+     "is_guest_login": "int8",
+     "is_host_login": "int8",
+     "land": "int8",
+     "level": "int8",
+     "logged_in": "int8",
+     "num_access_files": "int8",
+     "num_compromised": "int8",
+     "num_failed_logins": "int8",
+     "num_file_creations": "int8",
+     "num_outbound_cmds": "int8",
+     "num_root": "int8",
+     "num_shells": "int8",
+     "protocol_type": "category",
+     "root_shell": "int8",
+     "service": "category",
+     "src_bytes": "int32",
+     "srv_count": "int16",
+     "su_attempted": "int8",
+     "urgent": "int8",
+     "wrong_fragment": "int8"
+    },
+    "dropped_duplicate_columns": [],
+    "encoding": "utf-8",
+    "has_header": false,
+    "infinite_values": 0,
+    "label_values_normalised": 0,
+    "missing_values": 0,
+    "renamed_columns": {},
+    "rows": 100,
+    "separator": ",",
+    "sha256": "",
+    "warnings": []
+   },
+   "split_default": {
+    "coverage": [
+     {
+      "label": "apache2",
+      "test": 1,
+      "train": 2
+     },
+     {
+      "label": "back",
+      "test": 1,
+      "train": 1
+     },
+     {
+      "label": "guess_passwd",
+      "test": 2,
+      "train": 6
+     },
+     {
+      "label": "httptunnel",
+      "test": 0,
+      "train": 1
+     },
+     {
+      "label": "mailbomb",
+      "test": 1,
+      "train": 4
+     },
+     {
+      "label": "neptune",
+      "test": 5,
+      "train": 21
+     },
+     {
+      "label": "normal",
+      "test": 7,
+      "train": 29
+     },
+     {
+      "label": "pod",
+      "test": 0,
+      "train": 1
+     },
+     {
+      "label": "processtable",
+      "test": 1,
+      "train": 1
+     },
+     {
+      "label": "satan",
+      "test": 1,
+      "train": 1
+     },
+     {
+      "label": "smurf",
+      "test": 1,
+      "train": 2
+     },
+     {
+      "label": "snmpgetattack",
+      "test": 0,
+      "train": 1
+     },
+     {
+      "label": "snmpguess",
+      "test": 1,
+      "train": 1
+     },
+     {
+      "label": "warezmaster",
+      "test": 2,
+      "train": 6
+     }
+    ],
+    "dedupe": {
+     "applied": true,
+     "compared_columns": 42,
+     "conflicting_rows": 0,
+     "copies_found": 0,
+     "ignored_columns": [
+      "level"
+     ],
+     "removed": 0,
+     "removed_per_class": [],
+     "rows_after": 100,
+     "rows_before": 100,
+     "test_copies": 0,
+     "test_overlap": 0,
+     "test_removed": 0,
+     "test_rows_before": 0
+    },
+    "group_column": null,
+    "official_mode": null,
+    "overridden": false,
+    "profile_strategy": "official",
+    "reason_codes": [
+     "OFFICIAL_TEST_FILE_MISSING"
+    ],
+    "requested": "official",
+    "rows_without_label": 0,
+    "seed": 42,
+    "strategy": "stratified",
+    "test": {
+     "index_sha256": "6dfdc4f19e1478a1dde4cf5398fcec16f6218bf310e46a20055778eb6ecf1cb2",
+     "rows": 23
+    },
+    "test_size": 0.2,
+    "time_check": null,
+    "time_column": null,
+    "train": {
+     "index_sha256": "a95b4a076e3b63b76efbed8c799464c6a10b01ac1789ea5bc0e1edd1ff031337",
+     "rows": 77
+    },
+    "warnings": [
+     "STRATIFIED_SCORES_MAY_BE_OPTIMISTIC",
+     "CLASS_MISSING_FROM_TEST"
+    ]
+   },
+   "split_stratified": {
+    "coverage": [
+     {
+      "label": "apache2",
+      "test": 1,
+      "train": 2
+     },
+     {
+      "label": "back",
+      "test": 1,
+      "train": 1
+     },
+     {
+      "label": "guess_passwd",
+      "test": 2,
+      "train": 6
+     },
+     {
+      "label": "httptunnel",
+      "test": 0,
+      "train": 1
+     },
+     {
+      "label": "mailbomb",
+      "test": 1,
+      "train": 4
+     },
+     {
+      "label": "neptune",
+      "test": 5,
+      "train": 21
+     },
+     {
+      "label": "normal",
+      "test": 7,
+      "train": 29
+     },
+     {
+      "label": "pod",
+      "test": 0,
+      "train": 1
+     },
+     {
+      "label": "processtable",
+      "test": 1,
+      "train": 1
+     },
+     {
+      "label": "satan",
+      "test": 1,
+      "train": 1
+     },
+     {
+      "label": "smurf",
+      "test": 1,
+      "train": 2
+     },
+     {
+      "label": "snmpgetattack",
+      "test": 0,
+      "train": 1
+     },
+     {
+      "label": "snmpguess",
+      "test": 1,
+      "train": 1
+     },
+     {
+      "label": "warezmaster",
+      "test": 2,
+      "train": 6
+     }
+    ],
+    "dedupe": {
+     "applied": true,
+     "compared_columns": 42,
+     "conflicting_rows": 0,
+     "copies_found": 0,
+     "ignored_columns": [
+      "level"
+     ],
+     "removed": 0,
+     "removed_per_class": [],
+     "rows_after": 100,
+     "rows_before": 100,
+     "test_copies": 0,
+     "test_overlap": 0,
+     "test_removed": 0,
+     "test_rows_before": 0
+    },
+    "group_column": null,
+    "official_mode": null,
+    "overridden": true,
+    "profile_strategy": "official",
+    "reason_codes": [],
+    "requested": "stratified",
+    "rows_without_label": 0,
+    "seed": 42,
+    "strategy": "stratified",
+    "test": {
+     "index_sha256": "6dfdc4f19e1478a1dde4cf5398fcec16f6218bf310e46a20055778eb6ecf1cb2",
+     "rows": 23
+    },
+    "test_size": 0.2,
+    "time_check": null,
+    "time_column": null,
+    "train": {
+     "index_sha256": "a95b4a076e3b63b76efbed8c799464c6a10b01ac1789ea5bc0e1edd1ff031337",
+     "rows": 77
+    },
+    "warnings": [
+     "STRATIFIED_SCORES_MAY_BE_OPTIMISTIC",
+     "CLASS_MISSING_FROM_TEST"
+    ]
+   },
+   "variant": "full"
+  },
+  "nslkdd_train_sample.txt": {
+   "balancing": {
+    "alternatives": [
+     "smote"
+    ],
+    "classes": 23,
+    "dimensionality": "medium",
+    "features": 42,
+    "imbalance_ratio": 0.125,
+    "majority_count": 8,
+    "minority_count": 1,
+    "reason": "Multi-class (23 classes) with moderate imbalance: class weights are fast and add no synthetic rows.",
+    "reason_code": "MULTICLASS",
+    "recommended": "class_weight",
+    "severity": "moderate",
+    "size": "small",
+    "train_rows": 161
+   },
+   "dtypes": {
+    "attack": "category",
+    "count": "int16",
+    "diff_srv_rate": "float64",
+    "dst_bytes": "int32",
+    "dst_host_count": "int16",
+    "dst_host_diff_srv_rate": "float64",
+    "dst_host_rerror_rate": "float64",
+    "dst_host_same_src_port_rate": "float64",
+    "dst_host_same_srv_rate": "float64",
+    "dst_host_serror_rate": "float64",
+    "dst_host_srv_count": "int16",
+    "dst_host_srv_diff_host_rate": "float64",
+    "dst_host_srv_rerror_rate": "float64",
+    "dst_host_srv_serror_rate": "float64",
+    "duration": "int32",
+    "flag": "category",
+    "hot": "int8",
+    "is_guest_login": "int8",
+    "is_host_login": "int8",
+    "land": "int8",
+    "level": "int8",
+    "logged_in": "int8",
+    "num_access_files": "int8",
+    "num_compromised": "int8",
+    "num_failed_logins": "int8",
+    "num_file_creations": "int8",
+    "num_outbound_cmds": "int8",
+    "num_root": "int8",
+    "num_shells": "int8",
+    "protocol_type": "category",
+    "rerror_rate": "float64",
+    "root_shell": "int8",
+    "same_srv_rate": "float64",
+    "serror_rate": "float64",
+    "service": "category",
+    "src_bytes": "int32",
+    "srv_count": "int16",
+    "srv_diff_host_rate": "float64",
+    "srv_rerror_rate": "float64",
+    "srv_serror_rate": "float64",
+    "su_attempted": "int8",
+    "urgent": "int8",
+    "wrong_fragment": "int8"
+   },
+   "frame_sha256": "d7fd7c412bb0688a4acb23b01e25377e2ec9279af88dea2561fb7db3c5b00226",
+   "leakage": {
+    "blocked": [
+     "level"
+    ],
+    "config": null,
+    "excluded_classes": [
+     "perl",
+     "spy"
+    ],
+    "features": [
+     "duration",
+     "protocol_type",
+     "service",
+     "flag",
+     "src_bytes",
+     "dst_bytes",
+     "land",
+     "wrong_fragment",
+     "urgent",
+     "hot",
+     "num_failed_logins",
+     "logged_in",
+     "num_compromised",
+     "root_shell",
+     "su_attempted",
+     "num_root",
+     "num_file_creations",
+     "num_shells",
+     "num_access_files",
+     "num_outbound_cmds",
+     "is_host_login",
+     "is_guest_login",
+     "count",
+     "srv_count",
+     "serror_rate",
+     "srv_serror_rate",
+     "rerror_rate",
+     "srv_rerror_rate",
+     "same_srv_rate",
+     "diff_srv_rate",
+     "srv_diff_host_rate",
+     "dst_host_count",
+     "dst_host_srv_count",
+     "dst_host_same_srv_rate",
+     "dst_host_diff_srv_rate",
+     "dst_host_same_src_port_rate",
+     "dst_host_srv_diff_host_rate",
+     "dst_host_serror_rate",
+     "dst_host_srv_serror_rate",
+     "dst_host_rerror_rate",
+     "dst_host_srv_rerror_rate"
+    ],
+    "findings": [
+     {
+      "action": "block",
+      "column": "level",
+      "detail": "the dataset profile lists it",
+      "reason": "PROFILE_BLOCKED",
+      "score": null,
+      "values_per_class": null
+     },
+     {
+      "action": "block",
+      "column": "level",
+      "detail": "word 'level'",
+      "reason": "NAME_PATTERN",
+      "score": null,
+      "values_per_class": null
+     }
+    ],
+    "overrides": [],
+    "rows": 161,
+    "sample_rows": 158,
+    "warned": []
+   },
+   "profile": "nsl_kdd",
+   "report": {
+    "columns": 43,
+    "downcast": {
+     "attack": "category",
+     "count": "int16",
+     "dst_bytes": "int32",
+     "dst_host_count": "int16",
+     "dst_host_srv_count": "int16",
+     "duration": "int32",
+     "flag": "category",
+     "hot": "int8",
+     "is_guest_login": "int8",
+     "is_host_login": "int8",
+     "land": "int8",
+     "level": "int8",
+     "logged_in": "int8",
+     "num_access_files": "int8",
+     "num_compromised": "int8",
+     "num_failed_logins": "int8",
+     "num_file_creations": "int8",
+     "num_outbound_cmds": "int8",
+     "num_root": "int8",
+     "num_shells": "int8",
+     "protocol_type": "category",
+     "root_shell": "int8",
+     "service": "category",
+     "src_bytes": "int32",
+     "srv_count": "int16",
+     "su_attempted": "int8",
+     "urgent": "int8",
+     "wrong_fragment": "int8"
+    },
+    "dropped_duplicate_columns": [],
+    "encoding": "utf-8",
+    "has_header": true,
+    "infinite_values": 0,
+    "label_values_normalised": 0,
+    "missing_values": 0,
+    "renamed_columns": {
+     " dst_host_count": "dst_host_count",
+     " dst_host_srv_count": "dst_host_srv_count"
+    },
+    "rows": 203,
+    "separator": ",",
+    "sha256": "",
+    "warnings": []
+   },
+   "split_default": {
+    "coverage": [
+     {
+      "label": "back",
+      "test": 2,
+      "train": 8
+     },
+     {
+      "label": "buffer_overflow",
+      "test": 2,
+      "train": 8
+     },
+     {
+      "label": "ftp_write",
+      "test": 2,
+      "train": 6
+     },
+     {
+      "label": "guess_passwd",
+      "test": 2,
+      "train": 8
+     },
+     {
+      "label": "imap",
+      "test": 2,
+      "train": 8
+     },
+     {
+      "label": "ipsweep",
+      "test": 2,
+      "train": 8
+     },
+     {
+      "label": "land",
+      "test": 2,
+      "train": 8
+     },
+     {
+      "label": "loadmodule",
+      "test": 2,
+      "train": 7
+     },
+     {
+      "label": "multihop",
+      "test": 1,
+      "train": 6
+     },
+     {
+      "label": "neptune",
+      "test": 2,
+      "train": 8
+     },
+     {
+      "label": "nmap",
+      "test": 2,
+      "train": 8
+     },
+     {
+      "label": "normal",
+      "test": 2,
+      "train": 8
+     },
+     {
+      "label": "perl",
+      "test": 1,
+      "train": 2
+     },
+     {
+      "label": "phf",
+      "test": 1,
+      "train": 3
+     },
+     {
+      "label": "pod",
+      "test": 2,
+      "train": 8
+     },
+     {
+      "label": "portsweep",
+      "test": 2,
+      "train": 8
+     },
+     {
+      "label": "rootkit",
+      "test": 2,
+      "train": 8
+     },
+     {
+      "label": "satan",
+      "test": 2,
+      "train": 8
+     },
+     {
+      "label": "smurf",
+      "test": 2,
+      "train": 8
+     },
+     {
+      "label": "spy",
+      "test": 1,
+      "train": 1
+     },
+     {
+      "label": "teardrop",
+      "test": 2,
+      "train": 8
+     },
+     {
+      "label": "warezclient",
+      "test": 2,
+      "train": 8
+     },
+     {
+      "label": "warezmaster",
+      "test": 2,
+      "train": 8
+     }
+    ],
+    "dedupe": {
+     "applied": true,
+     "compared_columns": 42,
+     "conflicting_rows": 0,
+     "copies_found": 0,
+     "ignored_columns": [
+      "level"
+     ],
+     "removed": 0,
+     "removed_per_class": [],
+     "rows_after": 203,
+     "rows_before": 203,
+     "test_copies": 0,
+     "test_overlap": 0,
+     "test_removed": 0,
+     "test_rows_before": 0
+    },
+    "group_column": null,
+    "official_mode": null,
+    "overridden": false,
+    "profile_strategy": "official",
+    "reason_codes": [
+     "OFFICIAL_TEST_FILE_MISSING"
+    ],
+    "requested": "official",
+    "rows_without_label": 0,
+    "seed": 42,
+    "strategy": "stratified",
+    "test": {
+     "index_sha256": "c0feae171047dad1be34f670cb3622e8051825bfc239fe5566139e552ba8a893",
+     "rows": 42
+    },
+    "test_size": 0.2,
+    "time_check": null,
+    "time_column": null,
+    "train": {
+     "index_sha256": "ef88e8a185f78acaf0f90941c94fae1e2a095a5c9451b4cf3053504f36aeed8d",
+     "rows": 161
+    },
+    "warnings": [
+     "STRATIFIED_SCORES_MAY_BE_OPTIMISTIC"
+    ]
+   },
+   "split_stratified": {
+    "coverage": [
+     {
+      "label": "back",
+      "test": 2,
+      "train": 8
+     },
+     {
+      "label": "buffer_overflow",
+      "test": 2,
+      "train": 8
+     },
+     {
+      "label": "ftp_write",
+      "test": 2,
+      "train": 6
+     },
+     {
+      "label": "guess_passwd",
+      "test": 2,
+      "train": 8
+     },
+     {
+      "label": "imap",
+      "test": 2,
+      "train": 8
+     },
+     {
+      "label": "ipsweep",
+      "test": 2,
+      "train": 8
+     },
+     {
+      "label": "land",
+      "test": 2,
+      "train": 8
+     },
+     {
+      "label": "loadmodule",
+      "test": 2,
+      "train": 7
+     },
+     {
+      "label": "multihop",
+      "test": 1,
+      "train": 6
+     },
+     {
+      "label": "neptune",
+      "test": 2,
+      "train": 8
+     },
+     {
+      "label": "nmap",
+      "test": 2,
+      "train": 8
+     },
+     {
+      "label": "normal",
+      "test": 2,
+      "train": 8
+     },
+     {
+      "label": "perl",
+      "test": 1,
+      "train": 2
+     },
+     {
+      "label": "phf",
+      "test": 1,
+      "train": 3
+     },
+     {
+      "label": "pod",
+      "test": 2,
+      "train": 8
+     },
+     {
+      "label": "portsweep",
+      "test": 2,
+      "train": 8
+     },
+     {
+      "label": "rootkit",
+      "test": 2,
+      "train": 8
+     },
+     {
+      "label": "satan",
+      "test": 2,
+      "train": 8
+     },
+     {
+      "label": "smurf",
+      "test": 2,
+      "train": 8
+     },
+     {
+      "label": "spy",
+      "test": 1,
+      "train": 1
+     },
+     {
+      "label": "teardrop",
+      "test": 2,
+      "train": 8
+     },
+     {
+      "label": "warezclient",
+      "test": 2,
+      "train": 8
+     },
+     {
+      "label": "warezmaster",
+      "test": 2,
+      "train": 8
+     }
+    ],
+    "dedupe": {
+     "applied": true,
+     "compared_columns": 42,
+     "conflicting_rows": 0,
+     "copies_found": 0,
+     "ignored_columns": [
+      "level"
+     ],
+     "removed": 0,
+     "removed_per_class": [],
+     "rows_after": 203,
+     "rows_before": 203,
+     "test_copies": 0,
+     "test_overlap": 0,
+     "test_removed": 0,
+     "test_rows_before": 0
+    },
+    "group_column": null,
+    "official_mode": null,
+    "overridden": true,
+    "profile_strategy": "official",
+    "reason_codes": [],
+    "requested": "stratified",
+    "rows_without_label": 0,
+    "seed": 42,
+    "strategy": "stratified",
+    "test": {
+     "index_sha256": "c0feae171047dad1be34f670cb3622e8051825bfc239fe5566139e552ba8a893",
+     "rows": 42
+    },
+    "test_size": 0.2,
+    "time_check": null,
+    "time_column": null,
+    "train": {
+     "index_sha256": "ef88e8a185f78acaf0f90941c94fae1e2a095a5c9451b4cf3053504f36aeed8d",
+     "rows": 161
+    },
+    "warnings": [
+     "STRATIFIED_SCORES_MAY_BE_OPTIMISTIC"
+    ]
+   },
+   "variant": "full"
+  }
+ },
+ "official": {
+  "coverage": [
+   {
+    "label": "apache2",
+    "test": 3,
+    "train": 0
+   },
+   {
+    "label": "back",
+    "test": 2,
+    "train": 10
+   },
+   {
+    "label": "buffer_overflow",
+    "test": 0,
+    "train": 10
+   },
+   {
+    "label": "ftp_write",
+    "test": 0,
+    "train": 8
+   },
+   {
+    "label": "guess_passwd",
+    "test": 8,
+    "train": 10
+   },
+   {
+    "label": "httptunnel",
+    "test": 1,
+    "train": 0
+   },
+   {
+    "label": "imap",
+    "test": 0,
+    "train": 10
+   },
+   {
+    "label": "ipsweep",
+    "test": 0,
+    "train": 10
+   },
+   {
+    "label": "land",
+    "test": 0,
+    "train": 10
+   },
+   {
+    "label": "loadmodule",
+    "test": 0,
+    "train": 9
+   },
+   {
+    "label": "mailbomb",
+    "test": 5,
+    "train": 0
+   },
+   {
+    "label": "multihop",
+    "test": 0,
+    "train": 7
+   },
+   {
+    "label": "neptune",
+    "test": 26,
+    "train": 10
+   },
+   {
+    "label": "nmap",
+    "test": 0,
+    "train": 10
+   },
+   {
+    "label": "normal",
+    "test": 36,
+    "train": 10
+   },
+   {
+    "label": "perl",
+    "test": 0,
+    "train": 3
+   },
+   {
+    "label": "phf",
+    "test": 0,
+    "train": 4
+   },
+   {
+    "label": "pod",
+    "test": 1,
+    "train": 10
+   },
+   {
+    "label": "portsweep",
+    "test": 0,
+    "train": 10
+   },
+   {
+    "label": "processtable",
+    "test": 2,
+    "train": 0
+   },
+   {
+    "label": "rootkit",
+    "test": 0,
+    "train": 10
+   },
+   {
+    "label": "satan",
+    "test": 2,
+    "train": 10
+   },
+   {
+    "label": "smurf",
+    "test": 3,
+    "train": 10
+   },
+   {
+    "label": "snmpgetattack",
+    "test": 1,
+    "train": 0
+   },
+   {
+    "label": "snmpguess",
+    "test": 2,
+    "train": 0
+   },
+   {
+    "label": "spy",
+    "test": 0,
+    "train": 2
+   },
+   {
+    "label": "teardrop",
+    "test": 0,
+    "train": 10
+   },
+   {
+    "label": "warezclient",
+    "test": 0,
+    "train": 10
+   },
+   {
+    "label": "warezmaster",
+    "test": 8,
+    "train": 10
+   }
+  ],
+  "dedupe": {
+   "applied": false,
+   "compared_columns": 42,
+   "conflicting_rows": 0,
+   "copies_found": 0,
+   "ignored_columns": [
+    "level"
+   ],
+   "removed": 0,
+   "removed_per_class": [],
+   "rows_after": 203,
+   "rows_before": 203,
+   "test_copies": 0,
+   "test_overlap": 0,
+   "test_removed": 0,
+   "test_rows_before": 100
+  },
+  "group_column": null,
+  "official_mode": "as_published",
+  "overridden": false,
+  "profile_strategy": "official",
+  "reason_codes": [],
+  "requested": "official",
+  "rows_without_label": 0,
+  "seed": 42,
+  "strategy": "official",
+  "test": {
+   "index_sha256": "96bdba67cd0b5e6dc0f9e399f66b17eae627eac812d0620119e87687d789546a",
+   "rows": 100
+  },
+  "test_size": 0.2,
+  "time_check": null,
+  "time_column": null,
+  "train": {
+   "index_sha256": "35a7e21ca5a4cf74cb09f2e18289284b7b452d7087a1faba788a3907f6afabff",
+   "rows": 203
+  },
+  "warnings": [
+   "CLASS_MISSING_FROM_TEST",
+   "CLASS_MISSING_FROM_TRAIN"
+  ]
+ },
+ "rule_table": [
+  [
+   "mild",
+   "small",
+   "low",
+   2,
+   5,
+   [
+    "none",
+    "MILD_IMBALANCE",
+    "The classes are fairly balanced (ratio 60.00%); balancing may not be needed.",
+    [
+     "class_weight"
+    ]
+   ]
+  ],
+  [
+   "mild",
+   "small",
+   "low",
+   2,
+   50,
+   [
+    "none",
+    "MILD_IMBALANCE",
+    "The classes are fairly balanced (ratio 60.00%); balancing may not be needed.",
+    [
+     "class_weight"
+    ]
+   ]
+  ],
+  [
+   "mild",
+   "small",
+   "low",
+   3,
+   5,
+   [
+    "none",
+    "MILD_IMBALANCE",
+    "The classes are fairly balanced (ratio 60.00%); balancing may not be needed.",
+    [
+     "class_weight"
+    ]
+   ]
+  ],
+  [
+   "mild",
+   "small",
+   "low",
+   3,
+   50,
+   [
+    "none",
+    "MILD_IMBALANCE",
+    "The classes are fairly balanced (ratio 60.00%); balancing may not be needed.",
+    [
+     "class_weight"
+    ]
+   ]
+  ],
+  [
+   "mild",
+   "small",
+   "low",
+   11,
+   5,
+   [
+    "none",
+    "MILD_IMBALANCE",
+    "The classes are fairly balanced (ratio 60.00%); balancing may not be needed.",
+    [
+     "class_weight"
+    ]
+   ]
+  ],
+  [
+   "mild",
+   "small",
+   "low",
+   11,
+   50,
+   [
+    "none",
+    "MILD_IMBALANCE",
+    "The classes are fairly balanced (ratio 60.00%); balancing may not be needed.",
+    [
+     "class_weight"
+    ]
+   ]
+  ],
+  [
+   "mild",
+   "small",
+   "medium",
+   2,
+   5,
+   [
+    "none",
+    "MILD_IMBALANCE",
+    "The classes are fairly balanced (ratio 60.00%); balancing may not be needed.",
+    [
+     "class_weight"
+    ]
+   ]
+  ],
+  [
+   "mild",
+   "small",
+   "medium",
+   2,
+   50,
+   [
+    "none",
+    "MILD_IMBALANCE",
+    "The classes are fairly balanced (ratio 60.00%); balancing may not be needed.",
+    [
+     "class_weight"
+    ]
+   ]
+  ],
+  [
+   "mild",
+   "small",
+   "medium",
+   3,
+   5,
+   [
+    "none",
+    "MILD_IMBALANCE",
+    "The classes are fairly balanced (ratio 60.00%); balancing may not be needed.",
+    [
+     "class_weight"
+    ]
+   ]
+  ],
+  [
+   "mild",
+   "small",
+   "medium",
+   3,
+   50,
+   [
+    "none",
+    "MILD_IMBALANCE",
+    "The classes are fairly balanced (ratio 60.00%); balancing may not be needed.",
+    [
+     "class_weight"
+    ]
+   ]
+  ],
+  [
+   "mild",
+   "small",
+   "medium",
+   11,
+   5,
+   [
+    "none",
+    "MILD_IMBALANCE",
+    "The classes are fairly balanced (ratio 60.00%); balancing may not be needed.",
+    [
+     "class_weight"
+    ]
+   ]
+  ],
+  [
+   "mild",
+   "small",
+   "medium",
+   11,
+   50,
+   [
+    "none",
+    "MILD_IMBALANCE",
+    "The classes are fairly balanced (ratio 60.00%); balancing may not be needed.",
+    [
+     "class_weight"
+    ]
+   ]
+  ],
+  [
+   "mild",
+   "small",
+   "high",
+   2,
+   5,
+   [
+    "none",
+    "MILD_IMBALANCE",
+    "The classes are fairly balanced (ratio 60.00%); balancing may not be needed.",
+    [
+     "class_weight"
+    ]
+   ]
+  ],
+  [
+   "mild",
+   "small",
+   "high",
+   2,
+   50,
+   [
+    "none",
+    "MILD_IMBALANCE",
+    "The classes are fairly balanced (ratio 60.00%); balancing may not be needed.",
+    [
+     "class_weight"
+    ]
+   ]
+  ],
+  [
+   "mild",
+   "small",
+   "high",
+   3,
+   5,
+   [
+    "none",
+    "MILD_IMBALANCE",
+    "The classes are fairly balanced (ratio 60.00%); balancing may not be needed.",
+    [
+     "class_weight"
+    ]
+   ]
+  ],
+  [
+   "mild",
+   "small",
+   "high",
+   3,
+   50,
+   [
+    "none",
+    "MILD_IMBALANCE",
+    "The classes are fairly balanced (ratio 60.00%); balancing may not be needed.",
+    [
+     "class_weight"
+    ]
+   ]
+  ],
+  [
+   "mild",
+   "small",
+   "high",
+   11,
+   5,
+   [
+    "none",
+    "MILD_IMBALANCE",
+    "The classes are fairly balanced (ratio 60.00%); balancing may not be needed.",
+    [
+     "class_weight"
+    ]
+   ]
+  ],
+  [
+   "mild",
+   "small",
+   "high",
+   11,
+   50,
+   [
+    "none",
+    "MILD_IMBALANCE",
+    "The classes are fairly balanced (ratio 60.00%); balancing may not be needed.",
+    [
+     "class_weight"
+    ]
+   ]
+  ],
+  [
+   "mild",
+   "medium",
+   "low",
+   2,
+   5,
+   [
+    "none",
+    "MILD_IMBALANCE",
+    "The classes are fairly balanced (ratio 60.00%); balancing may not be needed.",
+    [
+     "class_weight"
+    ]
+   ]
+  ],
+  [
+   "mild",
+   "medium",
+   "low",
+   2,
+   50,
+   [
+    "none",
+    "MILD_IMBALANCE",
+    "The classes are fairly balanced (ratio 60.00%); balancing may not be needed.",
+    [
+     "class_weight"
+    ]
+   ]
+  ],
+  [
+   "mild",
+   "medium",
+   "low",
+   3,
+   5,
+   [
+    "none",
+    "MILD_IMBALANCE",
+    "The classes are fairly balanced (ratio 60.00%); balancing may not be needed.",
+    [
+     "class_weight"
+    ]
+   ]
+  ],
+  [
+   "mild",
+   "medium",
+   "low",
+   3,
+   50,
+   [
+    "none",
+    "MILD_IMBALANCE",
+    "The classes are fairly balanced (ratio 60.00%); balancing may not be needed.",
+    [
+     "class_weight"
+    ]
+   ]
+  ],
+  [
+   "mild",
+   "medium",
+   "low",
+   11,
+   5,
+   [
+    "none",
+    "MILD_IMBALANCE",
+    "The classes are fairly balanced (ratio 60.00%); balancing may not be needed.",
+    [
+     "class_weight"
+    ]
+   ]
+  ],
+  [
+   "mild",
+   "medium",
+   "low",
+   11,
+   50,
+   [
+    "none",
+    "MILD_IMBALANCE",
+    "The classes are fairly balanced (ratio 60.00%); balancing may not be needed.",
+    [
+     "class_weight"
+    ]
+   ]
+  ],
+  [
+   "mild",
+   "medium",
+   "medium",
+   2,
+   5,
+   [
+    "none",
+    "MILD_IMBALANCE",
+    "The classes are fairly balanced (ratio 60.00%); balancing may not be needed.",
+    [
+     "class_weight"
+    ]
+   ]
+  ],
+  [
+   "mild",
+   "medium",
+   "medium",
+   2,
+   50,
+   [
+    "none",
+    "MILD_IMBALANCE",
+    "The classes are fairly balanced (ratio 60.00%); balancing may not be needed.",
+    [
+     "class_weight"
+    ]
+   ]
+  ],
+  [
+   "mild",
+   "medium",
+   "medium",
+   3,
+   5,
+   [
+    "none",
+    "MILD_IMBALANCE",
+    "The classes are fairly balanced (ratio 60.00%); balancing may not be needed.",
+    [
+     "class_weight"
+    ]
+   ]
+  ],
+  [
+   "mild",
+   "medium",
+   "medium",
+   3,
+   50,
+   [
+    "none",
+    "MILD_IMBALANCE",
+    "The classes are fairly balanced (ratio 60.00%); balancing may not be needed.",
+    [
+     "class_weight"
+    ]
+   ]
+  ],
+  [
+   "mild",
+   "medium",
+   "medium",
+   11,
+   5,
+   [
+    "none",
+    "MILD_IMBALANCE",
+    "The classes are fairly balanced (ratio 60.00%); balancing may not be needed.",
+    [
+     "class_weight"
+    ]
+   ]
+  ],
+  [
+   "mild",
+   "medium",
+   "medium",
+   11,
+   50,
+   [
+    "none",
+    "MILD_IMBALANCE",
+    "The classes are fairly balanced (ratio 60.00%); balancing may not be needed.",
+    [
+     "class_weight"
+    ]
+   ]
+  ],
+  [
+   "mild",
+   "medium",
+   "high",
+   2,
+   5,
+   [
+    "none",
+    "MILD_IMBALANCE",
+    "The classes are fairly balanced (ratio 60.00%); balancing may not be needed.",
+    [
+     "class_weight"
+    ]
+   ]
+  ],
+  [
+   "mild",
+   "medium",
+   "high",
+   2,
+   50,
+   [
+    "none",
+    "MILD_IMBALANCE",
+    "The classes are fairly balanced (ratio 60.00%); balancing may not be needed.",
+    [
+     "class_weight"
+    ]
+   ]
+  ],
+  [
+   "mild",
+   "medium",
+   "high",
+   3,
+   5,
+   [
+    "none",
+    "MILD_IMBALANCE",
+    "The classes are fairly balanced (ratio 60.00%); balancing may not be needed.",
+    [
+     "class_weight"
+    ]
+   ]
+  ],
+  [
+   "mild",
+   "medium",
+   "high",
+   3,
+   50,
+   [
+    "none",
+    "MILD_IMBALANCE",
+    "The classes are fairly balanced (ratio 60.00%); balancing may not be needed.",
+    [
+     "class_weight"
+    ]
+   ]
+  ],
+  [
+   "mild",
+   "medium",
+   "high",
+   11,
+   5,
+   [
+    "none",
+    "MILD_IMBALANCE",
+    "The classes are fairly balanced (ratio 60.00%); balancing may not be needed.",
+    [
+     "class_weight"
+    ]
+   ]
+  ],
+  [
+   "mild",
+   "medium",
+   "high",
+   11,
+   50,
+   [
+    "none",
+    "MILD_IMBALANCE",
+    "The classes are fairly balanced (ratio 60.00%); balancing may not be needed.",
+    [
+     "class_weight"
+    ]
+   ]
+  ],
+  [
+   "mild",
+   "large",
+   "low",
+   2,
+   5,
+   [
+    "none",
+    "MILD_IMBALANCE",
+    "The classes are fairly balanced (ratio 60.00%); balancing may not be needed.",
+    [
+     "class_weight"
+    ]
+   ]
+  ],
+  [
+   "mild",
+   "large",
+   "low",
+   2,
+   50,
+   [
+    "none",
+    "MILD_IMBALANCE",
+    "The classes are fairly balanced (ratio 60.00%); balancing may not be needed.",
+    [
+     "class_weight"
+    ]
+   ]
+  ],
+  [
+   "mild",
+   "large",
+   "low",
+   3,
+   5,
+   [
+    "none",
+    "MILD_IMBALANCE",
+    "The classes are fairly balanced (ratio 60.00%); balancing may not be needed.",
+    [
+     "class_weight"
+    ]
+   ]
+  ],
+  [
+   "mild",
+   "large",
+   "low",
+   3,
+   50,
+   [
+    "none",
+    "MILD_IMBALANCE",
+    "The classes are fairly balanced (ratio 60.00%); balancing may not be needed.",
+    [
+     "class_weight"
+    ]
+   ]
+  ],
+  [
+   "mild",
+   "large",
+   "low",
+   11,
+   5,
+   [
+    "none",
+    "MILD_IMBALANCE",
+    "The classes are fairly balanced (ratio 60.00%); balancing may not be needed.",
+    [
+     "class_weight"
+    ]
+   ]
+  ],
+  [
+   "mild",
+   "large",
+   "low",
+   11,
+   50,
+   [
+    "none",
+    "MILD_IMBALANCE",
+    "The classes are fairly balanced (ratio 60.00%); balancing may not be needed.",
+    [
+     "class_weight"
+    ]
+   ]
+  ],
+  [
+   "mild",
+   "large",
+   "medium",
+   2,
+   5,
+   [
+    "none",
+    "MILD_IMBALANCE",
+    "The classes are fairly balanced (ratio 60.00%); balancing may not be needed.",
+    [
+     "class_weight"
+    ]
+   ]
+  ],
+  [
+   "mild",
+   "large",
+   "medium",
+   2,
+   50,
+   [
+    "none",
+    "MILD_IMBALANCE",
+    "The classes are fairly balanced (ratio 60.00%); balancing may not be needed.",
+    [
+     "class_weight"
+    ]
+   ]
+  ],
+  [
+   "mild",
+   "large",
+   "medium",
+   3,
+   5,
+   [
+    "none",
+    "MILD_IMBALANCE",
+    "The classes are fairly balanced (ratio 60.00%); balancing may not be needed.",
+    [
+     "class_weight"
+    ]
+   ]
+  ],
+  [
+   "mild",
+   "large",
+   "medium",
+   3,
+   50,
+   [
+    "none",
+    "MILD_IMBALANCE",
+    "The classes are fairly balanced (ratio 60.00%); balancing may not be needed.",
+    [
+     "class_weight"
+    ]
+   ]
+  ],
+  [
+   "mild",
+   "large",
+   "medium",
+   11,
+   5,
+   [
+    "none",
+    "MILD_IMBALANCE",
+    "The classes are fairly balanced (ratio 60.00%); balancing may not be needed.",
+    [
+     "class_weight"
+    ]
+   ]
+  ],
+  [
+   "mild",
+   "large",
+   "medium",
+   11,
+   50,
+   [
+    "none",
+    "MILD_IMBALANCE",
+    "The classes are fairly balanced (ratio 60.00%); balancing may not be needed.",
+    [
+     "class_weight"
+    ]
+   ]
+  ],
+  [
+   "mild",
+   "large",
+   "high",
+   2,
+   5,
+   [
+    "none",
+    "MILD_IMBALANCE",
+    "The classes are fairly balanced (ratio 60.00%); balancing may not be needed.",
+    [
+     "class_weight"
+    ]
+   ]
+  ],
+  [
+   "mild",
+   "large",
+   "high",
+   2,
+   50,
+   [
+    "none",
+    "MILD_IMBALANCE",
+    "The classes are fairly balanced (ratio 60.00%); balancing may not be needed.",
+    [
+     "class_weight"
+    ]
+   ]
+  ],
+  [
+   "mild",
+   "large",
+   "high",
+   3,
+   5,
+   [
+    "none",
+    "MILD_IMBALANCE",
+    "The classes are fairly balanced (ratio 60.00%); balancing may not be needed.",
+    [
+     "class_weight"
+    ]
+   ]
+  ],
+  [
+   "mild",
+   "large",
+   "high",
+   3,
+   50,
+   [
+    "none",
+    "MILD_IMBALANCE",
+    "The classes are fairly balanced (ratio 60.00%); balancing may not be needed.",
+    [
+     "class_weight"
+    ]
+   ]
+  ],
+  [
+   "mild",
+   "large",
+   "high",
+   11,
+   5,
+   [
+    "none",
+    "MILD_IMBALANCE",
+    "The classes are fairly balanced (ratio 60.00%); balancing may not be needed.",
+    [
+     "class_weight"
+    ]
+   ]
+  ],
+  [
+   "mild",
+   "large",
+   "high",
+   11,
+   50,
+   [
+    "none",
+    "MILD_IMBALANCE",
+    "The classes are fairly balanced (ratio 60.00%); balancing may not be needed.",
+    [
+     "class_weight"
+    ]
+   ]
+  ],
+  [
+   "mild",
+   "very_large",
+   "low",
+   2,
+   5,
+   [
+    "none",
+    "MILD_IMBALANCE",
+    "The classes are fairly balanced (ratio 60.00%); balancing may not be needed.",
+    [
+     "class_weight"
+    ]
+   ]
+  ],
+  [
+   "mild",
+   "very_large",
+   "low",
+   2,
+   50,
+   [
+    "none",
+    "MILD_IMBALANCE",
+    "The classes are fairly balanced (ratio 60.00%); balancing may not be needed.",
+    [
+     "class_weight"
+    ]
+   ]
+  ],
+  [
+   "mild",
+   "very_large",
+   "low",
+   3,
+   5,
+   [
+    "none",
+    "MILD_IMBALANCE",
+    "The classes are fairly balanced (ratio 60.00%); balancing may not be needed.",
+    [
+     "class_weight"
+    ]
+   ]
+  ],
+  [
+   "mild",
+   "very_large",
+   "low",
+   3,
+   50,
+   [
+    "none",
+    "MILD_IMBALANCE",
+    "The classes are fairly balanced (ratio 60.00%); balancing may not be needed.",
+    [
+     "class_weight"
+    ]
+   ]
+  ],
+  [
+   "mild",
+   "very_large",
+   "low",
+   11,
+   5,
+   [
+    "none",
+    "MILD_IMBALANCE",
+    "The classes are fairly balanced (ratio 60.00%); balancing may not be needed.",
+    [
+     "class_weight"
+    ]
+   ]
+  ],
+  [
+   "mild",
+   "very_large",
+   "low",
+   11,
+   50,
+   [
+    "none",
+    "MILD_IMBALANCE",
+    "The classes are fairly balanced (ratio 60.00%); balancing may not be needed.",
+    [
+     "class_weight"
+    ]
+   ]
+  ],
+  [
+   "mild",
+   "very_large",
+   "medium",
+   2,
+   5,
+   [
+    "none",
+    "MILD_IMBALANCE",
+    "The classes are fairly balanced (ratio 60.00%); balancing may not be needed.",
+    [
+     "class_weight"
+    ]
+   ]
+  ],
+  [
+   "mild",
+   "very_large",
+   "medium",
+   2,
+   50,
+   [
+    "none",
+    "MILD_IMBALANCE",
+    "The classes are fairly balanced (ratio 60.00%); balancing may not be needed.",
+    [
+     "class_weight"
+    ]
+   ]
+  ],
+  [
+   "mild",
+   "very_large",
+   "medium",
+   3,
+   5,
+   [
+    "none",
+    "MILD_IMBALANCE",
+    "The classes are fairly balanced (ratio 60.00%); balancing may not be needed.",
+    [
+     "class_weight"
+    ]
+   ]
+  ],
+  [
+   "mild",
+   "very_large",
+   "medium",
+   3,
+   50,
+   [
+    "none",
+    "MILD_IMBALANCE",
+    "The classes are fairly balanced (ratio 60.00%); balancing may not be needed.",
+    [
+     "class_weight"
+    ]
+   ]
+  ],
+  [
+   "mild",
+   "very_large",
+   "medium",
+   11,
+   5,
+   [
+    "none",
+    "MILD_IMBALANCE",
+    "The classes are fairly balanced (ratio 60.00%); balancing may not be needed.",
+    [
+     "class_weight"
+    ]
+   ]
+  ],
+  [
+   "mild",
+   "very_large",
+   "medium",
+   11,
+   50,
+   [
+    "none",
+    "MILD_IMBALANCE",
+    "The classes are fairly balanced (ratio 60.00%); balancing may not be needed.",
+    [
+     "class_weight"
+    ]
+   ]
+  ],
+  [
+   "mild",
+   "very_large",
+   "high",
+   2,
+   5,
+   [
+    "none",
+    "MILD_IMBALANCE",
+    "The classes are fairly balanced (ratio 60.00%); balancing may not be needed.",
+    [
+     "class_weight"
+    ]
+   ]
+  ],
+  [
+   "mild",
+   "very_large",
+   "high",
+   2,
+   50,
+   [
+    "none",
+    "MILD_IMBALANCE",
+    "The classes are fairly balanced (ratio 60.00%); balancing may not be needed.",
+    [
+     "class_weight"
+    ]
+   ]
+  ],
+  [
+   "mild",
+   "very_large",
+   "high",
+   3,
+   5,
+   [
+    "none",
+    "MILD_IMBALANCE",
+    "The classes are fairly balanced (ratio 60.00%); balancing may not be needed.",
+    [
+     "class_weight"
+    ]
+   ]
+  ],
+  [
+   "mild",
+   "very_large",
+   "high",
+   3,
+   50,
+   [
+    "none",
+    "MILD_IMBALANCE",
+    "The classes are fairly balanced (ratio 60.00%); balancing may not be needed.",
+    [
+     "class_weight"
+    ]
+   ]
+  ],
+  [
+   "mild",
+   "very_large",
+   "high",
+   11,
+   5,
+   [
+    "none",
+    "MILD_IMBALANCE",
+    "The classes are fairly balanced (ratio 60.00%); balancing may not be needed.",
+    [
+     "class_weight"
+    ]
+   ]
+  ],
+  [
+   "mild",
+   "very_large",
+   "high",
+   11,
+   50,
+   [
+    "none",
+    "MILD_IMBALANCE",
+    "The classes are fairly balanced (ratio 60.00%); balancing may not be needed.",
+    [
+     "class_weight"
+    ]
+   ]
+  ],
+  [
+   "moderate",
+   "small",
+   "low",
+   2,
+   5,
+   [
+    "class_weight",
+    "SMALL_BINARY",
+    "Small training data (500 rows): class weights avoid overfitting to synthetic rows.",
+    [
+     "smote"
+    ]
+   ]
+  ],
+  [
+   "moderate",
+   "small",
+   "low",
+   2,
+   50,
+   [
+    "class_weight",
+    "SMALL_BINARY",
+    "Small training data (500 rows): class weights avoid overfitting to synthetic rows.",
+    [
+     "smote"
+    ]
+   ]
+  ],
+  [
+   "moderate",
+   "small",
+   "low",
+   3,
+   5,
+   [
+    "class_weight",
+    "MULTICLASS",
+    "Multi-class (3 classes) with moderate imbalance: class weights are fast and add no synthetic rows.",
+    [
+     "smote"
+    ]
+   ]
+  ],
+  [
+   "moderate",
+   "small",
+   "low",
+   3,
+   50,
+   [
+    "class_weight",
+    "MULTICLASS",
+    "Multi-class (3 classes) with moderate imbalance: class weights are fast and add no synthetic rows.",
+    [
+     "smote"
+    ]
+   ]
+  ],
+  [
+   "moderate",
+   "small",
+   "low",
+   11,
+   5,
+   [
+    "class_weight",
+    "MULTICLASS",
+    "Multi-class (11 classes) with moderate imbalance: class weights are fast and add no synthetic rows.",
+    [
+     "smote"
+    ]
+   ]
+  ],
+  [
+   "moderate",
+   "small",
+   "low",
+   11,
+   50,
+   [
+    "class_weight",
+    "MULTICLASS",
+    "Multi-class (11 classes) with moderate imbalance: class weights are fast and add no synthetic rows.",
+    [
+     "smote"
+    ]
+   ]
+  ],
+  [
+   "moderate",
+   "small",
+   "medium",
+   2,
+   5,
+   [
+    "class_weight",
+    "SMALL_BINARY",
+    "Small training data (500 rows): class weights avoid overfitting to synthetic rows.",
+    [
+     "smote"
+    ]
+   ]
+  ],
+  [
+   "moderate",
+   "small",
+   "medium",
+   2,
+   50,
+   [
+    "class_weight",
+    "SMALL_BINARY",
+    "Small training data (500 rows): class weights avoid overfitting to synthetic rows.",
+    [
+     "smote"
+    ]
+   ]
+  ],
+  [
+   "moderate",
+   "small",
+   "medium",
+   3,
+   5,
+   [
+    "class_weight",
+    "MULTICLASS",
+    "Multi-class (3 classes) with moderate imbalance: class weights are fast and add no synthetic rows.",
+    [
+     "smote"
+    ]
+   ]
+  ],
+  [
+   "moderate",
+   "small",
+   "medium",
+   3,
+   50,
+   [
+    "class_weight",
+    "MULTICLASS",
+    "Multi-class (3 classes) with moderate imbalance: class weights are fast and add no synthetic rows.",
+    [
+     "smote"
+    ]
+   ]
+  ],
+  [
+   "moderate",
+   "small",
+   "medium",
+   11,
+   5,
+   [
+    "class_weight",
+    "MULTICLASS",
+    "Multi-class (11 classes) with moderate imbalance: class weights are fast and add no synthetic rows.",
+    [
+     "smote"
+    ]
+   ]
+  ],
+  [
+   "moderate",
+   "small",
+   "medium",
+   11,
+   50,
+   [
+    "class_weight",
+    "MULTICLASS",
+    "Multi-class (11 classes) with moderate imbalance: class weights are fast and add no synthetic rows.",
+    [
+     "smote"
+    ]
+   ]
+  ],
+  [
+   "moderate",
+   "small",
+   "high",
+   2,
+   5,
+   [
+    "class_weight",
+    "SMALL_BINARY",
+    "Small training data (500 rows): class weights avoid overfitting to synthetic rows.",
+    [
+     "smote"
+    ]
+   ]
+  ],
+  [
+   "moderate",
+   "small",
+   "high",
+   2,
+   50,
+   [
+    "class_weight",
+    "SMALL_BINARY",
+    "Small training data (500 rows): class weights avoid overfitting to synthetic rows.",
+    [
+     "smote"
+    ]
+   ]
+  ],
+  [
+   "moderate",
+   "small",
+   "high",
+   3,
+   5,
+   [
+    "class_weight",
+    "MULTICLASS",
+    "Multi-class (3 classes) with moderate imbalance: class weights are fast and add no synthetic rows.",
+    [
+     "smote"
+    ]
+   ]
+  ],
+  [
+   "moderate",
+   "small",
+   "high",
+   3,
+   50,
+   [
+    "class_weight",
+    "MULTICLASS",
+    "Multi-class (3 classes) with moderate imbalance: class weights are fast and add no synthetic rows.",
+    [
+     "smote"
+    ]
+   ]
+  ],
+  [
+   "moderate",
+   "small",
+   "high",
+   11,
+   5,
+   [
+    "class_weight",
+    "MULTICLASS",
+    "Multi-class (11 classes) with moderate imbalance: class weights are fast and add no synthetic rows.",
+    [
+     "smote"
+    ]
+   ]
+  ],
+  [
+   "moderate",
+   "small",
+   "high",
+   11,
+   50,
+   [
+    "class_weight",
+    "MULTICLASS",
+    "Multi-class (11 classes) with moderate imbalance: class weights are fast and add no synthetic rows.",
+    [
+     "smote"
+    ]
+   ]
+  ],
+  [
+   "moderate",
+   "medium",
+   "low",
+   2,
+   5,
+   [
+    "smote",
+    "MODERATE_MEDIUM",
+    "Moderate imbalance (20.00%) with medium-sized training data.",
+    [
+     "class_weight",
+     "adasyn"
+    ]
+   ]
+  ],
+  [
+   "moderate",
+   "medium",
+   "low",
+   2,
+   50,
+   [
+    "smote",
+    "MODERATE_MEDIUM",
+    "Moderate imbalance (20.00%) with medium-sized training data.",
+    [
+     "class_weight",
+     "adasyn"
+    ]
+   ]
+  ],
+  [
+   "moderate",
+   "medium",
+   "low",
+   3,
+   5,
+   [
+    "class_weight",
+    "MULTICLASS",
+    "Multi-class (3 classes) with moderate imbalance: class weights are fast and add no synthetic rows.",
+    [
+     "smote"
+    ]
+   ]
+  ],
+  [
+   "moderate",
+   "medium",
+   "low",
+   3,
+   50,
+   [
+    "class_weight",
+    "MULTICLASS",
+    "Multi-class (3 classes) with moderate imbalance: class weights are fast and add no synthetic rows.",
+    [
+     "smote"
+    ]
+   ]
+  ],
+  [
+   "moderate",
+   "medium",
+   "low",
+   11,
+   5,
+   [
+    "class_weight",
+    "MULTICLASS",
+    "Multi-class (11 classes) with moderate imbalance: class weights are fast and add no synthetic rows.",
+    [
+     "smote"
+    ]
+   ]
+  ],
+  [
+   "moderate",
+   "medium",
+   "low",
+   11,
+   50,
+   [
+    "class_weight",
+    "MULTICLASS",
+    "Multi-class (11 classes) with moderate imbalance: class weights are fast and add no synthetic rows.",
+    [
+     "smote"
+    ]
+   ]
+  ],
+  [
+   "moderate",
+   "medium",
+   "medium",
+   2,
+   5,
+   [
+    "smote",
+    "MODERATE_MEDIUM",
+    "Moderate imbalance (20.00%) with medium-sized training data.",
+    [
+     "class_weight",
+     "adasyn"
+    ]
+   ]
+  ],
+  [
+   "moderate",
+   "medium",
+   "medium",
+   2,
+   50,
+   [
+    "smote",
+    "MODERATE_MEDIUM",
+    "Moderate imbalance (20.00%) with medium-sized training data.",
+    [
+     "class_weight",
+     "adasyn"
+    ]
+   ]
+  ],
+  [
+   "moderate",
+   "medium",
+   "medium",
+   3,
+   5,
+   [
+    "class_weight",
+    "MULTICLASS",
+    "Multi-class (3 classes) with moderate imbalance: class weights are fast and add no synthetic rows.",
+    [
+     "smote"
+    ]
+   ]
+  ],
+  [
+   "moderate",
+   "medium",
+   "medium",
+   3,
+   50,
+   [
+    "class_weight",
+    "MULTICLASS",
+    "Multi-class (3 classes) with moderate imbalance: class weights are fast and add no synthetic rows.",
+    [
+     "smote"
+    ]
+   ]
+  ],
+  [
+   "moderate",
+   "medium",
+   "medium",
+   11,
+   5,
+   [
+    "class_weight",
+    "MULTICLASS",
+    "Multi-class (11 classes) with moderate imbalance: class weights are fast and add no synthetic rows.",
+    [
+     "smote"
+    ]
+   ]
+  ],
+  [
+   "moderate",
+   "medium",
+   "medium",
+   11,
+   50,
+   [
+    "class_weight",
+    "MULTICLASS",
+    "Multi-class (11 classes) with moderate imbalance: class weights are fast and add no synthetic rows.",
+    [
+     "smote"
+    ]
+   ]
+  ],
+  [
+   "moderate",
+   "medium",
+   "high",
+   2,
+   5,
+   [
+    "class_weight",
+    "HIGH_DIMENSIONAL",
+    "200 features: synthetic rows may be unrealistic in high dimensions.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "moderate",
+   "medium",
+   "high",
+   2,
+   50,
+   [
+    "class_weight",
+    "HIGH_DIMENSIONAL",
+    "200 features: synthetic rows may be unrealistic in high dimensions.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "moderate",
+   "medium",
+   "high",
+   3,
+   5,
+   [
+    "class_weight",
+    "MULTICLASS",
+    "Multi-class (3 classes) with moderate imbalance: class weights are fast and add no synthetic rows.",
+    [
+     "smote"
+    ]
+   ]
+  ],
+  [
+   "moderate",
+   "medium",
+   "high",
+   3,
+   50,
+   [
+    "class_weight",
+    "MULTICLASS",
+    "Multi-class (3 classes) with moderate imbalance: class weights are fast and add no synthetic rows.",
+    [
+     "smote"
+    ]
+   ]
+  ],
+  [
+   "moderate",
+   "medium",
+   "high",
+   11,
+   5,
+   [
+    "class_weight",
+    "MULTICLASS",
+    "Multi-class (11 classes) with moderate imbalance: class weights are fast and add no synthetic rows.",
+    [
+     "smote"
+    ]
+   ]
+  ],
+  [
+   "moderate",
+   "medium",
+   "high",
+   11,
+   50,
+   [
+    "class_weight",
+    "MULTICLASS",
+    "Multi-class (11 classes) with moderate imbalance: class weights are fast and add no synthetic rows.",
+    [
+     "smote"
+    ]
+   ]
+  ],
+  [
+   "moderate",
+   "large",
+   "low",
+   2,
+   5,
+   [
+    "class_weight",
+    "MODERATE_LARGE",
+    "Moderate imbalance with large training data: class weights are often enough.",
+    [
+     "smote",
+     "smote_enn"
+    ]
+   ]
+  ],
+  [
+   "moderate",
+   "large",
+   "low",
+   2,
+   50,
+   [
+    "class_weight",
+    "MODERATE_LARGE",
+    "Moderate imbalance with large training data: class weights are often enough.",
+    [
+     "smote",
+     "smote_enn"
+    ]
+   ]
+  ],
+  [
+   "moderate",
+   "large",
+   "low",
+   3,
+   5,
+   [
+    "class_weight",
+    "MULTICLASS",
+    "Multi-class (3 classes) with moderate imbalance: class weights are fast and add no synthetic rows.",
+    [
+     "smote",
+     "adasyn"
+    ]
+   ]
+  ],
+  [
+   "moderate",
+   "large",
+   "low",
+   3,
+   50,
+   [
+    "class_weight",
+    "MULTICLASS",
+    "Multi-class (3 classes) with moderate imbalance: class weights are fast and add no synthetic rows.",
+    [
+     "smote",
+     "adasyn"
+    ]
+   ]
+  ],
+  [
+   "moderate",
+   "large",
+   "low",
+   11,
+   5,
+   [
+    "class_weight",
+    "MULTICLASS",
+    "Multi-class (11 classes) with moderate imbalance: class weights are fast and add no synthetic rows.",
+    [
+     "smote",
+     "adasyn"
+    ]
+   ]
+  ],
+  [
+   "moderate",
+   "large",
+   "low",
+   11,
+   50,
+   [
+    "class_weight",
+    "MULTICLASS",
+    "Multi-class (11 classes) with moderate imbalance: class weights are fast and add no synthetic rows.",
+    [
+     "smote",
+     "adasyn"
+    ]
+   ]
+  ],
+  [
+   "moderate",
+   "large",
+   "medium",
+   2,
+   5,
+   [
+    "class_weight",
+    "MODERATE_LARGE",
+    "Moderate imbalance with large training data: class weights are often enough.",
+    [
+     "smote",
+     "smote_enn"
+    ]
+   ]
+  ],
+  [
+   "moderate",
+   "large",
+   "medium",
+   2,
+   50,
+   [
+    "class_weight",
+    "MODERATE_LARGE",
+    "Moderate imbalance with large training data: class weights are often enough.",
+    [
+     "smote",
+     "smote_enn"
+    ]
+   ]
+  ],
+  [
+   "moderate",
+   "large",
+   "medium",
+   3,
+   5,
+   [
+    "class_weight",
+    "MULTICLASS",
+    "Multi-class (3 classes) with moderate imbalance: class weights are fast and add no synthetic rows.",
+    [
+     "smote",
+     "adasyn"
+    ]
+   ]
+  ],
+  [
+   "moderate",
+   "large",
+   "medium",
+   3,
+   50,
+   [
+    "class_weight",
+    "MULTICLASS",
+    "Multi-class (3 classes) with moderate imbalance: class weights are fast and add no synthetic rows.",
+    [
+     "smote",
+     "adasyn"
+    ]
+   ]
+  ],
+  [
+   "moderate",
+   "large",
+   "medium",
+   11,
+   5,
+   [
+    "class_weight",
+    "MULTICLASS",
+    "Multi-class (11 classes) with moderate imbalance: class weights are fast and add no synthetic rows.",
+    [
+     "smote",
+     "adasyn"
+    ]
+   ]
+  ],
+  [
+   "moderate",
+   "large",
+   "medium",
+   11,
+   50,
+   [
+    "class_weight",
+    "MULTICLASS",
+    "Multi-class (11 classes) with moderate imbalance: class weights are fast and add no synthetic rows.",
+    [
+     "smote",
+     "adasyn"
+    ]
+   ]
+  ],
+  [
+   "moderate",
+   "large",
+   "high",
+   2,
+   5,
+   [
+    "class_weight",
+    "HIGH_DIMENSIONAL",
+    "200 features: synthetic rows may be unrealistic in high dimensions.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "moderate",
+   "large",
+   "high",
+   2,
+   50,
+   [
+    "class_weight",
+    "HIGH_DIMENSIONAL",
+    "200 features: synthetic rows may be unrealistic in high dimensions.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "moderate",
+   "large",
+   "high",
+   3,
+   5,
+   [
+    "class_weight",
+    "MULTICLASS",
+    "Multi-class (3 classes) with moderate imbalance: class weights are fast and add no synthetic rows.",
+    [
+     "smote",
+     "adasyn"
+    ]
+   ]
+  ],
+  [
+   "moderate",
+   "large",
+   "high",
+   3,
+   50,
+   [
+    "class_weight",
+    "MULTICLASS",
+    "Multi-class (3 classes) with moderate imbalance: class weights are fast and add no synthetic rows.",
+    [
+     "smote",
+     "adasyn"
+    ]
+   ]
+  ],
+  [
+   "moderate",
+   "large",
+   "high",
+   11,
+   5,
+   [
+    "class_weight",
+    "MULTICLASS",
+    "Multi-class (11 classes) with moderate imbalance: class weights are fast and add no synthetic rows.",
+    [
+     "smote",
+     "adasyn"
+    ]
+   ]
+  ],
+  [
+   "moderate",
+   "large",
+   "high",
+   11,
+   50,
+   [
+    "class_weight",
+    "MULTICLASS",
+    "Multi-class (11 classes) with moderate imbalance: class weights are fast and add no synthetic rows.",
+    [
+     "smote",
+     "adasyn"
+    ]
+   ]
+  ],
+  [
+   "moderate",
+   "very_large",
+   "low",
+   2,
+   5,
+   [
+    "class_weight",
+    "VERY_LARGE_BINARY",
+    "Large training data with moderate imbalance: class weights are fast and effective.",
+    [
+     "smote",
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "moderate",
+   "very_large",
+   "low",
+   2,
+   50,
+   [
+    "class_weight",
+    "VERY_LARGE_BINARY",
+    "Large training data with moderate imbalance: class weights are fast and effective.",
+    [
+     "smote",
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "moderate",
+   "very_large",
+   "low",
+   3,
+   5,
+   [
+    "class_weight",
+    "MULTICLASS",
+    "Multi-class (3 classes) with moderate imbalance: class weights are fast and add no synthetic rows.",
+    [
+     "smote",
+     "adasyn"
+    ]
+   ]
+  ],
+  [
+   "moderate",
+   "very_large",
+   "low",
+   3,
+   50,
+   [
+    "class_weight",
+    "MULTICLASS",
+    "Multi-class (3 classes) with moderate imbalance: class weights are fast and add no synthetic rows.",
+    [
+     "smote",
+     "adasyn"
+    ]
+   ]
+  ],
+  [
+   "moderate",
+   "very_large",
+   "low",
+   11,
+   5,
+   [
+    "class_weight",
+    "MULTICLASS",
+    "Multi-class (11 classes) with moderate imbalance: class weights are fast and add no synthetic rows.",
+    [
+     "smote",
+     "adasyn"
+    ]
+   ]
+  ],
+  [
+   "moderate",
+   "very_large",
+   "low",
+   11,
+   50,
+   [
+    "class_weight",
+    "MULTICLASS",
+    "Multi-class (11 classes) with moderate imbalance: class weights are fast and add no synthetic rows.",
+    [
+     "smote",
+     "adasyn"
+    ]
+   ]
+  ],
+  [
+   "moderate",
+   "very_large",
+   "medium",
+   2,
+   5,
+   [
+    "class_weight",
+    "VERY_LARGE_BINARY",
+    "Large training data with moderate imbalance: class weights are fast and effective.",
+    [
+     "smote",
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "moderate",
+   "very_large",
+   "medium",
+   2,
+   50,
+   [
+    "class_weight",
+    "VERY_LARGE_BINARY",
+    "Large training data with moderate imbalance: class weights are fast and effective.",
+    [
+     "smote",
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "moderate",
+   "very_large",
+   "medium",
+   3,
+   5,
+   [
+    "class_weight",
+    "MULTICLASS",
+    "Multi-class (3 classes) with moderate imbalance: class weights are fast and add no synthetic rows.",
+    [
+     "smote",
+     "adasyn"
+    ]
+   ]
+  ],
+  [
+   "moderate",
+   "very_large",
+   "medium",
+   3,
+   50,
+   [
+    "class_weight",
+    "MULTICLASS",
+    "Multi-class (3 classes) with moderate imbalance: class weights are fast and add no synthetic rows.",
+    [
+     "smote",
+     "adasyn"
+    ]
+   ]
+  ],
+  [
+   "moderate",
+   "very_large",
+   "medium",
+   11,
+   5,
+   [
+    "class_weight",
+    "MULTICLASS",
+    "Multi-class (11 classes) with moderate imbalance: class weights are fast and add no synthetic rows.",
+    [
+     "smote",
+     "adasyn"
+    ]
+   ]
+  ],
+  [
+   "moderate",
+   "very_large",
+   "medium",
+   11,
+   50,
+   [
+    "class_weight",
+    "MULTICLASS",
+    "Multi-class (11 classes) with moderate imbalance: class weights are fast and add no synthetic rows.",
+    [
+     "smote",
+     "adasyn"
+    ]
+   ]
+  ],
+  [
+   "moderate",
+   "very_large",
+   "high",
+   2,
+   5,
+   [
+    "class_weight",
+    "VERY_LARGE_BINARY",
+    "Large training data with moderate imbalance: class weights are fast and effective.",
+    [
+     "smote",
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "moderate",
+   "very_large",
+   "high",
+   2,
+   50,
+   [
+    "class_weight",
+    "VERY_LARGE_BINARY",
+    "Large training data with moderate imbalance: class weights are fast and effective.",
+    [
+     "smote",
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "moderate",
+   "very_large",
+   "high",
+   3,
+   5,
+   [
+    "class_weight",
+    "MULTICLASS",
+    "Multi-class (3 classes) with moderate imbalance: class weights are fast and add no synthetic rows.",
+    [
+     "smote",
+     "adasyn"
+    ]
+   ]
+  ],
+  [
+   "moderate",
+   "very_large",
+   "high",
+   3,
+   50,
+   [
+    "class_weight",
+    "MULTICLASS",
+    "Multi-class (3 classes) with moderate imbalance: class weights are fast and add no synthetic rows.",
+    [
+     "smote",
+     "adasyn"
+    ]
+   ]
+  ],
+  [
+   "moderate",
+   "very_large",
+   "high",
+   11,
+   5,
+   [
+    "class_weight",
+    "MULTICLASS",
+    "Multi-class (11 classes) with moderate imbalance: class weights are fast and add no synthetic rows.",
+    [
+     "smote",
+     "adasyn"
+    ]
+   ]
+  ],
+  [
+   "moderate",
+   "very_large",
+   "high",
+   11,
+   50,
+   [
+    "class_weight",
+    "MULTICLASS",
+    "Multi-class (11 classes) with moderate imbalance: class weights are fast and add no synthetic rows.",
+    [
+     "smote",
+     "adasyn"
+    ]
+   ]
+  ],
+  [
+   "severe",
+   "small",
+   "low",
+   2,
+   5,
+   [
+    "class_weight",
+    "SMALLEST_CLASS_TOO_SMALL_FOR_SMOTE",
+    "The smallest class has only 5 rows, too few for SMOTE (needs 6 or more). Class weights are the safest option; consider removing very small classes.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "severe",
+   "small",
+   "low",
+   2,
+   50,
+   [
+    "class_weight",
+    "SMALL_BINARY",
+    "Small training data (500 rows): class weights avoid overfitting to synthetic rows.",
+    [
+     "smote"
+    ]
+   ]
+  ],
+  [
+   "severe",
+   "small",
+   "low",
+   3,
+   5,
+   [
+    "class_weight",
+    "SMALLEST_CLASS_TOO_SMALL_FOR_SMOTE",
+    "The smallest class has only 5 rows, too few for SMOTE (needs 6 or more). Class weights are the safest option; consider removing very small classes.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "severe",
+   "small",
+   "low",
+   3,
+   50,
+   [
+    "class_weight",
+    "MULTICLASS",
+    "Multi-class (3 classes) with severe imbalance: class weights are fast and add no synthetic rows.",
+    [
+     "smote"
+    ]
+   ]
+  ],
+  [
+   "severe",
+   "small",
+   "low",
+   11,
+   5,
+   [
+    "class_weight",
+    "SMALLEST_CLASS_TOO_SMALL_FOR_SMOTE",
+    "The smallest class has only 5 rows, too few for SMOTE (needs 6 or more). Class weights are the safest option; consider removing very small classes.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "severe",
+   "small",
+   "low",
+   11,
+   50,
+   [
+    "class_weight",
+    "MULTICLASS",
+    "Multi-class (11 classes) with severe imbalance: class weights are fast and add no synthetic rows.",
+    [
+     "smote"
+    ]
+   ]
+  ],
+  [
+   "severe",
+   "small",
+   "medium",
+   2,
+   5,
+   [
+    "class_weight",
+    "SMALLEST_CLASS_TOO_SMALL_FOR_SMOTE",
+    "The smallest class has only 5 rows, too few for SMOTE (needs 6 or more). Class weights are the safest option; consider removing very small classes.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "severe",
+   "small",
+   "medium",
+   2,
+   50,
+   [
+    "class_weight",
+    "SMALL_BINARY",
+    "Small training data (500 rows): class weights avoid overfitting to synthetic rows.",
+    [
+     "smote"
+    ]
+   ]
+  ],
+  [
+   "severe",
+   "small",
+   "medium",
+   3,
+   5,
+   [
+    "class_weight",
+    "SMALLEST_CLASS_TOO_SMALL_FOR_SMOTE",
+    "The smallest class has only 5 rows, too few for SMOTE (needs 6 or more). Class weights are the safest option; consider removing very small classes.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "severe",
+   "small",
+   "medium",
+   3,
+   50,
+   [
+    "class_weight",
+    "MULTICLASS",
+    "Multi-class (3 classes) with severe imbalance: class weights are fast and add no synthetic rows.",
+    [
+     "smote"
+    ]
+   ]
+  ],
+  [
+   "severe",
+   "small",
+   "medium",
+   11,
+   5,
+   [
+    "class_weight",
+    "SMALLEST_CLASS_TOO_SMALL_FOR_SMOTE",
+    "The smallest class has only 5 rows, too few for SMOTE (needs 6 or more). Class weights are the safest option; consider removing very small classes.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "severe",
+   "small",
+   "medium",
+   11,
+   50,
+   [
+    "class_weight",
+    "MULTICLASS",
+    "Multi-class (11 classes) with severe imbalance: class weights are fast and add no synthetic rows.",
+    [
+     "smote"
+    ]
+   ]
+  ],
+  [
+   "severe",
+   "small",
+   "high",
+   2,
+   5,
+   [
+    "class_weight",
+    "SMALLEST_CLASS_TOO_SMALL_FOR_SMOTE",
+    "The smallest class has only 5 rows, too few for SMOTE (needs 6 or more). Class weights are the safest option; consider removing very small classes.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "severe",
+   "small",
+   "high",
+   2,
+   50,
+   [
+    "class_weight",
+    "SMALL_BINARY",
+    "Small training data (500 rows): class weights avoid overfitting to synthetic rows.",
+    [
+     "smote"
+    ]
+   ]
+  ],
+  [
+   "severe",
+   "small",
+   "high",
+   3,
+   5,
+   [
+    "class_weight",
+    "SMALLEST_CLASS_TOO_SMALL_FOR_SMOTE",
+    "The smallest class has only 5 rows, too few for SMOTE (needs 6 or more). Class weights are the safest option; consider removing very small classes.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "severe",
+   "small",
+   "high",
+   3,
+   50,
+   [
+    "class_weight",
+    "MULTICLASS",
+    "Multi-class (3 classes) with severe imbalance: class weights are fast and add no synthetic rows.",
+    [
+     "smote"
+    ]
+   ]
+  ],
+  [
+   "severe",
+   "small",
+   "high",
+   11,
+   5,
+   [
+    "class_weight",
+    "SMALLEST_CLASS_TOO_SMALL_FOR_SMOTE",
+    "The smallest class has only 5 rows, too few for SMOTE (needs 6 or more). Class weights are the safest option; consider removing very small classes.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "severe",
+   "small",
+   "high",
+   11,
+   50,
+   [
+    "class_weight",
+    "MULTICLASS",
+    "Multi-class (11 classes) with severe imbalance: class weights are fast and add no synthetic rows.",
+    [
+     "smote"
+    ]
+   ]
+  ],
+  [
+   "severe",
+   "medium",
+   "low",
+   2,
+   5,
+   [
+    "class_weight",
+    "SMALLEST_CLASS_TOO_SMALL_FOR_SMOTE",
+    "The smallest class has only 5 rows, too few for SMOTE (needs 6 or more). Class weights are the safest option; consider removing very small classes.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "severe",
+   "medium",
+   "low",
+   2,
+   50,
+   [
+    "borderline_smote",
+    "SEVERE_LOW_DIMENSIONAL",
+    "Severe imbalance (5.00%) with few features: Borderline-SMOTE focuses on the class border.",
+    [
+     "smote_enn",
+     "adasyn",
+     "class_weight"
+    ]
+   ]
+  ],
+  [
+   "severe",
+   "medium",
+   "low",
+   3,
+   5,
+   [
+    "class_weight",
+    "SMALLEST_CLASS_TOO_SMALL_FOR_SMOTE",
+    "The smallest class has only 5 rows, too few for SMOTE (needs 6 or more). Class weights are the safest option; consider removing very small classes.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "severe",
+   "medium",
+   "low",
+   3,
+   50,
+   [
+    "class_weight",
+    "MULTICLASS",
+    "Multi-class (3 classes) with severe imbalance: class weights are fast and add no synthetic rows.",
+    [
+     "smote"
+    ]
+   ]
+  ],
+  [
+   "severe",
+   "medium",
+   "low",
+   11,
+   5,
+   [
+    "class_weight",
+    "SMALLEST_CLASS_TOO_SMALL_FOR_SMOTE",
+    "The smallest class has only 5 rows, too few for SMOTE (needs 6 or more). Class weights are the safest option; consider removing very small classes.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "severe",
+   "medium",
+   "low",
+   11,
+   50,
+   [
+    "class_weight",
+    "MULTICLASS",
+    "Multi-class (11 classes) with severe imbalance: class weights are fast and add no synthetic rows.",
+    [
+     "smote"
+    ]
+   ]
+  ],
+  [
+   "severe",
+   "medium",
+   "medium",
+   2,
+   5,
+   [
+    "class_weight",
+    "SMALLEST_CLASS_TOO_SMALL_FOR_SMOTE",
+    "The smallest class has only 5 rows, too few for SMOTE (needs 6 or more). Class weights are the safest option; consider removing very small classes.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "severe",
+   "medium",
+   "medium",
+   2,
+   50,
+   [
+    "smote_enn",
+    "SEVERE",
+    "Severe imbalance (5.00%): SMOTE-ENN oversamples and cleans.",
+    [
+     "class_weight",
+     "borderline_smote"
+    ]
+   ]
+  ],
+  [
+   "severe",
+   "medium",
+   "medium",
+   3,
+   5,
+   [
+    "class_weight",
+    "SMALLEST_CLASS_TOO_SMALL_FOR_SMOTE",
+    "The smallest class has only 5 rows, too few for SMOTE (needs 6 or more). Class weights are the safest option; consider removing very small classes.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "severe",
+   "medium",
+   "medium",
+   3,
+   50,
+   [
+    "class_weight",
+    "MULTICLASS",
+    "Multi-class (3 classes) with severe imbalance: class weights are fast and add no synthetic rows.",
+    [
+     "smote"
+    ]
+   ]
+  ],
+  [
+   "severe",
+   "medium",
+   "medium",
+   11,
+   5,
+   [
+    "class_weight",
+    "SMALLEST_CLASS_TOO_SMALL_FOR_SMOTE",
+    "The smallest class has only 5 rows, too few for SMOTE (needs 6 or more). Class weights are the safest option; consider removing very small classes.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "severe",
+   "medium",
+   "medium",
+   11,
+   50,
+   [
+    "class_weight",
+    "MULTICLASS",
+    "Multi-class (11 classes) with severe imbalance: class weights are fast and add no synthetic rows.",
+    [
+     "smote"
+    ]
+   ]
+  ],
+  [
+   "severe",
+   "medium",
+   "high",
+   2,
+   5,
+   [
+    "class_weight",
+    "SMALLEST_CLASS_TOO_SMALL_FOR_SMOTE",
+    "The smallest class has only 5 rows, too few for SMOTE (needs 6 or more). Class weights are the safest option; consider removing very small classes.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "severe",
+   "medium",
+   "high",
+   2,
+   50,
+   [
+    "class_weight",
+    "HIGH_DIMENSIONAL",
+    "200 features: synthetic rows may be unrealistic in high dimensions.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "severe",
+   "medium",
+   "high",
+   3,
+   5,
+   [
+    "class_weight",
+    "SMALLEST_CLASS_TOO_SMALL_FOR_SMOTE",
+    "The smallest class has only 5 rows, too few for SMOTE (needs 6 or more). Class weights are the safest option; consider removing very small classes.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "severe",
+   "medium",
+   "high",
+   3,
+   50,
+   [
+    "class_weight",
+    "MULTICLASS",
+    "Multi-class (3 classes) with severe imbalance: class weights are fast and add no synthetic rows.",
+    [
+     "smote"
+    ]
+   ]
+  ],
+  [
+   "severe",
+   "medium",
+   "high",
+   11,
+   5,
+   [
+    "class_weight",
+    "SMALLEST_CLASS_TOO_SMALL_FOR_SMOTE",
+    "The smallest class has only 5 rows, too few for SMOTE (needs 6 or more). Class weights are the safest option; consider removing very small classes.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "severe",
+   "medium",
+   "high",
+   11,
+   50,
+   [
+    "class_weight",
+    "MULTICLASS",
+    "Multi-class (11 classes) with severe imbalance: class weights are fast and add no synthetic rows.",
+    [
+     "smote"
+    ]
+   ]
+  ],
+  [
+   "severe",
+   "large",
+   "low",
+   2,
+   5,
+   [
+    "class_weight",
+    "SMALLEST_CLASS_TOO_SMALL_FOR_SMOTE",
+    "The smallest class has only 5 rows, too few for SMOTE (needs 6 or more). Class weights are the safest option; consider removing very small classes.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "severe",
+   "large",
+   "low",
+   2,
+   50,
+   [
+    "borderline_smote",
+    "SEVERE_LOW_DIMENSIONAL",
+    "Severe imbalance (5.00%) with few features: Borderline-SMOTE focuses on the class border.",
+    [
+     "smote_enn",
+     "adasyn",
+     "class_weight"
+    ]
+   ]
+  ],
+  [
+   "severe",
+   "large",
+   "low",
+   3,
+   5,
+   [
+    "class_weight",
+    "SMALLEST_CLASS_TOO_SMALL_FOR_SMOTE",
+    "The smallest class has only 5 rows, too few for SMOTE (needs 6 or more). Class weights are the safest option; consider removing very small classes.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "severe",
+   "large",
+   "low",
+   3,
+   50,
+   [
+    "smote",
+    "MULTICLASS_LARGE_SEVERE",
+    "Multi-class training data (3 classes) with severe imbalance.",
+    [
+     "class_weight",
+     "smote_enn",
+     "adasyn"
+    ]
+   ]
+  ],
+  [
+   "severe",
+   "large",
+   "low",
+   11,
+   5,
+   [
+    "class_weight",
+    "SMALLEST_CLASS_TOO_SMALL_FOR_SMOTE",
+    "The smallest class has only 5 rows, too few for SMOTE (needs 6 or more). Class weights are the safest option; consider removing very small classes.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "severe",
+   "large",
+   "low",
+   11,
+   50,
+   [
+    "smote",
+    "MULTICLASS_LARGE_SEVERE",
+    "Multi-class training data (11 classes) with severe imbalance.",
+    [
+     "class_weight",
+     "smote_enn",
+     "adasyn"
+    ]
+   ]
+  ],
+  [
+   "severe",
+   "large",
+   "medium",
+   2,
+   5,
+   [
+    "class_weight",
+    "SMALLEST_CLASS_TOO_SMALL_FOR_SMOTE",
+    "The smallest class has only 5 rows, too few for SMOTE (needs 6 or more). Class weights are the safest option; consider removing very small classes.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "severe",
+   "large",
+   "medium",
+   2,
+   50,
+   [
+    "smote_enn",
+    "SEVERE",
+    "Severe imbalance (5.00%): SMOTE-ENN oversamples and cleans.",
+    [
+     "class_weight",
+     "borderline_smote"
+    ]
+   ]
+  ],
+  [
+   "severe",
+   "large",
+   "medium",
+   3,
+   5,
+   [
+    "class_weight",
+    "SMALLEST_CLASS_TOO_SMALL_FOR_SMOTE",
+    "The smallest class has only 5 rows, too few for SMOTE (needs 6 or more). Class weights are the safest option; consider removing very small classes.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "severe",
+   "large",
+   "medium",
+   3,
+   50,
+   [
+    "smote",
+    "MULTICLASS_LARGE_SEVERE",
+    "Multi-class training data (3 classes) with severe imbalance.",
+    [
+     "class_weight",
+     "smote_enn",
+     "adasyn"
+    ]
+   ]
+  ],
+  [
+   "severe",
+   "large",
+   "medium",
+   11,
+   5,
+   [
+    "class_weight",
+    "SMALLEST_CLASS_TOO_SMALL_FOR_SMOTE",
+    "The smallest class has only 5 rows, too few for SMOTE (needs 6 or more). Class weights are the safest option; consider removing very small classes.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "severe",
+   "large",
+   "medium",
+   11,
+   50,
+   [
+    "smote",
+    "MULTICLASS_LARGE_SEVERE",
+    "Multi-class training data (11 classes) with severe imbalance.",
+    [
+     "class_weight",
+     "smote_enn",
+     "adasyn"
+    ]
+   ]
+  ],
+  [
+   "severe",
+   "large",
+   "high",
+   2,
+   5,
+   [
+    "class_weight",
+    "SMALLEST_CLASS_TOO_SMALL_FOR_SMOTE",
+    "The smallest class has only 5 rows, too few for SMOTE (needs 6 or more). Class weights are the safest option; consider removing very small classes.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "severe",
+   "large",
+   "high",
+   2,
+   50,
+   [
+    "class_weight",
+    "HIGH_DIMENSIONAL",
+    "200 features: synthetic rows may be unrealistic in high dimensions.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "severe",
+   "large",
+   "high",
+   3,
+   5,
+   [
+    "class_weight",
+    "SMALLEST_CLASS_TOO_SMALL_FOR_SMOTE",
+    "The smallest class has only 5 rows, too few for SMOTE (needs 6 or more). Class weights are the safest option; consider removing very small classes.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "severe",
+   "large",
+   "high",
+   3,
+   50,
+   [
+    "smote",
+    "MULTICLASS_LARGE_SEVERE",
+    "Multi-class training data (3 classes) with severe imbalance.",
+    [
+     "class_weight",
+     "smote_enn",
+     "adasyn"
+    ]
+   ]
+  ],
+  [
+   "severe",
+   "large",
+   "high",
+   11,
+   5,
+   [
+    "class_weight",
+    "SMALLEST_CLASS_TOO_SMALL_FOR_SMOTE",
+    "The smallest class has only 5 rows, too few for SMOTE (needs 6 or more). Class weights are the safest option; consider removing very small classes.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "severe",
+   "large",
+   "high",
+   11,
+   50,
+   [
+    "smote",
+    "MULTICLASS_LARGE_SEVERE",
+    "Multi-class training data (11 classes) with severe imbalance.",
+    [
+     "class_weight",
+     "smote_enn",
+     "adasyn"
+    ]
+   ]
+  ],
+  [
+   "severe",
+   "very_large",
+   "low",
+   2,
+   5,
+   [
+    "class_weight",
+    "SMALLEST_CLASS_TOO_SMALL_FOR_SMOTE",
+    "The smallest class has only 5 rows, too few for SMOTE (needs 6 or more). Class weights are the safest option; consider removing very small classes.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "severe",
+   "very_large",
+   "low",
+   2,
+   50,
+   [
+    "smote_enn",
+    "VERY_LARGE_BINARY_SEVERE",
+    "Large training data with severe imbalance (5.00%).",
+    [
+     "class_weight",
+     "random_undersample",
+     "smote_tomek"
+    ]
+   ]
+  ],
+  [
+   "severe",
+   "very_large",
+   "low",
+   3,
+   5,
+   [
+    "class_weight",
+    "SMALLEST_CLASS_TOO_SMALL_FOR_SMOTE",
+    "The smallest class has only 5 rows, too few for SMOTE (needs 6 or more). Class weights are the safest option; consider removing very small classes.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "severe",
+   "very_large",
+   "low",
+   3,
+   50,
+   [
+    "smote_enn",
+    "MULTICLASS_VERY_LARGE_SEVERE",
+    "Large multi-class training data (3 classes, 500,000 rows) with severe imbalance: SMOTE-ENN oversamples and removes noisy synthetic rows.",
+    [
+     "class_weight",
+     "smote_tomek",
+     "adasyn"
+    ]
+   ]
+  ],
+  [
+   "severe",
+   "very_large",
+   "low",
+   11,
+   5,
+   [
+    "class_weight",
+    "SMALLEST_CLASS_TOO_SMALL_FOR_SMOTE",
+    "The smallest class has only 5 rows, too few for SMOTE (needs 6 or more). Class weights are the safest option; consider removing very small classes.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "severe",
+   "very_large",
+   "low",
+   11,
+   50,
+   [
+    "smote_enn",
+    "MULTICLASS_VERY_LARGE_SEVERE",
+    "Large multi-class training data (11 classes, 500,000 rows) with severe imbalance: SMOTE-ENN oversamples and removes noisy synthetic rows.",
+    [
+     "class_weight",
+     "smote_tomek",
+     "adasyn"
+    ]
+   ]
+  ],
+  [
+   "severe",
+   "very_large",
+   "medium",
+   2,
+   5,
+   [
+    "class_weight",
+    "SMALLEST_CLASS_TOO_SMALL_FOR_SMOTE",
+    "The smallest class has only 5 rows, too few for SMOTE (needs 6 or more). Class weights are the safest option; consider removing very small classes.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "severe",
+   "very_large",
+   "medium",
+   2,
+   50,
+   [
+    "smote_enn",
+    "VERY_LARGE_BINARY_SEVERE",
+    "Large training data with severe imbalance (5.00%).",
+    [
+     "class_weight",
+     "random_undersample",
+     "smote_tomek"
+    ]
+   ]
+  ],
+  [
+   "severe",
+   "very_large",
+   "medium",
+   3,
+   5,
+   [
+    "class_weight",
+    "SMALLEST_CLASS_TOO_SMALL_FOR_SMOTE",
+    "The smallest class has only 5 rows, too few for SMOTE (needs 6 or more). Class weights are the safest option; consider removing very small classes.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "severe",
+   "very_large",
+   "medium",
+   3,
+   50,
+   [
+    "smote_enn",
+    "MULTICLASS_VERY_LARGE_SEVERE",
+    "Large multi-class training data (3 classes, 500,000 rows) with severe imbalance: SMOTE-ENN oversamples and removes noisy synthetic rows.",
+    [
+     "class_weight",
+     "smote_tomek",
+     "adasyn"
+    ]
+   ]
+  ],
+  [
+   "severe",
+   "very_large",
+   "medium",
+   11,
+   5,
+   [
+    "class_weight",
+    "SMALLEST_CLASS_TOO_SMALL_FOR_SMOTE",
+    "The smallest class has only 5 rows, too few for SMOTE (needs 6 or more). Class weights are the safest option; consider removing very small classes.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "severe",
+   "very_large",
+   "medium",
+   11,
+   50,
+   [
+    "smote_enn",
+    "MULTICLASS_VERY_LARGE_SEVERE",
+    "Large multi-class training data (11 classes, 500,000 rows) with severe imbalance: SMOTE-ENN oversamples and removes noisy synthetic rows.",
+    [
+     "class_weight",
+     "smote_tomek",
+     "adasyn"
+    ]
+   ]
+  ],
+  [
+   "severe",
+   "very_large",
+   "high",
+   2,
+   5,
+   [
+    "class_weight",
+    "SMALLEST_CLASS_TOO_SMALL_FOR_SMOTE",
+    "The smallest class has only 5 rows, too few for SMOTE (needs 6 or more). Class weights are the safest option; consider removing very small classes.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "severe",
+   "very_large",
+   "high",
+   2,
+   50,
+   [
+    "smote_enn",
+    "VERY_LARGE_BINARY_SEVERE",
+    "Large training data with severe imbalance (5.00%).",
+    [
+     "class_weight",
+     "random_undersample",
+     "smote_tomek"
+    ]
+   ]
+  ],
+  [
+   "severe",
+   "very_large",
+   "high",
+   3,
+   5,
+   [
+    "class_weight",
+    "SMALLEST_CLASS_TOO_SMALL_FOR_SMOTE",
+    "The smallest class has only 5 rows, too few for SMOTE (needs 6 or more). Class weights are the safest option; consider removing very small classes.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "severe",
+   "very_large",
+   "high",
+   3,
+   50,
+   [
+    "smote_enn",
+    "MULTICLASS_VERY_LARGE_SEVERE",
+    "Large multi-class training data (3 classes, 500,000 rows) with severe imbalance: SMOTE-ENN oversamples and removes noisy synthetic rows.",
+    [
+     "class_weight",
+     "smote_tomek",
+     "adasyn"
+    ]
+   ]
+  ],
+  [
+   "severe",
+   "very_large",
+   "high",
+   11,
+   5,
+   [
+    "class_weight",
+    "SMALLEST_CLASS_TOO_SMALL_FOR_SMOTE",
+    "The smallest class has only 5 rows, too few for SMOTE (needs 6 or more). Class weights are the safest option; consider removing very small classes.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "severe",
+   "very_large",
+   "high",
+   11,
+   50,
+   [
+    "smote_enn",
+    "MULTICLASS_VERY_LARGE_SEVERE",
+    "Large multi-class training data (11 classes, 500,000 rows) with severe imbalance: SMOTE-ENN oversamples and removes noisy synthetic rows.",
+    [
+     "class_weight",
+     "smote_tomek",
+     "adasyn"
+    ]
+   ]
+  ],
+  [
+   "extreme",
+   "small",
+   "low",
+   2,
+   5,
+   [
+    "class_weight",
+    "SMALLEST_CLASS_TOO_SMALL_FOR_SMOTE",
+    "The smallest class has only 5 rows, too few for SMOTE (needs 6 or more). Class weights are the safest option; consider removing very small classes.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "extreme",
+   "small",
+   "low",
+   2,
+   50,
+   [
+    "class_weight",
+    "SMALL_BINARY",
+    "Small training data (500 rows): class weights avoid overfitting to synthetic rows.",
+    [
+     "smote"
+    ]
+   ]
+  ],
+  [
+   "extreme",
+   "small",
+   "low",
+   3,
+   5,
+   [
+    "class_weight",
+    "SMALLEST_CLASS_TOO_SMALL_FOR_SMOTE",
+    "The smallest class has only 5 rows, too few for SMOTE (needs 6 or more). Class weights are the safest option; consider removing very small classes.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "extreme",
+   "small",
+   "low",
+   3,
+   50,
+   [
+    "class_weight",
+    "MULTICLASS",
+    "Multi-class (3 classes) with extreme imbalance: class weights are fast and add no synthetic rows.",
+    [
+     "smote"
+    ]
+   ]
+  ],
+  [
+   "extreme",
+   "small",
+   "low",
+   11,
+   5,
+   [
+    "class_weight",
+    "SMALLEST_CLASS_TOO_SMALL_FOR_SMOTE",
+    "The smallest class has only 5 rows, too few for SMOTE (needs 6 or more). Class weights are the safest option; consider removing very small classes.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "extreme",
+   "small",
+   "low",
+   11,
+   50,
+   [
+    "class_weight",
+    "MANY_CLASSES_EXTREME_IMBALANCE",
+    "11 classes with extreme imbalance: class weights are safest, SMOTE may fail on very small classes.",
+    [
+     "smote_enn",
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "extreme",
+   "small",
+   "medium",
+   2,
+   5,
+   [
+    "class_weight",
+    "SMALLEST_CLASS_TOO_SMALL_FOR_SMOTE",
+    "The smallest class has only 5 rows, too few for SMOTE (needs 6 or more). Class weights are the safest option; consider removing very small classes.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "extreme",
+   "small",
+   "medium",
+   2,
+   50,
+   [
+    "class_weight",
+    "SMALL_BINARY",
+    "Small training data (500 rows): class weights avoid overfitting to synthetic rows.",
+    [
+     "smote"
+    ]
+   ]
+  ],
+  [
+   "extreme",
+   "small",
+   "medium",
+   3,
+   5,
+   [
+    "class_weight",
+    "SMALLEST_CLASS_TOO_SMALL_FOR_SMOTE",
+    "The smallest class has only 5 rows, too few for SMOTE (needs 6 or more). Class weights are the safest option; consider removing very small classes.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "extreme",
+   "small",
+   "medium",
+   3,
+   50,
+   [
+    "class_weight",
+    "MULTICLASS",
+    "Multi-class (3 classes) with extreme imbalance: class weights are fast and add no synthetic rows.",
+    [
+     "smote"
+    ]
+   ]
+  ],
+  [
+   "extreme",
+   "small",
+   "medium",
+   11,
+   5,
+   [
+    "class_weight",
+    "SMALLEST_CLASS_TOO_SMALL_FOR_SMOTE",
+    "The smallest class has only 5 rows, too few for SMOTE (needs 6 or more). Class weights are the safest option; consider removing very small classes.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "extreme",
+   "small",
+   "medium",
+   11,
+   50,
+   [
+    "class_weight",
+    "MANY_CLASSES_EXTREME_IMBALANCE",
+    "11 classes with extreme imbalance: class weights are safest, SMOTE may fail on very small classes.",
+    [
+     "smote_enn",
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "extreme",
+   "small",
+   "high",
+   2,
+   5,
+   [
+    "class_weight",
+    "SMALLEST_CLASS_TOO_SMALL_FOR_SMOTE",
+    "The smallest class has only 5 rows, too few for SMOTE (needs 6 or more). Class weights are the safest option; consider removing very small classes.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "extreme",
+   "small",
+   "high",
+   2,
+   50,
+   [
+    "class_weight",
+    "SMALL_BINARY",
+    "Small training data (500 rows): class weights avoid overfitting to synthetic rows.",
+    [
+     "smote"
+    ]
+   ]
+  ],
+  [
+   "extreme",
+   "small",
+   "high",
+   3,
+   5,
+   [
+    "class_weight",
+    "SMALLEST_CLASS_TOO_SMALL_FOR_SMOTE",
+    "The smallest class has only 5 rows, too few for SMOTE (needs 6 or more). Class weights are the safest option; consider removing very small classes.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "extreme",
+   "small",
+   "high",
+   3,
+   50,
+   [
+    "class_weight",
+    "MULTICLASS",
+    "Multi-class (3 classes) with extreme imbalance: class weights are fast and add no synthetic rows.",
+    [
+     "smote"
+    ]
+   ]
+  ],
+  [
+   "extreme",
+   "small",
+   "high",
+   11,
+   5,
+   [
+    "class_weight",
+    "SMALLEST_CLASS_TOO_SMALL_FOR_SMOTE",
+    "The smallest class has only 5 rows, too few for SMOTE (needs 6 or more). Class weights are the safest option; consider removing very small classes.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "extreme",
+   "small",
+   "high",
+   11,
+   50,
+   [
+    "class_weight",
+    "MANY_CLASSES_EXTREME_IMBALANCE",
+    "11 classes with extreme imbalance: class weights are safest, SMOTE may fail on very small classes.",
+    [
+     "smote_enn",
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "extreme",
+   "medium",
+   "low",
+   2,
+   5,
+   [
+    "class_weight",
+    "SMALLEST_CLASS_TOO_SMALL_FOR_SMOTE",
+    "The smallest class has only 5 rows, too few for SMOTE (needs 6 or more). Class weights are the safest option; consider removing very small classes.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "extreme",
+   "medium",
+   "low",
+   2,
+   50,
+   [
+    "smote_enn",
+    "EXTREME",
+    "Extreme imbalance (ratio 0.5000%); also consider collecting more minority rows.",
+    [
+     "smote_tomek",
+     "class_weight",
+     "adasyn"
+    ]
+   ]
+  ],
+  [
+   "extreme",
+   "medium",
+   "low",
+   3,
+   5,
+   [
+    "class_weight",
+    "SMALLEST_CLASS_TOO_SMALL_FOR_SMOTE",
+    "The smallest class has only 5 rows, too few for SMOTE (needs 6 or more). Class weights are the safest option; consider removing very small classes.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "extreme",
+   "medium",
+   "low",
+   3,
+   50,
+   [
+    "class_weight",
+    "MULTICLASS",
+    "Multi-class (3 classes) with extreme imbalance: class weights are fast and add no synthetic rows.",
+    [
+     "smote"
+    ]
+   ]
+  ],
+  [
+   "extreme",
+   "medium",
+   "low",
+   11,
+   5,
+   [
+    "class_weight",
+    "SMALLEST_CLASS_TOO_SMALL_FOR_SMOTE",
+    "The smallest class has only 5 rows, too few for SMOTE (needs 6 or more). Class weights are the safest option; consider removing very small classes.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "extreme",
+   "medium",
+   "low",
+   11,
+   50,
+   [
+    "class_weight",
+    "MANY_CLASSES_EXTREME_IMBALANCE",
+    "11 classes with extreme imbalance: class weights are safest, SMOTE may fail on very small classes.",
+    [
+     "smote_enn",
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "extreme",
+   "medium",
+   "medium",
+   2,
+   5,
+   [
+    "class_weight",
+    "SMALLEST_CLASS_TOO_SMALL_FOR_SMOTE",
+    "The smallest class has only 5 rows, too few for SMOTE (needs 6 or more). Class weights are the safest option; consider removing very small classes.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "extreme",
+   "medium",
+   "medium",
+   2,
+   50,
+   [
+    "smote_enn",
+    "EXTREME",
+    "Extreme imbalance (ratio 0.5000%); also consider collecting more minority rows.",
+    [
+     "smote_tomek",
+     "class_weight",
+     "adasyn"
+    ]
+   ]
+  ],
+  [
+   "extreme",
+   "medium",
+   "medium",
+   3,
+   5,
+   [
+    "class_weight",
+    "SMALLEST_CLASS_TOO_SMALL_FOR_SMOTE",
+    "The smallest class has only 5 rows, too few for SMOTE (needs 6 or more). Class weights are the safest option; consider removing very small classes.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "extreme",
+   "medium",
+   "medium",
+   3,
+   50,
+   [
+    "class_weight",
+    "MULTICLASS",
+    "Multi-class (3 classes) with extreme imbalance: class weights are fast and add no synthetic rows.",
+    [
+     "smote"
+    ]
+   ]
+  ],
+  [
+   "extreme",
+   "medium",
+   "medium",
+   11,
+   5,
+   [
+    "class_weight",
+    "SMALLEST_CLASS_TOO_SMALL_FOR_SMOTE",
+    "The smallest class has only 5 rows, too few for SMOTE (needs 6 or more). Class weights are the safest option; consider removing very small classes.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "extreme",
+   "medium",
+   "medium",
+   11,
+   50,
+   [
+    "class_weight",
+    "MANY_CLASSES_EXTREME_IMBALANCE",
+    "11 classes with extreme imbalance: class weights are safest, SMOTE may fail on very small classes.",
+    [
+     "smote_enn",
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "extreme",
+   "medium",
+   "high",
+   2,
+   5,
+   [
+    "class_weight",
+    "SMALLEST_CLASS_TOO_SMALL_FOR_SMOTE",
+    "The smallest class has only 5 rows, too few for SMOTE (needs 6 or more). Class weights are the safest option; consider removing very small classes.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "extreme",
+   "medium",
+   "high",
+   2,
+   50,
+   [
+    "class_weight",
+    "HIGH_DIMENSIONAL",
+    "200 features: synthetic rows may be unrealistic in high dimensions.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "extreme",
+   "medium",
+   "high",
+   3,
+   5,
+   [
+    "class_weight",
+    "SMALLEST_CLASS_TOO_SMALL_FOR_SMOTE",
+    "The smallest class has only 5 rows, too few for SMOTE (needs 6 or more). Class weights are the safest option; consider removing very small classes.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "extreme",
+   "medium",
+   "high",
+   3,
+   50,
+   [
+    "class_weight",
+    "MULTICLASS",
+    "Multi-class (3 classes) with extreme imbalance: class weights are fast and add no synthetic rows.",
+    [
+     "smote"
+    ]
+   ]
+  ],
+  [
+   "extreme",
+   "medium",
+   "high",
+   11,
+   5,
+   [
+    "class_weight",
+    "SMALLEST_CLASS_TOO_SMALL_FOR_SMOTE",
+    "The smallest class has only 5 rows, too few for SMOTE (needs 6 or more). Class weights are the safest option; consider removing very small classes.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "extreme",
+   "medium",
+   "high",
+   11,
+   50,
+   [
+    "class_weight",
+    "MANY_CLASSES_EXTREME_IMBALANCE",
+    "11 classes with extreme imbalance: class weights are safest, SMOTE may fail on very small classes.",
+    [
+     "smote_enn",
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "extreme",
+   "large",
+   "low",
+   2,
+   5,
+   [
+    "class_weight",
+    "SMALLEST_CLASS_TOO_SMALL_FOR_SMOTE",
+    "The smallest class has only 5 rows, too few for SMOTE (needs 6 or more). Class weights are the safest option; consider removing very small classes.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "extreme",
+   "large",
+   "low",
+   2,
+   50,
+   [
+    "smote_enn",
+    "EXTREME",
+    "Extreme imbalance (ratio 0.5000%); also consider collecting more minority rows.",
+    [
+     "smote_tomek",
+     "class_weight",
+     "adasyn"
+    ]
+   ]
+  ],
+  [
+   "extreme",
+   "large",
+   "low",
+   3,
+   5,
+   [
+    "class_weight",
+    "SMALLEST_CLASS_TOO_SMALL_FOR_SMOTE",
+    "The smallest class has only 5 rows, too few for SMOTE (needs 6 or more). Class weights are the safest option; consider removing very small classes.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "extreme",
+   "large",
+   "low",
+   3,
+   50,
+   [
+    "smote",
+    "MULTICLASS_LARGE_SEVERE",
+    "Multi-class training data (3 classes) with extreme imbalance.",
+    [
+     "class_weight",
+     "smote_enn",
+     "adasyn"
+    ]
+   ]
+  ],
+  [
+   "extreme",
+   "large",
+   "low",
+   11,
+   5,
+   [
+    "class_weight",
+    "SMALLEST_CLASS_TOO_SMALL_FOR_SMOTE",
+    "The smallest class has only 5 rows, too few for SMOTE (needs 6 or more). Class weights are the safest option; consider removing very small classes.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "extreme",
+   "large",
+   "low",
+   11,
+   50,
+   [
+    "class_weight",
+    "MANY_CLASSES_EXTREME_IMBALANCE",
+    "11 classes with extreme imbalance: class weights are safest, SMOTE may fail on very small classes.",
+    [
+     "smote_enn",
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "extreme",
+   "large",
+   "medium",
+   2,
+   5,
+   [
+    "class_weight",
+    "SMALLEST_CLASS_TOO_SMALL_FOR_SMOTE",
+    "The smallest class has only 5 rows, too few for SMOTE (needs 6 or more). Class weights are the safest option; consider removing very small classes.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "extreme",
+   "large",
+   "medium",
+   2,
+   50,
+   [
+    "smote_enn",
+    "EXTREME",
+    "Extreme imbalance (ratio 0.5000%); also consider collecting more minority rows.",
+    [
+     "smote_tomek",
+     "class_weight",
+     "adasyn"
+    ]
+   ]
+  ],
+  [
+   "extreme",
+   "large",
+   "medium",
+   3,
+   5,
+   [
+    "class_weight",
+    "SMALLEST_CLASS_TOO_SMALL_FOR_SMOTE",
+    "The smallest class has only 5 rows, too few for SMOTE (needs 6 or more). Class weights are the safest option; consider removing very small classes.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "extreme",
+   "large",
+   "medium",
+   3,
+   50,
+   [
+    "smote",
+    "MULTICLASS_LARGE_SEVERE",
+    "Multi-class training data (3 classes) with extreme imbalance.",
+    [
+     "class_weight",
+     "smote_enn",
+     "adasyn"
+    ]
+   ]
+  ],
+  [
+   "extreme",
+   "large",
+   "medium",
+   11,
+   5,
+   [
+    "class_weight",
+    "SMALLEST_CLASS_TOO_SMALL_FOR_SMOTE",
+    "The smallest class has only 5 rows, too few for SMOTE (needs 6 or more). Class weights are the safest option; consider removing very small classes.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "extreme",
+   "large",
+   "medium",
+   11,
+   50,
+   [
+    "class_weight",
+    "MANY_CLASSES_EXTREME_IMBALANCE",
+    "11 classes with extreme imbalance: class weights are safest, SMOTE may fail on very small classes.",
+    [
+     "smote_enn",
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "extreme",
+   "large",
+   "high",
+   2,
+   5,
+   [
+    "class_weight",
+    "SMALLEST_CLASS_TOO_SMALL_FOR_SMOTE",
+    "The smallest class has only 5 rows, too few for SMOTE (needs 6 or more). Class weights are the safest option; consider removing very small classes.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "extreme",
+   "large",
+   "high",
+   2,
+   50,
+   [
+    "class_weight",
+    "HIGH_DIMENSIONAL",
+    "200 features: synthetic rows may be unrealistic in high dimensions.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "extreme",
+   "large",
+   "high",
+   3,
+   5,
+   [
+    "class_weight",
+    "SMALLEST_CLASS_TOO_SMALL_FOR_SMOTE",
+    "The smallest class has only 5 rows, too few for SMOTE (needs 6 or more). Class weights are the safest option; consider removing very small classes.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "extreme",
+   "large",
+   "high",
+   3,
+   50,
+   [
+    "smote",
+    "MULTICLASS_LARGE_SEVERE",
+    "Multi-class training data (3 classes) with extreme imbalance.",
+    [
+     "class_weight",
+     "smote_enn",
+     "adasyn"
+    ]
+   ]
+  ],
+  [
+   "extreme",
+   "large",
+   "high",
+   11,
+   5,
+   [
+    "class_weight",
+    "SMALLEST_CLASS_TOO_SMALL_FOR_SMOTE",
+    "The smallest class has only 5 rows, too few for SMOTE (needs 6 or more). Class weights are the safest option; consider removing very small classes.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "extreme",
+   "large",
+   "high",
+   11,
+   50,
+   [
+    "class_weight",
+    "MANY_CLASSES_EXTREME_IMBALANCE",
+    "11 classes with extreme imbalance: class weights are safest, SMOTE may fail on very small classes.",
+    [
+     "smote_enn",
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "extreme",
+   "very_large",
+   "low",
+   2,
+   5,
+   [
+    "class_weight",
+    "SMALLEST_CLASS_TOO_SMALL_FOR_SMOTE",
+    "The smallest class has only 5 rows, too few for SMOTE (needs 6 or more). Class weights are the safest option; consider removing very small classes.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "extreme",
+   "very_large",
+   "low",
+   2,
+   50,
+   [
+    "smote_enn",
+    "VERY_LARGE_BINARY_SEVERE",
+    "Large training data with extreme imbalance (0.50%).",
+    [
+     "class_weight",
+     "random_undersample",
+     "smote_tomek"
+    ]
+   ]
+  ],
+  [
+   "extreme",
+   "very_large",
+   "low",
+   3,
+   5,
+   [
+    "class_weight",
+    "SMALLEST_CLASS_TOO_SMALL_FOR_SMOTE",
+    "The smallest class has only 5 rows, too few for SMOTE (needs 6 or more). Class weights are the safest option; consider removing very small classes.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "extreme",
+   "very_large",
+   "low",
+   3,
+   50,
+   [
+    "smote_enn",
+    "MULTICLASS_VERY_LARGE_SEVERE",
+    "Large multi-class training data (3 classes, 500,000 rows) with extreme imbalance: SMOTE-ENN oversamples and removes noisy synthetic rows.",
+    [
+     "class_weight",
+     "smote_tomek",
+     "adasyn"
+    ]
+   ]
+  ],
+  [
+   "extreme",
+   "very_large",
+   "low",
+   11,
+   5,
+   [
+    "class_weight",
+    "SMALLEST_CLASS_TOO_SMALL_FOR_SMOTE",
+    "The smallest class has only 5 rows, too few for SMOTE (needs 6 or more). Class weights are the safest option; consider removing very small classes.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "extreme",
+   "very_large",
+   "low",
+   11,
+   50,
+   [
+    "class_weight",
+    "MANY_CLASSES_EXTREME_IMBALANCE",
+    "11 classes with extreme imbalance: class weights are safest, SMOTE may fail on very small classes.",
+    [
+     "smote_enn",
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "extreme",
+   "very_large",
+   "medium",
+   2,
+   5,
+   [
+    "class_weight",
+    "SMALLEST_CLASS_TOO_SMALL_FOR_SMOTE",
+    "The smallest class has only 5 rows, too few for SMOTE (needs 6 or more). Class weights are the safest option; consider removing very small classes.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "extreme",
+   "very_large",
+   "medium",
+   2,
+   50,
+   [
+    "smote_enn",
+    "VERY_LARGE_BINARY_SEVERE",
+    "Large training data with extreme imbalance (0.50%).",
+    [
+     "class_weight",
+     "random_undersample",
+     "smote_tomek"
+    ]
+   ]
+  ],
+  [
+   "extreme",
+   "very_large",
+   "medium",
+   3,
+   5,
+   [
+    "class_weight",
+    "SMALLEST_CLASS_TOO_SMALL_FOR_SMOTE",
+    "The smallest class has only 5 rows, too few for SMOTE (needs 6 or more). Class weights are the safest option; consider removing very small classes.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "extreme",
+   "very_large",
+   "medium",
+   3,
+   50,
+   [
+    "smote_enn",
+    "MULTICLASS_VERY_LARGE_SEVERE",
+    "Large multi-class training data (3 classes, 500,000 rows) with extreme imbalance: SMOTE-ENN oversamples and removes noisy synthetic rows.",
+    [
+     "class_weight",
+     "smote_tomek",
+     "adasyn"
+    ]
+   ]
+  ],
+  [
+   "extreme",
+   "very_large",
+   "medium",
+   11,
+   5,
+   [
+    "class_weight",
+    "SMALLEST_CLASS_TOO_SMALL_FOR_SMOTE",
+    "The smallest class has only 5 rows, too few for SMOTE (needs 6 or more). Class weights are the safest option; consider removing very small classes.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "extreme",
+   "very_large",
+   "medium",
+   11,
+   50,
+   [
+    "class_weight",
+    "MANY_CLASSES_EXTREME_IMBALANCE",
+    "11 classes with extreme imbalance: class weights are safest, SMOTE may fail on very small classes.",
+    [
+     "smote_enn",
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "extreme",
+   "very_large",
+   "high",
+   2,
+   5,
+   [
+    "class_weight",
+    "SMALLEST_CLASS_TOO_SMALL_FOR_SMOTE",
+    "The smallest class has only 5 rows, too few for SMOTE (needs 6 or more). Class weights are the safest option; consider removing very small classes.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "extreme",
+   "very_large",
+   "high",
+   2,
+   50,
+   [
+    "smote_enn",
+    "VERY_LARGE_BINARY_SEVERE",
+    "Large training data with extreme imbalance (0.50%).",
+    [
+     "class_weight",
+     "random_undersample",
+     "smote_tomek"
+    ]
+   ]
+  ],
+  [
+   "extreme",
+   "very_large",
+   "high",
+   3,
+   5,
+   [
+    "class_weight",
+    "SMALLEST_CLASS_TOO_SMALL_FOR_SMOTE",
+    "The smallest class has only 5 rows, too few for SMOTE (needs 6 or more). Class weights are the safest option; consider removing very small classes.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "extreme",
+   "very_large",
+   "high",
+   3,
+   50,
+   [
+    "smote_enn",
+    "MULTICLASS_VERY_LARGE_SEVERE",
+    "Large multi-class training data (3 classes, 500,000 rows) with extreme imbalance: SMOTE-ENN oversamples and removes noisy synthetic rows.",
+    [
+     "class_weight",
+     "smote_tomek",
+     "adasyn"
+    ]
+   ]
+  ],
+  [
+   "extreme",
+   "very_large",
+   "high",
+   11,
+   5,
+   [
+    "class_weight",
+    "SMALLEST_CLASS_TOO_SMALL_FOR_SMOTE",
+    "The smallest class has only 5 rows, too few for SMOTE (needs 6 or more). Class weights are the safest option; consider removing very small classes.",
+    [
+     "random_undersample"
+    ]
+   ]
+  ],
+  [
+   "extreme",
+   "very_large",
+   "high",
+   11,
+   50,
+   [
+    "class_weight",
+    "MANY_CLASSES_EXTREME_IMBALANCE",
+    "11 classes with extreme imbalance: class weights are safest, SMOTE may fail on very small classes.",
+    [
+     "smote_enn",
+     "random_undersample"
+    ]
+   ]
+  ]
+ ]
+}

@@ -27,6 +27,8 @@ def _scratch_instance_dir(tmp_path_factory, monkeypatch):
     """Runs, bundles and the signing key go to a temporary instance/ in every test."""
     monkeypatch.setenv("TOOLKIT_INSTANCE_DIR", str(tmp_path_factory.mktemp("instance")))
     monkeypatch.setenv("TOOLKIT_NO_BROWSER", "1")  # no test ever opens a real browser
+    # no test finds this computer's nmap: TOOLKIT_NMAP_PATH, when set, is the only place looked at
+    monkeypatch.setenv("TOOLKIT_NMAP_PATH", str(tmp_path_factory.mktemp("no_nmap") / "nmap"))
 
 
 @pytest.fixture
@@ -50,6 +52,7 @@ def fake_platform(monkeypatch):
 # ---- Web IDS app fixtures (toolkit.web, v5.1 step 1.2a) ----
 
 STATE_CHANGING = {"POST", "PUT", "PATCH", "DELETE"}
+APP_ADDRESS = "127.0.0.1"  # where the test clients send their requests (the Host check)
 
 
 def _token_client_class():
@@ -72,6 +75,13 @@ def _token_client_class():
                 token = re.search(r'<meta name="csrf-token" content="([^"]+)">', page).group(1)
             return token
 
+        # the cookies are the app's address's (``SERVER_NAME``, see ``make_app``)
+        def get_cookie(self, key, domain=APP_ADDRESS, path="/"):
+            return super().get_cookie(key, domain, path)
+
+        def set_cookie(self, key, value="", *, domain=APP_ADDRESS, **kwargs):
+            super().set_cookie(key, value, domain=domain, **kwargs)
+
         def open(self, *args, **kwargs):
             if self.send_token and kwargs.get("method", "GET").upper() in STATE_CHANGING:
                 headers = Headers(kwargs.get("headers"))
@@ -88,11 +98,14 @@ def make_app():
     """Build a fresh web app (call it after setting env variables): its own workspaces,
     model store and upload folder, so state never leaks between apps or tests. Its test
     clients send the CSRF token (see ``_token_client_class``)."""
-    from toolkit.controllers.web import create_app
+    from toolkit.web.controllers import create_app
 
     def _make(config=None):
         app = create_app(config)
         app.config["TESTING"] = True
+        # The test clients' address, as a browser on the app sends it (the Host check, v5.2
+        # step 2.4a); since Flask 3.1 it doesn't limit which hosts the routes answer.
+        app.config["SERVER_NAME"] = f"{APP_ADDRESS}:{app.extensions['toolkit'].config.port}"
         app.test_client_class = _token_client_class()
         return app
 

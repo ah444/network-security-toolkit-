@@ -4,8 +4,24 @@ import re
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-JS_DIR = REPO_ROOT / "toolkit/ui/web/static/js"
-TEMPLATE = REPO_ROOT / "toolkit/ui/web/templates/dynamic_ids.html"
+JS_DIR = REPO_ROOT / "toolkit/web/ui/static/js"
+TEMPLATE = REPO_ROOT / "toolkit/web/ui/templates/dynamic_ids.html"
+SCAN_TEMPLATE = REPO_ROOT / "toolkit/web/ui/templates/scan.html"  # the port scanner (v5.2 2.4e)
+UNLOCK_TEMPLATE = REPO_ROOT / "toolkit/web/ui/templates/unlock.html"  # another computer (2.4f)
+# each page's entry module, and the template its element ids are in
+ENTRY_MODULES = {"main.js": TEMPLATE, "scan.js": SCAN_TEMPLATE, "unlock.js": UNLOCK_TEMPLATE}
+
+
+def found(paths, what):
+    """``paths`` sorted; an error when there are none, so a folder that moved (v5.2 step 2.3)
+    makes the tests fail instead of passing over an empty list."""
+    paths = sorted(paths)
+    if not paths:
+        raise FileNotFoundError(f"no {what} found: did the folder move?")
+    return paths
+
+
+TEMPLATES = found(TEMPLATE.parent.glob("*.html"), "templates")
 
 
 def _without_comments(text):
@@ -31,7 +47,8 @@ def _without_comments(text):
 
 def js_sources(code_only=True):
     """Module file name -> its text (comments removed unless ``code_only`` is False)."""
-    texts = {path.name: path.read_text(encoding="utf-8") for path in sorted(JS_DIR.glob("*.js"))}
+    texts = {path.name: path.read_text(encoding="utf-8")
+             for path in found(JS_DIR.glob("*.js"), "JavaScript modules")}
     return {name: _without_comments(text) for name, text in texts.items()} if code_only else texts
 
 
