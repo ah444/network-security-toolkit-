@@ -89,6 +89,7 @@ no Flask, no argparse. Read by `cli/` and `web/`, it imports neither
 | `toolkit/core/services/ids/bundle.py` | services | packs and checks signed bundles (bytes only) |
 | `toolkit/core/services/ids/legacy_names.py` | services | the old names (`toolkit.ids_core`, before step 1.5d; `toolkit.services.ids`, until v5.2 step 2.3a), only while a bundle saved with them loads |
 | `toolkit/core/services/ids/exports.py` | services | saves, lists and loads runs and bundles; `BundleStore` is the `ModelStore` |
+| `toolkit/core/services/ids/comparison.py` | services | the saved runs (records only, never a bundle): a run's summary, the view its charts need, whether two runs scored the same test rows, two runs side by side |
 | `toolkit/core/services/ids/batch.py` | services | labels every row of a table: the CLI's `--csv` and the web's "Predict a CSV file" |
 | `toolkit/core/services/ids/prediction.py` | services | the IDS command's predictions: one row, a table, a CSV file into a new file |
 | `toolkit/core/services/recon/__init__.py` | services | the scanner's logic |
