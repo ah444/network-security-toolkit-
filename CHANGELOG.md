@@ -2,8 +2,87 @@
 
 All notable changes to this project. Versions follow the roadmap in
 [docs/IMPROVEMENT_PLAN.md](docs/IMPROVEMENT_PLAN.md); day-to-day progress is in
+[docs/V5.2_CHECKLIST.md](docs/V5.2_CHECKLIST.md) (v5.2),
 [docs/V5.1_CHECKLIST.md](docs/V5.1_CHECKLIST.md) (v5.1) and
 [docs/V5.0_CHECKLIST.md](docs/V5.0_CHECKLIST.md) (v5.0).
+
+## [5.2] — 2026-10-30
+
+v5.2 "the user's improvements": a theme button, pages for every screen, the code arranged by
+interface, a port scanner that reads what it finds (with nmap as an optional engine), and the
+port scan in the web app, also from your own virtual machines behind an access token (steps
+2.1–2.4 of the [checklist](docs/V5.2_CHECKLIST.md)). Project version: `5.2.0`.
+
+**Test result:** 1,484 automated tests pass; `ruff`, `mypy` and `pip-audit` are clean. The
+gate ([record](docs/release/5.2-gate.md)): the full NSL-KDD files through the trainer with the
+keyboard only, and the web and the CLI label `KDDTest+` the same, byte for byte; the ML report
+on the v5.2 code gives the 5.0 numbers (six cases, all 1,246 values equal); a fresh install on
+Windows passes every menu path; the home page, the trainer, the port scanner and the unlock
+page at 8 sizes from 320 × 568 to 1920 × 1080 in both themes, with no contrast failure (text
+and, new in this gate, field borders). Windows 10 Enterprise LTSC 2021, Python 3.14.3,
+scikit-learn 1.8.0.
+
+### Added
+- **A theme button** (2.1) in the navbar of every page: Auto (follows the system), Light,
+  Dark, kept in the browser.
+- **The port scan in the web app** (2.4): a **Port Scanner** page (`/scan`) with the same
+  choices as `toolkit scan`, the "I own this target or have written permission" box, a live
+  log, progress and **Cancel scan**, a card per open port with its software, CVEs and CVSS
+  level, and the report as TXT, JSON or CSV. One scan at a time, beside a training; nothing is
+  sent, not even a DNS query, before the box is ticked; the API keys stay on the server;
+  `TOOLKIT_SCAN_MAX_MIN` (default 60). See [docs/web_api.md](docs/web_api.md) and the
+  [user guide](docs/user_guide.md) 3.6.
+- **`toolkit web --host ADDRESS`** (2.4f): opens the web app to your network (for example
+  your virtual machines' host-only network) behind a warning; another computer types an
+  access token, new at every start and shown in the terminal, once in its browser; five wrong
+  tries a minute; this computer's own browser needs none; a banner on every page while it is
+  open. User guide 3.7.
+- **nmap as an optional engine** (N1–N4): `toolkit scan --engine nmap` (and the page's
+  choice) when nmap is installed, with `--service-detection`, `--timing`, `--scripts safe`
+  and `--os-detect`; the toolkit's own scanner stays the default and needs nothing
+  installed. `TOOLKIT_NMAP_PATH`.
+- The report files get the columns `os_hint`, `cve_source`, `engine` and `cpe` (A, N).
+
+### Changed
+- **Pages for every screen** (2.2): a Menu button on phones (the sticky navbar from 55 % of a
+  320 px screen to 11 %), less padding, the step bar on one line; the trainer as wide as the
+  home page on large screens, lists in columns, a long form folded.
+- **The scanner reads what it finds** (A1–A5): the product and version from a banner's own
+  words (`OpenSSH_for_Windows_8.1` is OpenSSH 8.1); the service from its answer, else the
+  port's usual name with a `?`; the OS guess from the TTL, the banners and the open ports,
+  each with where it was seen, and saying when they disagree or the target is this
+  computer; CVEs matched by version (CPE names) for about 20 products, else by keyword, and
+  each report says which; every scan says first what it may send to each online service.
+- **The Upload Dataset card** redesigned from the user's mockup: a dropzone, the chosen files,
+  the result as tiles.
+- **The code arranged by interface** (2.3): `toolkit/core` (shared by both tools),
+  `toolkit/cli` and `toolkit/web`, the same layers inside each; `cli` and `web` never import
+  each other; a complexity limit of 10 and 400 lines a file, checked on every commit.
+
+### Security
+- **The Host check** (2.4a): the web app answers only a request named with its own IP
+  address or `localhost` and its port, against DNS rebinding.
+- **`ping` by its full path** (found in N2): on Windows a `ping.exe` in the current folder
+  could run instead of the system's.
+- A field's border is at least 3:1 in both themes (WCAG 1.4.11, 5.2 gate).
+
+### Fixed
+- `scripts/menu_walkthrough.py` failed on the Host check and on the scan engine question
+  asked when nmap is installed (5.2 gate).
+
+### Upgrading from 5.1
+- Code that imports the toolkit's modules: they moved to `toolkit.core`, `toolkit.cli` and
+  `toolkit.web` ([architecture](docs/architecture.md)). The commands are unchanged.
+- Bundles exported with 5.1 still load on the install that made them (2.3: a test bundle with
+  the old module names, and real exports made before 2.3).
+- Scripts that read the scan's CSV get four more columns at the end.
+
+### Known limitations
+See **Known limitations** in the [README](README.md). New in this release:
+- `--host` is plain HTTP: someone who can read the network's traffic could take over a
+  session; use it only on a network you trust.
+- The full CIC-IDS2017 file, a real second computer, Linux and macOS were not part of the
+  gate (see its record).
 
 ## [5.1] — 2026-10-25
 

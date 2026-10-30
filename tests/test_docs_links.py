@@ -68,12 +68,18 @@ def test_install_steps_cover_what_a_fresh_windows_install_meets(repo_root):
     assert "If PowerShell refuses `Activate.ps1`" in guide
 
 
-def test_changelog_starts_with_5_1(repo_root):
+def test_changelog_starts_with_5_2(repo_root):
     changelog = (repo_root / "CHANGELOG.md").read_text(encoding="utf-8")
     versions = re.findall(r"^## \[([^\]]+)\]", changelog, re.MULTILINE)
-    assert versions[:2] == ["5.1", "5.0.1"]
-    section = changelog[changelog.index("## [5.1]"):changelog.index("## [5.0.1]")]
-    for heading in ("Added", "Changed", "Security", "Removed", "Upgrading from 5.0",
-                    "Known limitations"):
-        assert f"\n### {heading}\n" in section, heading
-    assert "docs/V5.1_CHECKLIST.md" in changelog[:changelog.index("## [")]
+    assert versions[:3] == ["5.2", "5.1", "5.0.1"]
+    sections = {"5.2": (changelog.index("## [5.2]"), changelog.index("## [5.1]"),
+                        ("Added", "Changed", "Security", "Fixed", "Upgrading from 5.1",
+                         "Known limitations")),
+                "5.1": (changelog.index("## [5.1]"), changelog.index("## [5.0.1]"),
+                        ("Added", "Changed", "Security", "Removed", "Upgrading from 5.0",
+                         "Known limitations"))}
+    for version, (start, end, headings) in sections.items():
+        for heading in headings:
+            assert f"\n### {heading}\n" in changelog[start:end], (version, heading)
+    intro = changelog[:changelog.index("## [")]
+    assert "docs/V5.2_CHECKLIST.md" in intro and "docs/V5.1_CHECKLIST.md" in intro
