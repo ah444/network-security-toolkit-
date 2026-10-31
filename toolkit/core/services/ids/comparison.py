@@ -157,6 +157,7 @@ def compare(a: Mapping[str, Any], b: Mapping[str, Any]) -> dict[str, Any]:
         "models": models,
         "only_in_a": [name for name in a_rows if name not in b_rows],
         "only_in_b": [name for name in b_rows if name not in a_rows],
+        "titles": {row["model"]: row["title"] for row in [*b_rows.values(), *a_rows.values()]},
         "settings": [{"setting": key, "a": a_settings[key], "b": b_settings[key]}
                      for key in a_settings if a_settings[key] != b_settings[key]],
     }

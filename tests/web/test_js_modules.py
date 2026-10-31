@@ -3,7 +3,7 @@
 import mimetypes
 import re
 
-from web_js import ENTRY_MODULES, JS_DIR, SCAN_TEMPLATE, TEMPLATE, all_js, js_sources
+from web_js import ENTRY_MODULES, JS_DIR, RUNS_TEMPLATE, SCAN_TEMPLATE, TEMPLATE, all_js, js_sources
 
 IMPORT = re.compile(r"""^import\s+[^;]*?\s+from\s+["']([^"']+)["'];""", re.M)
 
@@ -23,6 +23,9 @@ def test_template_loads_main_as_a_module():
     scan_scripts = re.findall(r"<script[^>]*>", SCAN_TEMPLATE.read_text(encoding="utf-8"))
     assert scan_scripts == scripts[:2] + [
         '<script type="module" src="{{ url_for(\'static\', filename=\'js/scan.js\') }}">']
+    runs_scripts = re.findall(r"<script[^>]*>", RUNS_TEMPLATE.read_text(encoding="utf-8"))
+    assert runs_scripts == scripts[:2] + [
+        '<script type="module" src="{{ url_for(\'static\', filename=\'js/runs.js\') }}">']
 
 
 def test_imports_are_relative_and_exist():

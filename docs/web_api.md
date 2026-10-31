@@ -139,7 +139,8 @@ TrainingRun records (an edited file, a newer schema), which are skipped, not an 
 
 `GET /api/v1/runs/compare?a=...&b=...` answers both summaries, `comparable` and `reasons`,
 each model of both runs with its numbers in `a` and `b`, the recall of the classes in both, the
-models of one run only (`only_in_a`, `only_in_b`) and the settings that differ (features,
+models of one run only (`only_in_a`, `only_in_b`), every model's `title` in `titles`, and the
+settings that differ (features,
 models, balancing, selection). Two runs are comparable when they scored the same test rows;
 otherwise `reasons` lists what differs (`DIFFERENT_DATASET`, `DIFFERENT_TEST_FILE`,
 `DIFFERENT_LABEL`, `DIFFERENT_SPLIT`, `DIFFERENT_ROWS`) and every `delta` is null. A `delta` is

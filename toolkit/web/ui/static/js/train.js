@@ -2,9 +2,9 @@
 // the results (split, leakage guard, leaderboard) and the confusion matrices.
 
 import { getJSON, send } from "./api.js";
-import { runCharts } from "./charts.js";
+import { leaderboardTable, runCharts } from "./charts.js";
 import { byId, checkedValues, el, fillCheckboxList, fillSelect, message, scrollBox, setContent, show } from "./dom.js";
-import { balancingName, fmt, splitMessage } from "./format.js";
+import { balancingName, splitMessage } from "./format.js";
 import { emit, modelTitle, on, state, testSize } from "./state.js";
 
 // Fill the target list and the feature list; the profile's label is preselected
@@ -109,14 +109,7 @@ function trainingResult(result) {
       warning("Left out by the leakage guard: " + result.leakage.blocked.map(b => b.column + " (" + b.reason + ")").join(", ")),
     el("p", {}, `Balancing: ${balancingName(result.balancing.method)}${result.balancing.requested === "recommended" ? " (recommended from the training split)" : ""}.`),
     el("strong", {}, "Leaderboard"), " (ranked by CV macro-F1; ★ = selected):", el("br"),
-    scrollBox("Leaderboard", el("table", { class: "metrics-table" },
-      el("thead", {}, el("tr", {}, ["Model", "CV macro-F1", "Test macro-F1", "Test balanced acc.",
-                                    "Test accuracy", "Weakest class recall", "Fit time"].map(text => el("th", {}, text)))),
-      el("tbody", {}, result.leaderboard.map(row => el("tr", {},
-        [(row.selected ? "★ " : "") + row.title,
-         `${fmt(row.cv_macro_f1_mean, 3)} ± ${fmt(row.cv_macro_f1_std, 3)}`,
-         fmt(row.test_macro_f1, 3), fmt(row.test_balanced_accuracy, 3), fmt(row.test_accuracy, 3),
-         fmt(row.test_min_recall, 3), `${fmt(row.fit_seconds, 1)} s`].map(text => el("td", {}, text))))))),
+    leaderboardTable(result.leaderboard),
     runCharts(result.leaderboard, result.folds),
     result.failures.map(failure => warning(`${modelTitle(failure.name)} failed and was left out.`)),
     result.skipped.map(([name, reason]) => warning(`${modelTitle(name)} skipped: ${reason}`)),

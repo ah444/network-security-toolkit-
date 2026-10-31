@@ -1501,6 +1501,40 @@ textarea:focus-visible,
   fill: var(--chart-test);
 }
 
+/* ---------- Saved runs (v5.3 F2e) ---------- */
+/* runs.html: the list scrolls in its box; two runs' panels and each model's numbers sit side
+   by side where there is room, one under the other on a narrow screen */
+.runs-table td {
+  vertical-align: top;
+}
+
+.run-pick {
+  justify-content: center;
+  min-width: 44px;
+}
+
+.compare-runs,
+.compare-models {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+/* a run's tiles need the room: side by side only on a wide screen */
+.compare-runs {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 28rem), 1fr));
+}
+
+.compare-group {
+  text-align: left;
+  font-weight: 600;
+}
+
+#compareControls {
+  margin-top: 1rem;
+}
+
 /* ---------- Use: one row by hand (v5.2 step 2.2b) ---------- */
 /* A long form starts closed (predict.js); open, its fields are columns where there is room */
 .row-entry {

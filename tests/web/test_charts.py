@@ -157,6 +157,6 @@ def test_the_charts_styles():
 
 def test_the_trainer_shows_the_charts_under_the_leaderboard():
     code = js_sources()["train.js"]
-    assert 'import { runCharts } from "./charts.js";' in code
-    assert code.index('scrollBox("Leaderboard"') < \
+    assert 'import { leaderboardTable, runCharts } from "./charts.js";' in code
+    assert code.index("leaderboardTable(result.leaderboard)") < \
         code.index("runCharts(result.leaderboard, result.folds)")

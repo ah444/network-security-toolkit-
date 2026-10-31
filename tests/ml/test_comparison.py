@@ -165,6 +165,8 @@ def test_models_and_classes_of_one_run_only(record):
     board[0]["test_recall_per_class"] = board[0]["test_recall_per_class"][1:]
     result = comparison.compare(record, other)
     assert result["only_in_a"] == [dropped] and result["only_in_b"] == ["random_forest"]
+    assert result["titles"][dropped] == record["evaluation"]["leaderboard"][-1]["title"]
+    assert result["titles"]["random_forest"] == "Random Forest", "every model of both, titled"
     first = next(m for m in result["models"] if m["model"] == board[0]["model"])
     assert [r["label"] for r in first["recall"]] == list(CLASSES[1:])
 

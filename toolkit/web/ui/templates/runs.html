@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Saved Runs - Intrusion Detection System</title>
+  <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+  <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/app.css') }}">
+</head>
+<body>
+  <!-- Nav Bar -->
+  <nav class="navbar">
+    <a href="/" class="nav-logo">Intrusion Detection System</a>
+    <button type="button" id="navToggle" class="nav-link nav-toggle" aria-expanded="false" aria-controls="navMenu" hidden>Menu</button>
+    <ul class="nav-menu" id="navMenu">
+      <li class="nav-item"><a href="/" class="nav-link">Home</a></li>
+      <li class="nav-item"><a href="/dynamic_ids" class="nav-link">Dynamic Intrusion Detection System</a></li>
+      <li class="nav-item"><a href="/scan" class="nav-link">Port Scanner</a></li>
+      <li class="nav-item"><a href="/runs" class="nav-link" aria-current="page">Saved Runs</a></li>
+      <li class="nav-item"><button type="button" id="themeToggle" class="nav-link theme-toggle" hidden>Theme: Auto</button></li>
+    </ul>
+  </nav>
+  <script src="{{ url_for('static', filename='js/navbar.js') }}"></script>
+  {% if network_banner %}<p class="network-banner" role="note">{{ network_banner }}</p>{% endif %}
+
+  <!-- v5.3 F2: the runs exported from the trainer, read from their records only (never a
+       model); nothing is uploaded or trained here. runs.js fills it from GET /api/v1/runs. -->
+  <div class="container">
+    <h1>Saved Runs</h1>
+    <p class="field-hint">Each run exported on the Dynamic IDS page is saved on this computer with its settings and scores. Show one to see its leaderboard and charts, or tick two to compare them.</p>
+
+    <section class="section" aria-labelledby="runsTitle">
+      <h2 class="section-title" id="runsTitle">Runs, newest first</h2>
+      <div id="runsStatus" class="message" role="status" tabindex="-1"></div>
+      <div id="runsBox" class="table-container" tabindex="0" role="region" aria-label="Saved runs" hidden>
+        <table class="metrics-table runs-table">
+          <thead>
+            <tr><th scope="col">Compare</th><th scope="col">Saved</th><th scope="col">Dataset</th><th scope="col">Label</th><th scope="col">Split (train / test rows)</th><th scope="col">Selected model</th><th scope="col">CV macro-F1</th><th scope="col">Test macro-F1</th><th scope="col">Run</th></tr>
+          </thead>
+          <tbody id="runsRows"></tbody>
+        </table>
+      </div>
+      <p id="runsLeftOut" class="warning-message" hidden></p>
+      <div class="button-group">
+        <button type="button" id="runsOlder" class="btn btn-secondary" hidden>Older runs</button>
+      </div>
+      <div id="compareControls" hidden>
+        <button type="button" id="compareRuns" class="btn" disabled aria-describedby="compareHint">Compare the two ticked runs</button>
+        <p id="compareHint" class="field-hint" aria-live="polite"></p>
+      </div>
+    </section>
+
+    <section class="section" id="runSection" aria-labelledby="runTitle" hidden>
+      <h2 class="section-title" id="runTitle" tabindex="-1">Run</h2>
+      <div id="runView"></div>
+    </section>
+
+    <section class="section" id="comparisonSection" aria-labelledby="comparisonTitle" hidden>
+      <h2 class="section-title" id="comparisonTitle" tabindex="-1">Comparison</h2>
+      <div id="comparisonView"></div>
+    </section>
+  </div>
+  <script type="module" src="{{ url_for('static', filename='js/runs.js') }}"></script>
+</body>
+</html>

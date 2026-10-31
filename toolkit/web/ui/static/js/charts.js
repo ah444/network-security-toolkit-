@@ -203,6 +203,19 @@ export function recallTable(leaderboard) {
           el("td", {}, "–"))))))));
 }
 
+// The leaderboard of a run, ranked by CV macro-F1, the selected model starred (the trainer's
+// run and a saved one)
+export function leaderboardTable(leaderboard) {
+  return scrollBox("Leaderboard", el("table", { class: "metrics-table" },
+    el("thead", {}, el("tr", {}, ["Model", "CV macro-F1", "Test macro-F1", "Test balanced acc.",
+                                  "Test accuracy", "Weakest class recall", "Fit time"].map(text => el("th", {}, text)))),
+    el("tbody", {}, leaderboard.map(row => el("tr", {},
+      [(row.selected ? "★ " : "") + row.title,
+       `${fmt(row.cv_macro_f1_mean, 3)} ± ${fmt(row.cv_macro_f1_std, 3)}`,
+       fmt(row.test_macro_f1, 3), fmt(row.test_balanced_accuracy, 3), fmt(row.test_accuracy, 3),
+       fmt(row.test_min_recall, 3), `${fmt(row.fit_seconds, 1)} s`].map(text => el("td", {}, text)))))));
+}
+
 // All the charts of a run, in a section that can be closed
 export function runCharts(leaderboard, folds) {
   return el("details", { class: "run-charts", open: true },

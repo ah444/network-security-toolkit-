@@ -46,6 +46,7 @@ def test_settings_refuses_to_run_under_another_name(repo_root, tmp_path):
 
 
 def test_the_web_files_are_found(paths):
-    assert paths["templates"] == ["dynamic_ids.html", "home.html", "scan.html", "unlock.html"]
+    assert paths["templates"] == ["dynamic_ids.html", "home.html", "runs.html", "scan.html",
+                                  "unlock.html"]
     assert {"css/app.css", "js/main.js", "js/theme.js", "js/navbar.js"} <= set(paths["static"])
     assert paths["web_inside_package"] is True

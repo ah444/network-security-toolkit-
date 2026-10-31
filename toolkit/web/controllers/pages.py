@@ -1,4 +1,4 @@
-"""The HTML pages: home, the trainer and the port scanner."""
+"""The HTML pages: home, the trainer, the port scanner and the saved runs."""
 
 from __future__ import annotations
 
@@ -25,3 +25,9 @@ def dynamic_ids_page() -> str:
 def scan_page() -> str:
     """``GET /scan``: the port scanner's page (v5.2 step 2.4e)."""
     return render_template("scan.html")
+
+
+@bp.route("/runs")
+def runs_page() -> str:
+    """``GET /runs``: the saved runs, one shown or two compared (v5.3 F2e)."""
+    return render_template("runs.html")

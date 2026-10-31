@@ -47,10 +47,11 @@ def test_page_uses_only_api_routes():
     # the two predict-file routes are the url of predict.js's BATCH parts (step 1.4f);
     # /api/v1/workspace is used twice: GET to resume after a reload, DELETE to clear;
     # the scan page (v5.2 step 2.4e): its options, a scan started, and the session's scan,
-    # asked after a reload and after a scan that was cancelled; the unlock page's (2.4f)
+    # asked after a reload and after a scan that was cancelled; the unlock page's (2.4f);
+    # the saved runs' page (v5.3 F2e): the list, one run and the comparison
     urls = re.findall(r'(?:getJSON|send|predictWith)\("(/[^"?]*)|\burl: "(/[^"?]*)', all_js())
     urls = [call or part for call, part in urls]
-    assert len(urls) == 22 and all(url.startswith("/api/v1/") for url in urls), urls
+    assert len(urls) == 25 and all(url.startswith("/api/v1/") for url in urls), urls
 
 
 def test_page_sends_every_state_change_with_the_token():
