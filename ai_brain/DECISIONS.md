@@ -1,6 +1,6 @@
 # Decisions and rules of work
 
-The decisions the project is built on, why they were taken, and the rules every change follows. The decisions taken with the outside review committee in v5.3 (RD1–RD4) are in [REVIEW_DECISIONS.md](REVIEW_DECISIONS.md). The full reasoning behind D1–D23, with every option weighed, is in [IMPROVEMENT_PLAN.md](IMPROVEMENT_PLAN.md) §2–§3. What exists is in [PROJECT_STATUS.md](PROJECT_STATUS.md); what comes next is in [ROADMAP.md](ROADMAP.md).
+The decisions the project is built on, why they were taken, and the rules every change follows. The decisions taken with the outside review committee in v5.3 (RD1–RD4) are in [REVIEW_DECISIONS.md](REVIEW_DECISIONS.md). The full reasoning behind D1–D23, with every option weighed, is in [IMPROVEMENT_PLAN.md](../docs/IMPROVEMENT_PLAN.md) §2–§3. What exists is in [PROJECT_STATUS.md](PROJECT_STATUS.md); what comes next is in [ROADMAP.md](ROADMAP.md).
 
 A decision that was replaced stays listed, marked with what replaced it (section 9).
 
@@ -86,7 +86,7 @@ A decision that was replaced stays listed, marked with what replaced it (section
 
 ## 7. The plan's decisions, D1–D23
 
-From [IMPROVEMENT_PLAN.md](IMPROVEMENT_PLAN.md) §3 (2026-10-19, revised through six reviews). The table gives the choice and the main reason; the plan has every option.
+From [IMPROVEMENT_PLAN.md](../docs/IMPROVEMENT_PLAN.md) §3 (2026-10-19, revised through six reviews). The table gives the choice and the main reason; the plan has every option.
 
 | ID | Topic | Choice | Why | State |
 |---|---|---|---|---|

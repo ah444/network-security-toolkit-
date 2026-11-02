@@ -1,6 +1,6 @@
 # Project status: what exists today
 
-What the Network Security Toolkit is and does **now**, as built and tested. What is planned is in [ROADMAP.md](ROADMAP.md); why it is built this way is in [DECISIONS.md](DECISIONS.md) and [REVIEW_DECISIONS.md](REVIEW_DECISIONS.md); the tasks in progress are in [V5.3_CHECKLIST.md](V5.3_CHECKLIST.md).
+What the Network Security Toolkit is and does **now**, as built and tested. What is planned is in [ROADMAP.md](ROADMAP.md); why it is built this way is in [DECISIONS.md](DECISIONS.md) and [REVIEW_DECISIONS.md](REVIEW_DECISIONS.md); the tasks in progress are in [V5.3_CHECKLIST.md](../docs/V5.3_CHECKLIST.md).
 
 **As of:** 2026-11-02, branch `main`. Last release tag: **5.2** (2026-10-30). Work in progress: **v5.3**. Nothing has been pushed to a remote.
 

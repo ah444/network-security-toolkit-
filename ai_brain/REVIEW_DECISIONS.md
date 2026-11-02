@@ -1,6 +1,6 @@
 # Decisions of the review committee
 
-The design decisions taken with the outside review committee in v5.3, with why. The project's own decisions (D1–D23 of the plan and the later ones) and the rules of work are in [DECISIONS.md](DECISIONS.md), which also defines severity, test levels and "done". The checklist ([V5.3_CHECKLIST.md](V5.3_CHECKLIST.md)) holds the tasks that implement these; [CHANGELOG.md](../CHANGELOG.md) holds what shipped. The IDs start with **RD** so they never clash with the plan's D1–D23. When a decision replaces an earlier one, the earlier one is listed under **Superseded** with what replaced it, and the checklist marks it there too.
+The design decisions taken with the outside review committee in v5.3, with why. The project's own decisions (D1–D23 of the plan and the later ones) and the rules of work are in [DECISIONS.md](DECISIONS.md), which also defines severity, test levels and "done". The checklist ([V5.3_CHECKLIST.md](../docs/V5.3_CHECKLIST.md)) holds the tasks that implement these; [CHANGELOG.md](../CHANGELOG.md) holds what shipped. The IDs start with **RD** so they never clash with the plan's D1–D23. When a decision replaces an earlier one, the earlier one is listed under **Superseded** with what replaced it, and the checklist marks it there too.
 
 **Status:** RD1–RD4 were approved on 2026-11-02 by the outside review committee (security, architecture, reliability, ML, product) and by the user. **None of them is implemented or tested yet.** The tasks that implement them are in the checklist's section H.
 
