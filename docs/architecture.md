@@ -109,6 +109,7 @@ no Flask, no argparse. Read by `cli/` and `web/`, it imports neither
 | `toolkit/core/data/logs.py` | data | one rotating log file per tool, secrets redacted |
 | `toolkit/core/data/keys.py` | data | API keys and the AI model setting, from the environment or `.env` |
 | `toolkit/core/data/files.py` | data | the text files the commands read and write |
+| `toolkit/core/data/protect.py` | data | `instance/` and `.env` limited to this account (HS5): on Windows the ACL with `icacls`, elsewhere `chmod` |
 | `toolkit/core/data/ids/__init__.py` | data | the IDS's files |
 | `toolkit/core/data/ids/bundle_files.py` | data | the signing key and the bundle files, as bytes |
 | `toolkit/core/data/ids/run_files.py` | data | `TrainingRun` records on disk, as dicts (`instance/runs/`) |

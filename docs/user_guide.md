@@ -921,11 +921,54 @@ Everything the toolkit keeps is in the `instance` folder of the project folder
 | `instance\runs\` | the record of each exported run: data, split, settings, scores |
 | `instance\scans\` | exported scan reports |
 | `instance\logs\` | one log file per tool (`web.log`, `scanner.log`, `ids_cli.log`) |
+| `instance\uploads\` | temporary copies of the datasets uploaded to the web trainer |
 | `instance\signing.key` | the key that signs your exports |
 
-Back up `signing.key` together with your bundles: without it, the bundles can't be loaded.
 An installed copy (`pip install .`) keeps these in a per-user folder instead
-([reference.md, section 7.3](reference.md#73-where-the-data-folder-is)).
+([reference.md, section 7.3](reference.md#73-where-the-data-folder-is)). Your API keys are
+in `.env` in the project folder.
+
+### 6.1 Who can open them
+
+The toolkit trusts this computer: whoever is signed in to it as you, and whoever you give
+the web app's access token to (section 3.7), has the same rights over these files. Other
+accounts on the computer are kept out by the operating system's permissions only, so each
+tool (a scan, the IDS, the web trainer) sets them when it starts: `instance` and `.env` can be opened by your account, SYSTEM
+(which Windows needs for backups and services) and the Administrators only, and nothing is
+inherited from the folder above (on Windows a second drive such as `D:` often gives
+everyone full control). Every file made in `instance`, the signing key too, gets the same.
+On Linux and macOS the folder is `700` and `.env` `600`.
+
+When they can't be set, for example on a USB drive formatted FAT, which has no permissions,
+the tool says so as it starts and goes on:
+
+```
+Could not limit who may open E:\toolkit\instance (...): other accounts on this computer may be able to read it.
+```
+
+The signature of a bundle proves it was made with this install's key and not changed
+since. It hides nothing: whoever can read a bundle can read the model, its settings and its
+example rows. Whoever has a copy of `signing.key` can make bundles this install loads and
+open the ones it made, so keep its backups where only you can read them.
+
+### 6.2 Back up and restore
+
+Back up these three, together:
+
+| Path | Why |
+|---|---|
+| `instance\signing.key` | without it, no bundle made here loads again (a new key doesn't bring them back) |
+| `instance\bundles\` | your exports |
+| `instance\runs\` | the record of each run, to retrain from if a bundle is lost |
+
+The logs and the uploads need no backup, and the scan reports only if you want to keep them.
+
+To restore, on this computer or on a new install: start the web trainer once
+(`python -m toolkit web`, then stop it with Ctrl+C: it makes the `instance` folder and
+protects it), then copy the three into it. Copy them rather than move
+them, so they get the folder's permissions (a file moved on the same drive keeps its old
+ones). Do it before your first export on a new install: an export makes a new key, and the
+bundles saved with that key won't load once your old key is back.
 
 ## 7. If something goes wrong
 

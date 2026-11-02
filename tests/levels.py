@@ -100,6 +100,7 @@ INTEGRATION = (
     "test_paths.py",
     "test_portability.py",
     "test_ports.py",
+    "test_protect.py",
     "test_repo.py",
     "test_smoke.py",
     "web/test_access.py",

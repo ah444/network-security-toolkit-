@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 from levels import LEVELS
+from toolkit.core.data import protect
 from platforms import PLATFORMS
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -39,6 +40,9 @@ def _scratch_instance_dir(tmp_path_factory, monkeypatch):
     monkeypatch.setenv("TOOLKIT_NO_BROWSER", "1")  # no test ever opens a real browser
     # no test finds this computer's nmap: TOOLKIT_NMAP_PATH, when set, is the only place looked at
     monkeypatch.setenv("TOOLKIT_NMAP_PATH", str(tmp_path_factory.mktemp("no_nmap") / "nmap"))
+    # no test changes the permissions of a real file (this checkout's .env): HS5's own tests
+    # put the real one back (tests/test_protect.py)
+    monkeypatch.setattr(protect, "_apply", lambda path: None)
 
 
 @pytest.fixture

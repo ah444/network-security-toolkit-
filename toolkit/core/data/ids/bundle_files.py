@@ -14,6 +14,7 @@ import secrets
 from collections.abc import Mapping
 from pathlib import Path
 
+from ..protect import protect
 from ..settings import instance_dir
 
 KEY_BYTES = 32
@@ -44,6 +45,7 @@ def signing_key(path: str | Path | None = None, *, create: bool = False) -> byte
         if not create:
             raise BundleError("NO_KEY", f"This install has no signing key ({path.name})")
         path.parent.mkdir(parents=True, exist_ok=True)
+        protect(path.parent)  # HS5: the key inherits the folder's permissions
         try:
             with path.open("x", encoding="ascii", newline="\n") as handle:
                 handle.write(secrets.token_bytes(KEY_BYTES).hex() + "\n")
@@ -51,7 +53,7 @@ def signing_key(path: str | Path | None = None, *, create: bool = False) -> byte
             pass  # made at the same moment by another process: use that one
         else:
             try:
-                os.chmod(path, 0o600)  # owner only (Windows keeps its own ACLs)
+                os.chmod(path, 0o600)  # owner only (on Windows: the folder's ACL, protect)
             except OSError:
                 pass
     try:
