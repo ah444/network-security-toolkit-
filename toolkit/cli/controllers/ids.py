@@ -9,6 +9,8 @@ project: train one in the web trainer and click Export (saved in instance/bundle
     python -m toolkit ids --list              list the exports
     python -m toolkit ids --csv flows.csv     label every row (newest export)
     python -m toolkit ids --bundle my.bundle --json '{"Flow Duration": 3, ...}'
+    python -m toolkit ids --runs              list the saved runs (v5.3 F2)
+    python -m toolkit ids --compare A B       two saved runs side by side
 
 (from the project folder; ``toolkit ids`` once installed; moved from
 tools/IDS/IDS_CLI - CIC-2017/ in v5.1 step 1.4a; the predictions are
@@ -25,6 +27,7 @@ from collections.abc import Sequence
 from pathlib import Path
 
 from ...core.services.ids.bundle import Bundle, BundleError, BundleVersionWarning
+from ...core.services.ids.comparison import NotARun, compare_saved, saved_runs
 from ...core.services.ids.datasets import DatasetError
 from ...core.services.ids.exports import BundleStore
 from ...core.services.ids.prediction import (
@@ -37,6 +40,7 @@ from ...core.services.ids.prediction import (
 from ...core.data.logs import setup_logging
 from ...core.services.ports import ModelStore
 from ..ui import ids as screen
+from ..ui import runs as runs_screen
 
 MODEL_STORE: ModelStore = BundleStore()  # this install's exports (instance/bundles)
 LARGE_BUNDLE = 500 * 2**20  # bytes: say that loading takes a while
@@ -71,6 +75,34 @@ def list_exports() -> int:
     """``--list``: this install's exports, newest first; exit code 0."""
     screen.exports_list(MODEL_STORE.list_bundles())
     return 0
+
+
+def list_runs(before: str | None = None) -> int:
+    """``--runs``: the saved runs, newest first, 50 at a time (``--before``: the older ones);
+    their records only, no model is opened. Exit code 0."""
+    runs_screen.runs_list(saved_runs(before))
+    return 0
+
+
+def compare_runs(a: str, b: str) -> int:
+    """``--compare A B``: two saved runs side by side, Δ = B − A when they scored the same
+    test rows. Exit code 0."""
+    runs_screen.comparison(compare_saved(a, b))
+    return 0
+
+
+def listing(args: argparse.Namespace) -> int:
+    """``--list``, ``--runs`` or ``--compare``, which open no model; exit code 2 with the message
+    for a bad run id, a file that is not a run, or a run that isn't saved."""
+    if args.list:
+        return list_exports()
+    try:
+        return list_runs(args.before) if args.runs else compare_runs(*args.compare)
+    except NotARun as error:
+        screen.error(error)
+    except FileNotFoundError as error:
+        screen.error(FileNotFoundError(f"There is no saved run {error}."))
+    return 2
 
 
 def run_csv(bundle: Bundle, csv_path: str | Path, output: str | Path | None = None,
@@ -130,7 +162,14 @@ def build_parser(prog: str | None = None) -> argparse.ArgumentParser:
         prog=prog, description="Intrusion detection with a model bundle exported by the web trainer.")
     parser.add_argument("--bundle", help="a .bundle exported on this computer "
                         "(default: choose one; without a prompt, the newest export)")
-    parser.add_argument("--list", action="store_true", help="list the exports and exit")
+    listing = parser.add_mutually_exclusive_group()
+    listing.add_argument("--list", action="store_true", help="list the exports and exit")
+    listing.add_argument("--runs", action="store_true",
+                         help="list the saved runs (newest first, 50 at a time) and exit")
+    listing.add_argument("--compare", nargs=2, metavar="RUN_ID",
+                         help="compare two saved runs (A then B; differences are B - A) and exit")
+    parser.add_argument("--before", metavar="RUN_ID",
+                        help="with --runs: the runs saved before this one")
     parser.add_argument("--model", help="which model of the bundle (default: its best)")
     parser.add_argument("--csv", help="label every row of this CSV file")
     parser.add_argument("--output", help="where --csv writes its result "
@@ -143,17 +182,21 @@ def build_parser(prog: str | None = None) -> argparse.ArgumentParser:
 
 def parse_args(argv: Sequence[str] | None, prog: str | None = None) -> argparse.Namespace:
     """The flags of ``argv`` (``prog``: the command the help shows)."""
-    return build_parser(prog).parse_args(argv)
+    parser = build_parser(prog)
+    args = parser.parse_args(argv)
+    if args.before is not None and not args.runs:
+        parser.error("--before goes with --runs")
+    return args
 
 
 def main(argv: Sequence[str] | None = None, prog: str | None = None) -> int:
-    """The command, without exiting: ``--list``, the model card (``--info``), ``--csv``, ``--json``,
-    or the menu. Only a bundle signed by this install is opened. Exit code 0, or 2 with the message
-    for a bundle that is refused, a bad value or a file problem; Ctrl+C or the end of input says
-    goodbye (0)."""
+    """The command, without exiting: ``--list``, ``--runs``, ``--compare``, the model card
+    (``--info``), ``--csv``, ``--json``, or the menu. Only a bundle signed by this install is
+    opened. Exit code 0, or 2 with the message for a bundle that is refused, a bad value or a
+    file problem; Ctrl+C or the end of input says goodbye (0)."""
     args = parse_args(argv, prog)
-    if args.list:
-        return list_exports()
+    if args.list or args.runs or args.compare:
+        return listing(args)
     interactive_mode = not (args.csv or args.json or args.info)
     if interactive_mode:
         screen.header()

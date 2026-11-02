@@ -103,11 +103,17 @@ refused).
   and which model, then offers: 1 enter features manually, 2 test with a real example
   from the model's test split, 3 switch model, 4 predict a CSV file, 5 exit.
 - With `--csv`, `--json` or `--info` it asks nothing.
+- `--runs` and `--compare` read the saved runs (`instance/runs`, one record per export: its
+  settings and scores) and open no model; they exit with 2 and the message for a bad run id
+  or a run that isn't saved.
 
 | Flag | Default | What it does |
 |---|---|---|
 | `--bundle BUNDLE` | ask (without a prompt: the newest export) | the `.bundle` file to use |
 | `--list` | | lists the exports (newest first) without loading them, then exits |
+| `--runs` | | lists the saved runs, newest first and 50 at a time, then exits |
+| `--before RUN_ID` | | with `--runs`: the runs saved before this one (the list's last line names it) |
+| `--compare RUN_ID RUN_ID` | | the two saved runs A and B side by side, then exits: each model of both, with Δ = B − A only when both scored the same test rows (otherwise why not), the models of one run only and the settings that differ |
 | `--model MODEL` | the bundle's best | which model of the bundle |
 | `--csv CSV` | | labels every row of this CSV file |
 | `--output OUTPUT` | `<file>.predictions.csv` | where `--csv` writes (a new file, never overwritten) |
@@ -118,6 +124,8 @@ refused).
 python -m toolkit ids --list
 python -m toolkit ids --csv traffic.csv --model random_forest
 python -m toolkit ids --json rows.json
+python -m toolkit ids --runs
+python -m toolkit ids --compare 20261030T120509Z-a75da585 20261031T090000Z-1738e0a0
 ```
 
 A bundle above 500 MB says first that loading takes a while: large models can take minutes

@@ -139,6 +139,7 @@ The menu, `scan` and `ids`; it never imports the web trainer
 | `toolkit/cli/ui/menu.py` | ui | the banner, the menu and its prompt |
 | `toolkit/cli/ui/scan.py` | ui | the scanner's questions, authorization, progress line, tables and report; `ConsoleScan` is the scan's `ScanView` |
 | `toolkit/cli/ui/ids.py` | ui | the IDS command's export list, model card, predictions, interactive menu and prompts |
+| `toolkit/cli/ui/runs.py` | ui | what `ids --runs` and `--compare` print: the saved runs, and two of them side by side |
 | `toolkit/cli/controllers/__init__.py` | controllers | the command line's commands |
 | `toolkit/cli/controllers/main.py` | controllers | the command line: the menu, or `scan`, `ids` with the rest of the line; the toolkit's `--help` (it lists `web` too) |
 | `toolkit/cli/controllers/scan.py` | controllers | the scanner's flags or questions, a `ScanRequest`, the exit codes |
