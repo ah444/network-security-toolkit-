@@ -6,15 +6,27 @@ Copy and fill these in. Leave out a field only when it truly doesn't apply, and 
 
 ```markdown
 ### <step id>: <what it does, in a few words>
+- **Assumptions:** <what you take as given>; <any other reading of the request, asked about>
 - **Where:** <file(s), layer>; why there and not elsewhere
 - **Reuses:** <existing functions, queues, helpers, by name>; what is new and why nothing existing fits
 - **Lifecycle:** created when <…>; held by <…>; ends when <…>; on cancel <…>; on failure <…>; on crash or restart <…>
 - **Concurrency:** what can run at the same time; what protects it (or why nothing needs to)
 - **Trust and data:** what crosses a boundary; what is validated and where
+- **User sees:** who uses it, through which interface; the steps; the states; the messages' wording; the confirmations; what changes for existing users
 - **Failure modes:** <case> → <what the user sees>
 - **Tests:** unit <…>; integration <…>; end-to-end or manual <…>
 - **Out of scope:** <…>
 - **Risks / open questions for the owner:** <…>
+```
+
+## Suggestion outside the scope
+
+```markdown
+**Suggestion (not needed for this request):** <what you noticed>
+- **Evidence:** <file:line, version, advisory id>
+- **Why it matters:** <the risk or the cost of leaving it>
+- **Severity:** critical | high | medium | low
+- **Options:** <option A and what it changes>; <option B>; leave it as it is
 ```
 
 ## Task (from a review or a gap)
