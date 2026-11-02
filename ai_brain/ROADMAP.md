@@ -2,7 +2,7 @@
 
 How the project was changed, release by release, and what is planned. What exists today is in [PROJECT_STATUS.md](PROJECT_STATUS.md); the reasons are in [DECISIONS.md](DECISIONS.md) and [REVIEW_DECISIONS.md](REVIEW_DECISIONS.md); the original plan with every option weighed is [IMPROVEMENT_PLAN.md](../docs/IMPROVEMENT_PLAN.md); the day-to-day tasks are in the checklists (`V5.0_CHECKLIST.md` to `V5.3_CHECKLIST.md`).
 
-**As of:** 2026-11-02.
+**As of:** 2026-11-03. The plan ends with 5.4 (section 5).
 
 ---
 
@@ -50,7 +50,9 @@ Every tag is shippable: the app starts, every menu path works, the README lists 
 |---|---|
 | **F2** The full leaderboard: Saved Runs, the comparison, the charts, the CLI | Done, F2a–F2g (2026-10-30 to 2026-11-02) |
 | **F3** Explainability | F3a–F3c done in the core (permutation importance; the explanation of one prediction); F3d–F3g open |
-| **The outside review** | 2026-11-02: three reviews of the documents and a committee of five reviewers (security, architecture, reliability, ML, product). Result: the hardening section H of the checklist, and four design decisions (RD1–RD4). Written down; none implemented |
+| **The outside review** | 2026-11-02: three reviews of the documents and a committee of five reviewers (security, architecture, reliability, ML, product). Result: the hardening section H of the checklist, and four design decisions (RD1–RD4); RD5 followed on 2026-11-03 |
+| **H Phase 1** Correctness (HC1–HC4) | Done |
+| **H Phase 2** Security | Done: HS1 (a new token ends every remote session), HS3 (a record of every scan), HS4 (each outside service on by default with its own switch, RD5), HS5 (`instance/` and `.env` limited to this account). HS2 (HTTPS) dropped by the owner on 2026-11-02: the toolkit is a local tool |
 
 ---
 
@@ -70,9 +72,9 @@ The order is the review's: **correctness → security → reliability → usabil
 | Task | What |
 |---|---|
 | HS1 | A new token on demand (from this computer only) that ends every remote session; what happens to each job; the statement that a token holder has the owner's rights |
-| HS2 | HTTPS with the user's own certificate (Python's `ssl`), the SSH-tunnel way documented; HTTP stays with a clear warning |
+| ~~HS2~~ | Dropped by the owner (2026-11-02): the toolkit is a local tool with some outside services |
 | HS3 | A record of every scan with the source of its request |
-| HS4 | A switch for each outside service (NVD, AI, AbuseIPDB) and one for all of them; "CVEs not checked" when NVD is off |
+| HS4 | Each outside service (NVD, AI, AbuseIPDB) on by default, the key in `.env` being the consent, with its own switch and no switch for all (RD5); "CVEs not checked" when NVD is off or fails |
 | HS5 | The permissions of `instance/` and the key on Windows; backup and restore, tested on a clean install |
 
 ### Phase 3. Reliability
@@ -105,24 +107,34 @@ The review's conditions: remote access kept and its risks closed; real control o
 
 ---
 
-## 5. Later (after 5.3)
+## 5. Next: 5.4, the last release
 
-The plan's groups (§5 and §7 of the plan), with what the review asked to settle before each starts. None of these is approved yet.
+Decided by the owner on 2026-11-03: 5.4 is the project's last planned release. The three
+features complete one use of the toolkit: a scan or a training, its result kept in the
+history, opened again, a scan's report printed, and the home page showing where things
+stand. They come in this order, each proposed and approved as usual.
 
-| Item | Group | Goal | To settle first |
-|---|---|---|---|
-| F5 Scan reports | First | An HTML report of a scan (open ports, CVEs with CVSS, advice), printable | The PDF comes from the browser's print with a print stylesheet, not a hand-made PDF; long tables across pages; every banner and CVE text put in as text (XSS); never overwrite a file |
-| F6 History | First | Every training and scan listed, reopened and compared | Built on HR4 and HR5 (records already saved, deletion and limits already defined): its own part is listing, paging and retention, not saving |
-| F7 Recon and IDS | Next | One dashboard for both tools | The review objects to suggesting an IDS model from scan results: open ports and CVEs say nothing about which model reads traffic best. A risk dashboard from the scans, kept apart from any model advice |
-| F9 Tuning | Next | Hyperparameter search with a time budget | Only on the training split (CV); the test split stays out; limits on time, memory and trials; a real Cancel |
-| F10 Dashboard | Next | A home page with the recent jobs, models and scans | — |
-| F8 PCAP and live capture | Stretch | Predictions from captured traffic | A project of its own: packet parsing, flow rebuilding, the same features as the training data, timeouts, capture rights on each OS, tests on real captures. Reading a PCAP alone does not make a live IDS |
-| F11 Scheduled scans | Stretch | Scans on a schedule, alerts on a new open port | What happens when the app is closed, missed times, overlaps; never dependent on an open browser |
-| F12 Arabic and RTL | Stretch | The pages in Arabic | — |
-| F13 Offline CVE data | Stretch | CVEs without the internet | The copy's date, how it is refreshed, its size, how stale it is; an old copy proves nothing about new CVEs |
-| An asyncio scanner (plan D13-B) | Stretch | Faster scans of large networks | — |
+| Item | Goal | What it must respect |
+|---|---|---|
+| F6 History | Every training and scan kept, opened again and compared | The results, the settings and the metadata, never copies of a dataset. The trainings rest on HR4 and HR5. **The scans are not saved today** (a web scan stays in the session, by design since 5.2): whether every scan is saved, what of it, and when it is deleted is a decision of its own, taken in F6's proposal. Comparing two scans needs a definition (the same target and ports: the ports opened or closed, the CVEs added) |
+| F5 Scan reports | An HTML report of a scan (open ports, CVEs with CVSS, advice), printable | A CVE matched by a version is a possible match to check, not a confirmed vulnerability: each shows how it was matched (version, or name only and unconfirmed), its source and the date of the lookup; the AI's text marked "may be wrong"; advice general and tied to its CVE. The PDF comes from the browser's print with a print stylesheet; every banner and CVE text put in as text (XSS); a file never overwritten |
+| F10 Dashboard, with F7 | A home page with the recent jobs, models and scans | Built on F6. The scans and their risks in one part, the models, the trainings and the predictions in another, side by side: no link made between them, and no IDS model suggested from open ports or CVEs (the review's objection to F7 as first planned) |
+
+Then the gate and the tag `5.4`, after the owner approves it.
 
 ## 6. Not planned
 - Accounts, roles or per-user ownership (RD1: one project trust domain)
 - Microservices, a task queue service or a database server (plan §2)
 - Shipping a trained model in the repository (plan D12, revised in 0.5)
+
+Set aside by the owner on 2026-11-03, outside this project's plan (they may come back after
+5.4, as work of its own):
+
+| Item | Goal | Why not now |
+|---|---|---|
+| F9 Tuning | Hyperparameter search with a time budget | Of real value but not needed for a complete toolkit: it needs cross-validation on the training split only (the test split never choosing), limits on time, memory and trials, and a real Cancel |
+| F12 Arabic and RTL | The pages in Arabic | A change to the interface, not a new capability; it touches every page and the stylesheet |
+| F8 PCAP and live capture | Predictions from captured traffic | A project of its own: the flows and features must be built exactly as the training data's (CIC-IDS2017), or the predictions mislead without anyone seeing it; capture rights differ on each OS |
+| F11 Scheduled scans | Scans on a schedule, alerts on a new open port | A service running while the app is closed, missed times, overlaps: not a local tool the user opens and closes |
+| F13 Offline CVE data | CVEs without the internet | A local copy needs refreshing and grows old; an old copy says nothing about new CVEs. Asking NVD when needed, and saying when it can't be reached (RD5), stays |
+| An asyncio scanner (plan D13-B) | Faster scans of large networks | Speed only, not a new capability, and the limits (256 hosts) fit the use; only if a measurement shows a real bottleneck |
