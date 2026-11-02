@@ -229,6 +229,18 @@ class EvaluationConfig:
 
 
 @dataclass(frozen=True)
+class ExplainConfig:
+    """What a model relies on (v5.3 F3): permutation importance on the test split."""
+
+    # Above this many test rows, a stratified sample of them (at least min_per_class each).
+    importance_max_rows: int = 5_000
+    importance_min_per_class: int = 3
+    importance_repeats: int = 5
+    # One feature with more than this share of the summed positive drops: maybe a label copy.
+    dominant_share: float = 0.5
+
+
+@dataclass(frozen=True)
 class ScanConfig:
     """Port scanner limits (plan S16, step 0.6)."""
 

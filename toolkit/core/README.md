@@ -8,7 +8,7 @@ neither, and has no user interface: nothing here prints, asks, or uses Flask or 
 core/
   services/        what the tools do, with no I/O
     ids/           the ML core: load, split, leakage guard, train, evaluate, bundles, predict,
-                   saved runs compared
+                   saved runs compared, what a model relies on
     recon/         the scan, start to end: targets and limits, the scan, lookups, report
     ports.py       the three interfaces between layers: ModelStore, IntelProvider, ProgressSink
   data/            files, the network and the environment
