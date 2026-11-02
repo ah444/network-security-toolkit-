@@ -76,7 +76,7 @@ def test_failed_provider_is_named_and_scan_goes_on():
             raise requests.ConnectionError("down")
 
     found = recon_intel.Intel({}, session=NoNetwork(), providers=[Broken()]).lookup("x 1.0")
-    assert found["errors"] == ["Mirror: no connection"] and found["severity"] == "UNKNOWN"
+    assert found["errors"] == ["Mirror: no connection"] and found["severity"] == "NOT CHECKED"
 
 
 def test_ip_reputation_through_the_port():

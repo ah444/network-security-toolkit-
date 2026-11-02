@@ -40,11 +40,15 @@ permission to test.
 - Without a `TARGET` it asks its questions: the target, the first and last port, the
   protocol, the engine (only when nmap is installed; for nmap its service detection, its
   scripts and, with raw packets, OS detection), the authorization, the progress line and
-  the AI explanation (only with a key);
-  during the scan, the AbuseIPDB check of a public IP (only with a key) and whether to scan
-  a host that doesn't answer ping; at the end, the export.
-- With a `TARGET` it asks nothing but the authorization question, and sends nothing online
-  but the CVE lookups unless `--ai` or `--abuseipdb` says so.
+  the CVE lookups in NVD, the AI explanation (only with a key); during the scan, the
+  AbuseIPDB check of a public IP (only with a key) and whether to scan a host that doesn't
+  answer ping; at the end, the export. The questions of the outside services are yes on
+  Enter (`(Y/n)`).
+- With a `TARGET` it asks nothing but the authorization question. NVD, the AI and AbuseIPDB
+  are on when their key is set (NVD needs none) unless `--no-nvd`, `--no-ai` or
+  `--no-abuseipdb` turns them off (RD5). A service that fails during the scan is not asked
+  again in it: the summary says `Unavailable: NVD (no connection)` and its ports
+  `NOT CHECKED`.
 - The authorization question needs the answer `yes`; `--i-am-authorized` answers it for
   scripts.
 
@@ -54,8 +58,10 @@ permission to test.
 | `-p`, `--ports SPEC` | `1-1024` | `80`, `1-1024` or a list such as `22,80,8000-8100` |
 | `--protocol {tcp,udp,both}` | `tcp` | which protocols to check |
 | `-v`, `--verbose` | off | the progress line while scanning |
-| `--ai` | off | sends the detected software names (never the raw banner) to OpenRouter for an explanation; needs `OPENROUTER_API_KEY` |
-| `--abuseipdb` | off | sends public target IPs to AbuseIPDB for a reputation check; needs `ABUSEIPDB_API_KEY` |
+| `--no-nvd` | NVD on | no CVE lookups (NVD gets the detected software name and version); every port with software says `NOT CHECKED` |
+| `--no-ai` | on with the key | no AI explanation (OpenRouter gets the detected software names, never the raw banner; needs `OPENROUTER_API_KEY`) |
+| `--no-abuseipdb` | on with the key | no reputation check (AbuseIPDB gets public target IPs only; needs `ABUSEIPDB_API_KEY`) |
+| `--ai`, `--abuseipdb` | | the default now; still accepted so older commands work (refused together with its `--no-` form) |
 | `--scan-unresponsive` | off | also scans hosts that don't answer ping |
 | `--export {txt,json,csv}` | none | saves the report in `instance/scans/` (a new file, never overwritten) |
 | `--i-am-authorized` | off | confirms you are authorised to scan the target (for scripts) |
@@ -262,9 +268,9 @@ as `your_..._here` count as unset. Keys never reach the log files.
 | Variable | Default | What it does |
 |---|---|---|
 | `NVD_API_KEY` | none | faster CVE lookups (without one, NVD allows about one every 6 seconds) |
-| `OPENROUTER_API_KEY` | none | the AI explanation (`--ai`, or yes to the question) |
+| `OPENROUTER_API_KEY` | none | the AI explanation (on with the key, unless `--no-ai` or no to the question) |
 | `OPENROUTER_MODEL` | `deepseek/deepseek-chat:free` | which OpenRouter model explains |
-| `ABUSEIPDB_API_KEY` | none | the IP reputation check (`--abuseipdb`) |
+| `ABUSEIPDB_API_KEY` | none | the IP reputation check (on with the key, unless `--no-abuseipdb` or no to the question) |
 
 ### 7.3 Where the data folder is
 

@@ -185,7 +185,7 @@ def test_pages_stop_at_the_limit_and_at_an_empty_page(no_nvd_wait):
 @pytest.mark.parametrize("reply", [[1, 2], "text", None])
 def test_a_reply_that_is_not_an_object_is_a_lookup_error(fake_session, no_nvd_wait, reply):
     found = recon_intel.Intel({}, session=fake_session(get=reply)).lookup("Jetty 9.4.1")
-    assert found["errors"] == ["NVD: ValueError"] and found["severity"] == "UNKNOWN"
+    assert found["errors"] == ["NVD: ValueError"] and found["severity"] == "NOT CHECKED"
 
 
 def test_requests_are_spaced_without_a_key(nvd_reply, fake_session):

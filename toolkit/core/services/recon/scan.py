@@ -66,6 +66,7 @@ class ScanRequest:
     engine: str = DEFAULT_ENGINE  # a name in engines.ENGINES (step N1)
     nmap_options: NmapOptions = NmapOptions()  # nmap's choices, for --engine nmap (step N4)
     source: str = THIS_COMPUTER  # where the request came from: another computer's address (HS3)
+    nvd: bool = True  # the CVE lookups (HS4: on unless turned off)
 
 
 @dataclass(frozen=True)
@@ -77,13 +78,18 @@ class OnlinePlan:
     abuseipdb: str
 
 
+def _turned_off(request: ScanRequest, flag: str) -> str:
+    """Why a service with its key is off: the answer no, or its ``--no-`` flag (HS4)."""
+    return "off: you said no" if request.interactive else f"off: turned off ({flag})"
+
+
 def _ai_plan(request: ScanRequest, keys: Mapping[str, str]) -> str:
-    """The AI explanation: on, or why not (no key, not asked for, the answer no)."""
+    """The AI explanation: on, or why not (no key, turned off, the answer no)."""
     if request.use_ai:
         return "on, the software name and version only"
     if not keys.get("openrouter"):
         return f"off: no {KEY_VARIABLES['openrouter']}"
-    return "off: you said no" if request.interactive else "off: not asked for (--ai)"
+    return _turned_off(request, "--no-ai")
 
 
 def _abuse_plan(request: ScanRequest, keys: Mapping[str, str]) -> str:
@@ -95,7 +101,7 @@ def _abuse_plan(request: ScanRequest, keys: Mapping[str, str]) -> str:
     if request.interactive:
         return "asked before each public address"
     return "on, the public addresses only" if request.abuseipdb else \
-        "off: not asked for (--abuseipdb)"
+        _turned_off(request, "--no-abuseipdb")
 
 
 def online_plan(request: ScanRequest, keys: Mapping[str, str]) -> OnlinePlan:
@@ -103,8 +109,9 @@ def online_plan(request: ScanRequest, keys: Mapping[str, str]) -> OnlinePlan:
     and the keys that are set."""
     pace = "" if keys.get("nvd") else (
         f"; no {KEY_VARIABLES['nvd']}, so one request every {NVD_INTERVAL[False]:g} s")
-    return OnlinePlan(f"on, the software name and version only{pace}",
-                      _ai_plan(request, keys), _abuse_plan(request, keys))
+    nvd = f"on, the software name and version only{pace}" if request.nvd else \
+        _turned_off(request, "--no-nvd")
+    return OnlinePlan(nvd, _ai_plan(request, keys), _abuse_plan(request, keys))
 
 
 class ScanView(Protocol):
@@ -181,10 +188,11 @@ class ScanView(Protocol):
         """After each target, scanned or skipped."""
 
     def summary(self, targets: int, entries: int, failed: Sequence[str], seconds: float,
-                sent: Mapping[str, int]) -> None:
+                sent: Mapping[str, int], unavailable: Mapping[str, str]) -> None:
         """After the last target: the targets, the entries, the failed lookups (as ``port/protocol
-        error``), the seconds since the command started and the requests sent to each online
-        service (``Intel.sent``)."""
+        error``), the seconds since the command started, the requests sent to each online
+        service (``Intel.sent``) and the services that failed and were not asked again, with
+        why (``Intel.unavailable``, HS4)."""
 
     def nothing_to_export(self) -> None:
         """No entries, and an export was asked for (interactive or ``--export``)."""
@@ -356,7 +364,7 @@ def run_scan(request: ScanRequest, keys: Mapping[str, str], start_time: float,
     entries: list[ReportEntry] = []
     engine_failed = 0
     try:
-        intel = Intel(keys, request.use_ai, stop=stop)
+        intel = Intel(keys, request.use_ai, stop=stop, nvd=request.nvd)
         view.engine_notice(describe(request.engine, request.nmap_options))
         view.lookups_notice(plan)
         entries, engine_failed = _scan_all(request, intel, view, stop)
@@ -371,7 +379,7 @@ def run_scan(request: ScanRequest, keys: Mapping[str, str], start_time: float,
     failed =[f"{e['port']}/{e['protocol']} {error}" for e in entries
               for error in e["lookup_errors"]]
     view.summary(len(request.targets), len(entries), failed, time.time() - start_time,
-                 intel.sent())
+                 intel.sent(), intel.unavailable())
 
     if not entries:
         if request.interactive or request.export:

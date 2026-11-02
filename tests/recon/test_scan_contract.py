@@ -27,7 +27,8 @@ AUTHORIZE = "authorised to scan"
 def net(fake_ports, scan_service, scanner, fake_session, no_nvd_wait, monkeypatch):
     """Every step that could reach the network, in order: ``dns``, ``authorize``, ``ping``,
     ``scan``, ``http`` (with what was sent). Answers come from ``answers`` (prompt prefix →
-    answer); any other question fails the test."""
+    answer); NVD's question gets Enter (yes, HS4) unless ``answers`` has it; any other question
+    fails the test."""
     state = {"events": [], "alive": True, "keys": {"openrouter": "", "abuseipdb": "", "nvd": ""},
              "answers": {AUTHORIZE: "yes"}, "session": None,
              "results": [PortResult(22, "tcp", "open", "ssh", BANNER)]}
@@ -38,7 +39,7 @@ def net(fake_ports, scan_service, scanner, fake_session, no_nvd_wait, monkeypatc
         return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("8.8.8.8", 0))]
 
     def ask(prompt=""):
-        for start, answer in state["answers"].items():
+        for start, answer in {"known CVEs in NVD": "", **state["answers"]}.items():
             if start in prompt:
                 if start == AUTHORIZE:
                     events.append(("authorize", prompt))
@@ -58,9 +59,9 @@ def net(fake_ports, scan_service, scanner, fake_session, no_nvd_wait, monkeypatc
             events.append(("http", url, json.dumps(kwargs, default=str)))
             return super()._answer(method, url, **kwargs)
 
-    def intel(keys, use_ai=False, stop=None):
+    def intel(keys, use_ai=False, stop=None, nvd=True):
         state["session"] = Recorded(get={}, post={"choices": [{"message": {"content": "x"}}]})
-        return Intel(keys, use_ai, session=state["session"], stop=stop)
+        return Intel(keys, use_ai, session=state["session"], stop=stop, nvd=nvd)
 
     monkeypatch.setattr(socket, "getaddrinfo", getaddrinfo)
     monkeypatch.setattr(builtins, "input", ask)
@@ -127,11 +128,13 @@ def test_a_private_address_is_not_even_asked_about(scanner, net):
     assert _http(net["events"], "abuseipdb") == []
 
 
-@pytest.mark.parametrize("key, flags", [("", ["--abuseipdb"]), ("ab-key", [])])
-def test_a_public_address_needs_the_key_and_the_flag(scanner, net, key, flags):
+@pytest.mark.parametrize("key, flags, sent", [("", ["--abuseipdb"], 0), ("ab-key", [], 1),
+                                              ("ab-key", ["--no-abuseipdb"], 0)])
+def test_a_public_address_needs_the_key_and_not_its_off_flag(scanner, net, key, flags, sent):
+    """HS4 (RD5): the key is the consent; before, the flag was needed too."""
     net["keys"].update(abuseipdb=key)
     assert scanner.main(["8.8.8.8", "-p", "22", *flags]) == 0
-    assert _http(net["events"], "abuseipdb") == []
+    assert len(_http(net["events"], "abuseipdb")) == sent
 
 
 def test_a_public_address_needs_the_answer_yes(scanner, net):

@@ -67,7 +67,7 @@ def network(monkeypatch):
     cves = Cves()
     real_intel = Intel
 
-    def offline_intel(keys, use_ai=False, stop=None):
+    def offline_intel(keys, use_ai=False, stop=None, nvd=True):
         return real_intel(keys, use_ai, providers=[cves], stop=stop)
 
     monkeypatch.setattr(scan_service, "Intel", offline_intel)

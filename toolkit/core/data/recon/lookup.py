@@ -20,7 +20,12 @@ def describe(error: BaseException) -> str:
     if isinstance(error, requests.Timeout):
         return "timed out"
     if isinstance(error, requests.HTTPError) and error.response is not None:
-        return f"HTTP {error.response.status_code}"
+        status = error.response.status_code
+        if status in (401, 403):
+            return f"the key was refused (HTTP {status})"
+        if status == 429:
+            return f"too many requests (HTTP {status})"
+        return f"HTTP {status}"
     if isinstance(error, requests.ConnectionError):
         return "no connection"
     return type(error).__name__

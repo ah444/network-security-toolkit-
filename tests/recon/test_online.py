@@ -24,15 +24,15 @@ def _request(targets=("10.0.0.5",), interactive=False, use_ai=False, abuseipdb=F
     ({}, NO_KEYS, "off: no OPENROUTER_API_KEY",
      "off: no public address (a private one is never sent)"),
     ({"targets": ["8.8.8.8"]}, NO_KEYS, "off: no OPENROUTER_API_KEY", "off: no ABUSEIPDB_API_KEY"),
-    ({"targets": ["8.8.8.8"]}, KEYS, "off: not asked for (--ai)",
-     "off: not asked for (--abuseipdb)"),
+    ({"targets": ["8.8.8.8"]}, KEYS, "off: turned off (--no-ai)",
+     "off: turned off (--no-abuseipdb)"),
     ({"targets": ["8.8.8.8"], "use_ai": True, "abuseipdb": True}, KEYS,
      "on, the software name and version only", "on, the public addresses only"),
     ({"targets": ["8.8.8.8"], "interactive": True}, KEYS, "off: you said no",
      "asked before each public address"),
     ({"targets": ["192.168.1.10", "8.8.8.8"], "interactive": True}, NO_KEYS,
      "off: no OPENROUTER_API_KEY", "off: no ABUSEIPDB_API_KEY"),
-    ({"targets": ["192.168.1.10"], "abuseipdb": True}, KEYS, "off: not asked for (--ai)",
+    ({"targets": ["192.168.1.10"], "abuseipdb": True}, KEYS, "off: turned off (--no-ai)",
      "off: no public address (a private one is never sent)"),
 ])
 def test_the_plan_says_why_not(request_args, keys, ai, abuse):
@@ -112,7 +112,7 @@ def test_intel_names_each_service(no_network, no_nvd_wait):
 def test_the_console_lines(capsys):
     view = screen.ConsoleScan()
     view.lookups_notice(scan_service.OnlinePlan("on, x", "off: no OPENROUTER_API_KEY", "off: y"))
-    view.summary(1, 2, [], 3.0, {"NVD": 4, "AI (OpenRouter)": 0, "AbuseIPDB": 0})
+    view.summary(1, 2, [], 3.0, {"NVD": 4, "AI (OpenRouter)": 0, "AbuseIPDB": 0}, {})
     out = capsys.readouterr().out
     assert ("Online in this scan:\n  NVD (CVEs, services.nvd.nist.gov): on, x\n"
             "  AI explanation (OpenRouter): off: no OPENROUTER_API_KEY\n"

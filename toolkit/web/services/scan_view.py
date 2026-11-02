@@ -210,10 +210,12 @@ class WebScan:
         self.tally(self.index * HOST_UNITS)
 
     def summary(self, targets: int, entries: int, failed: Sequence[str], seconds: float,
-                sent: Mapping[str, int]) -> None:
-        """The scan's totals, kept for the answer."""
+                sent: Mapping[str, int], unavailable: Mapping[str, str]) -> None:
+        """The scan's totals, kept for the answer; ``unavailable``: the services that failed
+        and were not asked again, with why (HS4)."""
         self.totals = {"targets": targets, "open_ports": entries, "failed_lookups": list(failed),
-                       "seconds": round(seconds, 1), "sent": dict(sent)}
+                       "seconds": round(seconds, 1), "sent": dict(sent),
+                       "unavailable": dict(unavailable)}
         self.note(f"Done: {targets} host(s), {entries} open port(s), {len(failed)} failed "
                   f"lookup(s), {seconds:.1f} s")
 

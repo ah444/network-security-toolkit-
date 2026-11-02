@@ -21,8 +21,8 @@ class FakeIntel:
 
     made = []
 
-    def __init__(self, keys, use_ai=False, stop=None):
-        self.keys, self.use_ai, self.stop = keys, use_ai, stop
+    def __init__(self, keys, use_ai=False, stop=None, nvd=True):
+        self.keys, self.use_ai, self.stop, self.nvd = keys, use_ai, stop, nvd
         self.looked_up, self.abuse_checked = [], []
         FakeIntel.made.append(self)
 
@@ -41,6 +41,9 @@ class FakeIntel:
     def sent(self):
         return {"NVD": len(self.looked_up), "AI (OpenRouter)": 0,
                 "AbuseIPDB": len(self.abuse_checked)}
+
+    def unavailable(self):
+        return {}
 
 
 @pytest.fixture
@@ -106,16 +109,54 @@ def test_target_with_flags_asks_nothing(scan_screen, scanner, fake, capsys):
     assert "export" not in out.lower(), "no export and no export question without --export"
 
 
-def test_defaults_nothing_sent(scanner, fake, monkeypatch):
-    """Defaults: ports 1-1024, TCP, no progress, no AI, no AbuseIPDB, even with keys."""
+def test_defaults(scanner, fake, monkeypatch):
+    """Defaults: ports 1-1024, TCP, no progress; NVD, the AI and AbuseIPDB on when their key is
+    set (HS4, RD5: the key is the consent; before, the AI and AbuseIPDB needed their flag)."""
     _keys(scanner, monkeypatch, openrouter="or-key", abuseipdb="ab-key")
     assert scanner.main(["8.8.8.8", AUTHORIZED]) == 0
     [(host, ports, protocols, progress)] = fake["scans"]
     assert (ports, protocols, progress) == (list(range(1, 1025)), ["tcp"], None)
     [intel] = FakeIntel.made
-    assert intel.use_ai is False
-    assert intel.abuse_checked == []
-    assert intel.looked_up == ["OpenSSH 8.9"], "CVE lookups (NVD) stay on"
+    assert (intel.use_ai, intel.nvd) == (True, True)
+    assert intel.abuse_checked == ["8.8.8.8"]
+    assert intel.looked_up == ["OpenSSH 8.9"]
+
+
+def test_each_service_can_be_turned_off(scanner, fake, monkeypatch, capsys):
+    _keys(scanner, monkeypatch, openrouter="or-key", abuseipdb="ab-key")
+    assert scanner.main(["8.8.8.8", "-p", "22", "--no-nvd", "--no-ai", "--no-abuseipdb",
+                         AUTHORIZED]) == 0
+    [intel] = FakeIntel.made
+    assert (intel.use_ai, intel.nvd, intel.abuse_checked) == (False, False, [])
+    out = capsys.readouterr().out
+    for line in ("NVD (CVEs, services.nvd.nist.gov): off: turned off (--no-nvd)",
+                 "AI explanation (OpenRouter): off: turned off (--no-ai)",
+                 "IP reputation (AbuseIPDB): off: turned off (--no-abuseipdb)"):
+        assert line in out
+
+
+def test_a_service_without_its_key_says_so(scanner, fake, capsys):
+    assert scanner.main(["8.8.8.8", "-p", "22", AUTHORIZED]) == 0
+    out = capsys.readouterr().out
+    assert "AI explanation (OpenRouter): off: no OPENROUTER_API_KEY" in out
+    assert "IP reputation (AbuseIPDB): off: no ABUSEIPDB_API_KEY" in out
+    assert FakeIntel.made[-1].abuse_checked == [], "nothing without the key"
+
+
+@pytest.mark.parametrize("flags", [["--ai", "--no-ai"], ["--abuseipdb", "--no-abuseipdb"]])
+def test_a_service_turned_on_and_off_is_refused(scanner, fake, capsys, flags):
+    with pytest.raises(SystemExit) as stop:
+        scanner.main(["127.0.0.1", *flags, AUTHORIZED])
+    assert stop.value.code == 2 and "not allowed with argument" in capsys.readouterr().err
+    assert fake["scans"] == []
+
+
+def test_the_summary_names_a_service_that_failed(scanner, fake, monkeypatch, capsys):
+    monkeypatch.setattr(FakeIntel, "unavailable", lambda self: {
+        "NVD": "no connection", "AI": "the key was refused (HTTP 401)"})
+    assert scanner.main(["127.0.0.1", "-p", "22", AUTHORIZED]) == 0
+    assert ("Unavailable: NVD (no connection); AI (the key was refused (HTTP 401))\n"
+            in capsys.readouterr().out)
 
 
 def test_authorization_question_stays_without_the_flag(scanner, fake, capsys):
@@ -267,11 +308,12 @@ def test_cancelled_progress_does_not_say_100(scan_screen, scanner, capsys):
 
 
 def test_interactive_mode_unchanged(fake_ports, scan_service, scanner, monkeypatch, capsys):
-    """No TARGET: the same questions in the same order as before step 1.4c."""
+    """No TARGET: the same questions in the same order as before step 1.4c, with NVD's after
+    the progress one (HS4; Enter is yes)."""
     prompts = []
     answers = {"Enter target": "127.0.0.1", "Enter start ": "20", "Enter end po": "22",
                "Select proto": "both", "\nOnly scan s": "yes", "Enable verbo": "n",
-               "Do you want ": "y", "Enter desire": "txt"}
+               "Look up the ": "", "Do you want ": "y", "Enter desire": "txt"}
 
     def answer(prompt=""):
         prompts.append(prompt[:12])
@@ -286,7 +328,8 @@ def test_interactive_mode_unchanged(fake_ports, scan_service, scanner, monkeypat
     monkeypatch.setattr(scan_service, "export_results", lambda entries, fmt: f"report.{fmt}")
     assert scanner.main([]) == 0
     assert prompts == ["Enter target", "Enter start ", "Enter end po", "Select proto",
-                       "\nOnly scan s", "Enable verbo", "Do you want ", "Enter desire"]
+                       "\nOnly scan s", "Enable verbo", "Look up the ", "Do you want ",
+                       "Enter desire"]
     assert scans == [([20, 21, 22], ["tcp", "udp"])]
     assert "Results exported to report.txt" in capsys.readouterr().out
 

@@ -2,7 +2,7 @@
 
 The design decisions taken with the outside review committee in v5.3, with why. The project's own decisions (D1–D23 of the plan and the later ones) and the rules of work are in [DECISIONS.md](DECISIONS.md), which also defines severity, test levels and "done". The checklist ([V5.3_CHECKLIST.md](../docs/V5.3_CHECKLIST.md)) holds the tasks that implement these; [CHANGELOG.md](../CHANGELOG.md) holds what shipped. The IDs start with **RD** so they never clash with the plan's D1–D23. When a decision replaces an earlier one, the earlier one is listed under **Superseded** with what replaced it, and the checklist marks it there too.
 
-**Status:** RD1–RD4 were approved on 2026-11-02 by the outside review committee (security, architecture, reliability, ML, product) and by the user. RD1 is implemented in part: the new token and what happens to each job (HS1, 2026-11-02); the scan record's source (HS3) and the permissions of `instance/` (HS5) are not yet. **RD2–RD4 are not implemented or tested yet.** The tasks that implement them are in the checklist's section H.
+**Status:** RD1–RD4 were approved on 2026-11-02 by the outside review committee (security, architecture, reliability, ML, product) and by the user. RD1 is implemented: the new token and what happens to each job (HS1, 2026-11-02) and the scan record's source (HS3); the permissions of `instance/` (HS5) are not yet. RD5 (2026-11-03) is implemented on the command line (HS4a); the web page is HS4b. **RD2–RD4 are not implemented or tested yet.** The tasks that implement them are in the checklist's section H.
 
 ---
 
@@ -70,9 +70,35 @@ Rules (IA1–IA10 of the committee, and what was added to them):
 
 ---
 
+## RD5 The outside services are on by default; the key is the consent
+Decided by the user on 2026-11-03, while HS4 was designed.
+
+NVD, the AI explanation (OpenRouter) and the AbuseIPDB check are on by default in every scan,
+on the command line and on the web page. A service needs its key in `.env` (NVD needs none);
+without it the service is off and the scan says so ("off: no OPENROUTER_API_KEY"); on the web
+page its switch says "No API key: add it to .env, then refresh this page". Each service can be
+turned off for a scan: `--no-nvd`, `--no-ai`, `--no-abuseipdb`, the answer no to its question,
+or its switch on the page. A service that fails during a scan (no connection, a timeout, a key
+refused, too many requests) is not asked again in that scan; the scan goes on, its summary
+names the service and why ("Unavailable: NVD (no connection)"), and its ports say "NOT
+CHECKED", never "NO KNOWN CVE". The next scan tries again.
+
+Why: the user wants the toolkit to use what it was given; putting a key in `.env` is the
+choice to use that service. Asking again in every scan added nothing a key doesn't say.
+
+Rules:
+- A private address never goes to AbuseIPDB, and NVD and the AI get the software name and
+  version only: unchanged
+- The scan still says first, under "Online in this scan", what it may send to each service
+  or why not, and at the end how many requests went to each
+- There is no setting that turns every service off at once: each has its own switch
+- A port's CVEs not looked up (NVD off, failed or unavailable) are "NOT CHECKED"; a port with
+  no software found keeps "UNKNOWN"
+- `--ai` and `--abuseipdb` are still accepted (they are the default now), so older commands
+  work; each with its `--no-` form is refused
+
 ## Not decided yet
 - **DNS before consent:** today a host name is resolved before the authorization question (`toolkit/core/services/recon/scan.py`, `resolve_targets`). Proposed: ask first, then resolve
-- **The default of each outside service** (NVD, AI, AbuseIPDB) once each has a switch (HS4), and the name of the mode that turns them all off: it turns off the outside intelligence services, not the scan's own packets to its targets
 
 ---
 
@@ -84,3 +110,6 @@ Rules (IA1–IA10 of the committee, and what was added to them):
 | "A warning when one feature carries most of the effect: check that it is not a copy of the label" | F3 | HC2: an importance concentration warning, a label copy one possible cause |
 | A heavy-job slot with a limit in the config | H, HR1 as first written | RD2: the training queue |
 | A separate queue for the importance | F3d as first proposed | RD2 |
+| "Nothing to NVD, AbuseIPDB or the AI before the validation, the limits, the authorization and the opt-in": the AI and AbuseIPDB only with `--ai` / `--abuseipdb` or the answer yes | the scan contract (v5.2 step 2.3a, `tests/recon/test_scan_contract.py`), steps 1.4c and A5 | RD5: on when the key is set, off with `--no-ai` / `--no-abuseipdb` or the answer no; still nothing before the validation, the limits and the authorization |
+| "A failed lookup is recorded and tried again on the next host" | step 1.4e (`Intel.lookup`) | RD5: the service is not asked again in that scan; the next scan tries again |
+| One setting that turns all the outside services off ("not offline") | HS4 as first written | RD5: a switch for each service; no setting for all |

@@ -279,7 +279,7 @@ def test_the_flags_default_to_the_builtin_engine(scanner, no_scan):
 
 
 START = ["127.0.0.1", "22", "22", "tcp"]  # the target, the ports and the protocol
-AFTER = ["yes", "n"]  # the authorization, then no progress line
+AFTER = ["yes", "n", ""]  # the authorization, no progress line, NVD (Enter: yes, HS4)
 
 
 def test_no_engine_question_without_nmap(scanner, no_scan):

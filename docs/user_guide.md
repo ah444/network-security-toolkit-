@@ -99,6 +99,7 @@ Select protocol for scanning (TCP/UDP/both): tcp
 Only scan systems you own or have written permission to test. Scanning other systems can be illegal.
 Type 'yes' if you are authorised to scan 127.0.0.1: yes
 Enable verbose mode? (Y/N): n
+Look up the known CVEs in NVD (sends the detected software name and version, e.g. 'OpenSSH 8.9')? (Y/n):
 Scan engine:
   built-in (the toolkit's own scanner: a TCP connection or a UDP probe per port, nothing installed)
 Online in this scan:
@@ -243,24 +244,29 @@ Results exported to <project>\instance\scans\scan-20261024T185851Z.csv
 
 The flags: `-p` (ports, for example `22,80,8000-8100`), `--protocol tcp|udp|both`, `-v`
 (progress line), `--export txt|json|csv`, `--scan-unresponsive` (also hosts that don't
-answer ping), `--ai`, `--abuseipdb`, `--i-am-authorized`, and `--engine nmap` with its own
+answer ping), `--no-nvd`, `--no-ai`, `--no-abuseipdb`, `--i-am-authorized`, and `--engine nmap` with its own
 flags ([section 3.5](#35-scan-with-nmap)). Their defaults are in
 [reference.md, section 3](reference.md#3-scan-the-port-scanner).
 
 ### 3.4 What leaves your computer
 
 Every scan says first, under `Online in this scan`, what it may send to each service or
-why it sends nothing (`off: no OPENROUTER_API_KEY`, `off: not asked for (--ai)`, `off: you
+why it sends nothing (`off: no OPENROUTER_API_KEY`, `off: turned off (--no-ai)`, `off: you
 said no`, `off: no public address`), and at the end, under `Requests sent online`, how many
-requests went to each.
+requests went to each. All three services are on by default; the AI and AbuseIPDB need their
+key in `.env`, and putting it there is the choice to use them. A service that fails during
+the scan (no connection, a timeout, the key refused, too many requests) is not asked again in
+that scan: the summary adds a line such as `Unavailable: NVD (no connection)`, and its ports
+say `NOT CHECKED` rather than `NO KNOWN CVE`. The next scan tries again.
 
 - **The CVE lookup** sends only the software name and version (here `OpenSSH 8.9`, or
   as NVD names it, `cpe:2.3:a:openbsd:openssh:8.9`) to the public NVD API, never the
   banner or the address you scanned.
-- **The AI explanation** (OpenRouter) is asked only when an `OPENROUTER_API_KEY` is set,
-  and with a target only with `--ai`. It receives the same name and version.
-- **The IP reputation check** (AbuseIPDB) runs only for public addresses, only with an
-  `ABUSEIPDB_API_KEY`, and with a target only with `--abuseipdb`.
+- **The CVE lookup** can be turned off with `--no-nvd`, or no to its question.
+- **The AI explanation** (OpenRouter) runs when an `OPENROUTER_API_KEY` is set, unless
+  `--no-ai` or no to its question. It receives the same name and version.
+- **The IP reputation check** (AbuseIPDB) runs only for public addresses, when an
+  `ABUSEIPDB_API_KEY` is set, unless `--no-abuseipdb` or no to its question.
 - **nmap** (only with `--engine nmap`) runs on your computer and sends its packets only to
   the target; what goes to NVD is still only the name and version.
 

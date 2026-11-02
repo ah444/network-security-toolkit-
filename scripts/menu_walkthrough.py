@@ -218,7 +218,13 @@ def scan(label, end_port, protocol, verbose):
         expect("if you are authorised to scan")
     send("yes")  # S16
     answer("Enable verbose mode? (Y/N): ", verbose)
-    if expect("scan this host anyway? (Y/N): ", "Scan Summary Report") == 0:
+    answer("Look up the known CVEs in NVD", "")  # HS4: Enter is yes
+    step = expect("for an AI explanation? (Y/n): ", "scan this host anyway? (Y/N): ",
+                  "Scan Summary Report")
+    if step == 0:  # asked only when an OPENROUTER_API_KEY is set (.env): no, nothing is sent
+        send("n")
+        step = 1 + expect("scan this host anyway? (Y/N): ", "Scan Summary Report")
+    if step == 1:
         send("y")
     expect("No open port results to export.")
     checks.append(f"{label}: scan of 127.0.0.1 ({protocol}) ended normally")

@@ -87,6 +87,12 @@ def _write_csv(entries: Sequence[ReportEntry], handle: TextIO) -> None:
             ", ".join(c["id"] for c in e["cves"] if c["match"] != "version"))])
 
 
+def _no_cves(entry: ReportEntry) -> str:
+    """What the CVE line says without a CVE: ``not checked`` when they were not looked up
+    (HS4: never shown as clean), else ``none``."""
+    return "not checked" if entry["severity"] == "NOT CHECKED" else "none"
+
+
 def _write_txt(entries: Sequence[ReportEntry], handle: TextIO) -> None:
     """A block of lines per entry, separated by a dashed line."""
     for e in entries:
@@ -94,7 +100,7 @@ def _write_txt(entries: Sequence[ReportEntry], handle: TextIO) -> None:
                      f"Port: {e['port']}/{e['protocol']}\n"
                      f"Service: {e['service']}\nBanner: {e['banner']}\n"
                      f"Software: {e['software']}\nSeverity (CVSS): {severity_text(e)}\n"
-                     f"CVEs (NVD): {_matched_cves(e) or 'none'}\n"
+                     f"CVEs (NVD): {_matched_cves(e) or _no_cves(e)}\n"
                      f"CVE source: {e['cve_source'] or 'none'}\n"
                      f"AI explanation (may be wrong): {e['ai_explanation']}\n"
                      f"Lookup errors: {'; '.join(e['lookup_errors']) or 'none'}\n"

@@ -431,7 +431,7 @@ screen and every question goes through the `ScanView` (`ConsoleScan` in
 ```
  target (IP, name or range) + ports + protocols   core/services/recon/targets.py: limits first
      |
-     +--> public IP, a key, --abuseipdb (or yes)? --> AbuseIPDB    core/data/recon/abuseipdb.py
+     +--> public IP, a key, no --no-abuseipdb (or yes)? --> AbuseIPDB  core/data/recon/abuseipdb.py
      v
  ping --> no answer: skipped unless --scan-unresponsive        core/data/recon/ping.py
      |
@@ -452,15 +452,16 @@ screen and every question goes through the `ScanView` (`ConsoleScan` in
      |
      v
  Intel.lookup_many: up to INTEL_WORKERS at a time               core/services/recon/intel.py
-     |   NVD (always; spaced as NVD asks): by version, else by keyword
-     |   OpenRouter (--ai or yes, and a key)
+     |   NVD (unless --no-nvd; spaced as NVD asks): by version, else by keyword
+     |   OpenRouter (a key, unless --no-ai or no)
      v
  report entries (network text cleaned)                          core/services/recon/report.py
      --> table on screen --> export (--export json|csv|txt)     core/data/recon/scan_files.py
 ```
 
-A failed lookup is recorded in the report and the scan goes on. Ctrl+C stops the scan with
-exit code 130.
+A failed lookup is recorded in the report and the scan goes on; that service is not asked
+again in this scan (`Intel.unavailable`, RD5), its ports say `NOT CHECKED`, and the summary
+names it and why. Ctrl+C stops the scan with exit code 130.
 
 ## 9. Data on disk and what leaves the computer
 
@@ -487,16 +488,16 @@ exit code 130.
  +------------------------------------+
  | web trainer, IDS, bundles, datasets| ---- nothing ----
  |                                    |
- | scanner ---- product names --------|------> NVD (CVE lookups; always)
- |         ---- product names --------|------> OpenRouter (--ai, or yes; and a key)
- |         ---- the public IP --------|------> AbuseIPDB (--abuseipdb, or yes; and a key)
+ | scanner ---- product names --------|------> NVD (CVE lookups; unless --no-nvd)
+ |         ---- product names --------|------> OpenRouter (a key; unless --no-ai or no)
+ |         ---- the public IP --------|------> AbuseIPDB (a key; unless --no-abuseipdb or no)
  +------------------------------------+
 ```
 
-"or yes" is the scanner's question when it runs without flags. Each scan prints, before the
-first target, what it may send to each service or why it sends nothing (`online_plan` in
-`toolkit/core/services/recon/scan.py`: no key, not asked for, the answer no, no public
-address), and in its summary how many requests went to each (`Intel.sent`, counted by the
+"or no" is the scanner's question when it runs without flags (yes on Enter). Each scan
+prints, before the first target, what it may send to each service or why it sends nothing
+(`online_plan` in `toolkit/core/services/recon/scan.py`: no key, turned off, the answer no,
+no public address), and in its summary how many requests went to each (`Intel.sent`, counted by the
 scan's `Session` in `toolkit/core/data/recon/lookup.py`).
 
 Where each outside connection is made, all in the data layer:

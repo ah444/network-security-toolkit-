@@ -14,6 +14,7 @@ UNIT = (
     "recon/test_intel_providers.py",
     "recon/test_intel_timeouts.py",
     "recon/test_online.py",
+    "recon/test_outside_services.py",
     "recon/test_parallel_intel.py",
     "recon/test_probes.py",
     "recon/test_scan_contract.py",
