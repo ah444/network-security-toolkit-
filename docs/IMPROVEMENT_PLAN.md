@@ -790,7 +790,7 @@ A checkpoint that fails any of these isn't tagged.
 | Next | F7 recon→IDS dashboard, F9 tuning UI, F10 dashboard home |
 | Stretch | F8 PCAP/live detection, F11 scheduled scans, F12 Arabic/RTL, F13 offline CVE, D13-B asyncio scanner |
 
-v5.3 started 2026-10-30 with F2: see [V5.3_CHECKLIST.md](V5.3_CHECKLIST.md).
+v5.3 started 2026-10-30 with F2 (done 2026-11-02); F3 approved 2026-11-02 with permutation importance and a typical-value explanation instead of SHAP: see [V5.3_CHECKLIST.md](V5.3_CHECKLIST.md).
 
 ---
 
