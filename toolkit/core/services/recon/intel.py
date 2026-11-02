@@ -35,6 +35,7 @@ class LookupResult(TypedDict):
     cve_source: str  # how they were found: "version match (...)" or "keyword search (...)"
     max_cvss: float | None
     severity: str  # of the worst CVE; "NO KNOWN CVE" if none, "UNKNOWN" if no source answered
+    severity_unconfirmed: bool  # no CVE matched by version has the worst score
     ai_explanation: str
     errors: list[str]  # one per failed lookup: "<provider>: <reason>"
 
@@ -95,7 +96,8 @@ class Intel:
             if software in self._done:
                 return self._done[software]
         result: LookupResult = {"cves": [], "cve_source": "", "max_cvss": None,
-                                "severity": "UNKNOWN", "ai_explanation": "", "errors": []}
+                                "severity": "UNKNOWN", "severity_unconfirmed": False,
+                                "ai_explanation": "", "errors": []}
         answers = self._ask("cves", software, result["errors"])
         if answers:
             cves = [cve for answer in answers for cve in answer.cves]
@@ -104,6 +106,8 @@ class Intel:
             worst = result["cves"][0] if result["cves"] else None
             result["max_cvss"] = worst["cvss"] if worst else None
             result["severity"] = worst["severity"] if worst else "NO KNOWN CVE"
+            result["severity_unconfirmed"] = worst is not None and not any(
+                c["match"] == "version" and (c["cvss"] or 0) >= (worst["cvss"] or 0) for c in cves)
         texts = self._ask("explanation", software, result["errors"])
         result["ai_explanation"] = "\n\n".join(t.text for t in texts if t.text)
         if not result["errors"]:

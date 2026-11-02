@@ -139,7 +139,8 @@ class NoLookups(Intel):
     def lookup_many(self, products):
         self.asked.extend(products)
         return {p: {"cves": [], "cve_source": "", "max_cvss": None, "severity": "UNKNOWN",
-                    "ai_explanation": "", "errors": []} for p in products}
+                    "severity_unconfirmed": False, "ai_explanation": "", "errors": []}
+                for p in products}
 
 
 def test_nmap_products_go_to_nvd_as_the_a1_names(nmap_xml, scan_service):
@@ -172,14 +173,15 @@ def test_the_report_files_carry_the_engine_and_the_cpe(tmp_path):
     entry = {"target": "127.0.0.1", "port": 2222, "protocol": "tcp", "service": "ssh",
              "banner": "SSH-2.0-OpenSSH_for_Windows_8.1", "software": "OpenSSH 8.1",
              "cves": [], "cve_source": "", "max_cvss": None, "severity": "NO KNOWN CVE",
+             "severity_unconfirmed": False,
              "ai_explanation": "", "lookup_errors": [], "os_hint": "", "engine": "nmap",
              "cpe": ["cpe:/a:openbsd:openssh:for_windows_8.1", "cpe:/o:microsoft:windows"]}
     saved = {fmt: scan_files.export_results([entry], fmt, tmp_path)
              for fmt in ("json", "csv", "txt")}
     assert json.loads(saved["json"].read_text(encoding="utf-8"))[0]["cpe"] == entry["cpe"]
     header, row = list(csv.reader(saved["csv"].open(encoding="utf-8", newline="")))
-    assert header[-2:] == ["Engine", "CPE (nmap)"]
-    assert row[-2:] == ["nmap", " ".join(entry["cpe"])]
+    cells = dict(zip(header, row, strict=True))
+    assert (cells["Engine"], cells["CPE (nmap)"]) == ("nmap", " ".join(entry["cpe"]))
     txt = saved["txt"].read_text(encoding="utf-8")
     assert f"Engine: nmap\nCPE (nmap): {' '.join(entry['cpe'])}\n" in txt
 
@@ -326,7 +328,7 @@ def test_print_entry_shows_the_cpe(scan_screen, capsys):
     from toolkit.core.services.recon import report
     entry = report.make_entry("127.0.0.1", port, None, {
         "cves": [], "cve_source": "", "max_cvss": None, "severity": "UNKNOWN",
-        "ai_explanation": "", "errors": []}, engine="nmap")
+        "severity_unconfirmed": False, "ai_explanation": "", "errors": []}, engine="nmap")
     scan_screen.print_entry(entry)
     out = capsys.readouterr().out
     assert "CPE (nmap): cpe:/a:openbsd:openssh:8.1\n" in out

@@ -36,7 +36,7 @@ class SlowCves:
                 self.fail.discard(subject)  # fails once
                 raise requests.Timeout("read timed out")
             return IntelFinding(cves=({"id": f"CVE-2026-{len(subject):04d}", "cvss": 5.0,
-                                       "severity": "MEDIUM"},))
+                                       "severity": "MEDIUM", "match": "version"},))
         finally:
             with self.lock:
                 self.running -= 1
@@ -162,7 +162,7 @@ def test_scan_prints_entries_in_port_order(fake_ports, scan_service, scanner, mo
             with self.lock:
                 self.running[0] -= 1
             return IntelFinding(cves=({"id": "CVE-2026-0001", "cvss": 9.8,
-                                       "severity": "CRITICAL"},))
+                                       "severity": "CRITICAL", "match": "version"},))
 
     source = Uneven()
     real_intel = recon_intel.Intel
@@ -182,4 +182,4 @@ def test_scan_prints_entries_in_port_order(fake_ports, scan_service, scanner, mo
     assert ports == ["21/tcp", "22/tcp", "80/tcp", "2222/tcp", "9000/tcp"]
     assert sorted(source.asked) == ["Apache 2.4.49", "OpenSSH 8.9", "vsFTPd 3.0.3"]
     assert source.most[0] == 3, "the scan looks its products up at the same time"
-    assert out.count("CVE-2026-0001 (CVSS 9.8, CRITICAL)") == 4  # not the unknown banner
+    assert out.count("CVE-2026-0001 (CVSS 9.8, CRITICAL, version match)") == 4  # not the unknown banner

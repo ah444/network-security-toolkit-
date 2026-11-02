@@ -124,7 +124,7 @@ no Flask, no argparse. Read by `cli/` and `web/`, it imports neither
 | `toolkit/core/data/recon/text.py` | data | makes text from the network safe to show and export |
 | `toolkit/core/data/recon/scan_files.py` | data | scan reports as JSON, CSV or TXT: as text (`report_text`, for a download) or a file in `instance/scans/` (with the engine and nmap's CPE names) |
 | `toolkit/core/data/recon/findings.py` | data | what the intel gateways return (`CveEntry`, `IntelFinding`) |
-| `toolkit/core/data/recon/nvd.py` | data | CVEs and CVSS scores from the NVD API, by version (CPE names) or by keyword (an `IntelProvider`) |
+| `toolkit/core/data/recon/nvd.py` | data | CVEs and CVSS scores from the NVD API, by version (CPE names) or by keyword (an `IntelProvider`); each CVE carries its `match`, "version" or "name" |
 | `toolkit/core/data/recon/openrouter.py` | data | the optional AI explanation through OpenRouter (an `IntelProvider`) |
 | `toolkit/core/data/recon/abuseipdb.py` | data | the optional IP reputation from AbuseIPDB (an `IntelProvider`) |
 | `toolkit/core/data/recon/lookup.py` | data | the HTTP session (it counts the requests to each host), lookup time limits, expected failures and their names |

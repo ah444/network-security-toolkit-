@@ -62,7 +62,7 @@ class FakeCves:
     def lookup(self, subject):
         self.rec.sent["cves"].append(subject)
         return IntelFinding(cves=({"id": "CVE-2023-1", "cvss": 7.5, "cvss_version": "3.1",
-                                   "severity": "HIGH"},), source="offline")
+                                   "severity": "HIGH", "match": "version"},), source="offline")
 
 
 class FakeReputation(FakeCves):

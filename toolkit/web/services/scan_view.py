@@ -20,6 +20,7 @@ from ...core.services.recon.scan import (
     ReportEntry,
     ScanRequest,
     one_line,
+    severity_text,
 )
 from .jobs import Job
 
@@ -179,7 +180,7 @@ class WebScan:
     def entry(self, entry: ReportEntry, first: bool) -> None:
         """One open port's entry, kept for the answer and the download."""
         self.entries.append(entry)
-        found = f"{len(entry['cves'])} CVE(s), {entry['severity']}" if entry["software"] else \
+        found = f"{len(entry['cves'])} CVE(s), {severity_text(entry)}" if entry["software"] else \
             "software not recognised (no CVE lookup)"
         self.note(f"{entry['port']}/{entry['protocol']} {one_line(entry['service'], 30)}: "
                   f"{one_line(entry['software'], 60) or '-'}: {found}")

@@ -84,6 +84,12 @@ def test_cve_ids_are_text_never_links(modules):
     assert 'el("span", { class: "mono" }, cve.id)' in results
 
 
+def test_every_cve_shows_how_it_was_matched(modules):
+    results = modules["scanresults.js"]
+    assert '"version match"' in results and '"name match, unconfirmed"' in results
+    assert results.count("severityText(entry)") == 2, "the summary and the details"
+
+
 def test_the_downloads_are_the_report_route(page):
     links = re.findall(r'<a class="custom-btn" href="([^"]+)" download>(\w+)</a>', page)
     assert links == [(f"/api/v1/scan/report?format={fmt.lower()}", fmt)

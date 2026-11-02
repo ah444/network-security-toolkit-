@@ -17,7 +17,9 @@ from ...core.services.recon.scan import (
     OsHint,
     PortResult,
     ReportEntry,
+    match_label,
     one_line,
+    severity_text,
 )
 
 AUTHORIZATION = ("\nOnly scan systems you own or have written permission to test. Scanning "
@@ -130,12 +132,14 @@ def print_entry(entry: ReportEntry) -> None:
     print(f"Software: {entry['software']}")
     cves = entry["cves"]
     shown = ", ".join(f"{c['id']} (CVSS {c['cvss'] if c['cvss'] is not None else '?'}, "
-                      f"{c['severity']})" for c in cves[:10])
+                      f"{c['severity']}, {match_label(c)})" for c in cves[:10])
     more = f" ... +{len(cves) - 10} more" if len(cves) > 10 else ""
     print(f"CVEs (NVD): {shown + more if cves else 'none found'}")
     if entry["cve_source"]:
         print(f"CVE source: {entry['cve_source']}")
-    print(f"Severity (from CVSS): {entry['severity']}")
+    print(f"Severity (from CVSS): {severity_text(entry)}")
+    if entry["severity_unconfirmed"]:
+        print("Unconfirmed: found by the product's name only; the version was not checked")
     if entry["ai_explanation"]:
         print("AI explanation (may be wrong):")
         print(entry["ai_explanation"])

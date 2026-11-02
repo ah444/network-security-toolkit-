@@ -29,6 +29,8 @@ from ...data.recon.scan_files import EXPORT_FORMATS as EXPORT_FORMATS
 from ...data.recon.scan_files import ReportEntry as ReportEntry  # what the UI shows
 from ...data.recon.scan_files import export_results
 from ...data.recon.scan_files import report_text as report_text  # a download's text
+from ...data.recon.scan_files import severity_text as severity_text  # with "(unconfirmed)"
+from ...data.recon.findings import match_label as match_label  # how a CVE was found
 from ...data.recon.scanner import PortResult as PortResult
 from ...data.recon.scanner import ScanStopped as ScanStopped  # raised once a scan is stopped
 from ...data.recon.scanner import Progress
@@ -272,6 +274,7 @@ def _entries(target: str, open_ports: list[PortResult], intel: Intel, view: Scan
         found: LookupResult = (
             looked_up[software] if software else
             {"cves": [], "cve_source": "", "max_cvss": None, "severity": "UNKNOWN",
+             "severity_unconfirmed": False,
              "ai_explanation": "", "errors": []})
         entry = make_entry(target, result, software, found, os_text, engine)
         view.entry(entry, first=not entries)

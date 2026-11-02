@@ -82,8 +82,9 @@ def _worst_first(cves: list[CveEntry]) -> list[CveEntry]:
     return sorted(cves, key=lambda c: (-(c["cvss"] or 0), c["id"]))
 
 
-def parse_nvd(data: Mapping[str, Any]) -> list[CveEntry]:
-    """CVEs of an NVD CVE API 2.0 reply with CVSS score and severity, worst first."""
+def parse_nvd(data: Mapping[str, Any], match: str) -> list[CveEntry]:
+    """CVEs of an NVD CVE API 2.0 reply with CVSS score and severity, worst first; ``match``
+    is how the request found them ("version" or "name")."""
     found: list[CveEntry] = []
     for item in data.get("vulnerabilities", []):
         cve = item.get("cve", {})
@@ -92,7 +93,7 @@ def parse_nvd(data: Mapping[str, Any]) -> list[CveEntry]:
             continue
         score, version = _cvss(cve.get("metrics", {}))
         found.append({"id": cve_id, "cvss": score, "cvss_version": version,
-                      "severity": cvss_severity(score, version)})
+                      "severity": cvss_severity(score, version), "match": match})
     return _worst_first(found)
 
 
@@ -150,7 +151,8 @@ class NvdProvider:
         else:
             why = "no version match for this product"
         data = self._get({"keywordSearch": subject, "resultsPerPage": NVD_RESULTS})
-        return IntelFinding(cves=tuple(parse_nvd(data)), source=f"keyword search ({why})")
+        return IntelFinding(cves=tuple(parse_nvd(data, "name")),
+                            source=f"keyword search ({why})")
 
     def _by_version(self, names: list[str]) -> list[CveEntry]:
         """Every CVE that matches one of ``names`` (at most MAX_CVES each), once, worst first."""
@@ -159,7 +161,7 @@ class NvdProvider:
             for start in range(0, MAX_CVES, PAGE):
                 data = self._get({"virtualMatchString": name, "resultsPerPage": PAGE,
                                   "startIndex": start})
-                page = parse_nvd(data)
+                page = parse_nvd(data, "version")
                 for cve in page:
                     found.setdefault(cve["id"], cve)
                 if not page or start + PAGE >= int(data.get("totalResults", 0)):

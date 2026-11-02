@@ -1,6 +1,7 @@
 """B12, S14: UTF-8 export to instance/scans, never overwritten, sanitised."""
 
 import csv
+import io
 import json
 
 import pytest
@@ -11,11 +12,12 @@ from toolkit.core.data.recon import scanner as recon_scanner
 from toolkit.core.data.recon import text as recon_text
 
 
-def _entry(banner, ai=""):
+def _entry(banner, ai="", match="version"):
     result = recon_scanner.PortResult(8080, "tcp", "open", "http-alt", banner)
     intel = {"cves": [{"id": "CVE-2021-41773", "cvss": 9.8, "cvss_version": "3.1",
-                       "severity": "CRITICAL"}],
+                       "severity": "CRITICAL", "match": match}],
              "max_cvss": 9.8, "severity": "CRITICAL", "ai_explanation": ai, "errors": [],
+             "severity_unconfirmed": match != "version",
              "cve_source": "version match (cpe:2.3:a:apache:http_server:2.4.49)"}
     return report.make_entry("127.0.0.1", result, software.product_version(banner), intel)
 
@@ -52,6 +54,29 @@ def test_formula_cells_neutralised(tmp_path):
             assert not cell.startswith(recon_text.FORMULA_START), cell
             assert cell.startswith("'")
     assert rows[1][1] == "8080", "numbers stay numbers"
+
+
+@pytest.mark.parametrize(("match", "label", "severity", "confirmed", "unconfirmed"), [
+    ("version", "version match", "CRITICAL", "yes", ""),
+    ("name", "name match, unconfirmed", "CRITICAL (unconfirmed)", "no (name match only)",
+     "CVE-2021-41773"),
+])
+def test_every_cve_says_how_it_was_matched(scan_screen, capsys, match, label, severity,
+                                           confirmed, unconfirmed):
+    entries = [_entry("Apache/2.4.49", match=match)]
+    rows = list(csv.reader(io.StringIO(export.report_text(entries, "csv"))))
+    row = dict(zip(rows[0], rows[1], strict=True))
+    assert row["Severity confirmed"] == confirmed
+    assert row["Unconfirmed CVEs (name match)"] == unconfirmed
+    assert row["Severity (CVSS)"] == "CRITICAL", "the severity column keeps its values"
+    text = export.report_text(entries, "txt")
+    assert f"CVE-2021-41773 (9.8, {label})" in text and f"Severity (CVSS): {severity}\n" in text
+    data = json.loads(export.report_text(entries, "json"))
+    assert data[0]["cves"][0]["match"] == match
+    assert data[0]["severity_unconfirmed"] is (match == "name")
+    scan_screen.print_entry(entries[0])
+    out = capsys.readouterr().out
+    assert label in out and f"Severity (from CVSS): {severity}\n" in out
 
 
 def test_terminal_output_is_cleaned(scan_screen, scanner, capsys):

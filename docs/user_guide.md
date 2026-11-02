@@ -129,7 +129,7 @@ Port: 47822/tcp
 Service: ssh
 Banner: SSH-2.0-OpenSSH_8.9p1 Ubuntu-3ubuntu0.10
 Software: OpenSSH 8.9
-CVEs (NVD): CVE-2023-28531 (CVSS 9.8, CRITICAL), CVE-2023-38408 (CVSS 9.8, CRITICAL), CVE-2026-60002 (CVSS 9.4, CRITICAL), CVE-2024-6387 (CVSS 8.1, HIGH), CVE-2026-35385 (CVSS 8.1, HIGH), CVE-2026-35414 (CVSS 8.1, HIGH), CVE-2026-106583 (CVSS 7.8, HIGH), CVE-2026-106553 (CVSS 7.5, HIGH), CVE-2026-106555 (CVSS 7.5, HIGH), CVE-2026-59999 (CVSS 7.5, HIGH) ... +22 more
+CVEs (NVD): CVE-2023-28531 (CVSS 9.8, CRITICAL, version match), CVE-2023-38408 (CVSS 9.8, CRITICAL, version match), CVE-2026-60002 (CVSS 9.4, CRITICAL, version match), CVE-2024-6387 (CVSS 8.1, HIGH, version match), CVE-2026-35385 (CVSS 8.1, HIGH, version match), CVE-2026-35414 (CVSS 8.1, HIGH, version match), CVE-2026-106583 (CVSS 7.8, HIGH, version match), CVE-2026-106553 (CVSS 7.5, HIGH, version match), CVE-2026-106555 (CVSS 7.5, HIGH, version match), CVE-2026-59999 (CVSS 7.5, HIGH, version match) ... +22 more
 CVE source: version match (cpe:2.3:a:openbsd:openssh:8.9)
 Severity (from CVSS): CRITICAL
 ============================================================
@@ -164,7 +164,12 @@ protocol, which engine to use (Enter keeps its own), and for nmap its choices
   whose affected versions, as NVD records them, include this one; for about 20 products
   the scanner knows NVD's name for, such as OpenSSH, Apache, nginx, MySQL, MariaDB), or a
   **keyword search** on the name and version (any other product, or when the version
-  match found none), which can list CVEs of other versions and miss some.
+  match found none), which can list CVEs of other versions and miss some. Each CVE says
+  which: `version match`, or `name match, unconfirmed`. When no version match has the worst
+  score, the severity is marked too (`CRITICAL (unconfirmed)`), and a line says the version
+  was not checked. The CSV has the same in its last two columns, `Severity confirmed` and
+  `Unconfirmed CVEs (name match)`; the JSON has `match` on each CVE and
+  `severity_unconfirmed` on each port.
 - **OS:** the first line is the guess from the time-to-live (TTL) of the ping reply alone.
   After the ports, the scanner weighs all it saw: the TTL, words in the banners
   (`Ubuntu`, `Debian`, `Microsoft-IIS`, `OpenSSH_for_Windows`, ...) and open ports only
@@ -221,7 +226,7 @@ Port: 47822/tcp
 Service: ssh
 Banner: SSH-2.0-OpenSSH_8.9p1 Ubuntu-3ubuntu0.10
 Software: OpenSSH 8.9
-CVEs (NVD): CVE-2023-28531 (CVSS 9.8, CRITICAL), CVE-2023-38408 (CVSS 9.8, CRITICAL), CVE-2026-60002 (CVSS 9.4, CRITICAL), CVE-2024-6387 (CVSS 8.1, HIGH), CVE-2026-35385 (CVSS 8.1, HIGH), CVE-2026-35414 (CVSS 8.1, HIGH), CVE-2026-106583 (CVSS 7.8, HIGH), CVE-2026-106553 (CVSS 7.5, HIGH), CVE-2026-106555 (CVSS 7.5, HIGH), CVE-2026-59999 (CVSS 7.5, HIGH) ... +22 more
+CVEs (NVD): CVE-2023-28531 (CVSS 9.8, CRITICAL, version match), CVE-2023-38408 (CVSS 9.8, CRITICAL, version match), CVE-2026-60002 (CVSS 9.4, CRITICAL, version match), CVE-2024-6387 (CVSS 8.1, HIGH, version match), CVE-2026-35385 (CVSS 8.1, HIGH, version match), CVE-2026-35414 (CVSS 8.1, HIGH, version match), CVE-2026-106583 (CVSS 7.8, HIGH, version match), CVE-2026-106553 (CVSS 7.5, HIGH, version match), CVE-2026-106555 (CVSS 7.5, HIGH, version match), CVE-2026-59999 (CVSS 7.5, HIGH, version match) ... +22 more
 CVE source: version match (cpe:2.3:a:openbsd:openssh:8.9)
 Severity (from CVSS): CRITICAL
 ============================================================
@@ -316,7 +321,7 @@ Service: ssh
 Banner: OpenSSH for_Windows_8.1 (protocol 2.0)
 CPE (nmap): cpe:/a:openbsd:openssh:for_windows_8.1
 Software: OpenSSH 8.1
-CVEs (NVD): CVE-2023-38408 (CVSS 9.8, CRITICAL), CVE-2026-60002 (CVSS 9.4, CRITICAL), CVE-2026-35385 (CVSS 8.1, HIGH), CVE-2026-35414 (CVSS 8.1, HIGH), CVE-2026-106583 (CVSS 7.8, HIGH), CVE-2026-106553 (CVSS 7.5, HIGH), CVE-2026-106555 (CVSS 7.5, HIGH), CVE-2026-59999 (CVSS 7.5, HIGH), CVE-2026-60000 (CVSS 7.5, HIGH), CVE-2020-15778 (CVSS 7.4, HIGH) ... +24 more
+CVEs (NVD): CVE-2023-38408 (CVSS 9.8, CRITICAL, version match), CVE-2026-60002 (CVSS 9.4, CRITICAL, version match), CVE-2026-35385 (CVSS 8.1, HIGH, version match), CVE-2026-35414 (CVSS 8.1, HIGH, version match), CVE-2026-106583 (CVSS 7.8, HIGH, version match), CVE-2026-106553 (CVSS 7.5, HIGH, version match), CVE-2026-106555 (CVSS 7.5, HIGH, version match), CVE-2026-59999 (CVSS 7.5, HIGH, version match), CVE-2026-60000 (CVSS 7.5, HIGH, version match), CVE-2020-15778 (CVSS 7.4, HIGH, version match) ... +24 more
 CVE source: version match (cpe:2.3:a:openbsd:openssh:8.1)
 Severity (from CVSS): CRITICAL
 
@@ -325,7 +330,7 @@ Service: ssh
 Banner: OpenSSH 8.9p1 Ubuntu 3ubuntu0.10 (Ubuntu Linux; protocol 2.0)
 CPE (nmap): cpe:/a:openbsd:openssh:8.9p1 cpe:/o:linux:linux_kernel
 Software: OpenSSH 8.9
-CVEs (NVD): CVE-2023-28531 (CVSS 9.8, CRITICAL), CVE-2023-38408 (CVSS 9.8, CRITICAL), CVE-2026-60002 (CVSS 9.4, CRITICAL), CVE-2024-6387 (CVSS 8.1, HIGH), CVE-2026-35385 (CVSS 8.1, HIGH), CVE-2026-35414 (CVSS 8.1, HIGH), CVE-2026-106583 (CVSS 7.8, HIGH), CVE-2026-106553 (CVSS 7.5, HIGH), CVE-2026-106555 (CVSS 7.5, HIGH), CVE-2026-59999 (CVSS 7.5, HIGH) ... +22 more
+CVEs (NVD): CVE-2023-28531 (CVSS 9.8, CRITICAL, version match), CVE-2023-38408 (CVSS 9.8, CRITICAL, version match), CVE-2026-60002 (CVSS 9.4, CRITICAL, version match), CVE-2024-6387 (CVSS 8.1, HIGH, version match), CVE-2026-35385 (CVSS 8.1, HIGH, version match), CVE-2026-35414 (CVSS 8.1, HIGH, version match), CVE-2026-106583 (CVSS 7.8, HIGH, version match), CVE-2026-106553 (CVSS 7.5, HIGH, version match), CVE-2026-106555 (CVSS 7.5, HIGH, version match), CVE-2026-59999 (CVSS 7.5, HIGH, version match) ... +22 more
 CVE source: version match (cpe:2.3:a:openbsd:openssh:8.9)
 Severity (from CVSS): CRITICAL
 ============================================================
@@ -387,7 +392,8 @@ section 4) and open **Port Scanner** in the menu bar, or `http://127.0.0.1:5000/
 4. **Read the results.** A summary (the target, the engine, the ports, the time and the
    requests sent online), each host with its OS guess, and a card per open port. Click a
    card (or press Enter on it) to open its banner, software, CVEs (the 10 worst, with their
-   CVSS scores), how they were found, and the AI's explanation if you asked for one.
+   CVSS scores and how each was found: `version match` or `name match, unconfirmed`), and
+   the AI's explanation if you asked for one.
 5. **Download the report** as TXT, JSON or CSV: the same files as `--export` on the command
    line. The results stay in your browser session (in memory, nothing is saved on the
    server) until you scan again, clear the workspace or close the web app; a reload shows
