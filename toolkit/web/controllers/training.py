@@ -15,6 +15,7 @@ from ...core.services.ids.pipeline import FittedModel
 from ...core.services.ids.runs import TrainingRun
 from ..services.datasets import require_data
 from ..services.errors import NOT_TRAINED, TRAINING_FAILED
+from .access import origin
 from .api import Answer, ApiError, error_response, json_body, query
 from .jobs import job_view
 from ..services.training import start_job, training_settings
@@ -54,7 +55,7 @@ def start_training() -> Answer:
         settings = training_settings(data, req.target, req.features, req.models,
                                      req.balancing, req.test_size)
         job = start_job(ws, data, settings, state().training_jobs,
-                        state().config.job_max_minutes * 60, run_result)
+                        state().config.job_max_minutes * 60, run_result, origin())
         return jsonify(job_view(job, state().training_jobs)), 202
 
 

@@ -35,6 +35,7 @@ NO_SCAN = "NO_SCAN"  # 404: no finished scan in this session yet
 LOCKED = "LOCKED"  # 401: a computer other than this one, before it typed the access token
 WRONG_TOKEN = "WRONG_TOKEN"  # 401: that isn't the access token
 TOO_MANY_TRIES = "TOO_MANY_TRIES"  # 429: five wrong tokens from one address in a minute
+THIS_COMPUTER_ONLY = "THIS_COMPUTER_ONLY"  # 403: a new token, other computers' jobs (HS1)
 
 
 

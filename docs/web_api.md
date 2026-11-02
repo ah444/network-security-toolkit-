@@ -68,6 +68,9 @@ the network").
 | POST | `/api/v1/jobs/scan` | `authorized`, `target`, `ports`, `protocol`, `engine`, nmap's choices, `abuseipdb`, `ai`, `scan_unresponsive` | **202** and the scan's job (see Port scan) |
 | GET | `/api/v1/scan` | none | the session's scan still queued or running, and its last finished one |
 | POST | `/api/v1/unlock` | `token` | another computer's session unlocked, when `--host` opened the toolkit to the network (see Opened to the network) |
+| POST | `/api/v1/access/token` | none | this computer only: a new access token, printed in the terminal; every other computer is locked out and its waiting jobs are cancelled (see Opened to the network) |
+| GET | `/api/v1/access/jobs` | none | this computer only: the jobs other computers asked for that run or wait |
+| DELETE | `/api/v1/access/jobs/<job_id>` | none | this computer only: **202**, one of those jobs stopped, a waiting one at once, a running one at its next step |
 | GET | `/api/v1/scan/report` | `format`: `txt` (default), `json` or `csv` | the last finished scan as a download (404 `NO_SCAN` before one) |
 | GET | `/api/v1/runs` | `before`: a run id (the next page; default: the newest) | the saved runs' summaries, newest first, 50 at a time (see Saved runs) |
 | GET | `/api/v1/runs/<run_id>` | none | one saved run: its summary, its leaderboard and each model's CV folds |
@@ -285,9 +288,23 @@ address of the network; `127.0.0.1` stays bound. Then:
   `POST /api/v1/unlock` and the static files stay open.
 - `POST /api/v1/unlock` with `{"token": "K7QX-M2PD-9RTA-W4HE"}` (case, spaces and dashes
   don't matter; the CSRF token is needed as for every POST) unlocks the session until the
-  toolkit stops: `{"message": "Unlocked: ..."}`. Another token is `WRONG_TOKEN` (401); five
-  wrong ones from one address within a minute are `TOO_MANY_TRIES` (429) until the oldest is
-  a minute old. From this computer it answers that no token is needed.
+  toolkit stops or a new token is made: `{"message": "Unlocked: ..."}`. Another token is
+  `WRONG_TOKEN` (401); five wrong ones from one address within a minute are `TOO_MANY_TRIES`
+  (429) until the oldest is a minute old. From this computer it answers that no token is
+  needed.
+- `POST /api/v1/access/token`, from this computer only (HS1): a new access token, printed in
+  the terminal and never in the answer: `{"message": "New token made: ...", "cancelled": 1}`.
+  Every session unlocked before is locked again at once (every request answers `LOCKED`, a
+  job's state included). A job another computer asked for under the old unlock that still
+  waits is cancelled and never starts (`cancelled` counts them; its error says the access
+  token was changed); a running one goes on; this computer's jobs are not touched.
+- `GET /api/v1/access/jobs`, from this computer only: `{"jobs": [...]}`, the jobs other
+  computers asked for that run or wait, the running one first; each has `id`, `url`, `kind`,
+  `source` (the computer's address), `state`, `phase` and `elapsed_seconds`, never a result
+  or a log. `DELETE` on a job's `url` stops it, as `DELETE /api/v1/jobs/<id>` does for its own
+  session (`NOT_FOUND` once it ended).
+- The three answer `THIS_COMPUTER_ONLY` (403) to another computer, and `NOT_FOUND` (404)
+  when the toolkit isn't open to the network.
 - Every page shows a banner saying the toolkit is open to the network and where.
 
 ## Errors
@@ -320,6 +337,7 @@ Every error answer has the same shape; `details` is present only when there is m
 | `LOCKED` | 401 | another computer, before it typed the access token (`--host` only) |
 | `WRONG_TOKEN` | 401 | that isn't the access token |
 | `TOO_MANY_TRIES` | 429 | five wrong access tokens from one address within a minute |
+| `THIS_COMPUTER_ONLY` | 403 | a new access token, or the other computers' jobs, asked for from another computer |
 | `NOT_FOUND` | 404 | no such API route, or no such job in this session |
 | `METHOD_NOT_ALLOWED` | 405 | the route exists, the method doesn't |
 | `BUSY` | 409 | a training run is in progress in this workspace: a second training, an upload, a class filter or clearing the workspace has to wait for it; or a scan is: a second scan or clearing the workspace has to wait for it |

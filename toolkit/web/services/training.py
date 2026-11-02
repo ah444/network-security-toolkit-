@@ -14,15 +14,17 @@ from ...core.services.ids.runs import TrainingRun, TrainSettings
 from ...core.services.ids.runs import train as train_run
 from .datasets import label_values
 from .errors import BUSY, TRAINING_FAILED, UNKNOWN_COLUMN, ServiceError
-from .jobs import TRAINING, Job, JobRunner
+from .jobs import HERE, TRAINING, Job, JobRunner, Origin
 from .workspace import UploadedData, Workspace
 
 log = logging.getLogger(__name__)
 
 
 def start_job(ws: Workspace, data: UploadedData, settings: TrainSettings, jobs: JobRunner,
-              max_seconds: float, answer: Callable[[TrainingRun], dict[str, Any]]) -> Job:
-    """Queue a training of the session dataset; the job's result is ``answer(run)``.
+              max_seconds: float, answer: Callable[[TrainingRun], dict[str, Any]],
+              origin: Origin = HERE) -> Job:
+    """Queue a training of the session dataset, asked for from ``origin``; the job's result
+    is ``answer(run)``.
 
     One training at a time per workspace (``training`` lock, else BUSY); the lock and a
     lease (D22) are held from now until the job ends, so the dataset can't change and the
@@ -38,7 +40,7 @@ def start_job(ws: Workspace, data: UploadedData, settings: TrainSettings, jobs: 
         ws.training.release()
 
     job = Job(kind=TRAINING, work=lambda job: answer(run_training(ws, data, settings, job)),
-              on_end=release, max_seconds=max_seconds,
+              on_end=release, max_seconds=max_seconds, origin=origin,
               steps=training_steps(len(settings.models or ()), settings.evaluation.cv_folds))
     ws.split = None  # free the preview split: training makes its own
     ws.add_job(job)

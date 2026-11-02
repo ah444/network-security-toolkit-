@@ -8,7 +8,8 @@ scans twice at once, while a scan doesn't wait for a training. A job is its own
 ``ProgressSink``: every ``advance()`` updates the step count and is the point where a
 cancel or the time limit takes effect, so the current step (a model's fit) always
 finishes first (cooperative cancel). A job that doesn't end in ``done`` leaves nothing
-behind.
+behind. Each job keeps where it was asked for (``Origin``, HS1): a runner can be given the
+reason a queued job may no longer start, checked as the worker takes it.
 """
 
 from __future__ import annotations
@@ -28,6 +29,7 @@ log = logging.getLogger(__name__)
 
 QUEUED, RUNNING, DONE, FAILED, STOPPED = "queued", "running", "done", "failed", "cancelled"
 FINISHED = (DONE, FAILED, STOPPED)
+THIS_COMPUTER = "this computer"  # the source of a job asked for from a loopback address
 
 
 @dataclass(frozen=True)
@@ -55,6 +57,18 @@ class JobCancelled(Exception):
         self.message = message
 
 
+@dataclass(frozen=True)
+class Origin:
+    """Where a job was asked for (HS1, RD1): this computer, or another computer's address and
+    the unlock its session had (``Access.run_id``), so a new access token can cancel it."""
+
+    source: str = THIS_COMPUTER
+    unlock: str | None = None  # None: this computer, which needs no access token
+
+
+HERE = Origin()
+
+
 @dataclass(eq=False)
 class Job:
     """One training or scan: its state, its progress (it is the ProgressSink) and its
@@ -65,6 +79,7 @@ class Job:
     on_end: Callable[[], None]  # always called once at the end (releases lock and lease)
     max_seconds: float
     steps: Callable[[int, int], str]  # the phase text while it runs, from (done, total)
+    origin: Origin = HERE  # who asked for it (HS1)
     id: str = field(default_factory=lambda: secrets.token_urlsafe(9))
     state: str = QUEUED
     done: int = 0
@@ -150,10 +165,14 @@ class Job:
 
 
 class JobRunner:
-    """One kind's job queue and its one worker thread (started with the first job)."""
+    """One kind's job queue and its one worker thread (started with the first job).
+    ``refusal`` (HS1) says why a queued job may no longer start, or None: the worker asks it
+    as it takes each job, and cancels the job with that reason instead of running it."""
 
-    def __init__(self, kind: JobKind) -> None:
+    def __init__(self, kind: JobKind,
+                 refusal: Callable[[Job], str | None] | None = None) -> None:
         self.kind = kind
+        self._refusal = refusal
         self._queue: queue.Queue[Job] = queue.Queue()
         self._lock = threading.Lock()
         self._waiting: list[Job] = []
@@ -180,31 +199,46 @@ class JobRunner:
                 return 0
             return self._waiting.index(job) + (1 if self._running is not None else 0)
 
+    def active(self) -> list[Job]:
+        """The running job, then the queued ones in their order."""
+        with self._lock:
+            return ([self._running] if self._running is not None else []) + self._waiting
+
     def cancel(self, job: Job) -> None:
         """A queued job ends now; a running one at its next step (``advance``)."""
         job.cancel_requested.set()
+        self.cancel_waiting(job, f"{job.kind.title} cancelled before it started.")
+
+    def cancel_waiting(self, job: Job, message: str) -> bool:
+        """Ends ``job`` with ``message`` if it is still queued (True); a running or finished
+        one is left as it is, not even asked to stop (False)."""
         with self._lock:
             if job.state != QUEUED:
-                return
+                return False
             self._waiting.remove(job)
             job.state, job.ended = STOPPED, time.monotonic()
-            job.error = {"code": CANCELLED,
-                         "message": f"{job.kind.title} cancelled before it started."}
+            job.error = {"code": CANCELLED, "message": message}
         job.on_end()
+        return True
 
     def _work(self) -> None:
         """The worker thread: one job at a time, in order, skipping cancelled ones; records the
         result or the error (an unexpected one only as a generic message, the details in the log)
         and always calls ``on_end``, before the job is seen to end: a client that sees the end
-        can start the next job at once (v5.2 step 2.4d)."""
+        can start the next job at once (v5.2 step 2.4d). A job ``refusal`` refuses never starts."""
         while True:
             job = self._queue.get()
             with self._lock:
                 if job.state != QUEUED:  # cancelled while waiting
                     continue
-                self._waiting.remove(job)
-                self._running = job
-                job.state, job.started = RUNNING, time.monotonic()
+                reason = self._refusal(job) if self._refusal is not None else None
+                if reason is None:
+                    self._waiting.remove(job)
+                    self._running = job
+                    job.state, job.started = RUNNING, time.monotonic()
+            if reason is not None:
+                self.cancel_waiting(job, reason)
+                continue
             ended = FAILED
             result: dict[str, Any] | None = None
             error: dict[str, Any] | None = None

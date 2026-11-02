@@ -22,6 +22,7 @@ from ..services.errors import (
     METHOD_NOT_ALLOWED,
     NO_SCAN,
     NOT_FOUND,
+    THIS_COMPUTER_ONLY,
     TOO_LARGE,
     TOO_MANY_TRIES,
     WRONG_TOKEN,
@@ -72,7 +73,7 @@ def query() -> dict[str, str]:
 
 
 STATUS = {NOT_FOUND: 404, NO_SCAN: 404, WRONG_TOKEN: 401, BUSY: 409, DATA_LIMIT: 413,
-          TOO_LARGE: 413, TOO_MANY_TRIES: 429}  # else 400
+          TOO_LARGE: 413, TOO_MANY_TRIES: 429, THIS_COMPUTER_ONLY: 403}  # else 400
 
 
 def status_of(error: ServiceError) -> int:

@@ -36,6 +36,15 @@ def open_to_network(urls: list[str], token: str) -> None:
     print(line)
 
 
+def new_token(token: str) -> None:
+    """HS1: the access token made on this computer's page (shown here only, never logged)."""
+    line = "=" * 72
+    print(line)
+    print("A new access token was made: every other computer is locked out until it types")
+    print(f"the new one. New access token: {token}")
+    print(line)
+
+
 def not_this_computer(host: str) -> None:
     """--host named an address this computer doesn't have."""
     print(f"{host} is not an address of this computer, so the toolkit can't listen on it. "

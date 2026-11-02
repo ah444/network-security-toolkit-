@@ -60,7 +60,7 @@ from .errors import (
     TIME_LIMIT,
     ServiceError,
 )
-from .jobs import SCAN, Job, JobRunner
+from .jobs import HERE, SCAN, Job, JobRunner, Origin
 from .scan_view import WebScan, nmap_missing
 from .workspace import Workspace
 
@@ -192,9 +192,9 @@ def require_authorized(choices: ScanChoices) -> None:
 
 
 def start_scan(ws: Workspace, choices: ScanChoices, runner: JobRunner,
-               limits: ScanConfig) -> Job:
-    """Check a scan and queue it as a job of the session ``ws``; the job's result is its answer
-    and the session keeps it (``ws.scan``). The order is the contract: the authorization first,
+               limits: ScanConfig, origin: Origin = HERE) -> Job:
+    """Check a scan and queue it as a job of the session ``ws``, asked for from ``origin``; the
+    job's result is its answer and the session keeps it (``ws.scan``). The order is the contract: the authorization first,
     nothing sent before it (module docstring). One scan at a time per session (else BUSY); its
     lock and a lease are held until the job ends."""
     require_authorized(choices)
@@ -211,7 +211,7 @@ def start_scan(ws: Workspace, choices: ScanChoices, runner: JobRunner,
                 nmap_missing() if NmapEngine().available() else problem), ENGINE_UNAVAILABLE)
         job = Job(kind=SCAN, work=lambda job: _run(ws, request, keys, job, view),
                   on_end=lambda: _release(ws), max_seconds=limits.max_minutes * 60,
-                  steps=lambda done, total: view.phase())
+                  steps=lambda done, total: view.phase(), origin=origin)
         view = WebScan(job)
         targets = _targets(choices.target.strip(), ports, protocols, limits, view)
         request = ScanRequest(

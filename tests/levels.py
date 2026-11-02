@@ -108,6 +108,7 @@ INTEGRATION = (
     "web/test_job_kinds.py",
     "web/test_jobs.py",
     "web/test_js_modules.py",
+    "web/test_lock_out.py",
     "web/test_responsive.py",
     "web/test_resume.py",
     "web/test_runaway.py",

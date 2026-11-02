@@ -64,6 +64,10 @@ def create_app(config: WebConfig | None = None) -> Flask:
     )
     upload_dir = instance_dir() / "uploads"
     prepare_uploads(upload_dir)  # without the files a crash left (S11)
+    # other computers type a token, made new at every start (v5.2 step 2.4f); a job they asked
+    # for under an older unlock never starts (HS1)
+    access = None if is_this_computer(config.host) else Access()
+    refusal = access.refusal if access is not None else None
     app.extensions["toolkit"] = WebState(
         config=config,
         workspaces=WorkspaceStore(config.workspace_idle_minutes * 60,
@@ -71,10 +75,9 @@ def create_app(config: WebConfig | None = None) -> Flask:
                                   max_data_bytes=config.max_data_mb * 2**20),
         model_store=BundleStore(),
         upload_dir=upload_dir,
-        training_jobs=JobRunner(TRAINING),
-        scan_jobs=JobRunner(SCAN),
-        # other computers type a token, made new at every start (v5.2 step 2.4f)
-        access=None if is_this_computer(config.host) else Access(),
+        training_jobs=JobRunner(TRAINING, refusal),
+        scan_jobs=JobRunner(SCAN, refusal),
+        access=access,
     )
     register_error_handlers(app)
     register_security(app, config.port)
