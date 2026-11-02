@@ -1,12 +1,70 @@
-# Decisions in force
+# Decisions and rules of work
 
-The design decisions that hold now, with why and who approved them. The checklists ([V5.3_CHECKLIST.md](V5.3_CHECKLIST.md)) hold the tasks and their state; [CHANGELOG.md](../CHANGELOG.md) holds what shipped. When a decision replaces an earlier one, the earlier one is listed under **Superseded** with what replaced it, and the checklist marks it there too.
+The decisions the project is built on, why they were taken, and the rules every change follows. The decisions taken with the outside review committee in v5.3 (RD1–RD4) are in [REVIEW_DECISIONS.md](REVIEW_DECISIONS.md). The full reasoning behind D1–D23, with every option weighed, is in [IMPROVEMENT_PLAN.md](IMPROVEMENT_PLAN.md) §2–§3. What exists is in [PROJECT_STATUS.md](PROJECT_STATUS.md); what comes next is in [ROADMAP.md](ROADMAP.md).
 
-**Status:** D1–D4 were approved on 2026-11-02 by the outside review committee (security, architecture, reliability, ML, product) and by the user. **None of them is implemented or tested yet.** The tasks that implement them are in the checklist's section H.
+A decision that was replaced stays listed, marked with what replaced it (section 9).
 
 ---
 
-## Terms
+## 1. Priorities
+
+**For every change:** security → correctness → maintainability and testability → performance → extensibility → style.
+
+**For v5.3 (from the review):** correctness → security → reliability → usability → features. No new feature is added just to have more features before the known risks are closed.
+
+## 2. How the work is done
+
+- **Propose first.** Every step is proposed (what changes, where, why, the risks) and starts only after the user approves it. When the user asks for an opinion, the answer is an opinion, and nothing is changed
+- **A test first, then the smallest change, then one commit.** For behaviour that must not change, a characterization test that passes from the start
+- **The checks after every step:** the full tests, ruff, mypy, pip-audit (the environment and `requirements.lock`), and the browser when a page changed
+- **Git:** commits in the user's name; a tag only after the user approves it; **nothing is pushed** without the user's decision; each file keeps its own line endings; new files use LF
+- **Dependencies:** none added without approval. F3 uses no SHAP; F5 uses no PDF library
+- **Data:** the datasets are never committed. Real-data checks have three tiers: fixtures for every change, stratified samples for each step, the full files only at a gate or for a reported metric. A number from a sample is called a sample number, not a result
+- **Platforms:** works on Windows now (Python 3.14, the user's machine); written so it can run on Linux and macOS with nothing extra, all of it local
+- **Every tag is shippable:** the app starts, every menu path works, the README lists the limits, the CHANGELOG has the entry
+- **Claims need evidence.** A document says how each claim is known (a test, a capture, a dated manual check), and says what is only implemented and not verified. Failures are reported as they are
+- **User files are left alone.** Files the user made are not changed; the real `instance/` is never touched by checks (a scratch `TOOLKIT_INSTANCE_DIR` is used)
+
+## 3. Engineering rules
+
+**Metrics are signals, not orders** (agreed in v5.2 step 2.3):
+- Complexity at most 10 (ruff `C901`) and at most 400 lines per Python or JavaScript file in `toolkit/` (not CSS, not `scripts/`) are review signals. A file or a function is split only for a real benefit (a separate responsibility, testability, fewer bugs), never with helpers or dispatch tables made just to lower a number. A justified exception gets `# noqa: C901` with its reason
+- No limit on function length
+- Every suppression (`noqa`, `type: ignore`, `pragma: no cover`, `per-file-ignores`) is listed with its file, rule and reason in one inventory; a test fails on an unlisted one and on a stale entry; the list only shrinks
+- A docstring on every function, saying what isn't obvious: a security assumption, an order that must be kept, a leakage or correctness point, a memory cost. No filler
+- A refactor keeps behaviour, measured: memory at most 5% more and time at most 10% more (fresh process, median of three runs), or it stops and is reported
+
+**Structure:**
+- Layers `ui → controllers → services → data` inside `core`, `cli` and `web`; imports only go down; `cli` and `web` never import each other (tested)
+- Network, processes and the browser only in the data layers (tested)
+- An interface (port) only where an implementation is really swapped or faked in tests; everything else is plain functions and registries
+- A functional core: the ML takes data in and returns results; files are read and written at the edges
+- Settings in typed dataclasses in `settings.py`, overridable from the environment; no magic numbers
+- Domain errors with codes; one error mapper per interface; no bare `except`; no `print` in the core; keys and dataset values never logged
+- **Reuse before adding:** look for the existing mechanism (a queue, a helper, a registry) before writing a new one
+
+**Portability:** `pathlib` paths; every text file opened with `encoding="utf-8"` and CSV with `newline=""`; one function per OS-specific command, tested for Windows, Linux and macOS with a patched platform; never `shell=True`; only libraries with wheels for all three systems; ruff targets Python 3.11.
+
+## 4. ML rules
+
+- **Test isolation:** the test split never influences feature selection, balancing (the recommender included), tuning, thresholds or model selection. They use the training split, CV or a validation split only
+- **The test split is scored once per model for the leaderboard**, after the model is chosen by CV. Reusing it afterwards (the permutation importance) is a diagnosis; anything chosen from that diagnosis needs a validation split cut from the training split, and a final claim after such choices needs a holdout never used before (HC1)
+- **Dedupe before the split**; the split strategy comes from the dataset's profile, its checks and fallbacks recorded as reason codes, never a silent strange split
+- **The leakage guard** catches a set of known patterns; it cannot prove there is no leakage left
+- **Every seed is fixed**, nested samplers included
+- **Honest metrics:** macro-F1, balanced accuracy and recall per class, not accuracy alone; the numbers reported as they are, even when worse than before
+- **Explanations are approximate, not causal**, and say so where they are shown (HC2)
+- **No generalization claim** before a test on data from another source or time
+
+## 5. Security rules
+
+- **Nothing is deserialized before its signature (or a pinned hash) and its library versions are checked**, on the same bytes that are then loaded. Signing proves who made a file; it does not make unpickling safe
+- **Outside input is data, never instructions:** dataset text, file names, banners, AI replies, saved files read back (size limit, schema, ids checked: RD4)
+- **The AI never drives a decision:** CVE IDs, CVSS and severity come from NVD only; the AI gets the product and version only, after consent; its reply is plain text, labelled, length-capped
+- **The scan contract:** no packet to the target and nothing to NVD, AbuseIPDB or the AI before validation, the limits, the authorization and the opt-ins. A host name may be resolved by the system's DNS before the authorization question (documented; whether to move it after the question is not decided yet). A private address never goes to AbuseIPDB. The lookups send the product and version only
+- **One project trust domain** (RD1): the local machine and every holder of the remote token; no accounts or roles
+
+## 6. Terms
 
 **Severity:**
 - **Critical:** a way to break in, lose or damage data, or ML results that mislead in a way that matters
@@ -26,81 +84,58 @@ The design decisions that hold now, with why and who approved them. The checklis
 
 ---
 
-## D1 One project trust domain
-Approved 2026-11-02.
+## 7. The plan's decisions, D1–D23
 
-The toolkit has one owner. It trusts **the local machine and every holder of the remote access token as one project trust domain.** Remote access is project-level access: there is no user identity, no ownership of files and no roles. A session's workspace keeps one person's work from mixing with another's and bounds the memory; it is **not** a security boundary: saved runs, bundles and scan reports are shared by everyone in the domain.
+From [IMPROVEMENT_PLAN.md](IMPROVEMENT_PLAN.md) §3 (2026-10-19, revised through six reviews). The table gives the choice and the main reason; the plan has every option.
 
-Why: the toolkit is a local tool its owner can open to other computers, not a service with independent users; per-file ownership would be RBAC under another name.
+| ID | Topic | Choice | Why | State |
+|---|---|---|---|---|
+| D1 | Rendering | A DOM helper with `textContent` and ES modules, plus a CSP | Safe by default, no build step | Done (5.0 escaped in place; 5.1 the modules) |
+| D2 | Styling and devices | One `app.css` with light and dark tokens, the viewport meta, checkbox lists instead of Ctrl+Click; the system font stack (a web font would send a request outside) | Readable in both themes, touch-friendly, nothing fetched from outside | Done; every page at 8 sizes in 5.2 |
+| D3 | The trainer's flow | A stepper with disabled buttons and progress | Guides the user and mirrors the pipeline | Done (6 steps) |
+| D4 | The launcher | A flat menu and `argparse` subcommands | Scriptable, testable, no recursion | Done (5.1) |
+| D5 | CLI input | Model-agnostic: features, types and classes read from the bundle; real examples from the test split; `--csv`, `--json`, `--bundle` | Any exported bundle works | Done (5.0-rc2) |
+| D6 | The API | `/api/v1` with request schemas, one error shape, size limits | Consistent, safe, self-documenting | Done (5.1) |
+| D7 | State | A per-session in-memory workspace with a lock, TTL clean-up and limits | Separates sessions; simple | Done. The workspace separates work and bounds memory; it is not a security boundary (RD1) |
+| D8 | Long tasks | An in-process job runner with polling, progress and Cancel; one training at a time; `TOOLKIT_MAX_WORKERS` leaves a core free | No extra services; works on any OS | Done (5.1). RD2 puts the permutation importance on the same queue |
+| D9 | Pipeline and leakage | An `imblearn` pipeline fitted on the training split only; dedupe and the profile's split first; the leakage guard; the test-isolation invariant | Leakage-proof; one object to save | Done (5.0-beta) |
+| D10 | ML quality | CV on the training split; one-hot or ordinal encoding by model; macro-F1, balanced accuracy, recall per class; selection on CV; explainability | Honest numbers for an IDS | Done, except explainability (F3, in progress) and tuning (F9) |
+| D11 | Serialization | joblib plus an HMAC-SHA256 signature and a version manifest; nothing deserialized before it is checked; a version policy (patch: warn; minor or major of the estimator libraries: refuse) | Rejects tampered and foreign files | Done (5.0-rc1). Its threat model excludes someone who can write `instance/` (see HS5) |
+| D12 | The CLI model | Trained in the web trainer, exported as a signed bundle, loaded by the CLI | One training path | Done. **Revised in 0.5:** no model is shipped (a random forest on CIC is about 2 GB); the CLI lists this install's bundles |
+| D13 | The scanner engine | Threads kept; sockets closed with `with`; one connection per port; probe plugins; parallel lookups | Safe, small, extensible | Done. An asyncio rewrite (D13-B) is a stretch item |
+| D14 | Scanner correctness | TTL ranges, ping per OS, UDP open or filtered, TLS for banners only, guards, validated ports, host limits | Correct results on every OS | Done (5.0-rc2) |
+| D15 | Outside lookups and privacy | NVD CVE API 2.0; the AI only after consent with the product and version; its reply untrusted | Accurate; little data leaves the computer | Done. An off switch for NVD is HS4 |
+| D16 | Dataset handling | Content-based profiles; sniffed separator; stripped headers; random file names; uploads removed | Correct loading of every known dataset | Done |
+| D17 | Config, secrets, logs | `config` (now `settings.py`) with environment overrides; keys from the environment or `.env`; rotating logs with secrets hidden; no global warning filter | One place for settings; no secret in a log | Done |
+| D18 | Packaging | `pyproject.toml`, a lock file, extras (`[boost]`, `[dev]`), `waitress` | `pip install .` on any OS | Done (5.1) |
+| D19 | Quality gates | pytest, ruff, mypy, pip-audit, a pre-commit hook, all local on Windows; Python 3.14 for development, `requires-python >= 3.11` | No extra installs; works on the user's machine | Done. CI on a remote (HV2) waits for the user's decision to push |
+| D20 | Documentation | An honest README, the architecture document, the model card, the API reference, the user guide, the CHANGELOG, a LICENSE, the dataset licences | Anyone can install, use and check it | Done; HC4 corrects the descriptions |
+| D21 | Reproducibility | One immutable TrainingRun record per run, embedded in the bundle and saved in `instance/runs/` | One source of truth for the model card, the history and the thesis tables | Done; written on Export only until HR5 (RD3) |
+| D22 | Workspace TTL and jobs | A running job holds a lease on its workspace; a maximum job duration | No lost work, no stuck memory | Done (5.1) |
+| D23 | The `Secure` cookie | `SESSION_COOKIE_SECURE = TOOLKIT_HTTPS`, off by default | Explicit and testable | Done. HTTPS itself is HS2 |
 
-Rules:
-- The token is a bearer credential: whoever holds it has the owner's rights over the shared resources, not only a view of the pages. The terminal and the unlock page say so before remote access is used
-- A new token (made on this computer only) ends every remote session at once
-- After a new token: a remote job still **waiting** that was asked for under the old token is cancelled; a job already **running** goes on, and the owner can stop it on this computer; the old token's holder can neither follow nor cancel anything (every request answers 401). Jobs asked for on this computer are not touched. Each job records where it came from (this computer or another address) and the unlock it was asked under
-- The scan record names the **source of the request** (this computer, or an address); an address is not a person's identity
-- The local machine is inside the domain (loopback needs no token). On a computer shared by OS accounts that don't trust each other, D1 alone does not separate them: `instance/` must be protected by the OS permissions (HS5)
+## 8. Decisions taken during the releases
 
-## D2 The heavy jobs share the training queue
-Approved 2026-11-02.
+The ones that shape later work. The checklists have every step's details.
 
-The permutation importance runs on the queue the training already has: one FIFO queue, one worker, so one heavy job at a time. The scan keeps its own queue and the limits of `ScanConfig`.
-
-Why: the queue already has cancel while waiting, cancel while running, progress and clean-up after a failure, all tested; a second mechanism for the same purpose would drift from it.
-
-Rules:
-- The jobs share the queue, the worker, cancel and progress; each kind keeps its own inputs and outputs
-- An importance job is bound when it is **asked for** to a snapshot of one run: its `run_id`, the model's id, references to that fitted model and to that run's test rows and labels, the settings and the seed. References, not copies. It never reads "the current run" when it starts
-- One job per `(run_id, model id)`: asked again, it answers the job that exists, or the result if it was saved
-- The limit is one worker, fixed; it does not change while the app runs
-- No other path starts a training beside the queue
-
-## D3 A record for every successful training
-Approved 2026-11-02.
-
-Every training that succeeds gets its `run_id` and a TrainingRun record in `instance/runs/`, written at its end. Export is a separate step that writes the bundle; it is no longer what saves the run.
-
-Why: the user can keep and compare results without exporting a model; the importance has a run to belong to.
-
-Rules:
-- **Saved Runs are every successful training** with a record, exported or not; nothing assumes a run has a bundle
-- A training is shown as done for good only once its record is saved. If the save fails while the app runs, it shows "Completed, not saved" with a retry that saves the result kept by its job (same `run_id`), without training again. If the app stops before the record is saved, the result is lost: nothing promises a retry after a crash
-- The importance can be **calculated** only for a run whose models and test split are in memory (the workspace's run). An older run shows the results saved for it, and no Calculate button. A bundle holds the models but not the test split, so it cannot replace that
-- The page says, before the first training: "Training results are saved locally after each successful training. The saved record contains aggregated metrics, class names, feature metadata and typical feature values; it does not contain the original dataset rows."
-- Deleting a run is a deliberate, confirmed act that lists every file it removes (D4)
-
-## D4 Artifacts are never changed once published
-Approved 2026-11-02.
-
-A record, an importance result and a bundle are each written once, to a file of their own, and never changed: "exported" is the bundle file being there, not a field of the record. The rule already held for records (`open("x")`) and bundles (`"xb"`); D4 makes it the rule for everything the toolkit saves.
-
-Why: with no file updated, there is no lost update and no read-merge-write; the importance and the export never write the same file.
-
-Rules (IA1–IA10 of the committee, and what was added to them):
-- **IA1** A record is published once, after a training succeeds
-- **IA2** An importance result is its own file per run and model, `<run id>.importance.<model id>.json`, and never replaces a published one. It holds the `run_id`, the model id, its schema version, the method's version, the settings (rows, repeats, seed, per class), and the toolkit's version. A change of method later gets a new versioned file and a stated migration, never a silent replacement
-- **IA3** A bundle is its own file, `<run id>.bundle`; the export never touches the record
-- **IA4** All three are published the same way, by **one module of the data layer** that records, importance results and bundles all use, tested once: write a temporary file in the destination's folder, flush and `fsync` it, check it (and sign a bundle), then publish it without replacing anything; it is published only if that succeeds. Planned mechanism (to be tested on each OS): `os.rename` on Windows (it fails if the name exists and is atomic on one volume); `os.link` then removing the temporary file on Linux and macOS (it fails if the name exists); a file system without hard links is refused with a message, never written with a replace. **The guarantee:** a stopped or crashed process leaves either the whole file or none. A power cut is best effort: Windows has no folder `fsync`, and that is written in the docs
-- **IA5** File names come from checked ids only: a run id in the form the toolkit writes, a model id from the registry and among the record's own models, never a display name. A file is read as untrusted data: a size limit before reading, its schema, a newer schema refused, its ids matching its name; a bad file is left out and counted, never a 500
-- **IA6** One importance job per run and model, bound to its snapshot (D2)
-- **IA7** One lock inside the process orders publishing and deleting (no read-merge-write). A result computed outside the lock is published under it only if its record still exists; a run deleted meanwhile gets nothing published. An OS lock on the instance is a separate thing (HR3)
-- **IA8** Deleting a run removes its importance files, then its bundle when the user chose to remove it, then the record last; if any of them can't be removed, the record stays, the run is still shown and the delete can be tried again. The confirmation names every file, and lets the user keep the bundle: kept, it becomes an unregistered bundle on purpose
-- **IA9** A storage report finds what has no owner or is damaged, and deletes nothing on its own: importance files without a record or for a model not in it, temporary files, unregistered bundles, incomplete bundles. Listing a bundle never unpickles it
-- **IA10** A bundle's state comes from its header: the format records its lengths (`MAGIC | manifest length | manifest | payload length | payload | signature`), so a few bytes and the file's size show it is complete, with no HMAC and no unpickle. The states: **Not exported** (no file), **Incomplete: the export was interrupted** (the lengths don't match the size, such as a file left by the old direct write), **Exported** (complete; its signature is checked when it is used), **Verification failed** (shown after a use or a Verify found a bad signature). An incomplete bundle is never deleted on its own; the user removes it, then may export again
-- **Unregistered bundles can be registered again:** a bundle carries the signed copy of its run's record, and records never change, so after its signature is checked that copy can be published as the record (to be confirmed: the copy is complete)
-
----
-
-## Not decided yet
-- **DNS before consent:** today a host name is resolved before the authorization question (`toolkit/core/services/recon/scan.py`, `resolve_targets`). Proposed: ask first, then resolve
-- **The default of each outside service** (NVD, AI, AbuseIPDB) once each has a switch (HS4), and the name of the mode that turns them all off: it turns off the outside intelligence services, not the scan's own packets to its targets
-
----
-
-## Superseded
-| Decision | Where | Replaced by |
+| When | Decision | Why |
 |---|---|---|
-| "Which runs: those saved with Export (a record is written then)" | F2 | D3: every successful training has a record |
-| "Kept with the run: in the session until the next training; computed before Export, it is written in the TrainingRun record (and so in the bundle's copy of it)" | F3 | D3 and D4: a file per run and model, kept until the run is deleted; the bundle's copy of the record does not hold it |
-| "A warning when one feature carries most of the effect: check that it is not a copy of the label" | F3 | HC2: an importance concentration warning, a label copy one possible cause |
-| A heavy-job slot with a limit in the config | H, HR1 as first written | D2: the training queue |
-| A separate queue for the importance | F3d as first proposed | D2 |
+| 0.4a | The leakage guard's tree is limited by leaves, not depth; the name pattern is `attempted category`, not `attempted`; the 99%-unique ID rule needs at least 1,000 rows | Found by tests and real data: an exact label copy with many classes was missed; `su_attempted` is a real NSL-KDD feature; small samples look unique |
+| 0.4b | Dedupe ignores identifier columns; a temporal cut never separates equal timestamps; the official split keeps both published files by default, the overlap counted, and removed only in strict mode | Copies that differ only by an ID are still copies; scores stay comparable with other published work |
+| 0.5 | No model is shipped (the D12 revision) | Bundles are too large for GitHub, and a size cap would decide which models are allowed |
+| CI host | Everything local on Windows: "green" means `python -m pytest` passes on the user's PC | No remote, no extra tools; the user's choice |
+| 5.2, 2.3 | The code arranged by interface (`core`, `cli`, `web`) with the same layers inside; metrics are signals (section 3) | One structure everywhere; refactors done for real benefits, not scores |
+| 5.2, 2.4 | The scan on the web as a job; the app on 127.0.0.1 by default; `--host` behind a warning and a token per start | The scanner in the browser without exposing it by default |
+| F2 | Saved Runs read only the records, never a bundle; 50 per page; differences only when both runs scored the same test rows; a record is data, its id checked before a path is made | Fast, safe, and no misleading comparison |
+| F3 | Permutation importance (not SHAP), on the test split (a stratified sample of 5,000 rows, 5 repeats, the run's seed), one feature at a time so a job can show progress and stop; the explanation of one row by the typical value of each feature | No new dependency; the same method for all 11 models; immediate explanations |
+| v5.3 review | The hardening section H before the rest of F3; the committee's RD1–RD4 | The review's conditions for calling v5.3 complete |
+
+## 9. Superseded
+
+| Decision | Replaced by |
+|---|---|
+| Plan F6: the history in SQLite (D7-C, "a disk workspace when history arrives") | RD3 and RD4: every training's record and every result are files written once in `instance/`; F6 builds the history, its retention and its deletion on them (HR4, HR5) |
+| D12 steps 4 and 6: ship a default CLI model and its record | The 0.5 revision: no model is shipped |
+| v5.0's plain description "works offline" | Local-first with optional outside services (HC4) |
+| "The test split is scored once" as a literal statement | Section 4: scored once per model for the leaderboard; reused afterwards only as a diagnosis (HC1) |
+| The F2 and F3 decisions replaced in the review | Listed in [REVIEW_DECISIONS.md](REVIEW_DECISIONS.md), "Superseded" |

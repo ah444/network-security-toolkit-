@@ -790,7 +790,7 @@ A checkpoint that fails any of these isn't tagged.
 | Next | F7 recon→IDS dashboard, F9 tuning UI, F10 dashboard home |
 | Stretch | F8 PCAP/live detection, F11 scheduled scans, F12 Arabic/RTL, F13 offline CVE, D13-B asyncio scanner |
 
-v5.3 started 2026-10-30 with F2 (done 2026-11-02); F3 approved 2026-11-02 with permutation importance and a typical-value explanation instead of SHAP; after an outside review, the hardening tasks (H: correctness, security, reliability, usability) approved 2026-11-02 before F3d, and four design decisions of the review committee (D1-D4) in [DECISIONS.md](DECISIONS.md): every successful training saves its record, so F6 no longer saves records but builds the history, its retention and its deletion on them (HR4, HR5); and nothing saved is ever changed. See [V5.3_CHECKLIST.md](V5.3_CHECKLIST.md).
+v5.3 started 2026-10-30 with F2 (done 2026-11-02); F3 approved 2026-11-02 with permutation importance and a typical-value explanation instead of SHAP; after an outside review, the hardening tasks (H: correctness, security, reliability, usability) approved 2026-11-02 before F3d, and four design decisions of the review committee (RD1-RD4) in [REVIEW_DECISIONS.md](REVIEW_DECISIONS.md); the decisions and rules of work in [DECISIONS.md](DECISIONS.md), the current state in [PROJECT_STATUS.md](PROJECT_STATUS.md), the roadmap in [ROADMAP.md](ROADMAP.md): every successful training saves its record, so F6 no longer saves records but builds the history, its retention and its deletion on them (HR4, HR5); and nothing saved is ever changed. See [V5.3_CHECKLIST.md](V5.3_CHECKLIST.md).
 
 ---
 
