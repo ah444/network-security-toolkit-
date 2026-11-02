@@ -86,7 +86,7 @@ def run_result(run: TrainingRun) -> dict[str, Any]:
     return {
         "message": f"Trained {len(evaluation.training.models)} model(s). Selected: {title} "
                    f"(best mean macro-F1 over {evaluation.cv_folds} CV folds of the training "
-                   "split); the test split was scored once.",
+                   "split); the test split was used only after the choice.",
         "run_id": run.run_id,
         "selected": evaluation.selected,
         "selection_metric": evaluation.selection_metric,

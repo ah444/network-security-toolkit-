@@ -132,7 +132,7 @@
             <input type="range" id="trainTestSlider" name="trainTestSlider" min="10" max="50" value="20" step="5">
             <span id="splitLabel" class="slider-label">Train: 80% | Test: 20%</span>
           </div>
-          <p class="section-description">Models are compared by 3-fold cross-validation on the training rows; the test rows are scored once, at the end. Datasets with an official test file (NSL-KDD) use it instead.</p>
+          <p class="section-description">Models are compared by 3-fold cross-validation on the training rows; the test rows are scored only after the choice, at the end. Datasets with an official test file (NSL-KDD) use it instead.</p>
         </div>
         <button id="analyzeClassBtn" class="btn">Analyze Class Distribution</button>
         <div id="classDistributionResult" class="message" role="status"></div>

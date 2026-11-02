@@ -229,7 +229,7 @@ def write_readme(report_dir: Path) -> Path:
         f"All numbers are on the **test split**, mean of {runs} run(s), in %. v4 split "
         "70/15/15 with no deduplication; v5 removes duplicate rows, then splits before "
         "anything is fitted (80/20 stratified, or the official test file), and scores the "
-        "test split once (the model is chosen by cross-validation on the training split).",
+        "test split only after the choice (the model is chosen by cross-validation on the training split).",
         "",
         "| Dataset | Scenario | Model | v4 macro-F1 | v5 macro-F1 | v4 bal. acc. | "
         "v5 bal. acc. | v4 accuracy | v5 accuracy | v5 spread (macro-F1) | v5 features |",

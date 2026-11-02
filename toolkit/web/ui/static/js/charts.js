@@ -149,7 +149,7 @@ export function cvTestChart(leaderboard) {
     ];
   });
   const legend = [legendItem(PLOT_START, dot, "CV (training split)"),
-                  legendItem(PLOT_START + 150, square, "test (scored once)")];
+                  legendItem(PLOT_START + 150, square, "test split")];
   const description = "CV macro-F1 against test macro-F1. " + leaderboard.map(row =>
     `${row.title}: CV ${fmt(row.cv_macro_f1_mean, 3)}, test ${fmt(row.test_macro_f1, 3)}`).join(". ") + ".";
   return figure("CV against test macro-F1", description, leaderboard.length,

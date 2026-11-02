@@ -25,8 +25,9 @@ Rules that matter here:
 
 - `services/` never opens a file or a socket: it goes through `data/` or a port.
 - `ids` and `recon` never import each other.
-- The ML core sees the test split only once, after the model is chosen by cross-validation
-  on the training split; the leakage guard and the balancing recommendation read the
+- The ML core uses the test split only after the model is chosen by cross-validation on the
+  training split, never to train or to choose; the permutation importance reuses it
+  afterwards, as a diagnosis only; the leakage guard and the balancing recommendation read the
   training split only.
 - Nothing leaves the computer except through `data/recon/`: NVD gets product names and
   versions, OpenRouter (`--ai` or a yes) the same, AbuseIPDB (`--abuseipdb` or a yes) a

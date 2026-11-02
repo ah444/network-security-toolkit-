@@ -22,7 +22,7 @@ python -m toolkit ids --bundle instance/bundles/<run id>.bundle --info
   (linear and distance models), categorical columns one-hot or ordinal, optional feature
   selection and resampling, then the model. Every step is fitted on the training split only.
 - **Model choice:** by cross-validated macro-F1 on the training split; the test split is
-  scored once, after the choice.
+  used only after the choice, never to train or to choose.
 - **Output:** a class label per row and, for models that have them, class probabilities.
 - **Bundle:** the fitted models plus the full TrainingRun record (data fingerprint, settings,
   split, leakage findings, scores, library versions), signed with this install's key. A

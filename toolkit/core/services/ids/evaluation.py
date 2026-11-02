@@ -367,5 +367,5 @@ def leaderboard_table(result: EvaluationResult) -> str:
             f"{r.test_macro_f1:>13.3f}  {r.test_balanced_accuracy:>17.3f}  "
             f"{r.test_min_recall:>15.3f}  {r.fit_seconds:>7.1f}  {r.predict_seconds:>9.2f}")
     lines.append(f"Selected by {result.selection_metric} (CV on {result.cv_rows:,} training rows, "
-                 f"{result.cv_folds} folds); the test split was scored once per model.")
+                 f"{result.cv_folds} folds); the test split was used only after the choice.")
     return "\n".join(lines)

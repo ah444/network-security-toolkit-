@@ -89,7 +89,7 @@ def test_cv_and_test_have_different_shapes(rendered):
     assert {m["tag"] for m in _marks(figure, "chart-test")} == {"RECT"}
     assert len(_marks(figure, "chart-cv")) == len(_marks(figure, "chart-test")) == 3 + 1
     ticks = [m["text"] for m in _marks(figure, "chart-tick")]
-    assert ticks[:2] == ["CV (training split)", "test (scored once)"]
+    assert ticks[:2] == ["CV (training split)", "test split"]
     assert ticks[2:] == ["0.40", "0.70", "1.00"], "the axis starts at the tenth below the lowest"
 
 

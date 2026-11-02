@@ -7,6 +7,9 @@ are the same as one call for every feature (the same seed for each column). The 
 shuffled are the ones the user chose, before one-hot encoding: one number per feature. The
 models' own ``feature_importances_`` and ``coef_`` are not used: not every model has them,
 and a tree's favour features with many values.
+
+The test split is reused here, after training and evaluation: the result is a diagnosis,
+never a way to choose features, models or hyperparameters.
 """
 
 from __future__ import annotations

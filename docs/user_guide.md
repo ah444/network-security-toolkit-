@@ -569,7 +569,8 @@ When it ends, the leaderboard compares the models:
 
 - **CV macro-F1:** the score in 3-fold cross-validation on the training rows. The model with
   the best one is selected (★).
-- **Test** columns: each model scored once on the test split.
+- **Test** columns: each model's score on the test split, which plays no part in training
+  or in choosing the model.
 - **Weakest class recall:** how well the model finds its hardest class.
 
 The yellow notes matter. Here the NSL-KDD test file has 17 attack types that the training

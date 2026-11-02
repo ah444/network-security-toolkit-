@@ -19,7 +19,7 @@ What changed between them:
 | SMOTE (S2) | on the whole file **before** the split: NSL-KDD test set ~87 % synthetic rows | inside the pipeline, on the training split only; test rows are all real |
 | Feature selection (S2) | on the whole SMOTE-balanced file | inside the pipeline, on the real training rows only |
 | NSL-KDD `level` (label-derived) | used as a feature in S1, and ranked top-10 by the v4 recommender in S2 | blocked by the leakage guard |
-| Model choice | by test score | by 3-fold cross-validation on the training split; the test split is scored once |
+| Model choice | by test score | by 3-fold cross-validation on the training split; the test split is used only after the choice |
 | Metrics shown | accuracy, weighted F1 | also macro-F1, balanced accuracy, per-class recall |
 
 ## 1. Results are reproducible
@@ -73,7 +73,7 @@ gets it (`tests/ml/test_pipeline.py::test_identical_runs_identical_results`).
 
 ## 5. NSL-KDD with the official test file: the realistic numbers
 v4 had no way to use `KDDTest+` (it has no header row), so there is no v4 column here. v5
-trains on all of `KDDTrain+` and scores the official `KDDTest+` (22,544 rows) once.
+trains on all of `KDDTrain+` and scores the official `KDDTest+` (22,544 rows).
 - **S1:** cross-validation picked decision tree (CV macro-F1 76.15 % ± 2.41). On the
   official test file it scores **72.13 % accuracy, 26.96 % macro-F1, 32.23 % balanced
   accuracy**; random forest and logistic regression are close (72.22 % / 69.49 % accuracy).

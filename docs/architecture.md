@@ -83,7 +83,7 @@ no Flask, no argparse. Read by `cli/` and `web/`, it imports neither
 | `toolkit/core/services/ids/registry.py` | services | the model, balancer and feature-selector registries |
 | `toolkit/core/services/ids/pipeline.py` | services | builds and fits one pipeline per model; `FittedModel` predicts |
 | `toolkit/core/services/ids/evaluation.py` | services | cross-validation on train, model choice, one score on test, the leaderboard |
-| `toolkit/core/services/ids/importance.py` | services | what a model relies on: permutation importance on the test split (a stratified sample above 5,000 rows), one feature at a time so a job shows its progress and stops; the feature that carries most of the effect |
+| `toolkit/core/services/ids/importance.py` | services | what a model relies on: permutation importance on the test split (a stratified sample above 5,000 rows), one feature at a time so a job shows its progress and stops; the feature that carries most of the effect. It reuses the test split after the evaluation: a diagnosis, never a way to choose |
 | `toolkit/core/services/ids/explanation.py` | services | why one prediction came out as it did: each feature's value replaced by its typical training value (an approximation, not SHAP); the typical values from the record, or an older bundle's imputer medians |
 | `toolkit/core/services/ids/preview.py` | services | train-only previews for the web trainer (feature scores, class counts) |
 | `toolkit/core/services/ids/runs.py` | services | `train()` and the `TrainingRun` record of how a model was made |
@@ -349,7 +349,7 @@ upload route loads the file; `train()` starts from the loaded table.
    2. K-fold CV on train  --> mean macro-F1 per model        |
    3. fit every model on the whole train split               |
    4. choose the model by CV (never by test score)           |
-   5. score each model on the test split once  <-------------+
+   5. score each model on the test split  <------------------+
      |
      v
  TrainingRun (settings, profile, split, leakage, CV and test scores, versions)
@@ -357,6 +357,12 @@ upload route loads the file; `train()` starts from the loaded table.
      +--> bundle.pack + sign     -> instance/bundles/<run id>.bundle
      +--> exports.write_run      -> instance/runs/<run id>.json
 ```
+
+The test split plays no part in training or in choosing the model. The permutation
+importance (`importance.py`, F3) reuses it after training and evaluation: its result is a
+diagnosis, never a way to choose features, models or hyperparameters. Repeated experiments
+to choose features, if ever needed, would use a validation split cut from the training
+split.
 
 One pipeline per model, all fitted on the training rows only
 (`toolkit/core/services/ids/pipeline.py`):

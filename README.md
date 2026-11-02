@@ -396,7 +396,7 @@ Project/
 7. **Split** - exact duplicates removed, then the dataset's split (stratified, or the official test file)
 8. **Model Selection** - Choose from 11 algorithms
 9. **Training** - 3-fold cross-validation on the training rows, models trained one after another
-10. **Evaluation** - leaderboard with CV macro-F1 (mean ± std), test macro-F1, balanced accuracy and weakest-class recall; the test split is scored once; test confusion matrix
+10. **Evaluation** - leaderboard with CV macro-F1 (mean ± std), test macro-F1, balanced accuracy and weakest-class recall; the test split is used only after the choice, never to train or to choose; test confusion matrix
 11. **Export / Load** - signed `.bundle` (see Known limitations)
 
 ### ML core (v5.0)
@@ -406,7 +406,7 @@ Project/
 2. **Split** (`split.split_dataset`): exact copies removed first, then the profile's split: `official` (NSL-KDD's own files, kept as published), `temporal` / `temporal_per_class` (validated time column), `group`, or `stratified` with an "optimistic" warning. Every fallback has a reason code.
 3. **Leakage guard** (`leakage.check_leakage`, training split only): blocks label copies, IDs, IPs and timestamps.
 4. **Train** (`pipeline.train_models`): one pipeline per model, fitted on training rows only: impute → encode → scale → select → balance → model. Every seed is fixed and CPU use is capped by `TOOLKIT_MAX_WORKERS`.
-5. **Evaluate** (`evaluation.evaluate`): cross-validation on the training split, the model chosen by CV macro-F1 **before** the test split is used, then the test split scored once; macro-F1, balanced accuracy, per-class recall and a leaderboard.
+5. **Evaluate** (`evaluation.evaluate`): cross-validation on the training split, the model chosen by CV macro-F1 **before** the test split is used, then each model scored on the test split; macro-F1, balanced accuracy, per-class recall and a leaderboard.
 
 ```python
 from toolkit.core.services.ids.datasets import load_dataset
