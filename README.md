@@ -1,6 +1,6 @@
 # 🛡️ Network Security Toolkit
 
-A comprehensive network security tool combining **Network Reconnaissance** and **Machine Learning-based Intrusion Detection System (IDS)**.
+A local-first network security toolkit with optional external intelligence services: a **port scanner** with CVE lookups, and an **IDS model trainer and predictor** for flow datasets (CIC-IDS2017, NSL-KDD or your own CSV). It is not a live network IDS: it doesn't capture or watch traffic (PCAP files and live capture are stretch items, not built).
 
 ![Python](https://img.shields.io/badge/Python-3.11%2B-blue)
 ![Flask](https://img.shields.io/badge/Flask-3.1-green)
@@ -18,6 +18,7 @@ A comprehensive network security tool combining **Network Reconnaissance** and *
 
 ### Known limitations (current version)
 - Web trainer scores on CIC-IDS2017 come from a stratified (random) split, because the file has no time column: flows of the same attack can be on both sides, so the scores may still be optimistic (the app says so). NSL-KDD uses its official test file.
+- No claim of generalization: the scores on CIC-IDS2017 and NSL-KDD show a model on rows like its training rows only. No model has been tested on traffic from another network, another flow tool or another time.
 - Exported models are signed **`.bundle`** files that load only on the toolkit install that made them. The signing key is created in `instance/signing.key` on the first export: back up the `instance/` folder. If the key is lost, the bundles can't be loaded any more; retrain from the run's record in `instance/runs/`. Loading bundles from another computer is not part of v5.2.
 - Training runs as a background job with a progress bar and a **Cancel training** button. The server trains one job at a time; others wait in a queue. Cancel takes effect after the model being fitted at that moment, so on the full CIC file it can take a while; a job is also stopped after 180 minutes (`TOOLKIT_JOB_MAX_MIN`). A cancelled or failed job keeps nothing. On the full CIC file training takes many minutes and about 6 GB of memory.
 - Web trainer data lives in memory, one workspace per browser session (tabs of the same browser share it). It is lost when the app restarts, removed after 240 minutes without use (`TOOLKIT_WORKSPACE_IDLE_MIN`), or with the **Clear workspace** button. Only one training runs at a time per workspace, and the dataset can't be changed while it runs. At most 4 workspaces (`TOOLKIT_MAX_WORKSPACES`) and 4,096 MB of loaded datasets (`TOOLKIT_MAX_DATA_MB`; trained models not counted) are kept: the least recently used other session's workspace makes room first. The upload message reports how much memory the dataset takes. If you serve the app over HTTPS, set `TOOLKIT_HTTPS=1` so the session cookie is marked `Secure`. The page sends a per-session security token with every change (CSRF protection); after the app restarts, reload the page before going on.
@@ -27,7 +28,7 @@ A comprehensive network security tool combining **Network Reconnaissance** and *
 - Scans are limited to 256 hosts and 65,536 host×port checks (`TOOLKIT_SCAN_MAX_HOSTS`, `TOOLKIT_SCAN_MAX_PROBES`), and each one asks you to confirm you are authorised (`--i-am-authorized` in scripts).
 - No model is shipped with the project: train and export one in the web trainer first. The CLI lists the exports in `instance/bundles` and opens only bundles exported on this install. Large models (for example Random Forest on the full CIC file, about 2 GB) take minutes to load and need several times their size in memory. A bundle made with a different scikit-learn, imbalanced-learn, XGBoost or LightGBM minor version is refused (retrain it); smaller version differences are shown as a warning.
 - The web trainer opens in your default browser once it is ready and prints its address (`http://127.0.0.1:5000/`; `--no-browser` or `TOOLKIT_NO_BROWSER=1` to not open it); stop it with Ctrl+C (from the launcher menu, that brings the menu back).
-- Tested on Windows with Python 3.14 (1,484 automated tests at 5.2, a fresh install followed by a scripted walk-through of every menu path, `scripts/menu_walkthrough.py`, and browser sessions through the whole web trainer on real CIC-IDS2017 and NSL-KDD data and through the port scanner, see `docs/release/`); an install on Python 3.11 was checked at 5.1. **Linux and macOS are not tested on real machines:** the OS-specific logic (ping options, paths, file encodings) is unit-tested only.
+- Tested on Windows 10 with Python 3.14: automated tests at three levels (unit, integration and end-to-end; what each covers, and the manual checks with their dates, are in [docs/architecture.md §12](docs/architecture.md#12-test-levels-and-manual-checks)), a fresh install followed by a scripted walk-through of every menu path (`scripts/menu_walkthrough.py`), and browser sessions through the whole web trainer on real CIC-IDS2017 and NSL-KDD data and through the port scanner (`docs/release/`); an install on Python 3.11 was checked at 5.1. The number of tests is not a measure of readiness. **Linux and macOS: the code is written to be portable, but it is not tested on real machines:** the OS-specific code (ping options, paths, file encodings) is unit-tested with a patched platform only.
 - Only scan systems you are authorised to scan.
 
 ---
@@ -61,14 +62,14 @@ A comprehensive network security tool combining **Network Reconnaissance** and *
 - 🖱️ The same scanner from the web app's **Port Scanner** page (`/scan`): a form, a live log, Cancel, a card per open port and the report as TXT, JSON or CSV ([user guide 3.6](docs/user_guide.md#36-scan-from-the-web-page)); from another computer with `toolkit web --host`, behind an access token ([3.7](docs/user_guide.md#37-scan-from-another-computer))
 - 📁 Export results to JSON/CSV/TXT (UTF-8, in `instance/scans/`, never overwritten, safe to open in a spreadsheet)
 
-### 2. Intrusion Detection System (CLI)
+### 2. IDS predictor (CLI)
 - 🧠 Predicts with any model bundle exported by the web trainer (features, classes and best model come from the bundle)
 - 📊 Uses the models you export from the web trainer: it lists them (newest first) and you pick one; each shows its real metrics from its training record
 - ⌨️ Manual input (prefilled from a real example), real test-split examples, model switching
 - 📄 `--csv` batch prediction (writes `<file>.predictions.csv`, never overwritten; the web trainer's "Predict a CSV file" gives the same file), `--json` input, `--info` model card
 - 🗂️ `--runs` lists the saved runs and `--compare A B` puts two side by side, without loading a model ([user guide 5](docs/user_guide.md#5-use-your-model-in-the-terminal))
 
-### 3. Intrusion Detection System (Web) ⭐ NEW FEATURES
+### 3. IDS model trainer (Web) ⭐ NEW FEATURES
 - 🌐 Web-based UI with Flask
 - 🧭 **Step by step** - Data → Explore → Clean → Features → Train → Use, one step at a time (a loaded bundle: Data → Use); after a reload the page shows the session's dataset, results, a running training and the export link again
 - 📤 Upload custom datasets (CSV/TXT)

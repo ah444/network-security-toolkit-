@@ -7,10 +7,20 @@ from pathlib import Path
 
 import pytest
 
+from levels import LEVELS
 from platforms import PLATFORMS
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 FIXTURES_DIR = Path(__file__).resolve().parent / "fixtures"
+
+
+def pytest_collection_modifyitems(items):
+    """Every test gets its file's level from tests/levels.py: ``pytest -m unit`` runs one."""
+    tests_dir = REPO_ROOT / "tests"
+    for item in items:
+        level = LEVELS.get(item.path.relative_to(tests_dir).as_posix())
+        if level:
+            item.add_marker(getattr(pytest.mark, level))
 
 @pytest.fixture
 def repo_root() -> Path:

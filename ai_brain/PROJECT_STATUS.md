@@ -171,7 +171,7 @@ load + profile → dedupe → split → leakage guard → CV on the training spl
 | End-to-end | The browser checks of each gate (8 sizes, both themes, keyboard only) on Chromium; the fresh installs of each gate on Windows |
 | Manual | The gate records in `docs/release/`, dated |
 
-The tests are not yet marked by level (HC4). Not verified: Linux and macOS on real machines, browsers other than Chromium, a screen reader, a user who is not the developer.
+Every test is marked by level since HC4 (`tests/levels.py`; docs/architecture.md §12). Not verified: Linux and macOS on real machines, browsers other than Chromium, a screen reader, a user who is not the developer.
 
 ---
 

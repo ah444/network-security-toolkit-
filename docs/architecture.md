@@ -11,6 +11,8 @@ Diagrams are plain ASCII so they read the same in any editor, font or terminal.
 
 ## 1. Overview
 
+The toolkit is a local-first network security toolkit with optional external intelligence services: a **port scanner** with CVE lookups, and an **IDS model trainer and predictor** for flow datasets (CIC-IDS2017, NSL-KDD or your own CSV). It is not a live network IDS: it doesn't capture or watch traffic (PCAP files and live capture are stretch items, not built).
+
 One installable Python package, `toolkit/`, with three tools that share its code:
 
 | Command | Tool | What it does |
@@ -496,6 +498,23 @@ first target, what it may send to each service or why it sends nothing (`online_
 address), and in its summary how many requests went to each (`Intel.sent`, counted by the
 scan's `Session` in `toolkit/core/data/recon/lookup.py`).
 
+Where each outside connection is made, all in the data layer:
+
+| Module | Connects to |
+|---|---|
+| `toolkit/core/data/recon/nvd.py` | NVD (CVE lookups), through the scan's session in `lookup.py` |
+| `toolkit/core/data/recon/openrouter.py` | OpenRouter (the AI explanation), the same session |
+| `toolkit/core/data/recon/abuseipdb.py` | AbuseIPDB (IP reputation), the same session |
+| `toolkit/core/data/recon/resolve.py` | DNS: a target's name to its addresses (before the authorization question) |
+| `toolkit/core/data/recon/ping.py` | the target, through this computer's `ping` program |
+| `toolkit/core/data/recon/scanner.py`, `probes.py`, `services.py` | the target's ports: TCP connections and UDP probes |
+| `toolkit/core/data/recon/nmap.py`, `nmap_run.py` | the target, through nmap when it is chosen |
+
+`tests/test_architecture.py` keeps sockets, HTTP and child processes out of the services
+layer (and `tests/ml/test_core_rules.py` out of the ML core). That test proves this rule
+only: where the code may connect, not what it sends. What is sent, and when, is pinned by
+`tests/recon/test_scan_contract.py`.
+
 ## 10. Where this differs from the plan's target structure
 
 The plan's §2 "Target structure" was written before the code. What was built differs here:
@@ -540,3 +559,33 @@ stays in its folder.
 | keep a function above complexity 10, or a file of `toolkit/` above 400 lines | first see whether splitting it helps; if not, `# noqa: C901` with its reason (an entry in `SUPPRESSIONS`), or the file's exact length and a reason in `LONG_FILES` (`tests/exceptions_inventory.py`) | - | ruff (C901), `tests/test_exceptions_inventory.py`, `tests/test_file_sizes.py` |
 | show a result on a page as a panel of label/value tiles | `summaryPanel`, `statTile`, `code`, `quiet` and `chips` in `toolkit/web/ui/static/js/summary.js` (every value set as text); the styles are `.summary-panel`, `.stat-grid`, `.stat-tile` and `.chip` in `toolkit/web/ui/static/css/app.css`; render from the answer's fields, never by parsing its `message` | the answer's fields in [web_api.md](web_api.md) | `tests/web/test_upload_card.py`, `tests/security/test_xss.py` |
 | add a class, function or method to `toolkit/` | a docstring: what it is or returns, and what is not obvious (what may leave the computer, a check that must come first, a limit, why); dunder methods and functions defined inside a function need none, their parent's docstring says what matters about them | - | `tests/test_docstrings.py` |
+
+## 12. Test levels and manual checks
+
+Every test file has one level, in `tests/levels.py`; `tests/conftest.py` marks each test
+with it, so `pytest -m unit` (or `integration`, `e2e`) runs one level, and
+`tests/test_levels.py` fails when a test file has none. A file's level is its heaviest
+test's, so the integration count includes some tests that would be unit tests on their own.
+
+| Level | What it covers | Tests at HC4 (2026-11-02) |
+|---|---|---:|
+| unit | logic in memory, with fakes for the network and the OS; the checks that read the repository's own files (docs, layers, sizes, docstrings) | 320 |
+| integration | the Flask test client, files written to a temporary folder or read from `tests/fixtures/`, a model really fitted, local sockets, a helper process (node for the page's modules, a stand-in for nmap) | 1,185 |
+| e2e | the toolkit run as its own process (`python -m toolkit ...`), or a real program of this computer (`ping`) | 113 |
+
+A count of tests says how much is checked automatically, not that the toolkit works for a
+user. Real use is checked by hand, on Windows 10 Enterprise LTSC 2021 with Python 3.14.3:
+
+| Date | Manual check | Record |
+|---|---|---|
+| 2026-10-20 | Every menu path, by a script that types the answers (5.0-alpha, 5.0-rc2) | [alpha](release/5.0-alpha-menu-walkthrough.md), [rc2](release/5.0-rc2-menu-walkthrough.md) |
+| 2026-10-20 | The old web flow replayed after the alpha changes (5.0-beta) | [5.0-beta](release/5.0-beta-old-web-flow.md) |
+| 2026-10-20 | The web trainer on the v5 core, every step clicked, at phone width (5.0-rc1) | [5.0-rc1](release/5.0-rc1-web-trainer.md) |
+| 2026-10-20 | The CLI and the web give the same predictions on real data; the scanner's fixes (5.0-rc2) | [5.0-rc2](release/5.0-rc2-cli-and-scanner.md) |
+| 2026-10-20 | A fresh clone, every menu path and the pages (5.0 final) | [5.0 final](release/5.0-final-ui-and-install.md) |
+| 2026-10-25 | The full dataset files, a fresh install, the browser (5.1 gate) | [5.1 gate](release/5.1-gate.md) |
+| 2026-10-26 to 2026-10-30 | The full files, a fresh install, the layout, contrast and keyboard audits (5.2 gate) | [5.2 gate](release/5.2-gate.md) |
+| 2026-11-02 | v5.3 steps: each change seen in the browser in a scratch instance | each step's entry in [V5.3_CHECKLIST.md](V5.3_CHECKLIST.md) |
+
+Not checked yet: Linux and macOS on real machines, browsers other than Chromium, a screen
+reader, and a user who is not the developer (HV1–HV3 in the checklist).
