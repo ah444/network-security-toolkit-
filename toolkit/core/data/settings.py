@@ -237,8 +237,9 @@ class ExplainConfig:
     importance_max_rows: int = 5_000
     importance_min_per_class: int = 3
     importance_repeats: int = 5
-    # One feature with more than this share of the summed positive drops: maybe a label copy.
-    dominant_share: float = 0.5
+    # One feature with more than this share of the summed positive drops: the importance
+    # concentration warning (a copy of the label is one possible cause).
+    concentration_share: float = 0.5
     # One prediction: the features that push most toward the class, and most away from it.
     local_top: int = 5
 

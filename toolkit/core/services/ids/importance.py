@@ -42,7 +42,8 @@ class Importance:
     """The permutation importance of one model: the features ranked by their mean drop, how
     many test rows were scored (a sample above ``importance_max_rows``), the repeats and the
     seed, the macro-F1 before any shuffle, and the feature that carries most of the effect,
-    if one does (check that it is not a copy of the label)."""
+    if one does (the importance concentration warning; a copy of the label is one possible
+    cause)."""
     model: str
     rows: int
     test_rows: int
@@ -50,7 +51,7 @@ class Importance:
     seed: int
     baseline_macro_f1: float
     features: tuple[FeatureImportance, ...]
-    dominant: str | None
+    concentrated: str | None
 
 
 class _OneFeature:
@@ -83,7 +84,7 @@ def scored_rows(test: pd.DataFrame, label: str, seed: int,
     return test.iloc[positions]
 
 
-def dominant_feature(features: Sequence[FeatureImportance], share: float) -> str | None:
+def concentrated_feature(features: Sequence[FeatureImportance], share: float) -> str | None:
     """The feature whose mean drop is more than ``share`` of the summed positive drops (of two
     features or more), or None."""
     total = sum(item.mean for item in features if item.mean > 0)
@@ -128,4 +129,5 @@ def permutation_importances(fitted: FittedModel, test: pd.DataFrame, label: str,
                               zero_division=0))
     return Importance(model=fitted.name, rows=len(rows), test_rows=int(test[label].notna().sum()),
                       repeats=config.importance_repeats, seed=seed, baseline_macro_f1=baseline,
-                      features=ranked, dominant=dominant_feature(ranked, config.dominant_share))
+                      features=ranked,
+                      concentrated=concentrated_feature(ranked, config.concentration_share))

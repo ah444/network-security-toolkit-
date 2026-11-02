@@ -88,6 +88,12 @@ trained, and the report has not been re-run for them.
 - **Probabilities:** a random forest's probabilities can change in their last digits from
   one run to the next (its trees are summed in parallel); the CSV output rounds them to 4
   digits.
+- **Explanations** (v5.3, in the core only, not yet on the page or in the CLI): why one
+  prediction came out as it did is approximate, not causal; correlated features share and
+  hide each other's effect; one feature set to its typical value alone can make a row that
+  never occurs; the probabilities are not calibrated. The importance concentration warning
+  (one feature carries more than half of the effect) has more than one possible cause, a
+  copy of the label among them.
 
 ## Ethical considerations
 

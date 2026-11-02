@@ -13,7 +13,7 @@ from toolkit.core.data.settings import ExplainConfig
 from toolkit.core.services.ids.evaluation import evaluate
 from toolkit.core.services.ids.importance import (
     FeatureImportance,
-    dominant_feature,
+    concentrated_feature,
     permutation_importances,
     scored_rows,
 )
@@ -164,10 +164,10 @@ def test_a_copy_of_the_label_carries_most_of_the_effect():
     fitted = evaluate(split.train, split.test, "Label", features=("a", "b", "leak"),
                       models=("decision_tree",), workers=1).training.models["decision_tree"]
     found = permutation_importances(fitted, split.test, "Label", seed=42)
-    assert found.features[0].feature == "leak" and found.dominant == "leak"
+    assert found.features[0].feature == "leak" and found.concentrated == "leak"
 
 
-@pytest.mark.parametrize(("means", "dominant"), [
+@pytest.mark.parametrize(("means", "concentrated"), [
     ((0.6, 0.3, 0.1), "x0"),
     ((0.5, 0.5), None),  # half is not most
     ((0.3, 0.3, 0.3), None),
@@ -175,6 +175,6 @@ def test_a_copy_of_the_label_carries_most_of_the_effect():
     ((0.0, -0.1), None),
     ((0.9,), None),  # one feature: nothing to compare it with
 ])
-def test_the_dominant_feature(means, dominant):
+def test_the_concentrated_feature(means, concentrated):
     features = [FeatureImportance(f"x{i}", mean, 0.0) for i, mean in enumerate(means)]
-    assert dominant_feature(features, 0.5) == dominant
+    assert concentrated_feature(features, 0.5) == concentrated

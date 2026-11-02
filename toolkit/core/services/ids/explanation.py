@@ -6,6 +6,10 @@ is measured again: a feature whose real value raised that probability pushes tow
 class, one that lowered it pushes away. One prediction of a small table (a row per changed
 feature), so it is immediate. A model without probabilities gets no explanation.
 
+Its limits, to show beside it: it is approximate, not causal; correlated features share and
+hide each other's effect; one feature set to its typical value alone can make a row that
+never occurs; the probabilities are not calibrated.
+
 The typical values are in the run's record since v5.3 F3; a bundle saved before has only
 the medians its pipeline learnt (the numeric imputer), so its categories go unexplained.
 """
