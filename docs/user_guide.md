@@ -442,31 +442,48 @@ Do this **only on a network you trust**, such as VirtualBox's host-only network:
 can reach the toolkit and has its access token can upload data, train models and run port
 scans *from this computer*, and the connection is plain HTTP. `--host 0.0.0.0` listens on
 all of this computer's addresses. A host name is refused, and there is no setting that
-opens it for you: you choose it at every start. This was printed on 2026-10-26:
+opens it for you: you choose it at every start. This was printed on 2026-11-02:
 
 ```
 IDS web app running at http://127.0.0.1:5091/  (press Ctrl+C to stop)
 ========================================================================
 WARNING: the toolkit is open to your network, not only to this computer.
 Anyone who can reach it and has the access token can upload data, train models
-and run port scans FROM THIS COMPUTER. The connection is plain HTTP: someone who
-can read your network's traffic could take over a session. Use it only on a
-network you trust (such as your virtual machines' host-only network), and stop
-it with Ctrl+C when you are done.
+and run port scans FROM THIS COMPUTER: a holder of the token has your rights over
+the saved runs, bundles and scans, not only a view of the pages. A new token, made
+on this computer's home page, locks every other computer out at once. The
+connection is plain HTTP: someone who can read your network's traffic could
+take over a session. Use it only on a network you trust (such as your virtual
+machines' host-only network), and stop it with Ctrl+C when you are done.
 
 Other computers open:
   http://192.168.56.1:5091/
-Access token (typed once in each of their browsers): LSMT-PYWK-8PVT-GN5L
+Access token (typed once in each of their browsers): MZ4S-AXS9-AAXS-KMR2
 This computer's own browser, at 127.0.0.1, needs no token.
 ========================================================================
 ```
 
 - **On the other computer**, open the address shown. Every page first sends you to
   **Unlock the toolkit**: type the access token (capitals, spaces and dashes don't matter)
-  and press **Unlock**; that browser then works until the toolkit stops. The token is new at
-  every start, so last time's no longer works. Five wrong tokens within a minute are refused
-  for the rest of the minute.
-- **On this computer**, the browser at `http://127.0.0.1:...` needs no token.
+  and press **Unlock**; that browser then works until the toolkit stops or a new token is
+  made. The token is new at every start, so last time's no longer works. Five wrong tokens
+  within a minute are refused for the rest of the minute. The unlock page says first what
+  the token gives: your rights over the saved runs, bundles and scans, not only a view.
+- **On this computer**, the browser at `http://127.0.0.1:...` needs no token, and its home
+  page has a section, **Other computers**:
+  - **New token** asks first, then locks every other computer out at once, without stopping
+    the toolkit. The new token is printed in the terminal, as at the start; type it on the
+    computers you still want in. A job they asked for that was still waiting is cancelled
+    (the message says how many); a running one goes on. On 2026-11-02 the terminal printed:
+    ```
+    ========================================================================
+    A new access token was made: every other computer is locked out until it types
+    the new one. New access token: 9RTG-MP4U-BWSH-4K28
+    ========================================================================
+    ```
+  - **Their jobs** lists what other computers are running or waiting for: the computer's
+    address, the job, where it is and for how long, with **Stop** for each. **Refresh**
+    reads it again. Your own jobs are not listed.
 - **Every page** shows a yellow banner while the toolkit is open to the network.
 - `TOOLKIT_DEBUG=1` is refused with `--host`, and an address this computer doesn't have is
   a message (both exit code 2). On Windows the firewall may ask, the first time, whether

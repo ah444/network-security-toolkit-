@@ -58,7 +58,8 @@ def unlock() -> Answer:
     if _needs_no_token() or access is None:
         return jsonify({"message": "No access token is needed here."})
     session["unlocked"] = access.unlock(req.token, request.remote_addr or "")
-    return jsonify({"message": "Unlocked: this browser can use the toolkit until it stops."})
+    return jsonify({"message": "Unlocked: this browser can use the toolkit until it stops or a "
+                               "new token is made on its computer."})
 
 
 def _here_only() -> Access:

@@ -155,12 +155,20 @@ plain HTTP, so someone who can read the network's traffic could take over a sess
   new at every start, shown only there (never in a log). Every page shows a banner while
   the toolkit is open to the network.
 - Another computer's browser is sent to `/unlock`, where the token is typed once (spaces,
-  dashes and case don't matter); its session stays unlocked until the toolkit stops. The
-  API answers it `LOCKED` (401) before that. Five wrong tokens from one address within a
+  dashes and case don't matter); its session stays unlocked until the toolkit stops or a new
+  token is made. The API answers it `LOCKED` (401) before that. Five wrong tokens from one address within a
   minute are refused with `TOO_MANY_TRIES` (429) for the rest of the minute; each wrong
   try is logged with its address. The token is never in an address (URL).
 - This computer's own browser, at `127.0.0.1` (which stays bound), never needs the token.
   The address of a request is its connection's: `X-Forwarded-For` is never trusted.
+- A holder of the token has the owner's rights over the saved runs, bundles and scans, not
+  only a view of the pages: there are no user accounts (RD1). The terminal and the unlock
+  page say so.
+- **New token** (HS1), in the **Other computers** section of the home page on this computer
+  only: a new token, printed in the terminal, and every other computer is locked out at once,
+  without stopping the toolkit. A job one of them asked for that still waits is cancelled and
+  never starts; a running one goes on, and the section lists it with **Stop**; this
+  computer's jobs are not touched. The routes are in [web_api.md](web_api.md).
 - `TOOLKIT_DEBUG=1` is refused with `--host` (exit code 2): the debug server's debugger can
   run any code on this computer.
 - An address this computer doesn't have is a message and exit code 2. On Windows the

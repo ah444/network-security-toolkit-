@@ -3,6 +3,8 @@ once without stopping the app. A job another computer asked for under the old un
 cancelled while it still waits and never starts; a running one goes on and can be stopped on
 this computer; this computer's own jobs are not touched. The checks of every request hold for
 other computers too. No test binds a network address: other computers are a REMOTE_ADDR.
+HS1b: the home page's section on this computer, and the holder's rights said before the
+token is used, in the terminal and on the unlock page.
 """
 
 import logging
@@ -17,6 +19,7 @@ from toolkit.web.controllers import scan as scan_routes
 from toolkit.web.services import access as access_service
 from toolkit.web.services import jobs
 from toolkit.web.services import training
+from toolkit.web.ui import console
 from web_jobs import TRAIN_URL, wait_for
 from web_scan import fake_network
 
@@ -24,6 +27,7 @@ OTHER, SECOND = "192.168.56.20", "192.168.56.21"  # two other computers
 TOKEN_URL = "/api/v1/access/token"
 JOBS_URL = "/api/v1/access/jobs"
 TARGET = "Label"
+RIGHTS = "has your rights over the saved runs, bundles and scans, not only a view of the pages"
 
 
 @pytest.fixture
@@ -272,3 +276,39 @@ def test_the_checks_of_every_request_hold_for_other_computers(open_app):
         rebound = test_client.post(TRAIN_URL, json={}, headers={"Host": "evil.example:5000",
                                                                 "X-CSRF-Token": "any"})
         assert rebound.status_code == 400 and _code(rebound) == "BAD_HOST"
+
+
+# --- The pages (HS1b) ---------------------------------------------------------------------
+
+def test_the_home_page_has_the_section_on_this_computer(open_app):
+    response = open_app.test_client().get("/")
+    html = response.get_data(as_text=True)
+    assert response.status_code == 200 and response.headers["Cache-Control"] == "no-store"
+    assert '<meta name="csrf-token" content="' in html, "the page sends the new token's POST"
+    assert 'id="otherComputers"' in html and RIGHTS in html
+    assert 'id="newToken"' in html and 'id="otherJobs"' in html
+    assert 'src="/static/js/othercomputers.js"' in html
+    assert open_app.extensions["toolkit"].access.token not in html
+
+
+@pytest.mark.parametrize("where", ["another computer", "no --host"])
+def test_nowhere_else_has_the_section(open_app, client, where):
+    test_client = _unlocked(open_app) if where == "another computer" else client
+    html = test_client.get("/").get_data(as_text=True)
+    assert 'id="otherComputers"' not in html and "othercomputers.js" not in html
+
+
+def test_the_unlock_page_says_the_rights_before_the_token_is_typed(open_app):
+    html = _other(open_app).get("/unlock").get_data(as_text=True)
+    rights = RIGHTS.replace("your", "the owner's")  # said to the holder, not the owner
+    assert rights in html and html.index(rights) < html.index('id="accessToken"')
+    assert "until the toolkit stops or a new token is made on its computer" in html
+    unlocked = _unlock(_other(open_app), open_app.extensions["toolkit"].access.token)
+    assert "until it stops or a new token is made on its computer" in unlocked.get_json()["message"]
+
+
+def test_the_terminal_says_the_rights_before_remote_access_is_used(capsys):
+    console.open_to_network(["http://192.168.56.1:5000/"], "K7QX-M2PD-9RTA-W4HE")
+    out = " ".join(capsys.readouterr().out.split())
+    assert RIGHTS in out
+    assert "A new token, made on this computer's home page, locks every other computer out" in out

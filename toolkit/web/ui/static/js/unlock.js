@@ -1,6 +1,6 @@
 // The unlock page (/unlock, v5.2 step 2.4f), loaded as an ES module: another computer types
-// the access token once; the server keeps this session unlocked until the toolkit stops,
-// and the page goes on to the home page. The token is sent in the request's body, never in
+// the access token once; the server keeps this session unlocked until the toolkit stops or a
+// new token is made on its computer (HS1), and the page goes on to the home page. The token is sent in the request's body, never in
 // the address.
 
 import { send } from "./api.js";
