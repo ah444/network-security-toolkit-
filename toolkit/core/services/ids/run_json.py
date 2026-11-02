@@ -79,7 +79,8 @@ def split_dict(split: SplitResult) -> dict[str, Any]:
 
 
 def training_dict(outcome: TrainingOutcome) -> dict[str, Any]:
-    """The training's counts, columns, failures and notes (not the fitted models)."""
+    """The training's counts, columns, failures and notes, and each feature's typical value
+    (since v5.3 F3; not the fitted models)."""
     return {
         "train_rows": outcome.train_rows, "classes": list(outcome.classes),
         "class_counts": jsonable(outcome.class_counts),
@@ -87,6 +88,7 @@ def training_dict(outcome: TrainingOutcome) -> dict[str, Any]:
         "categorical_features": list(outcome.categorical_features),
         "failures": jsonable(outcome.failures), "skipped": jsonable(outcome.skipped),
         "notes": list(outcome.notes), "seed": outcome.seed, "workers": outcome.workers,
+        "typical_values": jsonable(dict(outcome.typical)),
     }
 
 

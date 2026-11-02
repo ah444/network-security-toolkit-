@@ -84,6 +84,7 @@ no Flask, no argparse. Read by `cli/` and `web/`, it imports neither
 | `toolkit/core/services/ids/pipeline.py` | services | builds and fits one pipeline per model; `FittedModel` predicts |
 | `toolkit/core/services/ids/evaluation.py` | services | cross-validation on train, model choice, one score on test, the leaderboard |
 | `toolkit/core/services/ids/importance.py` | services | what a model relies on: permutation importance on the test split (a stratified sample above 5,000 rows), one feature at a time so a job shows its progress and stops; the feature that carries most of the effect |
+| `toolkit/core/services/ids/explanation.py` | services | why one prediction came out as it did: each feature's value replaced by its typical training value (an approximation, not SHAP); the typical values from the record, or an older bundle's imputer medians |
 | `toolkit/core/services/ids/preview.py` | services | train-only previews for the web trainer (feature scores, class counts) |
 | `toolkit/core/services/ids/runs.py` | services | `train()` and the `TrainingRun` record of how a model was made |
 | `toolkit/core/services/ids/run_json.py` | services | the record's plain-JSON form (`TrainingRun.to_dict()`): any value as JSON types, what is kept of the profile, split, training and pipelines |

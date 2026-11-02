@@ -230,7 +230,8 @@ class EvaluationConfig:
 
 @dataclass(frozen=True)
 class ExplainConfig:
-    """What a model relies on (v5.3 F3): permutation importance on the test split."""
+    """What a model relies on (v5.3 F3): permutation importance on the test split, and why one
+    prediction came out as it did."""
 
     # Above this many test rows, a stratified sample of them (at least min_per_class each).
     importance_max_rows: int = 5_000
@@ -238,6 +239,8 @@ class ExplainConfig:
     importance_repeats: int = 5
     # One feature with more than this share of the summed positive drops: maybe a label copy.
     dominant_share: float = 0.5
+    # One prediction: the features that push most toward the class, and most away from it.
+    local_top: int = 5
 
 
 @dataclass(frozen=True)
