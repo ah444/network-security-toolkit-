@@ -1,5 +1,5 @@
 """Predictions with a bundle exported by the web trainer (plan D5, step 0.5): one row of
-values, every row of a table, or a whole CSV file labelled into a new file (the same table
+values, or a whole CSV file labelled into a new file (the same table
 as the web trainer's "Predict a CSV file", ``batch``, step 1.4f)."""
 
 from __future__ import annotations
@@ -10,7 +10,6 @@ from pathlib import Path
 from typing import Any, cast
 
 import numpy as np
-import pandas as pd
 
 from ...data.files import read_text, write_new_text
 from .batch import prediction_csv, prediction_summary, prediction_table
@@ -30,18 +29,6 @@ def model_order(bundle: Bundle) -> list[str]:
     ranked = [row["model"] for row in bundle.run["evaluation"]["leaderboard"]]
     return [name for name in ranked if name in bundle.models] + \
         [name for name in bundle.models if name not in ranked]
-
-
-def predict_rows(bundle: Bundle, frame: pd.DataFrame, model: str | None = None) -> pd.DataFrame:
-    """Predictions (and confidence, when the model has probabilities) for every row."""
-    missing = [f for f in bundle.features if f not in frame.columns]
-    if missing:
-        raise ValueError(f"Missing feature column(s): {', '.join(missing)}")
-    fitted = bundle.model(model)
-    result = pd.DataFrame({"prediction": fitted.predict(frame)}, index=frame.index)
-    proba = fitted.predict_proba(frame)
-    result["confidence"] = proba.max(axis=1) if proba is not None else np.nan
-    return result
 
 
 def predict_values(bundle: Bundle, values: Mapping[str, Any],

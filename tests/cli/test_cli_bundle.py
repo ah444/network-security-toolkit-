@@ -62,7 +62,7 @@ def test_cli_and_web_same_prediction(ids_prediction, cli_module, client, exporte
     bundle = cli_module.load_model(exported)
     rows = frame.iloc[[0, 1, 2, 100, 150, 199]]
     for model in ("decision_tree", "logistic_regression"):
-        cli = ids_prediction.predict_rows(bundle, rows, model=model)
+        cli = ids_prediction.prediction_table(bundle.model(model), rows)  # what label_file uses
         for (_, row), predicted in zip(rows.iterrows(), cli["prediction"], strict=True):
             values = {c: str(v) for c, v in row.items() if c != TARGET}
             web = client.post("/api/v1/run/predict", json={"values": values, "model": model})

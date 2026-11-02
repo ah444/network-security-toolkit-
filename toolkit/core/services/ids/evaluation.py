@@ -94,11 +94,6 @@ class CVSummary:
         """The balanced accuracy's standard deviation over the folds."""
         return float(np.std(self.balanced_accuracy))
 
-    @property
-    def accuracy_mean(self) -> float:
-        """The mean accuracy over the folds."""
-        return float(np.mean(self.accuracy))
-
 
 @dataclass(frozen=True)
 class ModelEvaluation:
