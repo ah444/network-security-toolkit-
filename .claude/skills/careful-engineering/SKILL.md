@@ -51,6 +51,7 @@ These are where mistakes are most likely, so check them in every design card.
 - **An interface only with two or more implementations**, real or faked in tests. Everything else is plain functions and registries.
 - **A functional core.** Logic takes data in and returns results; files and the network stay at the edges.
 - **Layers enforced by tests.** The direction of imports, and where network and process code may live.
+- **Checking dead code.** Before calling code dead, rule out a framework hook or override, a registry or `getattr` lookup, and a public API used from the docs. Code used only by tests is either a test hook (keep) or a test checking a path the program no longer takes (fix the test first, then remove the code). A search is a signal, not proof.
 - **Metrics are signals, not orders.** Complexity and file-size limits flag code for review. Split for a real benefit (a separate responsibility, testability, fewer bugs), never with helpers made just to lower a number. A justified exception is listed with its reason.
 
 ## 5. Reliability habits
