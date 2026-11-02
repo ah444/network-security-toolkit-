@@ -12,4 +12,4 @@ What the project is, where it is going, why it is built this way, and the way of
 
 The day-to-day tasks stay in the checklists in [`docs/`](../docs/V5.3_CHECKLIST.md), and the original plan with every option weighed in [`docs/IMPROVEMENT_PLAN.md`](../docs/IMPROVEMENT_PLAN.md).
 
-**Using the skill in another project:** copy the `careful-engineering` folder to `~/.claude/skills/` (every project) or to that project's `.claude/skills/` (that project only). Here it is kept to be read; this repository doesn't load it as a skill from this folder.
+**Using the skill in another project:** copy the `careful-engineering` folder to `~/.claude/skills/` (every project) or to that project's `.claude/skills/` (that project only). Here it is kept to be read; this repository loads it from its own copy in [`.claude/skills/careful-engineering/`](../.claude/skills/careful-engineering/SKILL.md). The three copies (this folder, the project's and `~/.claude/skills/`) must stay identical: edit one and copy it to the other two.
