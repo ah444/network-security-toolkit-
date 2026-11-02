@@ -142,9 +142,10 @@ def test_numbers_as_the_page_writes_them():
     assert [runs_screen.seconds(v) for v in (0.0042, 0.5, 1, 9.99, 12.5, 4414.07)] == \
         ["0.0042 s", "0.5 s", "1 s", "10 s", "13 s", "4,414 s"]
     assert [runs_screen.difference(v, k) for v, k in ((0.012, "x"), (-0.004, "x"), (0, "x"),
+                                                     (0.0002, "x"), (-0.0004, "x"),
                                                      (1.2, "fit_seconds"),
                                                      (-4414, "fit_seconds"))] == \
-        ["+0.012", "−0.004", "0.000", "+1.2 s", "−4,414 s"]
+        ["+0.012", "−0.004", "0.000", "0.000", "0.000", "+1.2 s", "−4,414 s"]
     assert runs_screen.when("2026-10-30T12:05:09Z") == "2026-10-30 12:05 UTC"
     assert runs_screen.when("not a time") == "not a time"
 

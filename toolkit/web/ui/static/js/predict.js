@@ -115,10 +115,11 @@ function showExport(result) {
   setContent(byId("exportResult"),
     el("p", {}, result.message),
     el("p", {}, "Run " + result.run_id + ", SHA-256 " + result.sha256.substring(0, 16) + "…"),
-    el("p", {}, "Its settings and scores are saved with the other runs: ",
-       el("a", { href: "/runs#" + result.run_id }, "see it in Saved Runs"), "."),
+    el("p", {}, "Its settings and scores are also saved with the other runs."),
     el("a", { href: result.download_url, download: result.download_name, class: "btn btn-sm" },
-       "Download " + result.download_name));
+       "Download " + result.download_name),
+    " ",
+    el("a", { href: "/runs#" + result.run_id, class: "btn btn-secondary btn-sm" }, "See it in Saved Runs"));
 }
 
 // A signed bundle, then a download link

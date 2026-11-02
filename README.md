@@ -66,6 +66,7 @@ A comprehensive network security tool combining **Network Reconnaissance** and *
 - 📊 Uses the models you export from the web trainer: it lists them (newest first) and you pick one; each shows its real metrics from its training record
 - ⌨️ Manual input (prefilled from a real example), real test-split examples, model switching
 - 📄 `--csv` batch prediction (writes `<file>.predictions.csv`, never overwritten; the web trainer's "Predict a CSV file" gives the same file), `--json` input, `--info` model card
+- 🗂️ `--runs` lists the saved runs and `--compare A B` puts two side by side, without loading a model ([user guide 5](docs/user_guide.md#5-use-your-model-in-the-terminal))
 
 ### 3. Intrusion Detection System (Web) ⭐ NEW FEATURES
 - 🌐 Web-based UI with Flask
@@ -78,6 +79,8 @@ A comprehensive network security tool combining **Network Reconnaissance** and *
 - 🎚️ **8 Balancing Methods** - SMOTE, ADASYN, SMOTE-ENN, etc.
 - 🎯 **Target Value Filtering** - Remove unwanted classes
 - 📉 **Confusion Matrix** - Visual model evaluation
+- 📊 **Charts of a run** - CV fold by fold, CV against test, recall per class, fit time
+- 🗂️ **Saved Runs** - every exported run listed; one shown, or two compared (a difference only when both scored the same test rows) ([user guide 4.8](docs/user_guide.md#48-compare-saved-runs))
 - 🔀 **Train/Test Split Slider** - Customize data splits
 - 💾 **Export / Load Models** - signed `.bundle` files (all models of a run plus its training record)
 - 📄 **Predict a CSV file** - label every row of a file with the session's model or a loaded bundle: rows per class with bars, how many match the file's label column, and the labelled CSV to download (the same file as the CLI's `--csv`; files up to 512 MB, `TOOLKIT_MAX_PREDICT_MB`)

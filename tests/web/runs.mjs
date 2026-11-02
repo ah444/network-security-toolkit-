@@ -71,6 +71,6 @@ console.log(JSON.stringify({
   comparable: shown(comparisonView(answer(true))),
   apart: shown(comparisonView(answer(false))),
   no_common: shown(comparisonView({ ...answer(true), models: [], settings: [] })),
-  deltas: [[0.012], [-0.004], [0], [1.2, "fit_seconds"], [-4414, "fit_seconds"]].map(([value, key]) => delta(value, key)),
+  deltas: [[0.012], [-0.004], [0], [0.0002], [-0.0004], [1.2, "fit_seconds"], [-4414, "fit_seconds"]].map(([value, key]) => delta(value, key)),
   when: [when("2026-10-30T12:05:09Z"), when("not a time")],
 }));

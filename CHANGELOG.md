@@ -2,9 +2,33 @@
 
 All notable changes to this project. Versions follow the roadmap in
 [docs/IMPROVEMENT_PLAN.md](docs/IMPROVEMENT_PLAN.md); day-to-day progress is in
+[docs/V5.3_CHECKLIST.md](docs/V5.3_CHECKLIST.md) (v5.3),
 [docs/V5.2_CHECKLIST.md](docs/V5.2_CHECKLIST.md) (v5.2),
 [docs/V5.1_CHECKLIST.md](docs/V5.1_CHECKLIST.md) (v5.1) and
 [docs/V5.0_CHECKLIST.md](docs/V5.0_CHECKLIST.md) (v5.0).
+
+## [Unreleased]
+
+v5.3 started with F2, the full leaderboard ([checklist](docs/V5.3_CHECKLIST.md)).
+
+### Added
+- **Charts of a run** (F2d) under the trainer's leaderboard: each model's CV macro-F1 fold by
+  fold, CV against test macro-F1, the test recall of each class, and the fit time. Drawn by
+  the page itself (no library), every number also written out, in both themes.
+- **Saved Runs** (F2e), a page (`/runs`) and a link in every navbar and after an export: the
+  runs you exported, newest first, 50 at a time; one shown with its leaderboard and charts,
+  or two compared. A difference (Δ = B − A) only when both runs scored the same test rows;
+  otherwise the numbers side by side and why. It reads the runs' records only: nothing is
+  uploaded or trained, no model is loaded ([user guide 4.8](docs/user_guide.md#48-compare-saved-runs)).
+- **`toolkit ids --runs` and `--compare A B`** (F2f): the same in the terminal; `--before`
+  pages through older runs ([reference](docs/reference.md#4-ids-intrusion-detection-with-an-export)).
+- **Web API** (F2c): `GET /api/v1/runs`, `/api/v1/runs/<run id>` and
+  `/api/v1/runs/compare` ([web_api.md](docs/web_api.md#saved-runs-v53-f2)); a finished
+  training's result carries each model's CV scores fold by fold (`folds`).
+
+### Fixed
+- The trainer's leaderboard table had no style of its own (its cells had no padding and
+  touched); it now looks like the data preview's table (F2g).
 
 ## [5.2] — 2026-10-30
 

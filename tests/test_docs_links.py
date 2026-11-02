@@ -71,7 +71,9 @@ def test_install_steps_cover_what_a_fresh_windows_install_meets(repo_root):
 def test_changelog_starts_with_5_2(repo_root):
     changelog = (repo_root / "CHANGELOG.md").read_text(encoding="utf-8")
     versions = re.findall(r"^## \[([^\]]+)\]", changelog, re.MULTILINE)
-    assert versions[:3] == ["5.2", "5.1", "5.0.1"]
+    if versions[0] == "Unreleased":  # v5.3 so far (F2), above the last release
+        versions = versions[1:]
+    assert versions[:3] == ["5.2", "5.1", "5.0.1"] and "Unreleased" not in versions
     sections = {"5.2": (changelog.index("## [5.2]"), changelog.index("## [5.1]"),
                         ("Added", "Changed", "Security", "Fixed", "Upgrading from 5.1",
                          "Known limitations")),

@@ -612,6 +612,30 @@ shows its models and scores; Step 6 then predicts with them, one row or a file.
 
 ![A bundle loaded](user-guide/17-load-bundle.jpg)
 
+### 4.8 Compare saved runs
+
+Each export also saves the run's record: its data, split, settings and scores, without the
+models. **Saved Runs** in the navbar (or **See it in Saved Runs** after an export) lists
+them, newest first, 50 at a time (**Older runs** shows more). Nothing is uploaded or trained
+there, and no model is loaded.
+
+![The saved runs](user-guide/18-saved-runs.jpg)
+
+- **Show** opens one run: what it was trained on, its leaderboard and its charts.
+- Tick two runs and click **Compare the two ticked runs**. A is the older one, B the newer.
+  Each model of both runs gets a table with every score of A and B and, per class, the test
+  recall.
+- **Δ = B − A** is shown only when both runs scored the same test rows: the same file (and
+  test file), the same label, the same split and the same row counts. Otherwise the numbers
+  stand side by side and the page says why they can't be compared.
+- Below: the models of one run only, and the settings that differ (features, models,
+  balancing, feature selection).
+
+Here the two runs of the same NSL-KDD files differ only in balancing, none (A) and class
+weights (B): Random Forest's CV macro-F1 is the same, its test macro-F1 is 0.010 lower.
+
+![Two runs compared](user-guide/19-compare-runs.jpg)
+
 ## 5. Use your model in the terminal
 
 `python -m toolkit ids` uses the bundles you exported from the web trainer. These examples
@@ -800,6 +824,56 @@ are `guess_passwd` and `smurf`: the first is predicted wrongly, as `normal`.
 
 `--model` chooses a model of the bundle (default: its best). The exit codes, for scripts,
 are in [reference.md, section 6](reference.md#6-exit-codes).
+
+**The saved runs** (section 4.8) are in the terminal too, without loading a model. The list,
+newest first (50 at a time; its last line gives the `--before` for the older ones):
+
+```
+> python -m toolkit ids --runs
+1. 20261102T020115Z-a8b5a214  2026-11-02 02:01 UTC  KDDTrain+_sample.txt (2,000 rows)  label attack, stratified 1,595/405  ★ Random Forest of 2: CV 0.638, test 0.751
+2. 20261102T020103Z-6bec0a5e  2026-11-02 02:01 UTC  KDDTrain+_sample.txt (2,000 rows), test file KDDTest+_sample.txt  label attack, official 2,000/1,000  ★ Random Forest of 3: CV 0.707, test 0.245
+3. 20261102T020053Z-8c45b90b  2026-11-02 02:00 UTC  KDDTrain+_sample.txt (2,000 rows), test file KDDTest+_sample.txt  label attack, official 2,000/1,000  ★ Random Forest of 3: CV 0.707, test 0.254
+```
+
+`--compare A B` prints the two side by side, as the page does. The 23 classes and the other
+two models are shortened here:
+
+```
+> python -m toolkit ids --compare 20261102T020053Z-8c45b90b 20261102T020103Z-6bec0a5e
+A: 20261102T020053Z-8c45b90b  2026-11-02 02:00 UTC  KDDTrain+_sample.txt (2,000 rows), test file KDDTest+_sample.txt  label attack, official 2,000/1,000  ★ Random Forest of 3: CV 0.707, test 0.254
+B: 20261102T020103Z-6bec0a5e  2026-11-02 02:01 UTC  KDDTrain+_sample.txt (2,000 rows), test file KDDTest+_sample.txt  label attack, official 2,000/1,000  ★ Random Forest of 3: CV 0.707, test 0.245
+
+✅ Both runs scored the same test rows, so their numbers can be compared: Δ = B − A.
+
+Random Forest (★ selected in both)
+                                       A         B   Δ (B − A)
+  CV macro-F1                      0.707     0.707       0.000
+  CV balanced acc.                 0.705     0.711      +0.005
+  Test macro-F1                    0.254     0.245      −0.010
+  Test balanced acc.               0.291     0.284      −0.008
+  Test accuracy                    0.677     0.674      −0.003
+  Weakest class recall             0.000     0.000       0.000
+  Fit time                        0.33 s    0.28 s    −0.054 s
+  Test recall per class
+    apache2                        0.000     0.000       0.000
+    back                           0.941     0.941       0.000
+    buffer_overflow                0.250     0.000      −0.250
+...
+
+Settings that differ:
+  Balancing
+    A: none
+    B: class_weight
+```
+
+With the run of the training file alone (a stratified split) as B, there is no Δ, and why:
+
+```
+⚠️ These runs did not score the same test rows, so the numbers are side by side, without a difference:
+   - Their test rows came from different test files, or only one had a test file.
+   - Their splits differ (the strategy, the seed, the test size or the official mode).
+   - They had different numbers of training or test rows.
+```
 
 ## 6. Your files
 

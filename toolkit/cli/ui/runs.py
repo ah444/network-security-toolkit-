@@ -48,9 +48,12 @@ def number(value: float, key: str) -> str:
 
 
 def difference(value: float, key: str) -> str:
-    """B − A with its sign: ``+0.012``, ``−0.004``, ``0.000``."""
+    """B − A with its sign: ``+0.012``, ``−0.004``, ``0.000``; one that rounds to zero has no
+    sign (not ``+0.000``)."""
     size = number(abs(value), key)
-    return f"+{size}" if value > 0 else f"−{size}" if value < 0 else size
+    if not any(digit in size for digit in "123456789"):
+        return size
+    return f"+{size}" if value > 0 else f"−{size}"
 
 
 def run_line(run: Mapping[str, Any]) -> str:

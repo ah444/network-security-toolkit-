@@ -35,10 +35,14 @@ function rows(count) {
   return `${Number(count).toLocaleString("en-US")} rows`;
 }
 
-// A difference with its sign: "+0.012", "−0.004", "0.000"; seconds for the fit time
+// A difference with its sign: "+0.012", "−0.004", "0.000"; seconds for the fit time. One
+// that rounds to zero has no sign (not "+0.000")
 export function delta(value, key) {
   const size = key === "fit_seconds" ? seconds(Math.abs(value)) : fmt(Math.abs(value), 3);
-  return value > 0 ? "+" + size : value < 0 ? "−" + size : size;
+  if (!/[1-9]/.test(size)) {
+    return size;
+  }
+  return value > 0 ? "+" + size : "−" + size;
 }
 
 function metric(value, key) {

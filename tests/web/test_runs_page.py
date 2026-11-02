@@ -51,7 +51,8 @@ def test_every_page_links_to_it(client):
 
 def test_the_export_links_to_the_saved_run():
     code = js_sources()["predict.js"]
-    assert 'el("a", { href: "/runs#" + result.run_id }, "see it in Saved Runs")' in code
+    assert ('el("a", { href: "/runs#" + result.run_id, class: "btn btn-secondary btn-sm" }, '
+            '"See it in Saved Runs")') in code, "a 44 px button-like link next to Download"
 
 
 def test_the_page_reads_the_records_only():
@@ -148,7 +149,8 @@ def test_the_models_and_settings_of_one_run(rendered):
 
 
 def test_numbers_and_times(rendered):
-    assert rendered["deltas"] == ["+0.012", "−0.004", "0.000", "+1.2 s", "−4,414 s"]
+    assert rendered["deltas"] == ["+0.012", "−0.004", "0.000", "0.000", "0.000", "+1.2 s",
+                                  "−4,414 s"], "a difference that rounds to zero has no sign"
     assert rendered["when"] == ["2026-10-30 12:05 UTC", "not a time"]
 
 

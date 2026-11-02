@@ -166,6 +166,21 @@ def test_a_charts_marks_are_visible_in_both_themes(mark):
         assert ratio >= 3, (name, mark, round(ratio, 2))
 
 
+def test_the_metrics_tables_are_styled_and_their_remarks_readable(css):
+    """v5.3 F2g: .metrics-table (the leaderboard, the saved runs) had no rule, so its cells had
+    no padding and touched. The tables stay light in the dark theme, so a remark in a cell
+    can't use the page's muted colour (1.41:1 on the table in dark): it has its own token."""
+    body = css[css.index(".metrics-table th,\n.metrics-table td {"):]
+    assert "padding: 8px 12px;" in body[:body.index("}")]
+    rule = css[css.index(".metrics-table .quiet {"):]
+    assert "color: var(--table-muted);" in rule[:rule.index("}")]
+    light, dark = themes()
+    for name, theme in (("light", light), ("dark", dark)):
+        for background in ("--table-bg", "--table-stripe"):
+            ratio = contrast(colour("--table-muted", theme, light), colour(background, theme, light))
+            assert ratio >= 4.5, (name, background, round(ratio, 2))
+
+
 def test_every_field_uses_the_field_border(css):
     """Gate 5.2: the balancing list had its own border (--table-border, 1.23:1 in light)."""
     for selector in ('input[type="text"],\ninput[type="number"],\nselect', "#balancingMethod"):

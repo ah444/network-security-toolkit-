@@ -108,6 +108,7 @@
   --on-accent: var(--white);
   --table-bg: var(--white);
   --table-text: var(--gray-700);
+  --table-muted: var(--gray-600);  /* a remark in a table (the tables stay light in dark) */
   --table-border: var(--gray-100);
   --table-stripe: var(--gray-50);
   --table-hover: var(--blue-50);
@@ -918,6 +919,46 @@ textarea:focus-visible,
   background: var(--table-hover);
 }
 
+/* The leaderboard and the saved runs' tables (v5.3 F2g: the class had no rule, so their
+   cells had no padding and touched): the preview table's look, the column headers in the
+   accent colour and a row's own header in bold */
+.metrics-table {
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  background: var(--table-bg);
+}
+
+.metrics-table th,
+.metrics-table td {
+  padding: 8px 12px;
+  border: 1px solid var(--table-border);
+  text-align: left;
+  color: var(--table-text);
+  white-space: nowrap;
+}
+
+.metrics-table thead th {
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 600;
+  position: sticky;
+  top: 0;
+}
+
+.metrics-table tbody th {
+  font-weight: 600;
+}
+
+/* a remark in a cell: the page's muted colour is light in the dark theme, but the table
+   stays light */
+.metrics-table .quiet {
+  color: var(--table-muted);
+}
+
+.metrics-table tbody tr:nth-child(even) {
+  background: var(--table-stripe);
+}
+
 /* ---------- Lists, slider, progress ---------- */
 /* Checkbox lists instead of Ctrl+Click multi-selects: they work on touch screens (U5, 0.4g) */
 /* Columns where there is room: more choices in view (v5.2 step 2.2b) */
@@ -1504,8 +1545,11 @@ textarea:focus-visible,
 /* ---------- Saved runs (v5.3 F2e) ---------- */
 /* runs.html: the list scrolls in its box; two runs' panels and each model's numbers sit side
    by side where there is room, one under the other on a narrow screen */
+/* each cell's lines are set apart by the page, so the cells may wrap to fit the card */
+.runs-table th,
 .runs-table td {
   vertical-align: top;
+  white-space: normal;
 }
 
 .run-pick {
