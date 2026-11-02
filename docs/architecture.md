@@ -103,6 +103,7 @@ no Flask, no argparse. Read by `cli/` and `web/`, it imports neither
 | `toolkit/core/services/recon/engines.py` | services | the scan engines by name: the built-in one (the toolkit's own scanner) and nmap (`NmapEngine`; `NmapProgress`: nmap's phases as one bar); `engine_problem` (why an engine can't do a scan here, asked before the authorization) and `describe` (the opening notice's lines) |
 | `toolkit/core/services/recon/os_guess.py` | services | the OS guess from the TTL, the banners, the open ports and nmap's OS match, with its evidence; this computer said |
 | `toolkit/core/services/recon/report.py` | services | one report entry per open port, its network text cleaned |
+| `toolkit/core/services/recon/record.py` | services | the record of every scan (HS3): a JSON line in the tool's log when `run_scan` starts and one when it ends, with the request's source |
 | `toolkit/core/data/__init__.py` | data | the shared data: files, the network, the environment |
 | `toolkit/core/data/settings.py` | data | every tunable setting, the `TOOLKIT_*` variables, the data folder, `.env` reading |
 | `toolkit/core/data/logs.py` | data | one rotating log file per tool, secrets redacted |

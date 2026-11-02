@@ -23,13 +23,13 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
+from ...core.services.recon.record import THIS_COMPUTER as THIS_COMPUTER  # a job asked for here
 from .errors import CANCELLED, INTERNAL, TIME_LIMIT, ServiceError
 
 log = logging.getLogger(__name__)
 
 QUEUED, RUNNING, DONE, FAILED, STOPPED = "queued", "running", "done", "failed", "cancelled"
 FINISHED = (DONE, FAILED, STOPPED)
-THIS_COMPUTER = "this computer"  # the source of a job asked for from a loopback address
 
 
 @dataclass(frozen=True)

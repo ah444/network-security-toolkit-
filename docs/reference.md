@@ -93,6 +93,34 @@ python -m toolkit scan 192.168.1.10 -p 1-1024 --protocol both --export csv
 python -m toolkit scan 127.0.0.1 -p 1-1024 --engine nmap --scripts safe
 ```
 
+### 3.1 The record of every scan
+
+Every scan, from `scan` or from the web page, writes one line to its tool's log when it
+starts and one when its scanning ends (HS3): `instance/logs/scanner.log` for `scan`,
+`web.log` for the web page. Nothing is written for a scan that was refused before it started
+(no authorization, a bad target, a limit). The values are JSON, in ASCII, so a target typed
+with a line break or quotes stays inside its own line:
+
+```
+2026-11-03T10:00:01 INFO toolkit.core.services.recon.record: Scan started {"scan_id": "k2Pq9xAb", "source": "192.168.56.20", "target": "10.0.0.0/30", "addresses": ["10.0.0.1", "10.0.0.2"], "ports": "22,80-82,443", "protocols": ["tcp"], "engine": "builtin", "online": {"nvd": "on, the software name and version only", "ai": "off: not asked for (--ai)", "abuseipdb": "off: no public address (a private one is never sent)"}}
+2026-11-03T10:00:09 INFO toolkit.core.services.recon.record: Scan ended {"scan_id": "k2Pq9xAb", "outcome": "done", "open_ports": 3, "engine_failed": 0, "seconds": 8.1}
+```
+
+- `source`: `this computer` (always for `scan`), or the address of the other computer whose
+  request it was, when `web --host` opened the toolkit to the network. An address, not a
+  person: there are no user accounts (RD1).
+- `addresses`: what the target was resolved to; `ports` as ranges; `online`: what the scan
+  may send to NVD, the AI and AbuseIPDB, as its opening notice says.
+- `outcome`: `done`, `stopped` (Cancel, the time limit or Ctrl+C) or `failed` (an error
+  nobody expected); `engine_failed`: targets the engine could not scan; `open_ports` is 0
+  when the scan didn't end `done`. The same `scan_id` joins the two lines.
+- No API key or access token is written.
+- How far back: each log rotates at 1 MB with three older files, the oldest deleted (about
+  4 MB per tool; a scan of 256 addresses writes a start line of about 4 KB).
+  `TOOLKIT_LOG_LEVEL` above `INFO` leaves the lines out.
+- The targets and ports say what was scanned: treat the logs as sensitive, like the rest of
+  `instance/` (which other Windows accounts can read is task HS5).
+
 ## 4. `ids`: intrusion detection with an export
 
 `python -m toolkit ids [flags]`, with a model bundle exported by the web trainer on this

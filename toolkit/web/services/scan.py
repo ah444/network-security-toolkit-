@@ -217,7 +217,7 @@ def start_scan(ws: Workspace, choices: ScanChoices, runner: JobRunner,
         request = ScanRequest(
             choices.target.strip(), targets, ports, protocols, verbose=True, use_ai=choices.ai,
             abuseipdb=choices.abuseipdb, scan_unresponsive=choices.scan_unresponsive,
-            engine=choices.engine, nmap_options=options)
+            engine=choices.engine, nmap_options=options, source=origin.source)
         view.hosts = len(targets)
     except BaseException:
         ws.scanning.release()
@@ -238,7 +238,7 @@ def _run(ws: Workspace, request: ScanRequest, keys: Mapping[str, str], job: Job,
          view: WebScan) -> dict[str, Any]:
     """The job's work, in the scan queue's thread: the core scan with the job's cancel as its
     stop, and a timer that stops it after ``max_seconds`` (TIME_LIMIT). Only a finished scan is
-    kept (``ws.scan``); one line in the log for each scan."""
+    kept (``ws.scan``). The log's record of the scan is ``run_scan``'s (HS3)."""
     add_secrets(*keys.values())  # the keys never reach the log
     timed_out = threading.Event()
 
@@ -249,19 +249,12 @@ def _run(ws: Workspace, request: ScanRequest, keys: Mapping[str, str], job: Job,
     timer = threading.Timer(job.max_seconds, expire)
     timer.daemon = True
     timer.start()
-    began, outcome = time.time(), "failed"
     try:
-        code = run_scan(request, keys, began, view, job.cancel_requested)
-        outcome = "done"
+        code = run_scan(request, keys, time.time(), view, job.cancel_requested)
     except ScanStopped:
-        outcome = "stopped"
         raise job.stopped(TIME_LIMIT if timed_out.is_set() else CANCELLED) from None
     finally:
         timer.cancel()
-        log.info("Scan %s: %r, %d host(s), %d port(s) x %s, engine %s, %d open port(s), %.0f s",
-                 outcome, request.target_text, len(request.targets), len(request.ports),
-                 "+".join(request.protocols), request.engine, len(view.entries),
-                 time.time() - began)
     answer = view.answer(request, code)
     with ws.lock:
         ws.scan = FinishedScan(list(view.entries), answer,

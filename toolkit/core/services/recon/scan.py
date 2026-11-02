@@ -40,6 +40,7 @@ from .engines import DEFAULT_ENGINE, describe, engine_named
 from .intel import Intel, LookupResult
 from .os_guess import OsHint as OsHint  # what the UI shows
 from .os_guess import guess_os, os_hint
+from .record import THIS_COMPUTER, scan_ended, scan_started
 from .report import make_entry
 from .targets import check_limits, is_ip_literal, is_public_ip, parse_target
 
@@ -64,6 +65,7 @@ class ScanRequest:
     interactive: bool = False
     engine: str = DEFAULT_ENGINE  # a name in engines.ENGINES (step N1)
     nmap_options: NmapOptions = NmapOptions()  # nmap's choices, for --engine nmap (step N4)
+    source: str = THIS_COMPUTER  # where the request came from: another computer's address (HS3)
 
 
 @dataclass(frozen=True)
@@ -322,25 +324,49 @@ def scan_target(target: str, request: ScanRequest, intel: Intel, view: ScanView,
                     engine.name)
 
 
-def run_scan(request: ScanRequest, keys: Mapping[str, str], start_time: float,
-             view: ScanView, stop: threading.Event | None = None) -> int:
-    """Scan every target, show the summary, export (asked, or ``--export``); the exit code:
-    1 when the engine could not scan a target (the others are still scanned), else 0.
-    ScanStopped once ``stop`` is set (``scan_target``), with no summary and no file."""
-    intel = Intel(keys, request.use_ai, stop=stop)
-    view.engine_notice(describe(request.engine, request.nmap_options))
-    view.lookups_notice(online_plan(request, keys))
-
+def _scan_all(request: ScanRequest, intel: Intel, view: ScanView,
+              stop: threading.Event | None) -> tuple[list[ReportEntry], int]:
+    """Every target scanned (``scan_target``): the entries, and how many targets the engine
+    could not scan (the others are still scanned)."""
     entries: list[ReportEntry] = []
-    code = 0
+    failed = 0
     for target in request.targets:
         try:
             entries.extend(scan_target(target, request, intel, view, stop))
         except (NmapMissing, NmapFailed) as error:
             view.scan_failed(target, str(error))
-            code = 1
+            failed += 1
         view.target_done()
     check_stop(stop)
+    return entries, failed
+
+
+def run_scan(request: ScanRequest, keys: Mapping[str, str], start_time: float,
+             view: ScanView, stop: threading.Event | None = None) -> int:
+    """Scan every target, show the summary, export (asked, or ``--export``); the exit code:
+    1 when the engine could not scan a target (the others are still scanned), else 0.
+    ScanStopped once ``stop`` is set (``scan_target``), with no summary and no file. The log
+    gets a line when the scan starts and one when its scanning ends, before the summary and the
+    export (``record``, HS3)."""
+    plan = online_plan(request, keys)
+    scan_id = scan_started(request.source, request.target_text, request.targets, request.ports,
+                           request.protocols, request.engine,
+                           {"nvd": plan.nvd, "ai": plan.ai, "abuseipdb": plan.abuseipdb})
+    began, outcome = time.monotonic(), "failed"
+    entries: list[ReportEntry] = []
+    engine_failed = 0
+    try:
+        intel = Intel(keys, request.use_ai, stop=stop)
+        view.engine_notice(describe(request.engine, request.nmap_options))
+        view.lookups_notice(plan)
+        entries, engine_failed = _scan_all(request, intel, view, stop)
+        outcome = "done"
+    except (ScanStopped, KeyboardInterrupt):
+        outcome = "stopped"
+        raise
+    finally:
+        scan_ended(scan_id, outcome, len(entries), engine_failed, time.monotonic() - began)
+    code = 1 if engine_failed else 0
 
     failed =[f"{e['port']}/{e['protocol']} {error}" for e in entries
               for error in e["lookup_errors"]]
