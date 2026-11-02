@@ -6,9 +6,10 @@ The scan contract holds as on the command line, and is stricter in one place: no
 is sent, not even a DNS query for a host name, before the request says the user is
 authorised to scan the target (``authorized``); then the choices are checked (no network),
 then the engine (nmap's own ``--version``, on this computer), then the target is resolved
-and the limits checked; a refusal is a 400 at once. AbuseIPDB and the AI explanation are
-opt-in and refused without their key; a private address never goes to AbuseIPDB (the core
-scan's rule); the keys never leave the server. Nothing is asked during the scan: the form
+and the limits checked; a refusal is a 400 at once. NVD, AbuseIPDB and the AI explanation
+are on by default, each with its switch, and the last two only with their key (HS4b, RD5: a
+service without its key is off and the answer says why, never a refusal); a private address
+never goes to AbuseIPDB (the core scan's rule); the keys never leave the server. Nothing is asked during the scan: the form
 answered everything. The last finished scan stays in the session (never saved, 4a); a
 cancelled one keeps nothing.
 """
@@ -83,8 +84,9 @@ class ScanChoices:
     timing: str = ""  # "" is nmap's default timing
     scripts: bool = False  # the toolkit's allowed scripts (nmap's "safe" set of the CLI)
     os_detect: bool = False
-    abuseipdb: bool = False  # public addresses only, with ABUSEIPDB_API_KEY
-    ai: bool = False  # the software names only, with OPENROUTER_API_KEY
+    nvd: bool = True  # the CVE lookups: the software name and version only (HS4b)
+    abuseipdb: bool = True  # public addresses only, and only with ABUSEIPDB_API_KEY
+    ai: bool = True  # the software names only, and only with OPENROUTER_API_KEY
     scan_unresponsive: bool = False
     authorized: bool = False  # the user confirmed being authorised to scan the target
 
@@ -137,8 +139,7 @@ def _refuse(message: str, code: str = BAD_REQUEST) -> ServiceError:
     return ServiceError(message, code)
 
 
-def _checked(choices: ScanChoices, keys: Mapping[str, str]) -> tuple[list[int], list[str],
-                                                                     NmapOptions]:
+def _checked(choices: ScanChoices) -> tuple[list[int], list[str], NmapOptions]:
     """The ports, the protocols and nmap's options from the choices, checked without any
     network; a ServiceError (400) for a bad or a refused one."""
     if choices.protocol not in PROTOCOLS:
@@ -158,10 +159,6 @@ def _checked(choices: ScanChoices, keys: Mapping[str, str]) -> tuple[list[int], 
         raise _refuse(f"'service_detection' must be one of {', '.join(INTENSITIES)}.")
     if choices.timing and choices.timing not in TIMINGS:
         raise _refuse(f"'timing' must be one of {', '.join(TIMINGS)}.")
-    for wanted, name, what in ((choices.ai, "openrouter", "an AI explanation"),
-                               (choices.abuseipdb, "abuseipdb", "a reputation check")):
-        if wanted and not keys.get(name):
-            raise _refuse(f"No {KEY_VARIABLES[name]} is set on the server, so no {what}.")
     defaults = NmapOptions()
     options = NmapOptions(choices.service_detection or defaults.service_detection,
                           choices.timing or defaults.timing,
@@ -199,7 +196,7 @@ def start_scan(ws: Workspace, choices: ScanChoices, runner: JobRunner,
     lock and a lease are held until the job ends."""
     require_authorized(choices)
     keys = load_api_keys()
-    ports, protocols, options = _checked(choices, keys)
+    ports, protocols, options = _checked(choices)
     if not ws.scanning.acquire(blocking=False):
         raise _refuse("A scan is already running in this session. Wait for it to finish or "
                       "cancel it.", BUSY)
@@ -215,9 +212,11 @@ def start_scan(ws: Workspace, choices: ScanChoices, runner: JobRunner,
         view = WebScan(job)
         targets = _targets(choices.target.strip(), ports, protocols, limits, view)
         request = ScanRequest(
-            choices.target.strip(), targets, ports, protocols, verbose=True, use_ai=choices.ai,
-            abuseipdb=choices.abuseipdb, scan_unresponsive=choices.scan_unresponsive,
-            engine=choices.engine, nmap_options=options, source=origin.source)
+            choices.target.strip(), targets, ports, protocols, verbose=True,
+            use_ai=choices.ai and bool(keys.get("openrouter")),
+            abuseipdb=choices.abuseipdb and bool(keys.get("abuseipdb")), nvd=choices.nvd,
+            scan_unresponsive=choices.scan_unresponsive, engine=choices.engine,
+            nmap_options=options, source=origin.source, from_page=True)
         view.hosts = len(targets)
     except BaseException:
         ws.scanning.release()

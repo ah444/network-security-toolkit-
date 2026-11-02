@@ -65,12 +65,6 @@ def test_nmaps_choices_are_sent_only_with_nmap(modules):
         assert request.index(field + ":") > request.index('if (body.engine === "nmap")'), field
 
 
-def test_choices_without_their_key_are_off(page, modules):
-    for box in ("scanAbuse", "scanAi"):
-        assert re.search(rf'id="{box}" aria-describedby="{box}Note"', page)
-    assert 'byId(box).disabled = !options.keys[key]' in modules["scan.js"]
-
-
 def test_the_log_is_asked_for_from_its_last_line(page, modules):
     assert 'getJSON(jobUrl, { since: logSize })' in modules["scanrun.js"]
     assert ('<ol id="scanLog" class="scan-log" tabindex="0" role="log" aria-live="off" '

@@ -38,12 +38,20 @@ function fillOptions() {
   byId("nmapRawNote").textContent = choices.raw_packets_note;
   show(byId("nmapRawNote"), !choices.udp_and_os_detection);
   byId("nmapVersionNote").textContent = choices.version_scripts_note;
+  // On by default (HS4b, RD5); without its key a service is off and its switch can't be
+  // turned on until the key is in .env and the page is loaded again
   for (const [box, note, key, variable] of [["scanAbuse", "scanAbuseNote", "abuseipdb", "ABUSEIPDB_API_KEY"],
                                             ["scanAi", "scanAiNote", "openrouter", "OPENROUTER_API_KEY"]]) {
     byId(box).disabled = !options.keys[key];
-    byId(note).textContent = options.keys[key] ? "" : "Off: no " + variable + " is set on the server.";
+    byId(box).checked = options.keys[key];
+    byId(note).textContent = options.keys[key] ? "" :
+      "No API key: add " + variable + " to .env, then refresh this page.";
     show(byId(note), !options.keys[key]);
   }
+  // NVD needs no key: without one it is asked more slowly
+  byId("scanNvdNote").textContent = options.keys.nvd ? "" :
+    "No NVD_API_KEY: NVD is asked more slowly. To go faster, add it to .env, then refresh this page.";
+  show(byId("scanNvdNote"), !options.keys.nvd);
   engineChanged();
 }
 
@@ -93,6 +101,7 @@ function request() {
     protocol: choice("protocol"),
     engine: choice("engine"),
     scan_unresponsive: byId("scanUnresponsive").checked,
+    nvd: byId("scanNvd").checked,
     abuseipdb: byId("scanAbuse").checked,
     ai: byId("scanAi").checked,
     authorized: byId("scanAuthorized").checked,

@@ -67,6 +67,7 @@ class ScanRequest:
     nmap_options: NmapOptions = NmapOptions()  # nmap's choices, for --engine nmap (step N4)
     source: str = THIS_COMPUTER  # where the request came from: another computer's address (HS3)
     nvd: bool = True  # the CVE lookups (HS4: on unless turned off)
+    from_page: bool = False  # the choices are the web page's switches (HS4b), not flags
 
 
 @dataclass(frozen=True)
@@ -79,8 +80,11 @@ class OnlinePlan:
 
 
 def _turned_off(request: ScanRequest, flag: str) -> str:
-    """Why a service with its key is off: the answer no, or its ``--no-`` flag (HS4)."""
-    return "off: you said no" if request.interactive else f"off: turned off ({flag})"
+    """Why a service with its key is off: the answer no, its switch on the web page, or its
+    ``--no-`` flag (HS4)."""
+    if request.interactive:
+        return "off: you said no"
+    return "off: turned off on the page" if request.from_page else f"off: turned off ({flag})"
 
 
 def _ai_plan(request: ScanRequest, keys: Mapping[str, str]) -> str:

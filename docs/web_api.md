@@ -65,7 +65,7 @@ the network").
 | GET | `/api/v1/workspace` | none | what the session holds, to resume after a reload (see below) |
 | DELETE | `/api/v1/workspace` | none | the session's dataset, models and last scan are forgotten (409 `BUSY` while a training or a scan runs) |
 | GET | `/api/v1/scan/options` | none | the scan engines (nmap: whether it can run here), the choices, the limits, whether each API key is set (see Port scan) |
-| POST | `/api/v1/jobs/scan` | `authorized`, `target`, `ports`, `protocol`, `engine`, nmap's choices, `abuseipdb`, `ai`, `scan_unresponsive` | **202** and the scan's job (see Port scan) |
+| POST | `/api/v1/jobs/scan` | `authorized`, `target`, `ports`, `protocol`, `engine`, nmap's choices, `nvd`, `abuseipdb`, `ai`, `scan_unresponsive` | **202** and the scan's job (see Port scan) |
 | GET | `/api/v1/scan` | none | the session's scan still queued or running, and its last finished one |
 | POST | `/api/v1/unlock` | `token` | another computer's session unlocked, when `--host` opened the toolkit to the network (see Opened to the network) |
 | POST | `/api/v1/access/token` | none | this computer only: a new access token, printed in the terminal; every other computer is locked out and its waiting jobs are cancelled (see Opened to the network) |
@@ -232,8 +232,9 @@ queued):
    `1-1024`); `engine` is `builtin` (default) or `nmap`; nmap's choices only with nmap:
    `service_detection` (`light`, `normal`, `all`), `timing` (`polite`, `normal`,
    `aggressive`), `scripts` (`true`: the toolkit's allowed scripts, as `--scripts safe`),
-   `os_detect`. `abuseipdb` and `ai` are refused when their key is not set on the server.
-   Every yes/no value is JSON's `true` or `false`.
+   `os_detect`. `nvd`, `abuseipdb` and `ai` are `true` by default (RD5); `abuseipdb` and
+   `ai` without their key on the server are off, not refused, and `online` says why
+   (`off: no ABUSEIPDB_API_KEY`). Every yes/no value is JSON's `true` or `false`.
 3. One scan at a time in a session (`BUSY`, 409).
 4. The engine (`ENGINE_UNAVAILABLE`): nmap installed, and raw packets for UDP or OS
    detection. The message never names this computer's folders.
@@ -252,9 +253,12 @@ more packets, no more lookups; it keeps nothing. After `TOOLKIT_SCAN_MAX_MIN` mi
 same setting is nmap's time for one host).
 
 **What goes online:** as on the command line: NVD gets the software name and version
-only; the AI explanation (OpenRouter) the same, only with `"ai": true`; AbuseIPDB a public
-target address only, with `"abuseipdb": true`, never a private one. The API keys stay on
-the server: `GET /api/v1/scan/options` says only whether each is set.
+only; the AI explanation (OpenRouter) the same, with its key; AbuseIPDB a public target
+address only, with its key, never a private one. Each is on unless its field is `false`
+(`online` then says `off: turned off on the page`). A service that fails during the scan is
+not asked again in it: `summary.unavailable` names it and why (`{"NVD": "no connection"}`)
+and its ports are `NOT CHECKED`. The API keys stay on the server:
+`GET /api/v1/scan/options` says only whether each is set.
 
 **The answer** (the job's `result`, and `last` in `GET /api/v1/scan`):
 
@@ -265,7 +269,7 @@ the server: `GET /api/v1/scan/options` says only whether each is set.
  "hosts": [{"target": "10.0.0.5", "state": "scanned", "os": "Linux (...)"}],
  "reputation": {}, "entries": [{"port": 22, "protocol": "tcp", "software": "OpenSSH 8.9", ...}],
  "summary": {"targets": 1, "open_ports": 2, "failed_lookups": [], "seconds": 4.2,
-             "sent": {"NVD": 2, "AI (OpenRouter)": 0, "AbuseIPDB": 0}},
+             "sent": {"NVD": 2, "AI (OpenRouter)": 0, "AbuseIPDB": 0}, "unavailable": {}},
  "failed_targets": []}
 ```
 

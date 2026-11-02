@@ -39,6 +39,7 @@ UNIT = (
     "test_warnings.py",
     "web/test_css.py",
     "web/test_scan_service.py",
+    "web/test_scan_switches.py",
     "web/test_schemas.py",
     "web/test_steps.py",
     "web/test_templates.py",

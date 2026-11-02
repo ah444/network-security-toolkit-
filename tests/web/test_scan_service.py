@@ -77,8 +77,6 @@ def test_the_authorization_is_checked_first(net, runner):
     ({"scripts": True}, "choose the nmap engine"),
     ({"engine": "nmap", "service_detection": "max"}, "'service_detection' must be one of"),
     ({"engine": "nmap", "timing": "insane"}, "'timing' must be one of"),
-    ({"ai": True}, "No OPENROUTER_API_KEY is set on the server"),
-    ({"abuseipdb": True}, "No ABUSEIPDB_API_KEY is set on the server"),
 ])
 def test_bad_choices_are_refused_before_any_network(net, runner, options, words):
     refused = _refused(Workspace(), _choices("scanme.example", **options), runner)

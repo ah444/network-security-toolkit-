@@ -96,8 +96,8 @@ def fake_network(monkeypatch):
     monkeypatch.setitem(engines.ENGINES, "builtin", FakeEngine)
     monkeypatch.setattr(core_scan, "ping_host", ping)
     monkeypatch.setattr(core_scan, "Intel", lambda keys, use_ai=False, stop=None, nvd=True:
-                        real_intel(keys, use_ai, stop=stop,
-                                   providers=[FakeCves(rec), FakeReputation(rec)]))
+                        real_intel(keys, use_ai, stop=stop, providers=[
+                            *([FakeCves(rec)] if nvd else []), FakeReputation(rec)]))
     monkeypatch.setattr(targets, "first_address", resolve)
     monkeypatch.setattr(scan, "engine_problem", engine_problem)
     monkeypatch.setattr(scan, "load_api_keys", lambda: dict(rec.keys))

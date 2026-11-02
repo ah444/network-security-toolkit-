@@ -14,7 +14,7 @@ const HOST_STATES = { scanned: "scanned", skipped: "skipped: it didn't answer pi
                       failed: "the engine couldn't scan it" };
 
 // "cvss-" + the level: the card's edge and the level's colour (app.css); the word is always
-// written too, so the level never rests on the colour alone
+// written too, so the level never rests on the colour alone. NOT CHECKED has UNKNOWN's
 function severityClass(severity) {
   return "cvss-" + (SEVERITY_CLASS[severity] || "unknown");
 }
@@ -36,6 +36,17 @@ function sentText(sent) {
   return names.map(name => name + " " + sent[name]).join(", ");
 }
 
+// The services that failed during the scan and were not asked again, and why (HS4b, RD5)
+function unavailableText(unavailable) {
+  return Object.entries(unavailable).map(([name, why]) => name + ": unavailable, " + why)
+    .join("; ");
+}
+
+// A port whose CVEs were not looked up (NVD off, failed or unavailable): never shown as clean
+function notChecked(entry) {
+  return entry.severity === "NOT CHECKED";
+}
+
 function summary(answer) {
   const totals = answer.summary;
   const online = answer.online;
@@ -51,6 +62,8 @@ function summary(answer) {
       statTile("Sent online", sentText(totals.sent) || "nothing"),
       statTile("Failed lookups", String(totals.failed_lookups.length),
                totals.failed_lookups.join("; ") || null),
+      Object.keys(totals.unavailable || {}).length > 0 ?
+        statTile("Unavailable", unavailableText(totals.unavailable)) : null,
     ],
     foot: online && "What could go online: NVD " + online.nvd + "; AI " + online.ai +
       "; AbuseIPDB " + online.abuseipdb + ".",
@@ -76,7 +89,7 @@ function detail(label, value) {
 function cveList(entry) {
   const cves = entry.cves;
   if (cves.length === 0) {
-    return entry.software ? "none found" : null;
+    return !entry.software ? null : notChecked(entry) ? "not checked" : "none found";
   }
   return el("ul", { class: "cve-list" },
     cves.slice(0, CVES_SHOWN).map(cve => el("li", {}, el("span", { class: "mono" }, cve.id),
@@ -95,7 +108,7 @@ function portCard(entry, manyHosts) {
          entry.protocol),
       " ", entry.service, " · ", software, " · ",
       el("span", { class: "cvss-level " + level }, entry.software ? severityText(entry) : "no lookup"),
-      entry.software && " · " + plural(entry.cves.length, "CVE")),
+      entry.software && !notChecked(entry) && " · " + plural(entry.cves.length, "CVE")),
     el("dl", { class: "port-details" },
       detail("Banner", entry.banner && code(entry.banner)),
       detail("CPE (nmap)", entry.cpe.length > 0 && code(entry.cpe.join(" "))),

@@ -125,7 +125,6 @@ def test_a_session_can_scan_again_as_soon_as_it_sees_the_end(client, net):
     ({**BODY, "engine": "nmap"}, "ENGINE_UNAVAILABLE"),
     ({**BODY, "target": "10.0.0.0/16"}, "SCAN_LIMIT"),
     ({**BODY, "ports": "1-99999"}, "BAD_REQUEST"),
-    ({**BODY, "ai": True}, "BAD_REQUEST"),
 ])
 def test_refusals_answer_at_once(client, net, body, code):
     response = client.post(SCAN_URL, json=body)

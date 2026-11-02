@@ -70,11 +70,12 @@
         <fieldset class="form-group choice-group">
           <legend class="label">Hosts and online lookups</legend>
           <label class="choice"><input type="checkbox" id="scanUnresponsive"> Scan hosts that don't answer ping</label>
-          <p class="field-hint">CVE lookups (NVD) always get the detected software name and version only, never the banner or the address.</p>
-          <label class="choice"><input type="checkbox" id="scanAbuse" aria-describedby="scanAbuseNote"> Check public addresses with AbuseIPDB (never a private one)</label>
-          <p id="scanAbuseNote" class="field-hint"></p>
-          <label class="choice"><input type="checkbox" id="scanAi" aria-describedby="scanAiNote"> Explain each software's CVEs with AI (OpenRouter: the name and version only; may be wrong)</label>
-          <p id="scanAiNote" class="field-hint"></p>
+          <label class="choice"><input type="checkbox" id="scanNvd" checked aria-describedby="scanNvdNote"> Look up the known CVEs in NVD (the detected software name and version only, never the banner or the address)</label>
+          <p id="scanNvdNote" class="field-hint" hidden></p>
+          <label class="choice"><input type="checkbox" id="scanAbuse" checked aria-describedby="scanAbuseNote"> Check public addresses with AbuseIPDB (never a private one)</label>
+          <p id="scanAbuseNote" class="field-hint" hidden></p>
+          <label class="choice"><input type="checkbox" id="scanAi" checked aria-describedby="scanAiNote"> Explain each software's CVEs with AI (OpenRouter: the name and version only; may be wrong)</label>
+          <p id="scanAiNote" class="field-hint" hidden></p>
         </fieldset>
         <p id="publicTargetWarning" class="warning-message" hidden>This target is on the internet, not in a private network: make sure you are allowed to scan it.</p>
         <label class="choice authorize"><input type="checkbox" id="scanAuthorized" required> <span id="scanAuthorizedText">I own this target or have written permission to scan it.</span></label>

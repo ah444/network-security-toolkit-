@@ -384,7 +384,10 @@ section 4) and open **Port Scanner** in the menu bar, or `http://127.0.0.1:5000/
    (when it isn't, the nmap choice is greyed out and the page says how to install it). With
    nmap you also choose its service detection, timing, the toolkit's 8 scripts and OS
    detection; the page shows the same note about nmap's own version scripts as section 3.5.
-   AbuseIPDB and the AI explanation can only be ticked when their key is set (section 1).
+   The online lookups, NVD, AbuseIPDB and the AI explanation, are ticked by default; untick
+   one to leave it out of this scan. AbuseIPDB and the AI need their key (section 1): without
+   it the box is greyed out and says "No API key: add ABUSEIPDB_API_KEY to .env, then
+   refresh this page"; once the key is in `.env`, refresh the page (no restart needed).
 2. **Tick the authorization.** It names your target: "I own 192.168.1.10 or have written
    permission to scan it." Changing the target unticks it, so it is asked again for each
    target, and the server refuses a scan without it before sending anything, not even a
@@ -396,7 +399,9 @@ section 4) and open **Port Scanner** in the menu bar, or `http://127.0.0.1:5000/
    is kept from a cancelled scan. One scan runs at a time on the server, and a second one
    waits for it; a scan never waits for a training.
 4. **Read the results.** A summary (the target, the engine, the ports, the time and the
-   requests sent online), each host with its OS guess, and a card per open port. Click a
+   requests sent online; and, when one failed during the scan, the service and why, such
+   as "NVD: unavailable, no connection"), each host with its OS guess, and a card per open
+   port. A port whose CVEs were not looked up says `NOT CHECKED` and "not checked". Click a
    card (or press Enter on it) to open its banner, software, CVEs (the 10 worst, with their
    CVSS scores and how each was found: `version match` or `name match, unconfirmed`), and
    the AI's explanation if you asked for one.
