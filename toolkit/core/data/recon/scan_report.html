@@ -43,7 +43,7 @@
   {%- if report.unavailable %}<p>Unavailable: {{ report.unavailable | join("; ") }}</p>{% endif %}
   {%- if report.first %}
   <h3>Look at these first</h3>
-  <ol>
+  <ol class="first">
     {%- for port in report.first %}
     <li><a href="#{{ port.anchor }}">{{ port.target }} {{ port.port }}/{{ port.protocol }}</a>: {{ port.software }}, <span class="level {{ port.level }}">{{ port.severity }}</span>{% if port.max_cvss is not none %}, highest CVSS {{ port.max_cvss }}{% endif %}{% if port.unconfirmed %} (unconfirmed){% endif %}</li>
     {%- endfor %}
@@ -65,7 +65,7 @@
   {%- if not report.ports_found %}
   <p>No open port was found.</p>
   {%- else %}
-  <div class="table-wrap">
+  <div class="table-wrap" tabindex="0" role="region" aria-label="Open ports">
   <table>
     <thead><tr><th scope="col">Host</th><th scope="col">Port</th><th scope="col">Service</th><th scope="col">Software</th><th scope="col">Severity</th><th scope="col">Highest CVSS</th></tr></thead>
     <tbody>
@@ -91,7 +91,7 @@
   {%- if port.cves %}
   <h3>CVEs</h3>
   <p class="note">Found in NVD during the scan, {{ report.started }}. A version match is a possible match to check, not a confirmed vulnerability; a name match is unconfirmed.</p>
-  <div class="table-wrap">
+  <div class="table-wrap" tabindex="0" role="region" aria-label="CVEs of {{ port.target }} {{ port.port }}/{{ port.protocol }}">
   <table>
     <thead><tr><th scope="col">CVE</th><th scope="col">CVSS</th><th scope="col">Severity</th><th scope="col">How it was found</th></tr></thead>
     <tbody>

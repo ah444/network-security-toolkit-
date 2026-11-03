@@ -178,6 +178,20 @@ def test_the_file_runs_no_script_and_loads_nothing():
     assert shown.style == report_render.stylesheet(), "the CSS is put in as it is"
 
 
+def test_the_tables_and_the_first_ports_work_by_keyboard_and_touch():
+    """Gate 5.4: a table that scrolls sideways takes the focus and is named; the links to the
+    ports to look at first are 44 px high on a screen."""
+    shown = page(entries=[found(22, "CRITICAL", [cve("CVE-2023-38408", 9.8, "CRITICAL")])])
+    boxes = [attrs for tag, attrs in shown.tags if tag == "div" and attrs.get("class") == "table-wrap"]
+    assert len(boxes) == 2, "the open ports and the port's CVEs"
+    assert all(box.get("tabindex") == "0" and box.get("role") == "region" for box in boxes)
+    assert [box.get("aria-label") for box in boxes] == ["Open ports", "CVEs of 10.0.0.5 22/tcp"]
+    css = report_render.stylesheet()
+    assert ".table-wrap:focus-visible" in css
+    assert ".first a { display: inline-flex; align-items: center; min-height: 44px; }" in css
+    assert '<ol class="first">' in report_render.TEMPLATE.read_text(encoding="utf-8")
+
+
 def test_the_template_never_turns_escaping_off():
     template = report_render.TEMPLATE.read_text(encoding="utf-8")
     for unsafe in ("|safe", "| safe", "{% autoescape", "Markup", "{% include", "{% import",

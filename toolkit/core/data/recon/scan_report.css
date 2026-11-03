@@ -22,7 +22,7 @@ h2 { font-size: 1.25rem; margin: 2rem 0 .75rem; padding-bottom: .3rem;
      border-bottom: 1px solid var(--line); }
 h3 { font-size: 1.05rem; margin: 1.25rem 0 .5rem; }
 a { color: var(--link); }
-a:focus-visible { outline: 3px solid var(--link); outline-offset: 2px; }
+a:focus-visible, .table-wrap:focus-visible { outline: 3px solid var(--link); outline-offset: 2px; }
 code { font: .9em/1.4 ui-monospace, Consolas, "Courier New", monospace; }
 .how-to-print, .note { color: var(--muted); }
 .facts { display: grid; grid-template-columns: max-content 1fr; gap: .3rem 1rem; margin: 1rem 0; }
@@ -48,6 +48,9 @@ td:first-child { white-space: nowrap; }  /* a host's address, a CVE id */
 .ai { border-left: 4px solid var(--unchecked); background: var(--panel); padding: .1rem 1rem;
       margin: 1rem 0; }
 footer { margin-top: 3rem; color: var(--muted); font-size: .9em; }
+@media screen {
+  .first a { display: inline-flex; align-items: center; min-height: 44px; }  /* easy to tap */
+}
 @media (max-width: 30rem) {
   .facts { grid-template-columns: 1fr; gap: 0; }
   .facts dd { margin-bottom: .5rem; }
