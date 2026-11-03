@@ -102,7 +102,9 @@ A local-first network security toolkit with optional external intelligence servi
 Everything runs locally; no account or online service is needed for the IDS.
 
 ```bash
-# 1. Open a terminal in the project folder (the folder that contains main.py)
+# 1. Get the code and open a terminal in its folder (the one that contains main.py)
+git clone https://github.com/ah444/network-security-toolkit-.git
+cd network-security-toolkit-
 
 # 2. Create a virtual environment in .venv
 python -m venv .venv

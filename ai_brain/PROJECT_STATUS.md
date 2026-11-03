@@ -2,7 +2,7 @@
 
 What the Network Security Toolkit is and does **now**, as built and tested. What is planned is in [ROADMAP.md](ROADMAP.md); why it is built this way is in [DECISIONS.md](DECISIONS.md) and [REVIEW_DECISIONS.md](REVIEW_DECISIONS.md); the tasks in progress are in [V5.4_CHECKLIST.md](../docs/V5.4_CHECKLIST.md).
 
-**As of:** 2026-11-03, branch `main`. Last release: **5.4** (2026-11-03, [gate record](../docs/release/5.4-gate.md)), the plan's last: the scan history (F6), the scan reports (F5) and the home page's dashboard (F10 with F7). Next: the review's condition (7), HV1, then HV3, and last HV2 (CI) with the push ([ROADMAP.md](ROADMAP.md), section 4). Nothing has been pushed to a remote.
+**As of:** 2026-11-03, branch `main`. Last release: **5.4** (2026-11-03, [gate record](../docs/release/5.4-gate.md)), the plan's last: the scan history (F6), the scan reports (F5) and the home page's dashboard (F10 with F7). Next: the review's condition (7), HV1, then HV3, and last HV2 (CI) with the push ([ROADMAP.md](ROADMAP.md), section 4). Published on GitHub on 2026-11-04, the whole history and the tags: https://github.com/ah444/network-security-toolkit-
 
 Every claim below names how it is known. Where something is only implemented and not verified, it says so.
 
