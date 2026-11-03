@@ -568,6 +568,21 @@ the choice. On a phone, a tablet or a narrow window (768 px wide or less) the li
 Theme button are under **Menu** at the top right (Escape closes it), and the trainer's step
 buttons are one row that scrolls sideways.
 
+The home page shows where things stand on this computer, in two parts side by side (one
+under the other on a phone), and **Refresh** reads them again:
+
+- **Scans and their risks**: the newest scan of each target (among the 50 newest scans),
+  the riskiest first, with a bar of how many targets have each risk and a link to each
+  report; then the 5 newest scans. A risk is the worst severity of the ports looked up:
+  "no lookup" when none was, "NOT CHECKED" when NVD wasn't asked (never shown as clean).
+- **Models and trainings**: the 5 newest saved runs with their selected model and a bar of
+  each one's test macro-F1, and what this browser session holds now: the dataset, a
+  training that runs, the last run, the loaded bundle, the last predictions (kept in the
+  session only, not saved) and a scan.
+
+The two parts are never linked: a scan's open ports don't choose an IDS model. (The picture
+below shows the home page before v5.4.)
+
 ![The web trainer's home page](user-guide/01-home.jpg)
 
 Click **Dynamic Intrusion Detection System** at the top. The trainer has six steps; the

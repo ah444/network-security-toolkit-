@@ -296,9 +296,9 @@ def test_a_big_matrix_has_smaller_cells(css):
     assert compact["font-size"] == "0.8rem"  # 12.8 px: no text under 12 px
 
 
-def test_home_cards_are_1_2_or_4_columns(css):
-    """Four cards: never 3 columns with one card alone on the last row."""
-    assert _top_level(css, ".features-grid")["grid-template-columns"] == "repeat(2, 1fr)"
-    assert _media(css, "max-width: 600px")[".features-grid"]["grid-template-columns"] == "1fr"
-    assert _media(css, "min-width: 1100px")[".features-grid"]["grid-template-columns"] == "repeat(4, 1fr)"
-    assert ".features-grid" not in _media(css, "max-width: 768px")
+def test_the_dashboard_is_one_column_then_two_side_by_side(css):
+    """F10: the scans and the models one under the other, side by side where there is room."""
+    assert _top_level(css, ".dashboard-grid")["grid-template-columns"] == "1fr"
+    assert _media(css, "min-width: 1000px")[".dashboard-grid"]["grid-template-columns"] == \
+        "repeat(2, minmax(0, 1fr))"
+    assert ".features-grid" not in css and ".feature-card" not in css, "the old cards are gone"

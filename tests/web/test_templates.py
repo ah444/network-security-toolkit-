@@ -73,11 +73,11 @@ def test_dynamic_form_labels_are_linked():
 
 
 def test_home_page_describes_signed_bundles(repo_root):
-    """Step 1.3d: export and load are signed bundles; nothing loads PKL files or retrains."""
+    """Step 1.3d: nothing on the home page says PKL files load or a model retrains. (Its cards
+    describing the signed bundles gave way to the dashboard in v5.4 F10b; the trainer's page
+    says it.)"""
     html = (repo_root / TEMPLATES / "home.html").read_text(encoding="utf-8")
     assert "PKL" not in html.upper() and "continue training" not in html
-    assert "signed .bundle file" in html
-    assert "exported by this toolkit on this computer" in html
 
 
 def test_status_messages_are_announced(repo_root):

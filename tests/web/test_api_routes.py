@@ -56,10 +56,10 @@ def test_page_uses_only_api_routes():
     # a run's files and its delete (HR4a); the storage report and a bundle registered (HR4b);
     # a run saved again (HR5a); the importance calculated and a saved run's results (F3e);
     # the saved scans' page: the list, one scan and its delete, and Scan again's scan (F6b);
-    # two scans compared (F6c)
+    # two scans compared (F6c); the home page's dashboard (F10b)
     urls = re.findall(r'(?:getJSON|send|predictWith)\("(/[^"?]*)|\burl: "(/[^"?]*)', all_js())
     urls = [call or part for call, part in urls]
-    assert len(urls) == 39 and all(url.startswith("/api/v1/") for url in urls), urls
+    assert len(urls) == 40 and all(url.startswith("/api/v1/") for url in urls), urls
 
 
 def test_page_sends_every_state_change_with_the_token():

@@ -14,7 +14,7 @@ SCANS_TEMPLATE = REPO_ROOT / "toolkit/web/ui/templates/scans.html"  # the saved 
 # each page's entry module, and the template its element ids are in
 ENTRY_MODULES = {"main.js": TEMPLATE, "scan.js": SCAN_TEMPLATE, "unlock.js": UNLOCK_TEMPLATE,
                  "runs.js": RUNS_TEMPLATE, "othercomputers.js": HOME_TEMPLATE,
-                 "scans.js": SCANS_TEMPLATE}
+                 "scans.js": SCANS_TEMPLATE, "dashboard.js": HOME_TEMPLATE}
 
 
 def found(paths, what):

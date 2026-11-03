@@ -89,8 +89,9 @@ def test_chosen_dark_is_the_system_dark(css):
     """The two copies of the dark tokens are the same, value for value and in order."""
     _, dark, chosen = _token_blocks(css)
     assert list(_declarations(chosen).items()) == list(_declarations(dark).items())
-    # + the scanner's 3 CVSS levels (v5.2 step 2.4e), the charts' 2 marks (v5.3 F2d)
-    assert len(_declarations(dark)) == 22
+    # + the scanner's 3 CVSS levels (v5.2 step 2.4e), the charts' 2 marks (v5.3 F2d), the
+    # dashboard's links (v5.4 F10b)
+    assert len(_declarations(dark)) == 23
 
 
 def test_dark_tokens_change_only_theme_tokens(css):

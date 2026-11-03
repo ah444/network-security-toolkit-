@@ -44,7 +44,7 @@ def test_every_page_links_to_the_scanner(template):
 
 def test_the_home_page_has_the_scanner(client):
     html = client.get("/").get_data(as_text=True)
-    assert "<h2>Port Scanner</h2>" in html and '<a href="/scan" class="custom-btn">' in html
+    assert '<a href="/scan" class="custom-btn">Start a Scan</a>' in html  # the dashboard, F10b
     assert "Only scan systems you own or have written permission to test." in html
 
 

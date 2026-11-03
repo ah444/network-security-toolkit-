@@ -11,6 +11,7 @@ from test_scans_page import _record
 from toolkit.core.data.recon import scan_records
 from toolkit.web.services import dashboard
 from toolkit.web.services.jobs import SCAN, TRAINING
+from web_js import JS_DIR
 from web_jobs import train_and_wait
 
 URL = "/api/v1/dashboard"
@@ -74,6 +75,17 @@ def test_the_runs_and_the_session_after_a_training(client, upload, fixtures_dir)
     assert session["dataset"]["files"] == ["cic_ddos_sample.csv"] and session["dataset"]["rows"]
     assert session["run"] == {"run_id": run_id, "saved": True}
     assert session["training"] is None and session["scan"] is None
+
+
+def test_the_home_page_shows_the_two_parts(client):
+    page = client.get("/").get_data(as_text=True)
+    for part in ('id="scansPart"', 'id="runsPart"', 'id="sessionPart"', 'id="dashboardRefresh"',
+                 "js/dashboard.js", 'href="/dynamic_ids"', 'href="/scan"'):
+        assert part in page, part
+    assert "feature-card" not in page, "the old cards are gone"
+    script = (JS_DIR / "dashboard.js").read_text(encoding="utf-8")
+    assert 'getJSON("/api/v1/dashboard")' in script and "innerHTML" not in script
+    assert "kept in this session only" in script, "the predictions aren't said to be saved"
 
 
 def test_the_session_part_names_what_the_session_holds():

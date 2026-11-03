@@ -27,40 +27,28 @@
   <!-- Page Content -->
   <div class="container container-wide">
     <h1>Welcome to IDS System</h1>
-    
-    <div class="section">
-      <h2>Dynamic IDS Model Trainer</h2>
-      <p>Train and customize your own Intrusion Detection System models with our advanced ML training platform.</p>
-      <div class="features-grid">
-        <div class="feature-card">
-          <h3>Custom Dataset Training</h3>
-          <p>Upload and train models using your own network traffic datasets in CSV or TXT format.</p>
-        </div>
-        <div class="feature-card">
-          <h3>Model Export</h3>
-          <p>Export a run as one signed .bundle file (its models plus how they were made).</p>
-        </div>
-        <div class="feature-card">
-          <h3>Feature Selection</h3>
-          <p>Choose specific features for training and get recommendations for optimal feature sets.</p>
-        </div>
-        <div class="feature-card">
-          <h3>Model Loading</h3>
-          <p>Load a bundle exported by this toolkit on this computer to make predictions; any other file is refused before it is opened.</p>
-        </div>
-      </div>
-      <div class="cta-buttons">
-        <a href="/dynamic_ids" class="custom-btn">Start Training</a>
-      </div>
+    <p class="section-description">Train intrusion detection models on your own traffic data, and scan for open ports and their known CVEs. Only scan systems you own or have written permission to test. Below: where things stand on this computer.</p>
+    <div class="cta-buttons">
+      <a href="/dynamic_ids" class="custom-btn">Start Training</a>
+      <a href="/scan" class="custom-btn">Start a Scan</a>
+      <button type="button" id="dashboardRefresh" class="btn btn-secondary">Refresh</button>
     </div>
+    <div id="dashboardStatus" class="message" role="status"></div>
 
-    <div class="section">
-      <h2>Port Scanner</h2>
-      <p>Scan your own computers and networks for open TCP and UDP ports, the software that answers on them and its known CVEs (from NVD, by version), with the toolkit's own scanner or with nmap when it is installed. Only scan systems you own or have written permission to test.</p>
-      <div class="cta-buttons">
-        <a href="/scan" class="custom-btn">Start a Scan</a>
-      </div>
+    <!-- F10: two parts side by side, never linked: a scan's ports don't choose a model -->
+    <div class="dashboard-grid">
+      <section class="section" aria-labelledby="scansPartTitle">
+        <h2 id="scansPartTitle">Scans and their risks</h2>
+        <div id="scansPart"></div>
+      </section>
+      <section class="section" aria-labelledby="runsPartTitle">
+        <h2 id="runsPartTitle">Models and trainings</h2>
+        <div id="runsPart"></div>
+        <h3>This session</h3>
+        <div id="sessionPart"></div>
+      </section>
     </div>
+    <script type="module" src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
     {% if other_computers %}
 
     <!-- HS1: on this computer only, while the toolkit is open to the network -->

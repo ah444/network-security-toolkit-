@@ -95,6 +95,8 @@
   /* the charts' marks (v5.3 F2d): each >= 3:1 on the cards */
   --chart-cv: var(--indigo-600);
   --chart-test: var(--orange-800);
+  /* a plain link (the dashboard's, v5.4 F10): >= 4.5:1 on the cards in both themes */
+  --link: var(--indigo-600);
   /* names for the result panels (the Upload Dataset card, the scan results): they follow
      the theme tokens they point to, so the dark blocks below need no copy of them */
   --muted: var(--placeholder);
@@ -156,6 +158,7 @@
     --cvss-medium: var(--amber-400);
     --chart-cv: var(--indigo-300);
     --chart-test: var(--orange-300);
+    --link: var(--indigo-300);
   }
 }
 
@@ -183,6 +186,7 @@
   --cvss-medium: var(--amber-400);
   --chart-cv: var(--indigo-300);
   --chart-test: var(--orange-300);
+  --link: var(--indigo-300);
 }
 
 /* ---------- Base ---------- */
@@ -410,38 +414,83 @@ textarea:focus-visible,
   margin-bottom: 1.5rem;
 }
 
-/* Home page */
-/* Four cards: 1 column on phones, 2, then 4 where there is room; never 3 with one card
-   alone (v5.2 step 2.2b) */
-.features-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1.5rem;
-  margin: 2rem 0;
-}
-
-@media (min-width: 1100px) {
-  .features-grid {
-    grid-template-columns: repeat(4, 1fr);
-  }
-}
-
-.feature-card {
-  background: var(--surface);
-  padding: 1.5rem;
-  border-radius: 10px;
-  box-shadow: var(--shadow-card);
-  transition: transform 0.3s ease;
-}
-
-.feature-card:hover {
-  transform: translateY(-5px);
-}
-
+/* Home page: the dashboard (v5.4 F10), two parts one under the other, side by side where
+   there is room; a list item's left edge has its risk's colour (the .cvss-* levels) */
 .cta-buttons {
   display: flex;
   gap: 1rem;
+  margin: 1.5rem 0;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem;
   margin-top: 1.5rem;
+}
+
+@media (min-width: 1000px) {
+  .dashboard-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.dash-list {
+  list-style: none;
+  display: grid;
+  gap: 0.5rem;
+  margin: 0.5rem 0 1rem;
+}
+
+.dash-item {
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--cvss-colour, var(--border));
+  border-radius: var(--radius);
+  padding: 0.5rem 0.75rem;
+  background: var(--surface-inset);
+  overflow-wrap: anywhere;
+}
+
+.dash-meta {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.dashboard-grid a {
+  color: var(--link);
+}
+
+.dash-bars {
+  display: grid;
+  grid-template-columns: max-content minmax(3rem, 1fr) max-content;
+  gap: 0.35rem 0.75rem;
+  align-items: center;
+  margin: 0.75rem 0 1rem;
+}
+
+.dash-bar {
+  width: 100%;
+  height: 10px;
+  border: none;
+  border-radius: 5px;
+  background: var(--list-border);
+}
+
+.dash-bar::-webkit-meter-bar {
+  height: 10px;
+  border: none;
+  border-radius: 5px;
+  background: var(--list-border);
+}
+
+.dash-bar::-webkit-meter-optimum-value {
+  border-radius: 5px;
+  background: var(--accent);
+}
+
+.dash-bar::-moz-meter-bar {
+  border-radius: 5px;
+  background: var(--accent);
 }
 
 /* ---------- Steps (v5.1 step 1.3c): one shown at a time ---------- */
@@ -1740,14 +1789,6 @@ textarea:focus-visible,
 
   .section {
     padding: 1rem 0.5rem;
-  }
-
-  .feature-card {
-    padding: 1rem;
-  }
-
-  .features-grid {
-    grid-template-columns: 1fr;
   }
 
   /* the dropzone: the icon and the title on one row, the chips under both */
