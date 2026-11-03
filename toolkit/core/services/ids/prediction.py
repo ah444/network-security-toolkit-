@@ -15,6 +15,7 @@ from ...data.files import read_text, write_new_text
 from .batch import prediction_csv, prediction_summary, prediction_table
 from .bundle import Bundle
 from .datasets import load_dataset
+from .explanation import why
 
 
 def label_column(bundle: Bundle) -> str | None:
@@ -33,7 +34,8 @@ def model_order(bundle: Bundle) -> list[str]:
 
 def predict_values(bundle: Bundle, values: Mapping[str, Any],
                    model: str | None = None) -> dict[str, Any]:
-    """One row of feature values (text or numbers) -> {prediction, confidence, top}."""
+    """One row of feature values (text or numbers) -> {prediction, confidence, top, why}:
+    ``why`` as the web API gives it (F3f)."""
     fitted = bundle.model(model)
     row = fitted.input_frame(values)
     proba = fitted.predict_proba(row)
@@ -43,6 +45,7 @@ def predict_values(bundle: Bundle, values: Mapping[str, Any],
         order = np.argsort(proba[0])[::-1][:5]
         result["confidence"] = float(proba[0].max())
         result["top"] = [[fitted.classes[i], float(proba[0][i])] for i in order]
+    result["why"] = why(fitted, row, bundle.run.get("training"))
     return result
 
 

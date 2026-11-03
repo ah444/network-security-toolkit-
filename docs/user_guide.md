@@ -759,6 +759,23 @@ use the export of section 4.
    Features: 41
 ```
 
+Since version 5.3 the card ends with what the models rely on, when it was calculated in
+the web trainer (section 4.5; the CLI only reads it): the 5 columns with the biggest drop of
+each model, and the warning when one column carries more than half of the effect. For
+example, on the CIC-IDS2017 sample (a sample number, not a result):
+
+```
+   What the models rely on (the drop in test macro-F1 when a feature's values are shuffled; a diagnosis, not causes):
+   Random Forest:
+      Fwd IAT Std                  0.0234 ± 0.0082
+      Average Packet Size          0.0000 ± 0.0000
+      ...
+      ⚠️  Fwd IAT Std carries more than half of the effect: check that it is not a copy of the label.
+      Support Vector Machine (linear): not calculated
+```
+
+Otherwise it says "not calculated" and where to calculate it.
+
 **Interactively:** choose an export and a model, then predict. Option 2 takes a real row
 from the model's test split. The list of 38 examples is shortened here:
 
@@ -915,6 +932,21 @@ are `guess_passwd` and `smurf`: the first is predicted wrongly, as `normal`.
  }
 ]
 ```
+
+Since version 5.3 each result also has `why`: the values that pushed the model toward the
+predicted class and away from it, as the web API gives it ([web_api.md](web_api.md),
+"Explanations"). An interactive prediction shows its top 3 reasons under the probabilities,
+an approximation, not causes:
+
+```
+   💡 Why: what pushed it toward DDoS (an approximation, not causes; --json gives every reason):
+      - Fwd IAT Std = 3421993.623 (typical 7698.2715): +0.380
+      - Avg Bwd Segment Size = 0.0 (typical 72.0): +0.270
+      - Bwd Packet Length Max = 0.0 (typical 72.0): +0.270
+```
+
+A model without probabilities (the linear SVM) says it can't say why; a row whose values are
+all typical says nothing pushed it.
 
 `--model` chooses a model of the bundle (default: its best). The exit codes, for scripts,
 are in [reference.md, section 6](reference.md#6-exit-codes).

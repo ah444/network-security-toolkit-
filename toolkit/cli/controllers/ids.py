@@ -29,6 +29,7 @@ import sys
 import warnings
 from collections.abc import Sequence
 from pathlib import Path
+from typing import Any
 
 from ...core.services.ids.bundle import Bundle, BundleError, BundleVersionWarning
 from ...core.services.ids.comparison import NotARun, compare_saved, saved_runs
@@ -36,6 +37,7 @@ from ...core.services.ids.datasets import DatasetError
 from ...core.services.ids.exports import EXPORTED, BundleStore
 from ...core.services.ids.registration import register_bundle
 from ...core.services.ids.run_removal import not_removed, remove_run, run_files
+from ...core.services.ids.saved_importance import NotAnImportance, saved_importances
 from ...core.services.storage import NoSpace, storage_report
 from ...core.services.ids.prediction import (
     json_rows,
@@ -167,10 +169,19 @@ def run_json(bundle: Bundle, text: str, model: str | None = None) -> int:
     return 0
 
 
+def saved_results(bundle: Bundle) -> dict[str, Any]:
+    """What the bundle's models rely on, as saved by the web trainer (F3f; read only): none
+    for a run id no result file can be named after (an older bundle's)."""
+    try:
+        return saved_importances(bundle.run_id)
+    except NotAnImportance:
+        return {"importances": [], "left_out": 0}
+
+
 def interactive(bundle: Bundle, model: str | None = None) -> int:
     """The menu: the model card, the model to use, then predictions until Exit. A bad value, a
     missing file or a result file that already exists is shown and the menu goes on."""
-    screen.card(bundle)
+    screen.card(bundle, saved_results(bundle))
     model = screen.choose_model(bundle, model or bundle.selected)
     screen.ready(model)
     while True:
@@ -265,7 +276,7 @@ def main(argv: Sequence[str] | None = None, prog: str | None = None) -> int:
             raise ValueError(f"Unknown model {args.model!r}; this bundle has "
                              f"{', '.join(bundle.models)}")
         if args.info:
-            screen.card(bundle)
+            screen.card(bundle, saved_results(bundle))
             return 0
         if args.csv:
             return run_csv(bundle, args.csv, args.output, args.model)

@@ -167,8 +167,8 @@ refused).
 | `--model MODEL` | the bundle's best | which model of the bundle |
 | `--csv CSV` | | labels every row of this CSV file |
 | `--output OUTPUT` | `<file>.predictions.csv` | where `--csv` writes (a new file, never overwritten) |
-| `--json JSON` | | rows as JSON (an object or a list, inline or a `.json` file); prints the results as JSON |
-| `--info` | | shows the model card, then exits |
+| `--json JSON` | | rows as JSON (an object or a list, inline or a `.json` file); prints the results as JSON, each with its `why` (see [web_api.md](web_api.md), "Explanations") |
+| `--info` | | shows the model card, with what its models rely on when the web trainer calculated it, then exits |
 
 ```
 python -m toolkit ids --list

@@ -53,7 +53,7 @@ def test_cli_loads_web_export(ids_screen, cli_module, exported):
     assert bundle.trust == "signature"
     assert set(bundle.models) == {"decision_tree", "logistic_regression"}
     assert len(bundle.features) == 14 and set(bundle.classes) == {"BENIGN", "DDoS"}
-    card = ids_screen.model_card(bundle)
+    card = ids_screen.model_card(bundle, {"importances": [], "left_out": 0})
     assert bundle.run_id in card and "cic_ddos_sample.csv" in card
     assert "macro-F1" in card
 
@@ -247,7 +247,8 @@ def test_no_v4_artifacts_remain(repo_root):
 def test_prediction_status_names_normal_traffic(ids_screen, capsys):
     """CIC-IDS2017 calls normal flows BENIGN, NSL-KDD calls them normal (real labels)."""
     def status(label, classes):
-        ids_screen.display_prediction({"prediction": label, "confidence": None, "top": []},
+        ids_screen.display_prediction({"prediction": label, "confidence": None, "top": [],
+                                       "why": None},
                                       classes=classes)
         return next(line for line in capsys.readouterr().out.splitlines() if "Status" in line)
 

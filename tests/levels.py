@@ -149,6 +149,7 @@ INTEGRATION = (
 # The toolkit run as its own process, or a real program of this computer (ping)
 E2E = (
     "cli/test_cli_bundle.py",
+    "cli/test_cli_explain.py",
     "cli/test_main_menu.py",
     "ml/test_legacy_bundle.py",
     "recon/test_ping.py",

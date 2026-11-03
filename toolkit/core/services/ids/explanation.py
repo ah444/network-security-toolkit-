@@ -16,8 +16,9 @@ the medians its pipeline learnt (the numeric imputer), so its categories go unex
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from typing import Any
 
 import numpy as np
@@ -25,6 +26,8 @@ import pandas as pd
 
 from ...data.settings import ExplainConfig
 from .pipeline import FittedModel
+
+log = logging.getLogger(__name__)
 
 NO_PROBABILITIES = "NO_PROBABILITIES"
 TRAINING = "training"  # the typical values recorded from the training split
@@ -115,3 +118,16 @@ def explain(fitted: FittedModel, row: pd.DataFrame, typical: Mapping[str, Any], 
     away = sorted((r for r in reasons if r.effect < 0), key=lambda r: (r.effect, r.feature))
     return Explanation(prediction, float(proba[0][column]), tuple(toward[:config.local_top]),
                        tuple(away[:config.local_top]), without, source)
+
+
+def why(fitted: FittedModel, row: pd.DataFrame,
+        training: Mapping[str, Any] | None) -> dict[str, Any] | None:
+    """``explain`` with the typical values of a record's ``training`` part, as the answer's
+    ``why`` (the web's, F3d, and the CLI's, F3f). None when it fails (logged): the prediction
+    stands without it."""
+    try:
+        typical, source = typical_values(fitted, training)
+        return asdict(explain(fitted, row, typical, source))
+    except Exception:
+        log.exception("Explanation error")
+        return None

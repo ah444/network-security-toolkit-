@@ -55,8 +55,9 @@ def export_line(info: BundleInfo) -> str:
             + f"  ({size_text(info.size)})" + STATE_NOTES.get(info.state, ""))
 
 
-def model_card(bundle: Bundle) -> str:
-    """What the model is and how good it is, from the bundle's TrainingRun record."""
+def model_card(bundle: Bundle, saved: Mapping[str, Any]) -> str:
+    """What the model is and how good it is, from the bundle's TrainingRun record, and what
+    its models rely on when the web trainer calculated it (``saved``, F3f)."""
     run = bundle.run
     dataset = run.get("dataset") or {}
     split = run["split"]
@@ -80,7 +81,33 @@ def model_card(bundle: Bundle) -> str:
     lines.append(f"   Features: {len(bundle.features)}")
     for warning in bundle.warnings:
         lines.append(f"   ⚠️  {warning}")
-    return "\n".join(lines)
+    return "\n".join(lines + relies_on(bundle, saved))
+
+
+def relies_on(bundle: Bundle, saved: Mapping[str, Any]) -> list[str]:
+    """What each model relies on (F3f): the 5 features with the biggest drop of each saved
+    result, the concentration warning (HC2); not calculated otherwise."""
+    results = {result["model"]: result for result in saved["importances"]}
+    if not results:
+        return ["   What the models rely on: not calculated. Calculate it in the web trainer "
+                "(the Train step) right after training."]
+    lines = ["   What the models rely on (the drop in test macro-F1 when a feature's values "
+             "are shuffled; a diagnosis, not causes):"]
+    for model in model_order(bundle):
+        title = MODELS[model].title if model in MODELS else model
+        result = results.get(model)
+        if result is None:
+            lines.append(f"      {title}: not calculated")
+            continue
+        lines.append(f"   {title}:")
+        lines += [f"      {f['feature'][:28]:<28} {f['mean']:.4f} ± {f['std']:.4f}"
+                  for f in result["features"][:5]]
+        if result["concentrated"]:
+            lines.append(f"      ⚠️  {result['concentrated']} carries more than half of the "
+                         "effect: check that it is not a copy of the label.")
+    if saved["left_out"]:
+        lines.append(f"   ⚠️  {saved['left_out']} saved result(s) could not be read: left out.")
+    return lines
 
 
 
@@ -108,7 +135,26 @@ def display_prediction(result: Mapping[str, Any], true_label: str | None = None,
         for cls, prob in result["top"]:
             bar = "█" * int(prob * 20)
             print(f"      {cls[:25]:25} {prob:6.2%} {bar}")
+    print()
+    for line in why_lines(result["why"]):
+        print(line)
     print("=" * 50)
+
+
+def why_lines(why: Mapping[str, Any] | None) -> list[str]:
+    """A prediction's top 3 reasons toward its class (F3f; ``--json`` gives them all)."""
+    if why is None:
+        return ["   💡 Why: no explanation for this prediction (details in the log)."]
+    if why["problem"] == "NO_PROBABILITIES":
+        return ["   💡 Why: this model gives no probabilities, so it can't say why."]
+    label = why["prediction"]
+    lines = [f"   💡 Why: what pushed it toward {label} (an approximation, not causes; "
+             "--json gives every reason):"]
+    lines += [f"      - {r['feature']} = {'missing' if r['value'] is None else r['value']} "
+              f"(typical {r['typical']}): {r['effect']:+.3f}" for r in why["toward"][:3]]
+    if not why["toward"]:
+        lines.append(f"      no value pushed it toward {label} more than its typical value would")
+    return lines
 
 
 def example_name(bundle: Bundle, example: Mapping[str, Any]) -> str:
@@ -265,9 +311,9 @@ def error(problem: Exception) -> None:
     print(f"❌ {problem}")
 
 
-def card(bundle: Bundle) -> None:
-    """Shows the model card."""
-    print(model_card(bundle))
+def card(bundle: Bundle, saved: Mapping[str, Any]) -> None:
+    """Shows the model card, with what its models rely on (``saved``)."""
+    print(model_card(bundle, saved))
 
 
 def goodbye() -> None:
