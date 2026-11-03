@@ -25,6 +25,24 @@ v5.3 started with F2, the full leaderboard ([checklist](docs/V5.3_CHECKLIST.md))
 - **Web API** (F2c): `GET /api/v1/runs`, `/api/v1/runs/<run id>` and
   `/api/v1/runs/compare` ([web_api.md](docs/web_api.md#saved-runs-v53-f2)); a finished
   training's result carries each model's CV scores fold by fold (`folds`).
+- **What the model relies on** (F3) in the trainer's Train step: choose a model and click
+  **Calculate**; each feature's values are shuffled in turn on the test rows (5,000 at most,
+  5 repeats, a fixed seed) and the drop in macro-F1 is drawn for the 15 features with the
+  biggest drop, with a progress bar and **Cancel**. Nothing starts until you click. A yellow
+  note when one feature carries more than half of the effect (check that it is not a copy of
+  the label). The result is saved with the run and shown again on **Saved Runs**
+  ([user guide 4.5](docs/user_guide.md#45-step-5-train)).
+- **Why?** (F3) under a one-row prediction, for the session's model and a loaded bundle: the
+  values that pushed the model toward the predicted class and away from it, each swapped
+  alone for its typical value in the training rows. An approximation, not causes, and the
+  page says so; a model without probabilities (the linear SVM) says it can't say why
+  ([user guide 4.6](docs/user_guide.md#46-step-6-use)). A run's record now keeps each
+  column's typical value (not the rows); an older bundle explains its numbers only.
+- **`toolkit ids --info`** (F3) ends with what the bundle's models rely on, when it was
+  calculated in the trainer; a prediction in the menu shows its top 3 reasons, and `--json`
+  gives every result's `why` ([reference](docs/reference.md#4-ids-intrusion-detection-with-an-export)).
+- **Web API** (F3): `POST /api/v1/jobs/importance`, `GET /api/v1/runs/<run id>/importance`,
+  and `why` in each one-row prediction's answer ([web_api.md](docs/web_api.md#explanations-v53-f3)).
 
 ### Fixed
 - The trainer's leaderboard table had no style of its own (its cells had no padding and
