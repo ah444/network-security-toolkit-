@@ -1,6 +1,7 @@
 """What ``toolkit ids --runs`` and ``--compare`` print (v5.3 F2): the saved runs' TrainingRun
 records, never a model, in the words and numbers of the web page's saved runs (runsview.js).
-``--delete`` (HR4a) names a run's files and asks before anything is removed."""
+``--delete`` (HR4a) names a run's files and asks before anything is removed; ``--storage``
+(HR4b) only shows what is kept, and ``--register`` brings a deleted run back from its bundle."""
 
 from __future__ import annotations
 
@@ -121,6 +122,30 @@ def deleted(run_id: str, count: int | None) -> None:
         print("Nothing deleted.")
     else:
         print(f"✅ Deleted run {run_id}: {count} file(s) removed.")
+
+
+def storage(report: Mapping[str, Any]) -> None:
+    """``--storage``: each kind of file with how many and their size, the total and the free
+    space, then the leftovers by name (an unregistered bundle with how to register it)."""
+    print("What this toolkit keeps on this computer (this only shows: nothing is deleted):")
+    for item in report["kinds"]:
+        if item["count"]:
+            print(f"  {item['title']}: {item['count']} file(s), {file_size(item['bytes'])}")
+    print(f"Total: {file_size(report['total_bytes'])}; {file_size(report['free_bytes'])} free on "
+          "this disk.")
+    for item in report["kinds"]:
+        if item["leftover"] and item["files"]:
+            print(f"⚠️ {item['title']}:")
+            for name in item["files"]:
+                again = (f"  (to bring its run back: python -m toolkit ids --register "
+                         f"{name.removesuffix('.bundle')})"
+                         if item["kind"] == "unregistered_bundles" else "")
+                print(f"  - {name}{again}")
+
+
+def registered(run_id: str) -> None:
+    """After ``--register``: the run is listed again."""
+    print(f"✅ Run {run_id} is a saved run again (its record is back in instance/runs).")
 
 
 def _setting(item: Mapping[str, Any], side: str, titles: Mapping[str, str]) -> str:

@@ -80,6 +80,31 @@ export function fileSize(bytes) {
 
 const KINDS = { importance: "importance result", record: "record" };
 
+// A leftover's name; an unregistered bundle's with the button that registers its run again
+function leftover(kind, name) {
+  const runId = name.replace(/\.bundle$/, "");
+  return el("li", {}, code(name), kind === "unregistered_bundles" && RUN_ID.test(runId) &&
+    el("button", { type: "button", class: "btn btn-sm btn-secondary", "data-register": runId,
+                   "aria-label": "Register run " + runId + " again" }, "Register again"));
+}
+
+// What this toolkit keeps on this computer (GET /api/v1/storage, HR4b): each kind of file with
+// how many and their size, the total and the free space, then the leftovers by name. It only
+// shows: nothing is deleted from here
+export function storageView(report) {
+  const kinds = report.kinds.filter(item => item.count > 0);
+  return [
+    kinds.length === 0 ? el("p", {}, "Nothing saved yet.") :
+      scrollBox("Storage by kind", el("table", { class: "metrics-table" },
+        el("thead", {}, el("tr", {}, ["Kind", "Files", "Size"].map(text => el("th", { scope: "col" }, text)))),
+        el("tbody", {}, kinds.map(item => el("tr", {},
+          el("th", { scope: "row" }, item.title), el("td", {}, String(item.count)), el("td", {}, fileSize(item.bytes))))))),
+    el("p", {}, `Total: ${fileSize(report.total_bytes)}; ${fileSize(report.free_bytes)} free on this disk.`),
+    kinds.filter(item => item.leftover).map(item => [
+      el("h3", {}, item.title), el("ul", {}, item.files.map(name => leftover(item.kind, name)))]),
+  ];
+}
+
 // What deleting a run removes, before the user says yes (GET /api/v1/runs/<id>/files): each
 // file in the order it goes, and its bundle as a box that is not ticked, so it is kept unless
 // the user asks (kept, it stays as an unregistered bundle)

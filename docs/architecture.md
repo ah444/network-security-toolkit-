@@ -72,6 +72,7 @@ no Flask, no argparse. Read by `cli/` and `web/`, it imports neither
 |---|---|---|
 | `toolkit/core/__init__.py` | - | what both tools share (v5.2 step 2.3b): `core/services/` and `core/data/` |
 | `toolkit/core/services/__init__.py` | services | the shared services |
+| `toolkit/core/services/storage.py` | services | the storage report (HR4b): every file of the instance counted once by kind with its size, the leftovers named, the total and the free space; it only reads, and never unpickles a bundle |
 | `toolkit/core/services/ports.py` | services | the four ports: `ModelStore`, `IntelProvider`, `ProgressSink`, `ScanEngine` |
 | `toolkit/core/services/ids/__init__.py` | services | the ML core: no web framework, no `print()`, no network |
 | `toolkit/core/services/ids/datasets.py` | services | a CSV/TXT dataset understood: encoding, separator, profile, header, dtypes, a load report |
@@ -94,6 +95,7 @@ no Flask, no argparse. Read by `cli/` and `web/`, it imports neither
 | `toolkit/core/services/ids/legacy_names.py` | services | the old names (`toolkit.ids_core`, before step 1.5d; `toolkit.services.ids`, until v5.2 step 2.3a), only while a bundle saved with them loads |
 | `toolkit/core/services/ids/exports.py` | services | saves, lists and loads runs and bundles, each bundle with its state (HR3d); `BundleStore` is the `ModelStore` |
 | `toolkit/core/services/ids/run_removal.py` | services | deleting a saved run when the user asks (HR4a): its importance results, then its bundle if asked, its record last, under the run files' lock; a file that can't be removed keeps the record |
+| `toolkit/core/services/ids/registration.py` | services | a kept bundle's run registered again (HR4b): the whole file's signature checked in pieces, then the record copy it carries published as the record, never replacing one |
 | `toolkit/core/services/ids/saved_importance.py` | services | an importance result as a file of its own (HR2): named from checked ids, published once under the run files' lock while the record lists the model, read back as untrusted data |
 | `toolkit/core/services/ids/comparison.py` | services | the saved runs (records only, never a bundle): a run's summary, the view its charts need, whether two runs scored the same test rows, two runs side by side |
 | `toolkit/core/services/ids/batch.py` | services | labels every row of a table: the CLI's `--csv` and the web's "Predict a CSV file" |
@@ -111,6 +113,7 @@ no Flask, no argparse. Read by `cli/` and `web/`, it imports neither
 | `toolkit/core/data/logs.py` | data | one rotating log file per tool, secrets redacted |
 | `toolkit/core/data/keys.py` | data | API keys and the AI model setting, from the environment or `.env` |
 | `toolkit/core/data/files.py` | data | the text files the commands read and write |
+| `toolkit/core/data/disk.py` | data | the instance's files with their sizes, and the disk's free space (HR4b); it only reads |
 | `toolkit/core/data/publish.py` | data | a new file published whole or not at all, never replacing one (HR3a): a record, a bundle |
 | `toolkit/core/data/protect.py` | data | `instance/` and `.env` limited to this account (HS5): on Windows the ACL with `icacls`, elsewhere `chmod` |
 | `toolkit/core/data/ids/__init__.py` | data | the IDS's files |
@@ -525,6 +528,20 @@ names it and why. Ctrl+C stops the scan with exit code 130.
   delete: the record stays, the run is still listed, and the delete can be tried again. An
   importance result computed meanwhile finds no record and is not published. A workspace
   holding the run's export forgets it once its bundle is gone, so Export saves it again.
+- The storage report (HR4b, `toolkit/core/services/storage.py`) counts every file of the
+  instance once, by kind, with its size, then the total and the disk's free space, and names
+  the leftovers: an importance result without its record or for a model the record doesn't
+  list, an unregistered bundle (its run was deleted), an incomplete bundle, a damaged file
+  (or one of a newer version), a temporary file a stop left. It only reads: it deletes
+  nothing, and a bundle's kind comes from its header, never unpickled.
+- An unregistered bundle can be registered again (HR4b,
+  `toolkit/core/services/ids/registration.py`): the bundle carries the copy of its record it
+  was signed with, and records never change. The whole file's HMAC is checked first, read
+  1 MiB at a time (`bundle.signature_matches`), with nothing deserialized; then the copy must
+  be this run's record (its run id, a schema this toolkit understands, the bundle's models
+  among its own); with the file's SHA-256 it is the record as it was, byte for byte
+  (tested). It is published under the one lock of the run files and never replaces a record.
+  A bundle exported before the manifest held its record can't be registered.
 - A bundle's state comes from its header (HR3d, `bundle.header_state`): the format records
   its lengths, so its first bytes and the file's size say whether it is whole, with no HMAC
   and nothing unpickled, and no length is read past the file's size. **Exported**: the

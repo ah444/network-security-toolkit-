@@ -10,7 +10,7 @@ import { installFakeDom } from "./fake_dom.mjs";
 installFakeDom();
 
 const folder = process.argv[2];
-const { comparisonView, deleteView, delta, fileSize, runRow, runView, when } =
+const { comparisonView, deleteView, delta, fileSize, runRow, runView, storageView, when } =
   await import(pathToFileURL(path.join(folder, "runsview.js")).href);
 
 const XSS = "<img src=x onerror=alert(1)>";
@@ -80,4 +80,11 @@ console.log(JSON.stringify({
   deleting_no_bundle: shown(deleteView({ run_id: A, files: [
     { kind: "record", name: `${A}.json`, size: 812 }] })),
   sizes: [0, 812, 1024, 2100, 40749566, 1980268869].map(fileSize),
+  storage: shown(storageView({ total_bytes: 1980270000, free_bytes: 5 * 2 ** 30, kinds: [
+    { kind: "records", title: "Saved runs' records", count: 1, bytes: 812, files: [], leftover: false },
+    { kind: "scans", title: "Scan reports", count: 0, bytes: 0, files: [], leftover: false },
+    { kind: "unregistered_bundles", title: "Bundles whose run was deleted", count: 1, bytes: 1980268869,
+      files: [`${A}.bundle`], leftover: true },
+    { kind: "damaged", title: "Damaged files", count: 1, bytes: 319, files: [XSS], leftover: true }] })),
+  storage_empty: shown(storageView({ total_bytes: 0, free_bytes: 2 ** 30, kinds: [] })),
 }));

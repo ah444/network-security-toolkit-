@@ -38,6 +38,8 @@ TOO_MANY_TRIES = "TOO_MANY_TRIES"  # 429: five wrong tokens from one address in 
 THIS_COMPUTER_ONLY = "THIS_COMPUTER_ONLY"  # 403: a new token, other computers' jobs (HS1)
 # Deleting a saved run (v5.3 step HR4a)
 NOT_REMOVED = "NOT_REMOVED"  # 409: one of its files could not be removed; the run is kept
+# Registering a kept bundle again (v5.3 step HR4b); its refusals are bundle codes
+ALREADY_SAVED = "ALREADY_SAVED"  # 409: the run has a record already (never replaced)
 
 
 

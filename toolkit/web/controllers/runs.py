@@ -2,15 +2,19 @@
 TrainingRun records in ``instance/runs/`` (``toolkit.core.services.ids.comparison``), never a
 bundle, and need no session: a saved run belongs to this install, not to a workspace. A run
 is deleted only when the user asks, after the page named its files (HR4a,
-``toolkit.core.services.ids.run_removal``)."""
+``toolkit.core.services.ids.run_removal``). The storage report only reads; registering a kept
+bundle again adds its record and deletes nothing (HR4b)."""
 
 from __future__ import annotations
 
 from flask import Blueprint, jsonify
 
+from ...core.services.ids.bundle import BundleError
 from ...core.services.ids.comparison import NotARun, compare_saved, saved_run, saved_runs, view
+from ...core.services.ids.registration import register_bundle
 from ...core.services.ids.run_removal import BUNDLE, not_removed, remove_run, run_files
-from ..services.errors import NOT_FOUND, NOT_REMOVED
+from ...core.services.storage import storage_report
+from ..services.errors import ALREADY_SAVED, NOT_FOUND, NOT_REMOVED
 from .api import Answer, error_response, json_body, query
 from .schemas import CompareRequest, DeleteRunRequest, RunsRequest, load
 from .state import state
@@ -18,6 +22,7 @@ from .state import state
 bp = Blueprint("runs", __name__, url_prefix="/api/v1")
 
 NO_SUCH_RUN = "There is no saved run with that id."
+NO_SUCH_BUNDLE = "There is no bundle of that run in instance/bundles."
 
 
 @bp.route("/runs", methods=["GET"])
@@ -72,6 +77,30 @@ def delete(run_id: str) -> Answer:
         return error_response(not_removed(removal), 409, NOT_REMOVED)
     return jsonify({"run_id": run_id, "removed": [item.to_dict() for item in removal.removed],
                     "kept": removal.kept.to_dict() if removal.kept else None})
+
+
+@bp.route("/storage", methods=["GET"])
+def storage() -> Answer:
+    """Every file of the instance by kind, with the leftovers named, the total and the disk's
+    free space. It only reads: nothing is deleted."""
+    return jsonify(storage_report())
+
+
+@bp.route("/bundles/<run_id>/register", methods=["POST"])
+def register(run_id: str) -> Answer:
+    """The record a kept bundle carries published again, once its signature is checked; a
+    record is never replaced."""
+    try:
+        record = register_bundle(run_id)
+    except NotARun as error:
+        return error_response(str(error))
+    except FileNotFoundError:
+        return error_response(NO_SUCH_BUNDLE, 404, NOT_FOUND)
+    except FileExistsError as error:
+        return error_response(str(error), 409, ALREADY_SAVED)
+    except BundleError as error:
+        return error_response(str(error), code=error.code)
+    return jsonify({"run_id": run_id, "record": record.name})
 
 
 @bp.route("/runs/<run_id>", methods=["GET"])

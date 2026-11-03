@@ -11,6 +11,7 @@ core/
                    saved runs compared, what a model relies on and why it predicts
     recon/         the scan, start to end: targets and limits, the scan, lookups, report
     ports.py       the three interfaces between layers: ModelStore, IntelProvider, ProgressSink
+    storage.py     the storage report: every file of the instance by kind (HR4b; only reads)
   data/            files, the network and the environment
     settings.py    every tunable setting and TOOLKIT_* variable, the data folder, .env
     keys.py        API keys and the AI model setting
@@ -18,6 +19,7 @@ core/
     files.py       the text files the commands read and write
     protect.py     instance/ and .env limited to this account (HS5)
     publish.py     a new file published whole or not at all (HR3a)
+    disk.py        the instance's files and sizes, the disk's free space (HR4b)
     ids/           bundle files and the signing key, run records, importance results
                    (HR2), dataset files
     recon/         port checks, banner probes, ping, names to addresses, NVD, OpenRouter,

@@ -206,11 +206,16 @@ def write_run(run: TrainingRun, directory: str | Path | None = None) -> Path:
 def read_run(path: str | Path) -> dict[str, Any]:
     """A TrainingRun record read back: ValueError if it is not one, or if its schema is newer than
     this toolkit understands."""
-    record = read_record(path)
+    return check_record(read_record(path), Path(path).name)
+
+
+def check_record(record: Any, name: str) -> dict[str, Any]:
+    """``record`` if it is a TrainingRun record this toolkit understands; ValueError naming
+    ``name`` otherwise (not one, or a newer schema)."""
     if not isinstance(record, dict) or "schema_version" not in record or "run_id" not in record:
-        raise ValueError(f"{Path(path).name} is not a TrainingRun record")
+        raise ValueError(f"{name} is not a TrainingRun record")
     version = record["schema_version"]
     if not isinstance(version, int) or version > SCHEMA_VERSION:
-        raise ValueError(f"{Path(path).name} uses TrainingRun schema {version}, newer than this "
+        raise ValueError(f"{name} uses TrainingRun schema {version}, newer than this "
                          f"version of the toolkit understands ({SCHEMA_VERSION}); update it")
     return record

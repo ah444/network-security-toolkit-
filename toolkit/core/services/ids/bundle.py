@@ -23,7 +23,7 @@ import io
 import json
 import re
 import warnings
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, cast
@@ -305,6 +305,24 @@ def _manifest(body: bytes) -> dict[str, Any]:
         raise BundleError("NEWER_FORMAT", f"The bundle uses format {version}, newer than this "
                           f"version of the toolkit understands ({FORMAT_VERSION}); update it")
     return manifest
+
+
+def signature_matches(chunks: Iterable[bytes], size: int, key: bytes) -> tuple[bool, str]:
+    """Whether a bundle of ``size`` bytes, given in pieces, is signed with ``key``, and its
+    SHA-256 (HR4b): the HMAC as ``unpack`` checks it, without the whole file in memory and
+    without deserializing anything."""
+    _check_key(key)
+    signed = size - _TAG_BYTES
+    mac, whole = hmac.new(key, digestmod=hashlib.sha256), hashlib.sha256()
+    seen, tag = 0, b""
+    for chunk in chunks:
+        whole.update(chunk)
+        part = chunk[:max(0, signed - seen)]
+        mac.update(part)
+        tag += chunk[len(part):]
+        seen += len(chunk)
+    matches = seen == size and signed >= 0 and hmac.compare_digest(mac.digest(), tag)
+    return matches, whole.hexdigest()
 
 
 def _check_key(key: bytes) -> None:

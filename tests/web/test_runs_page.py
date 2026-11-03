@@ -61,9 +61,12 @@ def test_the_page_reads_the_records_and_only_deletes():
     code = js_sources()["runs.js"] + js_sources()["runsview.js"]
     assert "FormData" not in code
     assert re.findall(r"send\(([^,]+), \"(\w+)\"", code) == [
-        ('"/api/v1/runs/" + encodeURIComponent(runId) + "/delete"', "POST")]
+        ('"/api/v1/bundles/" + encodeURIComponent(runId) + "/register"', "POST"),
+        ('"/api/v1/runs/" + encodeURIComponent(runId) + "/delete"', "POST")], \
+        "and registering a kept bundle's run again (HR4b), which deletes nothing"
     urls = set(re.findall(r'"(/api/v1/[^"]*)"', code))
-    assert urls == {"/api/v1/runs", "/api/v1/runs/", "/api/v1/runs/compare"}
+    assert urls == {"/api/v1/runs", "/api/v1/runs/", "/api/v1/runs/compare", "/api/v1/storage",
+                    "/api/v1/bundles/"}
     assert "encodeURIComponent(runId)" in code
 
 
@@ -121,6 +124,23 @@ def test_the_delete_names_every_file_and_keeps_the_bundle_by_default(rendered):
     assert "can't be undone" in rendered["deleting"][0]["text"]
     assert not any(item["tag"] == "INPUT" for item in rendered["deleting_no_bundle"])
     assert not any(item["tag"] == "IMG" for item in rendered["deleting"]), "text stays text"
+
+
+def test_the_storage_shows_each_kind_and_the_leftovers(rendered):
+    """HR4b: the kinds with files, the total and the free space, the leftovers by name; an
+    unregistered bundle has Register again; no button deletes anything."""
+    rows = [item["text"] for item in rendered["storage"] if item["tag"] == "TR"]
+    assert rows == ["KindFilesSize", "Saved runs' records1812 bytes",
+                    "Bundles whose run was deleted11.8 GB", "Damaged files1319 bytes"]
+    assert "Total: 1.8 GB; 5.0 GB free on this disk." in _texts(rendered["storage"], "P")
+    assert _texts(rendered["storage"], "H3") == ["Bundles whose run was deleted", "Damaged files"]
+    buttons = [item for item in rendered["storage"] if item["tag"] == "BUTTON"]
+    assert [b["text"] for b in buttons] == ["Register again"]
+    assert buttons[0]["attributes"]["data-register"] == "20261030T120509Z-0000000a"
+    assert buttons[0]["attributes"]["aria-label"] == "Register run 20261030T120509Z-0000000a again"
+    assert XSS in _texts(rendered["storage"], "LI") and \
+        not any(item["tag"] == "IMG" for item in rendered["storage"]), "text stays text"
+    assert _texts(rendered["storage_empty"], "P")[0] == "Nothing saved yet."
 
 
 def test_sizes_as_the_cli_writes_them(rendered):
@@ -197,6 +217,9 @@ def test_the_template():
     html = RUNS_TEMPLATE.read_text(encoding="utf-8")
     assert '<meta name="csrf-token" content="{{ csrf_token() }}">' in html, "for the delete"
     for part in ('id="deleteSection" aria-labelledby="deleteTitle" hidden',
+                 'id="storageSection" aria-labelledby="storageTitle"',
+                 'id="storageStatus" class="message" role="status" tabindex="-1"',
+                 "nothing is ever deleted on its own",
                  'id="deleteTitle" tabindex="-1"', 'id="deleteConfirm" class="btn btn-danger"',
                  'id="deleteCancel" class="btn btn-secondary"'):
         assert part in html, part

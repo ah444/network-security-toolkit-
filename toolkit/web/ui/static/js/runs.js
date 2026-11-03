@@ -2,11 +2,12 @@
 // trainer, 50 at a time and newest first (GET /api/v1/runs), one of them with its charts, or
 // two compared. It reads the runs' records only: nothing is uploaded or trained, and no model
 // is loaded. A run's id after the # (the trainer's export links to it) shows that run. Its one
-// change: a run is deleted when the user asks, after the page named its files (HR4a).
+// change: a run is deleted when the user asks, after the page named its files (HR4a). The
+// Storage section only shows; Register again adds a kept bundle's record back (HR4b).
 
 import { getJSON, send } from "./api.js";
 import { byId, message, setContent, show } from "./dom.js";
-import { RUN_ID, comparisonView, deleteView, runRow, runView } from "./runsview.js";
+import { RUN_ID, comparisonView, deleteView, runRow, runView, storageView } from "./runsview.js";
 
 let last = null;  // the oldest run listed: "Older runs" asks for the ones before it
 let leftOut = 0;
@@ -48,6 +49,36 @@ async function load() {
   } catch (error) {
     message(byId("runsStatus"), "error", "Error: " + error.message);
   }
+}
+
+// The list from the newest run again (after a run came back)
+async function reloadRuns() {
+  byId("runsRows").replaceChildren();
+  last = null;
+  leftOut = 0;
+  await load();
+  choiceChanged();
+}
+
+async function loadStorage() {
+  try {
+    setContent(byId("storageView"), storageView(await getJSON("/api/v1/storage")));
+  } catch (error) {
+    message(byId("storageStatus"), "error", "Error: " + error.message);
+  }
+}
+
+async function register(runId) {
+  message(byId("storageStatus"), "info", "Checking the bundle of run " + runId + "...");
+  try {
+    await send("/api/v1/bundles/" + encodeURIComponent(runId) + "/register", "POST");
+    message(byId("storageStatus"), "success", `Run ${runId} is a saved run again.`);
+    await reloadRuns();
+    await loadStorage();
+  } catch (error) {
+    message(byId("storageStatus"), "error", "Error: " + error.message);
+  }
+  byId("storageStatus").focus();
 }
 
 // Only one of the two views shows at a time; the keyboard focus goes to its heading
@@ -129,6 +160,7 @@ async function confirmDelete() {
     const count = answer.removed.length;
     message(byId("runsStatus"), "success", `Run ${runId} deleted (${count} file${count === 1 ? "" : "s"} removed)` +
       (answer.kept ? `; its bundle ${answer.kept.name} is kept in instance/bundles.` : "."));
+    loadStorage();
   } catch (error) {
     message(byId("runsStatus"), "error", "Error: " + error.message);
   }
@@ -155,6 +187,12 @@ async function setup() {
       askDelete(remove.dataset.delete);
     }
   });
+  byId("storageView").addEventListener("click", event => {
+    const button = event.target.closest("button[data-register]");
+    if (button) {
+      register(button.dataset.register);
+    }
+  });
   byId("deleteConfirm").addEventListener("click", confirmDelete);
   byId("deleteCancel").addEventListener("click", closeDelete);
   byId("runsOlder").addEventListener("click", load);
@@ -162,6 +200,7 @@ async function setup() {
   await load();
   choiceChanged();
   showFromHash();
+  loadStorage();
 }
 
 setup();

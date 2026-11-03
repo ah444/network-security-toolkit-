@@ -145,6 +145,11 @@ refused).
   `Delete these files? [y/N]`; only `y` or `yes` deletes, anything else (or the end of the
   input) deletes nothing. Its bundle is kept unless `--with-bundle` is given. A file that
   can't be removed exits with 2 and its name; the run is kept and can be deleted again.
+- `--storage` (HR4b) shows what the toolkit keeps on this computer, by kind, with the total
+  and the free space, and names the leftovers; it deletes nothing. `--register RUN_ID`
+  brings back a run deleted with its bundle kept, from the record the bundle carries, once
+  its signature is checked; it exits with 2 and why for no bundle, a changed or incomplete
+  one, or a run that is already saved.
 
 | Flag | Default | What it does |
 |---|---|---|
@@ -155,6 +160,8 @@ refused).
 | `--compare RUN_ID RUN_ID` | | the two saved runs A and B side by side, then exits: each model of both, with Δ = B − A only when both scored the same test rows (otherwise why not), the models of one run only and the settings that differ |
 | `--delete RUN_ID` | | deletes a saved run after naming its files and asking: its importance results, then its bundle with `--with-bundle`, its record last |
 | `--with-bundle` | the bundle is kept | with `--delete`: delete the run's bundle too |
+| `--storage` | | shows what is kept, by kind, the total and the free space, and the leftovers by name, then exits; it deletes nothing |
+| `--register RUN_ID` | | brings back a run deleted with its bundle kept (its signature checked first), then exits; it never replaces a record |
 | `--model MODEL` | the bundle's best | which model of the bundle |
 | `--csv CSV` | | labels every row of this CSV file |
 | `--output OUTPUT` | `<file>.predictions.csv` | where `--csv` writes (a new file, never overwritten) |
@@ -168,6 +175,8 @@ python -m toolkit ids --json rows.json
 python -m toolkit ids --runs
 python -m toolkit ids --compare 20261030T120509Z-a75da585 20261031T090000Z-1738e0a0
 python -m toolkit ids --delete 20261030T120509Z-a75da585
+python -m toolkit ids --storage
+python -m toolkit ids --register 20261030T120509Z-a75da585
 ```
 
 A bundle above 500 MB says first that loading takes a while: large models can take minutes

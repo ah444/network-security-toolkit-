@@ -228,3 +228,35 @@ def test_with_bundle_goes_with_delete(cli_module):
     with pytest.raises(SystemExit) as stopped:
         cli_module.main(["--with-bundle"])
     assert stopped.value.code == 2
+
+
+# ---- v5.3 step HR4b: --storage and --register RUN_ID ----
+
+def test_storage_counts_and_names_the_leftovers(cli_module, capsys, exported, no_model,
+                                                 monkeypatch):
+    run_id = exported["run_id"]
+    _answer(monkeypatch, "y")
+    _run(cli_module, capsys, "--delete", run_id)
+    code, out = _run(cli_module, capsys, "--storage")
+    assert code == 0
+    assert "Unregistered bundles" in out and f"  - {run_id}.bundle" in out
+    assert "Total:" in out and "free on this disk" in out
+    assert f"--register {run_id}" in out, "how to bring it back"
+
+
+def test_register_brings_a_deleted_run_back(cli_module, capsys, exported, no_model,
+                                            monkeypatch):
+    run_id = exported["run_id"]
+    record = (runs_dir() / f"{run_id}.json").read_bytes()
+    _answer(monkeypatch, "y")
+    _run(cli_module, capsys, "--delete", run_id)
+    code, out = _run(cli_module, capsys, "--register", run_id)
+    assert code == 0 and f"Run {run_id} is a saved run again" in out
+    assert (runs_dir() / f"{run_id}.json").read_bytes() == record
+    code, out = _run(cli_module, capsys, "--register", run_id)
+    assert code == 2 and "already saved" in out
+
+
+def test_register_a_bad_or_missing_bundle(cli_module, capsys, no_model):
+    assert _run(cli_module, capsys, "--register", "../x")[0] == 2
+    assert _run(cli_module, capsys, "--register", OTHER_ID)[0] == 2

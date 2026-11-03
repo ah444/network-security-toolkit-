@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import os
 import secrets
-from collections.abc import Mapping
+from collections.abc import Iterator, Mapping
 from pathlib import Path
 
 from ..protect import protect
@@ -20,6 +20,7 @@ from ..publish import publish_bytes
 from ..settings import instance_dir
 
 KEY_BYTES = 32
+CHUNK_BYTES = 2**20  # what read_chunks reads at a time
 
 
 class BundleError(ValueError):
@@ -96,6 +97,14 @@ def read_all(path: str | Path) -> bytes:
     """A bundle file's bytes, read whole; they are checked (``ids.bundle.unpack``) before anything
     in them is deserialized."""
     return Path(path).read_bytes()
+
+
+def read_chunks(path: str | Path) -> Iterator[bytes]:
+    """A file's bytes, ``CHUNK_BYTES`` at a time (HR4b: a bundle of gigabytes is checked
+    without being read into memory whole)."""
+    with Path(path).open("rb") as handle:
+        while chunk := handle.read(CHUNK_BYTES):
+            yield chunk
 
 
 def stored_bundles(directory: str | Path | None = None) -> list[tuple[Path, int, float]]:

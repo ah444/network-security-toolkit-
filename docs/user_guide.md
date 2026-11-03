@@ -670,6 +670,11 @@ there, and no model is loaded.
   is ever deleted on its own. The run's bundle (the large file) is kept unless you tick
   **Also delete its bundle**. If a file can't be removed (another program has it open), the
   run stays listed: close that program and delete it again.
+- **Storage**, below the list, shows what the toolkit keeps on this computer: each kind of
+  file, how many and their size, the total and the free space on the disk, and any
+  leftovers by name. It only shows: nothing is deleted from there. A run you deleted with
+  its bundle kept is listed under **Unregistered bundles**; **Register again** brings it
+  back as a saved run (its bundle's signature is checked first).
 
 Here the two runs of the same NSL-KDD files differ only in balancing, none (A) and class
 weights (B): Random Forest's CV macro-F1 is the same, its test macro-F1 is 0.010 lower.
@@ -876,7 +881,9 @@ newest first (50 at a time; its last line gives the `--before` for the older one
 ```
 
 `--delete RUN_ID` deletes one, as the page's **Delete** does: it lists the files and asks
-`[y/N]` first, and keeps the bundle unless you add `--with-bundle`.
+`[y/N]` first, and keeps the bundle unless you add `--with-bundle`. `--storage` shows what is
+kept, as the page's Storage does (it deletes nothing), and `--register RUN_ID` brings back a
+run deleted with its bundle kept.
 
 `--compare A B` prints the two side by side, as the page does. The 23 classes and the other
 two models are shortened here:

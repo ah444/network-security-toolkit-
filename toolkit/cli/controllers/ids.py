@@ -13,6 +13,8 @@ project: train one in the web trainer and click Export (saved in instance/bundle
     python -m toolkit ids --compare A B       two saved runs side by side
     python -m toolkit ids --delete RUN_ID     delete a saved run after naming its files
                                               (its bundle too with --with-bundle; HR4a)
+    python -m toolkit ids --storage           what is kept, by kind (only shows; HR4b)
+    python -m toolkit ids --register RUN_ID   a deleted run back from its kept bundle
 
 (from the project folder; ``toolkit ids`` once installed; moved from
 tools/IDS/IDS_CLI - CIC-2017/ in v5.1 step 1.4a; the predictions are
@@ -32,7 +34,9 @@ from ...core.services.ids.bundle import Bundle, BundleError, BundleVersionWarnin
 from ...core.services.ids.comparison import NotARun, compare_saved, saved_runs
 from ...core.services.ids.datasets import DatasetError
 from ...core.services.ids.exports import EXPORTED, BundleStore
+from ...core.services.ids.registration import register_bundle
 from ...core.services.ids.run_removal import not_removed, remove_run, run_files
+from ...core.services.storage import storage_report
 from ...core.services.ids.prediction import (
     json_rows,
     label_column,
@@ -110,12 +114,33 @@ def delete_run(run_id: str, with_bundle: bool) -> int:
     return 0
 
 
+def register_run(run_id: str) -> int:
+    """``--register RUN_ID``: the record its kept bundle carries saved again, once the
+    bundle's signature is checked. Exit code 0, or 2 with why not."""
+    try:
+        register_bundle(run_id)
+    except FileNotFoundError:
+        screen.error(FileNotFoundError(f"There is no bundle of run {run_id} in instance/bundles."))
+        return 2
+    except (FileExistsError, BundleError) as error:
+        screen.error(error)
+        return 2
+    runs_screen.registered(run_id)
+    return 0
+
+
 def listing(args: argparse.Namespace) -> int:
-    """``--list``, ``--runs``, ``--compare`` or ``--delete``, which open no model; exit code 2
-    with the message for a bad run id, a file that is not a run, or a run that isn't saved."""
+    """``--list``, ``--runs``, ``--compare``, ``--delete``, ``--storage`` or ``--register``,
+    which open no model; exit code 2 with the message for a bad run id, a file that is not a
+    run, or a run that isn't saved."""
     if args.list:
         return list_exports()
+    if args.storage:
+        runs_screen.storage(storage_report())
+        return 0
     try:
+        if args.register:
+            return register_run(args.register)
         if args.delete:
             return delete_run(args.delete, args.with_bundle)
         return list_runs(args.before) if args.runs else compare_runs(*args.compare)
@@ -191,6 +216,10 @@ def build_parser(prog: str | None = None) -> argparse.ArgumentParser:
                          help="compare two saved runs (A then B; differences are B - A) and exit")
     listing.add_argument("--delete", metavar="RUN_ID",
                          help="delete a saved run: names its files and asks first")
+    listing.add_argument("--storage", action="store_true",
+                         help="show what is kept, by kind (only shows: deletes nothing) and exit")
+    listing.add_argument("--register", metavar="RUN_ID",
+                         help="bring a deleted run back from its kept bundle and exit")
     parser.add_argument("--with-bundle", action="store_true",
                         help="with --delete: delete the run's bundle too (default: kept)")
     parser.add_argument("--before", metavar="RUN_ID",
@@ -222,7 +251,7 @@ def main(argv: Sequence[str] | None = None, prog: str | None = None) -> int:
     opened. Exit code 0, or 2 with the message for a bundle that is refused, a bad value or a
     file problem; Ctrl+C or the end of input says goodbye (0)."""
     args = parse_args(argv, prog)
-    if args.list or args.runs or args.compare or args.delete:
+    if args.list or args.runs or args.compare or args.delete or args.storage or args.register:
         return listing(args)
     interactive_mode = not (args.csv or args.json or args.info)
     if interactive_mode:
