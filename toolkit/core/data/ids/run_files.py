@@ -15,6 +15,7 @@ from typing import Any
 
 from ..publish import publish_text
 from ..settings import instance_dir
+from .importance_files import is_importance_name
 
 
 def runs_dir(environ: Mapping[str, str] | None = None) -> Path:
@@ -36,6 +37,8 @@ def read_record(path: str | Path) -> Any:
 
 
 def list_runs(directory: str | Path | None = None) -> list[Path]:
-    """The ``*.json`` files of ``directory`` (default ``runs_dir``), sorted by name."""
+    """The ``*.json`` files of ``directory`` (default ``runs_dir``) but the importance
+    results beside the records (HR2), sorted by name."""
     directory = Path(directory) if directory is not None else runs_dir()
-    return sorted(directory.glob("*.json")) if directory.is_dir() else []
+    found = directory.glob("*.json") if directory.is_dir() else ()
+    return sorted(path for path in found if not is_importance_name(path.name))

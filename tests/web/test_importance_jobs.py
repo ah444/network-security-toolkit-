@@ -12,6 +12,8 @@ import pytest
 
 from toolkit.core.services.ids.importance import permutation_importances
 from toolkit.core.services.ids.runs import DatasetRef, TrainSettings, train
+from toolkit.core.services.ids.exports import write_run
+from toolkit.core.services.ids.saved_importance import saved_importance
 from toolkit.web.services import importance, jobs
 from toolkit.web.services.access import Access, lock_out
 from toolkit.web.services.errors import NOT_TRAINED, ServiceError
@@ -104,6 +106,23 @@ def test_the_importance_of_the_selected_model_is_the_cores(ws, run, runner):
     assert result["features"] == _expected(run, run.evaluation.selected)
     assert result["seed"] == run.evaluation.seed and result["rows"] == len(run.split.test)
     assert job.done == job.total == 3, "a step per feature"
+
+
+def test_its_result_is_published_as_its_runs_file(ws, run, runner):
+    """HR2: with the run's record there (an exported run), the result is its own file."""
+    write_run(run)
+    job = _wait(importance.start_importance(ws, "decision_tree", runner, 60))
+    assert (job.result["saved"], job.result["not_saved"]) == (True, None)
+    stored = saved_importance(run.run_id, "decision_tree")
+    assert stored["features"] == job.result["features"] == _expected(run, "decision_tree")
+
+
+def test_without_a_record_the_job_says_it_was_not_saved(ws, run, runner):
+    job = _wait(importance.start_importance(ws, None, runner, 60))
+    assert job.state == jobs.DONE and job.result["saved"] is False
+    assert job.result["not_saved"] == ("Not saved: the run isn't saved yet. Export it to keep "
+                                       "its results.")
+    assert saved_importance(run.run_id, run.evaluation.selected) is None
 
 
 def test_it_computes_the_run_it_was_asked_for(ws, run, other_run, runner, hold):

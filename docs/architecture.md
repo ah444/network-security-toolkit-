@@ -93,6 +93,7 @@ no Flask, no argparse. Read by `cli/` and `web/`, it imports neither
 | `toolkit/core/services/ids/bundle.py` | services | packs and checks signed bundles (bytes only) |
 | `toolkit/core/services/ids/legacy_names.py` | services | the old names (`toolkit.ids_core`, before step 1.5d; `toolkit.services.ids`, until v5.2 step 2.3a), only while a bundle saved with them loads |
 | `toolkit/core/services/ids/exports.py` | services | saves, lists and loads runs and bundles, each bundle with its state (HR3d); `BundleStore` is the `ModelStore` |
+| `toolkit/core/services/ids/saved_importance.py` | services | an importance result as a file of its own (HR2): named from checked ids, published once under the run files' lock while the record lists the model, read back as untrusted data |
 | `toolkit/core/services/ids/comparison.py` | services | the saved runs (records only, never a bundle): a run's summary, the view its charts need, whether two runs scored the same test rows, two runs side by side |
 | `toolkit/core/services/ids/batch.py` | services | labels every row of a table: the CLI's `--csv` and the web's "Predict a CSV file" |
 | `toolkit/core/services/ids/prediction.py` | services | the IDS command's predictions: one row, a table, a CSV file into a new file |
@@ -114,6 +115,7 @@ no Flask, no argparse. Read by `cli/` and `web/`, it imports neither
 | `toolkit/core/data/ids/__init__.py` | data | the IDS's files |
 | `toolkit/core/data/ids/bundle_files.py` | data | the signing key and the bundle files, as bytes |
 | `toolkit/core/data/ids/run_files.py` | data | `TrainingRun` records on disk, as dicts (`instance/runs/`) |
+| `toolkit/core/data/ids/importance_files.py` | data | importance results on disk, `instance/runs/<run id>.importance.<model id>.json`, read up to 1 MiB; the one lock of the run files (HR2) |
 | `toolkit/core/data/ids/dataset_files.py` | data | a dataset file's first bytes, SHA-256 and row chunks |
 | `toolkit/core/data/recon/__init__.py` | data | the scanner's network access and report files |
 | `toolkit/core/data/recon/scanner.py` | data | TCP and UDP port checks of one host |
@@ -503,6 +505,17 @@ names it and why. Ctrl+C stops the scan with exit code 130.
   would replace). After a crash of the process the file is whole or absent, and a `.tmp`
   file may be left (no listing reads it); after a power cut it is best effort. A file
   system without hard links (on Linux and macOS) is refused with a message.
+- An importance result is a file of its own beside its run's record (HR2,
+  `toolkit/core/services/ids/saved_importance.py`): `<run id>.importance.<model id>.json`,
+  named from a run id of the toolkit's form and a model id of the registry, checked before
+  any path is made. It holds its run and model, its schema and the method's version, the
+  settings (rows, per class, repeats, seed, metric), the numbers and the library versions.
+  It is computed outside any lock and published under the one lock of the run files
+  (`importance_files.PUBLISHING`, which the delete of HR4 takes too) only while the record
+  lists that model, and never replaced. Read back, a file larger than 1 MiB, not JSON, of a
+  newer schema, whose ids are not its name's or whose values are not a result's is left out
+  and counted. The saved runs' list skips these names. Until every training has a record
+  (HR5), only an exported run's results are saved; the job says "Not saved" otherwise.
 - A bundle's state comes from its header (HR3d, `bundle.header_state`): the format records
   its lengths, so its first bytes and the file's size say whether it is whole, with no HMAC
   and nothing unpickled, and no length is read past the file's size. **Exported**: the

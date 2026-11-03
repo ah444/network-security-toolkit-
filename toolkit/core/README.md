@@ -18,7 +18,8 @@ core/
     files.py       the text files the commands read and write
     protect.py     instance/ and .env limited to this account (HS5)
     publish.py     a new file published whole or not at all (HR3a)
-    ids/           bundle files and the signing key, run records, dataset files
+    ids/           bundle files and the signing key, run records, importance results
+                   (HR2), dataset files
     recon/         port checks, banner probes, ping, names to addresses, NVD, OpenRouter,
                    AbuseIPDB, scan report files
 ```

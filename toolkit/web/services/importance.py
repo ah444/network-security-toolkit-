@@ -6,8 +6,9 @@ run's test rows, its label and its evaluation seed, never "the current run" when
 so a training after it changes nothing it computes (those references keep the old run in
 memory until it ends). One job per run and model: asked again, it is the same job, unless
 that one failed or was cancelled. Only the workspace's run can be calculated (RD3): a saved
-run has no test split in memory. The result is the job's for now; HR2 makes it a file of its
-own, F3d the route.
+run has no test split in memory. At its end the result is published as a file of its own
+beside the run's record (HR2, ``saved_importance``), when the record exists; the job's result
+says whether it was saved, and why not. The route is F3d's.
 """
 
 from __future__ import annotations
@@ -20,6 +21,7 @@ import pandas as pd
 from ...core.data.settings import ExplainConfig
 from ...core.services.ids.importance import Importance, permutation_importances
 from ...core.services.ids.pipeline import FittedModel
+from ...core.services.ids.saved_importance import publish
 from .errors import NOT_TRAINED, ServiceError
 from .jobs import FAILED, HERE, IMPORTANCE, STOPPED, Job, JobRunner, Origin
 from .workspace import Workspace
@@ -62,7 +64,8 @@ def start_importance(ws: Workspace, model: str | None, jobs: JobRunner, max_seco
             if job.kind == IMPORTANCE and job.key == key and job.state not in (FAILED, STOPPED):
                 return job
         ws.acquire_lease()
-        job = Job(kind=IMPORTANCE, work=lambda job: answer(bound, compute(bound, job, config)),
+        job = Job(kind=IMPORTANCE, work=lambda job: finish(bound, compute(bound, job, config),
+                                                           config),
                   on_end=ws.release_lease, max_seconds=max_seconds, origin=origin, key=key,
                   steps=importance_steps)
         ws.add_job(job)
@@ -74,6 +77,13 @@ def compute(bound: Bound, job: Job, config: ExplainConfig | None) -> Importance:
     """The job's work, in the worker thread: one step per feature, a cancel between two."""
     return permutation_importances(bound.fitted, bound.test, bound.label, seed=bound.seed,
                                    config=config, progress=job)
+
+
+def finish(bound: Bound, found: Importance, config: ExplainConfig | None) -> dict[str, Any]:
+    """The importance published as its run's file (HR2), then the job's result: ``saved``,
+    and ``not_saved``, why not, for the user (no record yet, or it could not be written)."""
+    not_saved = publish(bound.run_id, bound.model, found, config)
+    return {**answer(bound, found), "saved": not_saved is None, "not_saved": not_saved}
 
 
 def importance_steps(done: int, total: int) -> str:

@@ -959,7 +959,7 @@ Back up these three, together:
 |---|---|
 | `instance\signing.key` | without it, no bundle made here loads again (a new key doesn't bring them back) |
 | `instance\bundles\` | your exports |
-| `instance\runs\` | the record of each run, to retrain from if a bundle is lost |
+| `instance\runs\` | the record of each run, to retrain from if a bundle is lost, and the importance results saved beside it |
 
 The logs and the uploads need no backup, and the scan reports only if you want to keep them.
 

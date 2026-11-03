@@ -139,7 +139,8 @@ refused).
 - With `--csv`, `--json` or `--info` it asks nothing.
 - `--runs` and `--compare` read the saved runs (`instance/runs`, one record per export: its
   settings and scores) and open no model; they exit with 2 and the message for a bad run id
-  or a run that isn't saved.
+  or a run that isn't saved. The importance results beside the records
+  (`<run id>.importance.<model id>.json`, HR2) are not runs and are not counted.
 
 | Flag | Default | What it does |
 |---|---|---|

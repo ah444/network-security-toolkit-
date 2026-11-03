@@ -62,6 +62,7 @@ INTEGRATION = (
     "ml/test_loader.py",
     "ml/test_pipeline.py",
     "ml/test_profiles.py",
+    "ml/test_saved_importance.py",
     "ml/test_split.py",
     "ml/test_training_run.py",
     "recon/test_engines.py",
