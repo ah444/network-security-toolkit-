@@ -62,7 +62,7 @@ A local-first network security toolkit with optional external intelligence servi
 - 📊 IP reputation check (via AbuseIPDB), only after you agree
 - 🖱️ The same scanner from the web app's **Port Scanner** page (`/scan`): a form, a live log, Cancel, a card per open port and the report as TXT, JSON or CSV ([user guide 3.6](docs/user_guide.md#36-scan-from-the-web-page)); from another computer with `toolkit web --host`, behind an access token ([3.7](docs/user_guide.md#37-scan-from-another-computer))
 - 📁 Export results to JSON/CSV/TXT (UTF-8, in `instance/scans/`, never overwritten, safe to open in a spreadsheet)
-- 🗂️ Every finished scan kept in the scan history (`instance/scan_history/`, [user guide 3.8](docs/user_guide.md#38-the-scan-history))
+- 🗂️ Every finished scan kept in the scan history (`instance/scan_history/`), shown again, scanned again or deleted on the **Saved Scans** page (`/scans`, [user guide 3.8](docs/user_guide.md#38-the-scan-history))
 
 ### 2. IDS predictor (CLI)
 - 🧠 Predicts with any model bundle exported by the web trainer (features, classes and best model come from the bundle)

@@ -2,11 +2,11 @@
 one record, under the id of its lines in the log (HS3, ``record``).
 
 A record holds what was asked (the target as typed, its addresses, the ports, the protocols,
-the engine and nmap's choices, where the request came from), what may have gone online and
-why not (``online_plan``), what each host gave (scanned, skipped because it didn't answer the
-ping, or failed, with why), AbuseIPDB's answers, the report entries and the totals. Never a key
-or a token: they are not in the request. Network text is kept as the entries have it (cleaned,
-``report``); a page shows it as text. A stopped or failed scan saves nothing, as a cancelled
+the engine and nmap's choices, the switches, where the request came from), what may have gone
+online and why not (``online_plan``), what each host gave (scanned, skipped because it didn't
+answer the ping, or failed, with why), AbuseIPDB's answers, the report entries and the totals.
+Never a key or a token: they are not in the request. Network text is kept as the entries have
+it (cleaned, ``report``); a page shows it as text. A stopped or failed scan saves nothing, as a cancelled
 training keeps nothing. A record that can't be saved (a full disk, HR4c) leaves the scan as it
 was: the view says why. Nothing here deletes a record.
 """
@@ -195,6 +195,8 @@ def scan_record(scan_id: str, request: ScanRequest, plan: OnlinePlan, notes: Sca
         "ports": port_ranges(request.ports), "protocols": list(request.protocols),
         "engine": request.engine,
         "nmap": asdict(request.nmap_options) if request.engine == "nmap" else None,
+        "choices": {"scan_unresponsive": request.scan_unresponsive, "nvd": request.nvd,
+                    "ai": request.use_ai, "abuseipdb": request.abuseipdb},  # to scan again (F6b)
         "online": {"nvd": plan.nvd, "ai": plan.ai, "abuseipdb": plan.abuseipdb},
         "hosts": [notes.hosts[target] for target in request.targets],
         "reputation": notes.reputation, "entries": notes.entries, "summary": notes.totals,

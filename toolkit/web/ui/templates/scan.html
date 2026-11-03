@@ -18,6 +18,7 @@
       <li class="nav-item"><a href="/dynamic_ids" class="nav-link">Dynamic Intrusion Detection System</a></li>
       <li class="nav-item"><a href="/scan" class="nav-link" aria-current="page">Port Scanner</a></li>
       <li class="nav-item"><a href="/runs" class="nav-link">Saved Runs</a></li>
+      <li class="nav-item"><a href="/scans" class="nav-link">Saved Scans</a></li>
       <li class="nav-item"><button type="button" id="themeToggle" class="nav-link theme-toggle" hidden>Theme: Auto</button></li>
     </ul>
   </nav>
@@ -99,13 +100,14 @@
 
     <section class="section" id="scanResults" aria-labelledby="scanResultsTitle" hidden>
       <h2 class="section-title" id="scanResultsTitle" tabindex="-1">Results</h2>
+      <div id="scanSaved" class="field-hint" hidden></div>
       <div id="scanSummary"></div>
       <h3>Hosts</h3>
       <ul id="scanHosts" class="host-list"></ul>
       <h3>Open ports</h3>
       <div id="scanPortCards" class="port-cards"></div>
       <h3>Download the report</h3>
-      <p class="field-hint">The last finished scan of this browser session, kept in memory only: nothing is saved on the server.</p>
+      <p class="field-hint">The last finished scan of this browser session. Every finished scan is also kept on this computer, in Saved Scans.</p>
       <div class="button-group">
         <a class="custom-btn" href="/api/v1/scan/report?format=txt" download>TXT</a>
         <a class="custom-btn" href="/api/v1/scan/report?format=json" download>JSON</a>

@@ -21,7 +21,7 @@ from flask import Flask
 
 from ...core.services.ids.exports import BundleStore
 from ...core.data.settings import WebConfig, instance_dir, web_config
-from . import access, bundles, datasets, jobs, pages, resume, runs, scan, training, workspace
+from . import access, bundles, datasets, jobs, pages, resume, runs, scan, scans, training, workspace
 from .api import register_error_handlers
 from ..services.datasets import prepare_uploads
 from ..services.access import Access, is_this_computer
@@ -32,7 +32,7 @@ from ..services.workspace import WorkspaceStore
 from .. import ui as page
 
 BLUEPRINTS = (pages.bp, access.bp, datasets.bp, training.bp, jobs.bp, scan.bp, bundles.bp,
-              workspace.bp, resume.bp, runs.bp)
+              workspace.bp, resume.bp, runs.bp, scans.bp)
 
 
 def network_banner(config: WebConfig) -> str:

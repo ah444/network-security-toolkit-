@@ -109,6 +109,7 @@ no Flask, no argparse. Read by `cli/` and `web/`, it imports neither
 | `toolkit/core/services/recon/os_guess.py` | services | the OS guess from the TTL, the banners, the open ports and nmap's OS match, with its evidence; this computer said |
 | `toolkit/core/services/recon/report.py` | services | one report entry per open port, its network text cleaned |
 | `toolkit/core/services/recon/record.py` | services | the record of every scan (HS3): a JSON line in the tool's log when `run_scan` starts and one when it ends, with the request's source |
+| `toolkit/core/services/recon/saved_scans.py` | services | the saved scans read back (F6b): the list, newest first and 50 at a time, a file that isn't a scan record left out and counted; one scan as the scan page shows it, with the choices to scan again; its report; its delete; the id checked before a path is made |
 | `toolkit/core/services/recon/history.py` | services | the scan history (F6a): `ScanNotes`, the view `run_scan` reports to, which notes how each host ended; every finished scan's record saved under its log id; a stopped one saves nothing |
 | `toolkit/core/data/__init__.py` | data | the shared data: files, the network, the environment |
 | `toolkit/core/data/settings.py` | data | every tunable setting, the `TOOLKIT_*` variables, the data folder, `.env` reading |
@@ -135,7 +136,7 @@ no Flask, no argparse. Read by `cli/` and `web/`, it imports neither
 | `toolkit/core/data/recon/nmap_xml.py` | data | nmap's XML as the scanner's `PortResult`s (the built-in scanner's states, nmap's own in `reason`), the OS matches and host scripts; every text from the network cleaned and cut |
 | `toolkit/core/data/recon/local.py` | data | whether an address is this computer's own (nothing sent), and its OS |
 | `toolkit/core/data/recon/text.py` | data | makes text from the network safe to show and export |
-| `toolkit/core/data/recon/scan_records.py` | data | the scan history's records, `instance/scan_history/<scan id>.json`, written once (HR3a) |
+| `toolkit/core/data/recon/scan_records.py` | data | the scan history's records, `instance/scan_history/<scan id>.json`: written once (HR3a), read, listed, removed when the user deletes one |
 | `toolkit/core/data/recon/scan_files.py` | data | scan reports as JSON, CSV or TXT: as text (`report_text`, for a download) or a file in `instance/scans/` (with the engine and nmap's CPE names) |
 | `toolkit/core/data/recon/findings.py` | data | what the intel gateways return (`CveEntry`, `IntelFinding`) |
 | `toolkit/core/data/recon/nvd.py` | data | CVEs and CVSS scores from the NVD API, by version (CPE names) or by keyword (an `IntelProvider`); each CVE carries its `match`, "version" or "name" |
@@ -184,6 +185,7 @@ The page, its routes and jobs, and the `web` command; it never imports the comma
 | `toolkit/web/controllers/access.py` | controllers | the unlock page and `POST /api/v1/unlock`: other computers type the access token when `--host` opens the toolkit to the network; on this computer only, a new token and the other computers' jobs (`/api/v1/access/...`, HS1) |
 | `toolkit/web/controllers/scan.py` | controllers | the port scan's routes: its options, a scan started (the authorization checked first), the session's scan, the report download |
 | `toolkit/web/controllers/bundles.py` | controllers | export, download and load bundles; predictions, one row or a CSV file |
+| `toolkit/web/controllers/scans.py` | controllers | the saved scans: the list, one scan, its report, its delete (they read the scan history only, with no session) |
 | `toolkit/web/controllers/runs.py` | controllers | the saved runs: the list, one run, two side by side (they read the records only, with no session) |
 | `toolkit/web/controllers/resume.py` | controllers | `GET /api/v1/workspace`, so the page resumes after a reload |
 | `toolkit/web/controllers/workspace.py` | controllers | the calling session's workspace (the cookie holds its ID), locked for the request |

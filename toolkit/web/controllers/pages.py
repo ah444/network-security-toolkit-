@@ -1,4 +1,4 @@
-"""The HTML pages: home, the trainer, the port scanner and the saved runs."""
+"""The HTML pages: home, the trainer, the port scanner, the saved runs and the saved scans."""
 
 from __future__ import annotations
 
@@ -52,3 +52,9 @@ def scan_page() -> str:
 def runs_page() -> str:
     """``GET /runs``: the saved runs, one shown or two compared (v5.3 F2e)."""
     return render_template("runs.html")
+
+
+@bp.route("/scans")
+def scans_page() -> str:
+    """``GET /scans``: the saved scans, one shown (v5.4 F6b)."""
+    return render_template("scans.html")

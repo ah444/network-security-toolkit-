@@ -409,9 +409,10 @@ section 4) and open **Port Scanner** in the menu bar, or `http://127.0.0.1:5000/
    CVSS scores and how each was found: `version match` or `name match, unconfirmed`), and
    the AI's explanation if you asked for one.
 5. **Download the report** as TXT, JSON or CSV: the same files as `--export` on the command
-   line. The results stay in your browser session (in memory, nothing is saved on the
-   server) until you scan again, clear the workspace or close the web app; a reload shows
-   them again.
+   line. The results stay in your browser session until you scan again, clear the workspace
+   or close the web app; a reload shows them again. The scan is also saved in the scan
+   history ([section 3.8](#38-the-scan-history)): under the results, "Saved in the scan
+   history as …" and **See it in Saved Scans**.
 
 This was taken on 2026-10-26 with two test programs on this computer: port 10822, which
 answers like OpenSSH 8.9, and port 10880, which answers like nginx 1.25.3. The form asked
@@ -516,6 +517,20 @@ ping; or failed, with why), AbuseIPDB's answers and every open port as in the re
 an API key. A scan you cancel, or that reaches its time limit, saves nothing. Nothing is
 deleted on its own. When the disk is too full (`TOOLKIT_MIN_FREE_MB`), the scan still shows
 its results and says `Not saved in the scan history: …`.
+
+**Saved Scans** in the menu bar (`http://127.0.0.1:5000/scans`) lists them, newest first and
+50 at a time (**Older scans** for the rest): when each started, the target, the ports, how
+the hosts ended, the open ports, the worst severity among the ports whose software was looked
+up ("no lookup" when none was), and where it was asked from. Then, for one scan:
+
+- **Show** opens it with the Port Scanner's own summary, hosts and port cards, when it
+  started and the ports asked for, and its report as TXT, JSON or CSV.
+- **Scan again** opens the Port Scanner with that scan's choices filled in: the target, the
+  ports, the protocol, the engine and nmap's choices, and the switches. The authorization is
+  unticked: tick it for this scan, as for any target. A choice this computer can't make now
+  (nmap not installed, a service without its key) stays off, and the page says so.
+- **Delete** names the scan's file and asks first; it removes only that record, never a
+  report you downloaded or exported.
 
 ## 4. Train a model in the web trainer
 

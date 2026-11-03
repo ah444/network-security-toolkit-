@@ -2,12 +2,16 @@
 // from GET /api/v1/scan/options; the scan runs as a job on the server (scanrun.js follows it)
 // and its answer is shown by scanresults.js. The authorization names the target and is
 // asked again for every new target; the server refuses a scan without it, and sends nothing
-// at all before it (docs/web_api.md, "Port scan").
+// at all before it (docs/web_api.md, "Port scan"). A finished scan says where it was saved
+// (F6a); "#again=<scan id>" (Saved Scans' Scan again, F6b) fills the form with that scan's
+// choices, the authorization unticked.
 
 import { getJSON, send } from "./api.js";
-import { byId, fillSelect, message, show } from "./dom.js";
+import { byId, el, fillSelect, message, setContent, show } from "./dom.js";
 import { follow, setup as setupRun, starting } from "./scanrun.js";
 import { hideResults, showResults } from "./scanresults.js";
+
+const SCAN_ID = /^\d{8}T\d{6}Z-[0-9a-f]{8}$/;
 
 let options = null;
 
@@ -117,18 +121,75 @@ function request() {
   return body;
 }
 
+// Where a finished scan was saved (F6a), with a 44 px button-like link to it, or why it wasn't
+function showSaved(answer) {
+  const saved = answer.saved || {};
+  const line = byId("scanSaved");
+  if (saved.scan_id) {
+    setContent(line, el("p", {}, "Saved in the scan history as " + saved.scan_id + "."),
+               el("a", { href: "/scans#" + answer.saved.scan_id, class: "btn btn-secondary btn-sm" },
+                  "See it in Saved Scans"));
+  } else {
+    setContent(line, saved.error ? el("p", {}, "Not saved in the scan history: " + saved.error) : "");
+  }
+  line.className = saved.error ? "warning-message" : "field-hint";
+  show(line, Boolean(saved.scan_id || saved.error));
+}
+
+function showScan(answer, focus) {
+  showResults(answer, focus);
+  showSaved(answer);
+}
+
 // The last finished scan of the session, if any: the one the download gives
 async function showLastScan() {
   const scan = await getJSON("/api/v1/scan");
   if (scan.last) {
-    showResults(scan.last, false);
+    showScan(scan.last, false);
+  }
+}
+
+// Saved Scans' Scan again: that scan's choices in the form; the authorization is unticked and
+// names the target, as for any new target (a choice this computer can't make stays off)
+async function scanAgain(scanId) {
+  const status = byId("scanStatus");
+  try {
+    const scan = await getJSON("/api/v1/scans/" + encodeURIComponent(scanId));
+    const again = scan.again;
+    byId("scanTarget").value = again.target;
+    byId("scanPortList").value = again.ports;
+    const engine = again.engine === "nmap" && !byId("engineNmap").disabled ? "nmap" : "builtin";
+    byId(engine === "nmap" ? "engineNmap" : "engineBuiltin").checked = true;
+    engineChanged();
+    if (engine === "nmap") {
+      byId("nmapDetection").value = again.service_detection;
+      byId("nmapTiming").value = again.timing;
+      byId("nmapScripts").checked = again.scripts !== "";
+      byId("nmapOsDetect").checked = again.os_detect && !byId("nmapOsDetect").disabled;
+    }
+    const protocol = { tcp: "protocolTcp", udp: "protocolUdp", both: "protocolBoth" }[again.protocol];
+    if (!byId(protocol).disabled) {
+      byId(protocol).checked = true;
+    }
+    byId("scanUnresponsive").checked = again.scan_unresponsive;
+    byId("scanNvd").checked = again.nvd;
+    for (const [box, on] of [["scanAbuse", again.abuseipdb], ["scanAi", again.ai]]) {
+      byId(box).checked = on && !byId(box).disabled;
+    }
+    targetChanged();
+    message(status, "info", "The choices of scan " + scanId + " are filled in" +
+      (engine !== again.engine ? ", with the built-in engine: nmap can't run here" : "") +
+      ". Check them, tick the authorization, then start the scan.");
+    byId("scanTarget").focus();
+  } catch (error) {
+    message(status, "error", "Error: " + error.message);
   }
 }
 
 // A scan ended: its answer, or (cancelled or failed: nothing kept) the last finished one again
 function scanEnded(answer, focus) {
   if (answer !== null) {
-    showResults(answer, focus);
+    showScan(answer, focus);
   } else {
     showLastScan().catch(error => console.error("Could not show the last scan:", error));
   }
@@ -156,7 +217,7 @@ async function resume() {
     if (scan.job) {
       follow(scan.job, scanEnded, false);
     } else if (scan.last) {
-      showResults(scan.last, false);
+      showScan(scan.last, false);
     }
   } catch (error) {
     console.error("Could not resume the scan:", error);
@@ -176,6 +237,10 @@ async function setup() {
     message(byId("scanStatus"), "error", "Error: " + error.message);
   }
   resume();
+  const again = window.location.hash.replace(/^#again=/, "");
+  if (options !== null && SCAN_ID.test(again)) {
+    scanAgain(again);
+  }
 }
 
 setup();

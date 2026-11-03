@@ -27,8 +27,9 @@ def _served(web_app):
 def test_routes_match_the_documentation(repo_root, web_app):
     # + the scan's 4 (2.4d), the unlock (2.4f), the saved runs' 3 (v5.3 F2c), the access 3 (HS1),
     # a run's files and its delete (HR4a), the storage report and a bundle registered (HR4b),
-    # a run saved again (HR5a), the importance job and a saved run's results (F3d)
-    assert len(_documented(repo_root)) == 40
+    # a run saved again (HR5a), the importance job and a saved run's results (F3d), the saved
+    # scans' list, one, its report and its delete (F6b)
+    assert len(_documented(repo_root)) == 44
     assert _served(web_app) == _documented(repo_root)
 
 
@@ -53,23 +54,25 @@ def test_page_uses_only_api_routes():
     # the saved runs' page (v5.3 F2e): the list, one run and the comparison; the home page's
     # other computers (HS1): their jobs and a new token (a job's Stop sends to its own url);
     # a run's files and its delete (HR4a); the storage report and a bundle registered (HR4b);
-    # a run saved again (HR5a); the importance calculated and a saved run's results (F3e)
+    # a run saved again (HR5a); the importance calculated and a saved run's results (F3e);
+    # the saved scans' page: the list, one scan and its delete, and Scan again's scan (F6b)
     urls = re.findall(r'(?:getJSON|send|predictWith)\("(/[^"?]*)|\burl: "(/[^"?]*)', all_js())
     urls = [call or part for call, part in urls]
-    assert len(urls) == 34 and all(url.startswith("/api/v1/") for url in urls), urls
+    assert len(urls) == 38 and all(url.startswith("/api/v1/") for url in urls), urls
 
 
 def test_page_sends_every_state_change_with_the_token():
     """Step 1.2e: a POST/DELETE without the token is refused (403 CSRF_TOKEN). Since step
     1.3a every request goes through api.js, and send() always adds the token."""
     code = all_js()
-    # 22 POST/DELETE routes in 21 send() calls: both predict routes share predictWith's,
+    # 23 POST/DELETE routes in 22 send() calls: both predict routes share predictWith's,
     # both predict-file routes predictFile's (step 1.4f); a scan started and cancelled (2.4e),
     # the unlock (2.4f); a new token and another computer's job stopped (HS1); a run's
     # delete (HR4a); a bundle registered again (HR4b); a run saved again (HR5a); the
-    # importance calculated and cancelled (F3e: a job's DELETE, as a training's)
+    # importance calculated and cancelled (F3e: a job's DELETE, as a training's); a saved
+    # scan's delete (F6b)
     sends = re.findall(r'\bsend\([^,]+,\s*"([A-Z]+)"', code)
-    assert len(sends) == 21 and set(sends) == {"POST", "DELETE"}, sends
+    assert len(sends) == 22 and set(sends) == {"POST", "DELETE"}, sends
     api = js_sources()["api.js"]
     assert api.count("fetch(") == 2  # getJSON and send
     assert '"X-CSRF-Token": csrfToken()' in api

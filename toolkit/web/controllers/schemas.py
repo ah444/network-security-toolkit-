@@ -215,6 +215,12 @@ class RunsRequest:
 
 
 @dataclasses.dataclass(frozen=True)
+class ScansRequest:
+    """``GET /scans``: the list starts after this scan id (the next page); empty: the newest."""
+    before: str = ""
+
+
+@dataclasses.dataclass(frozen=True)
 class CompareRequest:
     """``GET /runs/compare``: the two saved runs, by run id."""
     a: str

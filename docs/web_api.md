@@ -82,6 +82,10 @@ the network").
 | GET | `/api/v1/storage` | none | what is kept, by kind (HR4b): `kinds`, each `{kind, title, count, bytes, files, leftover}` (`files` names the leftovers), `total_bytes`, `free_bytes`, `warn_bytes`, `floor_bytes` and `warnings` (past `TOOLKIT_STORAGE_WARN_MB`, under `TOOLKIT_MIN_FREE_MB`); it deletes nothing |
 | POST | `/api/v1/bundles/<run_id>/register` | none | a run deleted with its bundle kept is saved again from the record the bundle carries, once its signature is checked: `{run_id, record}`; 404 without a bundle, 409 `ALREADY_SAVED`, 400 `BAD_SIGNATURE` or `NOT_REGISTERED` (incomplete, or no record of this run in it) |
 | POST | `/api/v1/runs/<run_id>/delete` | `with_bundle`: true or false (default false: the bundle is kept) | the run deleted (HR4a): `removed` (in order) and `kept` (the bundle, or null); 409 `NOT_REMOVED` naming a file that couldn't be removed, the run kept |
+| GET | `/api/v1/scans` | `before`: a scan id (the next page; default: the newest) | the saved scans' summaries, newest first, 50 at a time (see Saved scans) |
+| GET | `/api/v1/scans/<scan_id>` | none | one saved scan, as a finished scan's answer, with `scan_id`, `started`, `source`, `port_list` and `again` (the choices to scan it again) |
+| GET | `/api/v1/scans/<scan_id>/report` | `format`: `txt` (default), `json` or `csv` | the saved scan's report as a download |
+| POST | `/api/v1/scans/<scan_id>/delete` | none | the saved scan deleted: `{scan_id, removed}` (its record's name); 409 `NOT_REMOVED` when it couldn't be removed, the scan kept |
 
 ## Dataset upload
 
@@ -157,6 +161,24 @@ models, balancing, selection). Two runs are comparable when they scored the same
 otherwise `reasons` lists what differs (`DIFFERENT_DATASET`, `DIFFERENT_TEST_FILE`,
 `DIFFERENT_LABEL`, `DIFFERENT_SPLIT`, `DIFFERENT_ROWS`) and every `delta` is null. A `delta` is
 b − a. A finished training's result (`GET /api/v1/jobs/<id>`) carries `folds` too.
+
+## Saved scans (v5.4 F6b)
+
+Every finished scan is saved in `instance/scan_history/<scan id>.json` (F6a). These routes
+read those records and need no session, like the saved runs'; a scan id has the toolkit's
+form, `20261103T101500Z-5d2e7a41`, else 400 before a file name is made from it; an id with no
+record, or a file that is not a scan record this toolkit can show, is `NOT_FOUND` (404) or
+400.
+
+`GET /api/v1/scans` answers `{"scans": [...], "more": false, "left_out": 0}`: each scan's
+`scan_id`, `started`, `source`, `target`, `ports` (as typed ranges) and `port_count`,
+`protocols`, `engine`, `hosts` (`{"scanned", "skipped", "failed"}` counts), `open_ports`,
+`worst` (the worst severity of the ports whose software was looked up, or null) with
+`worst_unconfirmed`, and `exit_code`. `GET /api/v1/scans/<scan_id>` answers the scan in the
+shape of a finished scan's answer (`ports` the number of ports), plus `scan_id`, `started`,
+`source`, `port_list` and `again`: `target`, `ports`, `protocol`, `engine`, nmap's choices with
+nmap, `scan_unresponsive`, `nvd`, `ai` and `abuseipdb` (a record from before F6b has the
+defaults). The delete removes the record only.
 
 ## Security token
 
