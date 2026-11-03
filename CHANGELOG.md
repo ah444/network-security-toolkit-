@@ -10,7 +10,7 @@ All notable changes to this project. Versions follow the roadmap in
 
 ## [Unreleased]
 
-v5.4, so far: the scan history (F6) and the scan reports (F5)
+v5.4, so far: the scan history (F6), the scan reports (F5) and the dashboard (F10, with F7)
 ([checklist](docs/V5.4_CHECKLIST.md)).
 
 ### Added
@@ -33,8 +33,16 @@ v5.4, so far: the scan history (F6) and the scan reports (F5)
   Print, then Save as PDF, makes the PDF. **HTML** downloads it as one file that opens in
   any browser, with no script and nothing loaded; `python -m toolkit scan --report SCAN_ID`
   saves the same file in `instance/scans/`, never over another.
+- The web app's **home page** is a dashboard: the scans and their risks (the newest scan of
+  each target, the riskiest first, a bar per risk, each with its report; the newest scans)
+  and, beside them, the newest saved runs with a bar of their test macro-F1 and what this
+  session holds. The two parts are never linked: no IDS model is suggested from open ports
+  or CVEs. **Refresh** reads them again (`GET /api/v1/dashboard`).
 
 ### Changed
+
+- The home page's four feature cards gave way to the dashboard: one line, **Start
+  Training**, **Start a Scan** and **Refresh**.
 
 - `jinja2` and `markupsafe` are pinned in `requirements.txt` and `pyproject.toml` (they
   already came with Flask): the scan report uses them, in one module only.
