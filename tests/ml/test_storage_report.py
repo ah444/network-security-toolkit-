@@ -2,7 +2,8 @@
 kind, with their sizes, the total and the disk's free space, and names the leftovers: an
 importance result without a record or for a model not in it, an unregistered bundle, an
 incomplete bundle, a damaged file, a temporary file. It only reads: it deletes nothing, and
-it never unpickles a bundle (a bundle's state comes from its header)."""
+it never unpickles a bundle (a bundle's state comes from its header). The scan history
+(F6e) is a kind of its own."""
 
 import json
 
@@ -22,6 +23,7 @@ from toolkit.core.services.ids.runs import DatasetRef, TrainSettings, train
 MODELS = ("decision_tree", "logistic_regression")
 NO_RECORD_ID = "20200101T000000Z-0000000c"
 DAMAGED_ID = "20200101T000000Z-0000000d"
+SCAN_ID = "20261103T120000Z-0123abcd"
 
 
 def _run(seed):
@@ -62,6 +64,11 @@ def instance(runs):
         (instance_dir() / folder_name).mkdir(exist_ok=True)
         (instance_dir() / folder_name / name).write_bytes(b"y" * 100)
     (instance_dir() / "jobs.journal").write_bytes(b"{}\n")
+    history = instance_dir() / "scan_history"
+    history.mkdir()
+    (history / f"{SCAN_ID}.json").write_bytes(b"{}" * 50)
+    (history / f"{SCAN_ID}.json.0123abcd.tmp").write_bytes(b"x" * 7)
+    (history / "notes.json").write_bytes(b"{}")
     sid = saved_run.run_id
     return {
         "records": [f"{sid}.json"],
@@ -71,8 +78,9 @@ def instance(runs):
         "bundles": [f"{sid}.bundle"],
         "unregistered_bundles": [f"{unregistered.run_id}.bundle"],
         "incomplete_bundles": [f"{NO_RECORD_ID}.bundle"],
-        "damaged": sorted([f"{DAMAGED_ID}.json", "notes.bundle"]),
-        "temporary": [f"{sid}.json.0123abcd.tmp"],
+        "damaged": sorted([f"{DAMAGED_ID}.json", "notes.bundle", "notes.json"]),
+        "temporary": sorted([f"{sid}.json.0123abcd.tmp", f"{SCAN_ID}.json.0123abcd.tmp"]),
+        "scan_history": [f"{SCAN_ID}.json"],
         "scans": ["scan-20261025T200015Z.txt"],
         "uploads": ["u.csv"],
         "logs": ["web.log"],

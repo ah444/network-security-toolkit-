@@ -210,7 +210,7 @@ The page, its routes and jobs, and the `web` command; it never imports the comma
 | `toolkit/web/data/__init__.py` | data | the web trainer's files and sockets |
 | `toolkit/web/data/uploads.py` | data | uploads on disk, only while they are read |
 | `toolkit/web/data/journal.py` | data | the jobs journal: a line when a job is asked for, starts and ends; the unfinished ones read at the next start (HR3c) |
-| `toolkit/web/data/instance_lock.py` | data | one web server per instance: the OS lock on `instance/web.lock`, and the clearing of a stopped export's temporary files (HR3b) |
+| `toolkit/web/data/instance_lock.py` | data | one web server per instance: the OS lock on `instance/web.lock`, and the clearing of a stopped export's or scan record's temporary files (HR3b) |
 | `toolkit/web/data/net.py` | data | the listening socket, and opening the page in the browser |
 
 ## 3. Dependency rules
@@ -548,7 +548,7 @@ names it and why. Ctrl+C stops the scan with exit code 130.
   importance result computed meanwhile finds no record and is not published. A workspace
   holding the run's export forgets it once its bundle is gone, so Export saves it again.
 - The storage report (HR4b, `toolkit/core/services/storage.py`) counts every file of the
-  instance once, by kind, with its size, then the total and the disk's free space, and names
+  instance once, by kind (the scan history a kind of its own, F6e), with its size, then the total and the disk's free space, and names
   the leftovers: an importance result without its record or for a model the record doesn't
   list, an unregistered bundle (its run was deleted), an incomplete bundle, a damaged file
   (or one of a newer version), a temporary file a stop left. It only reads: it deletes
@@ -582,8 +582,9 @@ names it and why. Ctrl+C stops the scan with exit code 130.
   lock on `instance/web.lock` (`msvcrt`, `fcntl`), taken before the port and released by the
   system when the process ends; the holder writes its process id and address after the
   locked byte, so a second server says which one holds the folder. Only the holder clears
-  publish's temporary files in `runs/` and `bundles/`, at its start. The command line takes
-  no lock: it writes in neither.
+  publish's temporary files in `runs/`, `bundles/` and `scan_history/`, at its start. The
+  command line takes no lock: it writes in neither of the first two, and a CLI scan saving
+  its record at that very moment loses only the record (the scan says it was not saved).
 - The jobs and the workspaces are in the server's memory, so a stop loses them; the jobs
   journal says which (`toolkit/web/data/journal.py`, HR3c): `JobRunner` writes a JSON line
   to `instance/jobs.journal` when a job is asked for, starts and ends (flushed, `fsync`;

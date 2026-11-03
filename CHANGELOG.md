@@ -2,10 +2,29 @@
 
 All notable changes to this project. Versions follow the roadmap in
 [docs/IMPROVEMENT_PLAN.md](docs/IMPROVEMENT_PLAN.md); day-to-day progress is in
+[docs/V5.4_CHECKLIST.md](docs/V5.4_CHECKLIST.md) (v5.4),
 [docs/V5.3_CHECKLIST.md](docs/V5.3_CHECKLIST.md) (v5.3),
 [docs/V5.2_CHECKLIST.md](docs/V5.2_CHECKLIST.md) (v5.2),
 [docs/V5.1_CHECKLIST.md](docs/V5.1_CHECKLIST.md) (v5.1) and
 [docs/V5.0_CHECKLIST.md](docs/V5.0_CHECKLIST.md) (v5.0).
+
+## [Unreleased]
+
+v5.4, so far: the scan history (F6, [checklist](docs/V5.4_CHECKLIST.md)).
+
+### Added
+
+- Every finished scan, from the command line or the web, is saved once in
+  `instance/scan_history/<scan id>.json`, under the id of its lines in the log: the request,
+  each host and how it ended, the ports with their CVEs, AbuseIPDB's answers and the totals.
+  A stopped scan saves nothing, and nothing is deleted on its own.
+- The **Saved Scans** page (`/scans`): the saved scans, newest first, one shown again with
+  **Scan again**, two compared port by port (a port the other scan didn't check is "not
+  scanned there", not closed), and a delete that asks first.
+- The same from the terminal: `python -m toolkit scan --history`, `--show`, `--compare`,
+  `--delete`.
+- Storage counts the saved scans as a kind of its own; the web server clears a stopped
+  save's temporary files at its start.
 
 ## [5.3] — 2026-11-03
 

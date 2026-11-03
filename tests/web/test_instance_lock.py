@@ -99,16 +99,18 @@ def test_an_unreadable_holder_still_refuses(held, monkeypatch, capsys):
 def test_the_holder_clears_what_a_stopped_export_left(tmp_path, monkeypatch, caplog):
     monkeypatch.setenv("TOOLKIT_INSTANCE_DIR", str(tmp_path))
     for name in ("runs/a.json.1a2b3c4d.tmp", "bundles/b.bundle.deadbeef.tmp",
-                 "runs/a.json", "bundles/notes.tmp", "uploads/c.csv.1a2b3c4d.tmp"):
+                 "runs/a.json", "bundles/notes.tmp", "uploads/c.csv.1a2b3c4d.tmp",
+                 "scan_history/s.json.0a0b0c0d.tmp", "scan_history/s.json"):
         (tmp_path / name).parent.mkdir(exist_ok=True)
         (tmp_path / name).write_bytes(b"x")
     caplog.set_level(logging.INFO, "toolkit.web.data.instance_lock")
     instance_lock.take(URL).release()
     left = sorted(str(p.relative_to(tmp_path)).replace("\\", "/") for p in tmp_path.rglob("*")
                   if p.is_file())
-    assert left == ["bundles/notes.tmp", "runs/a.json", "uploads/c.csv.1a2b3c4d.tmp",
-                    "web.lock"], "only publish's own temporary files, in runs/ and bundles/"
-    assert "Removed 2 temporary file(s)" in caplog.text
+    assert left == ["bundles/notes.tmp", "runs/a.json", "scan_history/s.json",
+                    "uploads/c.csv.1a2b3c4d.tmp", "web.lock"], \
+        "only publish's own temporary files, in runs/, bundles/ and scan_history/ (F6e)"
+    assert "Removed 3 temporary file(s)" in caplog.text
 
 
 def test_only_publishs_temporary_names_are_leftovers():

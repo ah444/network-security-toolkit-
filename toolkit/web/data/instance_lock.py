@@ -5,8 +5,9 @@ it ends (Ctrl+C, the launcher menu, a crash), so it never needs clearing by hand
 
 The holder writes who it is (its process id and address) after the locked first byte, so a
 second server can say which one holds the folder. Only the holder clears the temporary files
-a crash left in ``runs/`` and ``bundles/`` (``publish.clear_leftovers``), at its start: the
-command line takes no lock, as it writes neither (HR3b, decided with the user). The holder
+a crash left in ``runs/``, ``bundles/`` and ``scan_history/`` (F6e) (``publish.clear_leftovers``),
+at its start: the command line takes no lock (HR3b, decided with the user); a CLI scan whose
+record is being published at that very moment says it was not saved. The holder
 also reads the jobs journal the last server left (``journal.recover``, HR3c).
 """
 
@@ -24,6 +25,7 @@ from typing import IO
 from ...core.data.ids.bundle_files import bundles_dir
 from ...core.data.ids.run_files import runs_dir
 from ...core.data.publish import clear_leftovers
+from ...core.data.recon.scan_records import history_dir
 from ...core.data.settings import instance_dir
 from .journal import Interrupted, journal_path, recover
 
@@ -79,7 +81,8 @@ def take(url: str, environ: Mapping[str, str] | None = None) -> InstanceLock:
     handle.truncate()
     handle.write(json.dumps({"pid": os.getpid(), "url": url}).encode("utf-8"))
     handle.flush()
-    cleared = sum(clear_leftovers(where) for where in (runs_dir(environ), bundles_dir(environ)))
+    cleared = sum(clear_leftovers(where) for where in (runs_dir(environ), bundles_dir(environ),
+                                                        history_dir(environ)))
     if cleared:
         log.info("Removed %d temporary file(s) a stopped export left in %s", cleared, folder)
     return InstanceLock(handle, recover(journal_path(environ)))

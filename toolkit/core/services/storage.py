@@ -1,7 +1,7 @@
 """The storage report (v5.3 step HR4b, RD4: IA9): every file of the instance, by kind.
 
 Each file is counted once, with its size: the saved runs' records, their importance results
-and bundles, the scan reports, the uploads being read, the logs and the rest; then the total
+and bundles, the saved scans (the scan history, F6e), the scan reports, the uploads being read, the logs and the rest; then the total
 and the free space of the disk. The leftovers are named: an importance result without its
 record or for a model the record doesn't list, a bundle whose run was deleted (unregistered:
 it can be registered again), an incomplete bundle, a damaged file (or one of a newer
@@ -25,11 +25,13 @@ from ..data.ids.importance_files import INFIX
 from ..data.ids.run_files import runs_dir
 from ..data.publish import LEFTOVER
 from ..data.recon.scan_files import scans_dir
+from ..data.recon.scan_records import history_dir
 from ..data.settings import instance_dir, min_free_mb, storage_warn_mb
 from .ids.comparison import is_run_id
 from .ids.exports import EXPORTED, INCOMPLETE, read_run, read_state
 from .ids.registry import MODELS
 from .ids.saved_importance import record_models
+from .recon.history import is_scan_id
 
 KINDS = (
     ("records", "Saved runs' records"),
@@ -41,6 +43,7 @@ KINDS = (
     ("incomplete_bundles", "Incomplete bundles (an export was interrupted)"),
     ("damaged", "Damaged files, or from a newer version (not read)"),
     ("temporary", "Temporary files a stop left (cleared when the web server starts)"),
+    ("scan_history", "Saved scans (the scan history)"),
     ("scans", "Scan reports"),
     ("uploads", "Uploads being read"),
     ("logs", "Logs"),
@@ -60,6 +63,7 @@ def storage_report() -> dict[str, Any]:
     sorts: dict[Path, Callable[[Path], str]] = {
         runs: lambda path: _in_runs(path, models),
         bundles: lambda path: _in_bundles(path, models),
+        history_dir(): _in_history,
         scans_dir(): lambda _path: "scans", instance_dir() / "uploads": lambda _path: "uploads",
         instance_dir() / "logs": lambda _path: "logs"}
     for path, size in files_under(instance_dir()):
@@ -82,11 +86,12 @@ def warnings(total: int, free: int, warn: int, floor: int) -> list[str]:
     if total > warn:
         found.append(f"The toolkit's files take {_size(total)}, more than the {_size(warn)} set "
                      "in TOOLKIT_STORAGE_WARN_MB. Nothing is deleted on its own: delete the runs "
-                     "you no longer need on the Saved Runs page (or with toolkit ids --delete).")
+                     "and scans you no longer need on the Saved Runs and Saved Scans pages (or "
+                     "with toolkit ids --delete and toolkit scan --delete).")
     if free < floor:
         found.append(f"Only {_size(free)} is free on this disk, under the {_size(floor)} a new "
                      "file must leave (TOOLKIT_MIN_FREE_MB): new runs, bundles, importance "
-                     "results and scan reports are not saved until space is freed.")
+                     "results, scans and scan reports are not saved until space is freed.")
     return found
 
 
@@ -123,6 +128,14 @@ def _in_runs(path: Path, models: dict[str, list[str] | None]) -> str:
         return "importance" if owned else "orphan_importance"
     return "records" if models.get(path.stem) is not None and path.suffix == ".json" \
         else "damaged"
+
+
+def _in_history(path: Path) -> str:
+    """The kind of a file in ``instance/scan_history`` (by its name: the records are not read
+    here; Saved Scans leaves out one it can't show, and says so)."""
+    if LEFTOVER.fullmatch(path.name):
+        return "temporary"
+    return "scan_history" if path.suffix == ".json" and is_scan_id(path.stem) else "damaged"
 
 
 def _in_bundles(path: Path, models: dict[str, list[str] | None]) -> str:

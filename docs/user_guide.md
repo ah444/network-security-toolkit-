@@ -760,15 +760,15 @@ there, and no model is loaded.
   **Also delete its bundle**. If a file can't be removed (another program has it open), the
   run stays listed: close that program and delete it again.
 - **Storage**, below the list, shows what the toolkit keeps on this computer: each kind of
-  file, how many and their size, the total and the free space on the disk, and any
+  file (the saved scans of [section 3.8](#38-the-scan-history) among them), how many and their size, the total and the free space on the disk, and any
   leftovers by name. It only shows: nothing is deleted from there. A run you deleted with
   its bundle kept is listed under **Unregistered bundles**; **Register again** brings it
   back as a saved run (its bundle's signature is checked first).
 - Two limits keep the disk from filling up, and neither deletes anything. Past 20 GB of
   files (`TOOLKIT_STORAGE_WARN_MB`), Storage shows a warning, and so does the web server's
   log when it starts. When the disk would keep less than 1 GB free (`TOOLKIT_MIN_FREE_MB`),
-  a new export, importance result or scan report is not saved, and the message says so:
-  free some space (delete runs you no longer need), then try again. Both are set in `.env`.
+  a new export, importance result, scan or scan report is not saved, and the message says so:
+  free some space (delete runs or scans you no longer need), then try again. Both are set in `.env`.
 
 Here the two runs of the same NSL-KDD files differ only in balancing, none (A) and class
 weights (B): Random Forest's CV macro-F1 is the same, its test macro-F1 is 0.010 lower.
