@@ -74,6 +74,28 @@ def test_the_worst_severity_is_of_the_ports_looked_up_only():
     assert worst == {A: None, B: "NOT CHECKED"}
 
 
+def test_the_newest_scan_of_each_target_the_riskiest_first():
+    """F10: the dashboard's targets. An older scan of a target never shows; within a risk,
+    the newest first."""
+    save(A, target="10.0.0.9", entries=[entry(22, "CRITICAL")])  # older: replaced by C
+    save(B, target="10.0.0.5", entries=[entry(22, "HIGH", unconfirmed=True)])
+    save(C, target="10.0.0.9", entries=[entry(22, "LOW")])
+    save("20261104T100000Z-0000000d", target="10.0.0.7", entries=[])
+    save("20261105T100000Z-0000000e", target="10.0.0.8",
+         entries=[{**entry(5040, "UNKNOWN"), "software": ""}])
+    rows = saved_scans.targets_at_risk(saved_scans.saved_scans()["scans"])
+    assert [(r["target"], r["risk"], r["unconfirmed"]) for r in rows] == [
+        ("10.0.0.5", "HIGH", True), ("10.0.0.9", "LOW", False),
+        ("10.0.0.8", "no lookup", False), ("10.0.0.7", "no open port", False)]
+    assert rows[1]["scan_id"] == C and rows[1]["open_ports"] == 1
+
+
+def test_the_risk_of_a_scan_in_a_word():
+    assert saved_scans.risk({"worst": "NOT CHECKED", "open_ports": 1}) == "NOT CHECKED"
+    assert saved_scans.risk({"worst": None, "open_ports": 2}) == "no lookup"
+    assert saved_scans.risk({"worst": None, "open_ports": 0}) == "no open port"
+
+
 def test_the_list_comes_fifty_at_a_time():
     for day in range(1, 4):
         save(f"202611{day:02d}T100000Z-0000000{day}")

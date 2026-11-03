@@ -77,6 +77,7 @@ INTEGRATION = (
     "recon/test_scan_history_cli.py",
     "recon/test_scan_report.py",
     "web/test_scan_report_page.py",
+    "web/test_dashboard.py",
     "recon/test_keys.py",
     "recon/test_llm.py",
     "recon/test_nmap.py",

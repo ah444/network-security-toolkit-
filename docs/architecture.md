@@ -183,6 +183,7 @@ The page, its routes and jobs, and the `web` command; it never imports the comma
 | `toolkit/web/controllers/command.py` | controllers | the web trainer's command (from `toolkit.start`): its settings checked, `--port` and `--no-browser`, then the server |
 | `toolkit/web/controllers/__init__.py` | controllers | `create_app()`: the Flask app with its own state, serving `toolkit/web/ui` |
 | `toolkit/web/controllers/server.py` | controllers | `run_server()`: waitress on 127.0.0.1, the port bound exclusively, the browser opened |
+| `toolkit/web/controllers/dashboard.py` | controllers | `GET /api/v1/dashboard` (F10): the home page's dashboard, read only; the saved files read after the session's lock is let go |
 | `toolkit/web/controllers/pages.py` | controllers | the HTML pages: home, the trainer (`/dynamic_ids`), the port scanner (`/scan`), the saved runs (`/runs`), the saved scans (`/scans`) and a saved scan's report (`/scans/<id>/report`, its CSS at `/scans/report.css`, F5b) |
 | `toolkit/web/controllers/datasets.py` | controllers | upload, preview, class filter and the analyses before training |
 | `toolkit/web/controllers/training.py` | controllers | the model list, a training job started, its results |
@@ -204,6 +205,7 @@ The page, its routes and jobs, and the `web` command; it never imports the comma
 | `toolkit/web/services/importance.py` | services | the permutation importance of a model of the workspace's run, as a job on the training's queue, bound when asked for to its run and model, one per run and model (HR1); asked for by `POST /api/v1/jobs/importance` (F3d) |
 | `toolkit/web/services/errors.py` | services | the error codes and `ServiceError` |
 | `toolkit/web/services/datasets.py` | services | uploads read, files combined, the class filter, the training split |
+| `toolkit/web/services/dashboard.py` | services | the home page's dashboard (F10): the scans and their risks (`saved_scans.targets_at_risk`), the newest saved runs, and what the session holds, side by side; the two tools never linked |
 | `toolkit/web/services/training.py` | services | training settings checked, the job queued, the run kept |
 | `toolkit/web/services/scan.py` | services | the web port scan: the choices checked (the authorization first, nothing sent before it), the scan queued as a job, the last scan kept for the download |
 | `toolkit/web/services/access.py` | services | the access token of a start (`--host`): made, checked (five wrong tries a minute per address), loopback told apart; a new one made on this computer locks every other computer out and cancels their waiting jobs (`lock_out`, HS1) |

@@ -17,8 +17,9 @@ web/
     command.py       the web command: its settings, --port, --no-browser, then the server
     __init__.py      create_app(): the Flask app with its own state
     server.py        waitress on 127.0.0.1, the port bound exclusively, the browser opened
-    pages.py         the HTML pages: home, the trainer, the port scanner, the saved runs and
-                     the saved scans
+    pages.py         the HTML pages: home, the trainer, the port scanner, the saved runs,
+                     the saved scans and a saved scan's report
+    dashboard.py     GET /api/v1/dashboard: what the home page shows
     access.py        the unlock page and route: other computers type the access token
     datasets.py      upload, preview, class filter, the analyses before training
     training.py      the model list, a training job started, its results
@@ -39,6 +40,8 @@ web/
                      the scan's, progress, cancel
     importance.py    a model's permutation importance as a job, bound to its run (HR1)
     datasets.py      uploads read, files combined, the class filter, the training split
+    dashboard.py     the home page's two parts, never linked: the scans and their risks, the
+                     runs and the session
     training.py      training settings checked, the job queued, the run kept
     scan.py          the port scan: its choices checked (the authorization first), the job,
                      the last scan kept for the download

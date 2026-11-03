@@ -22,6 +22,7 @@ from .targets import parse_ports
 PAGE_SIZE = 50  # scans in one list, newest first
 # the severities from the worst: NOT CHECKED before the clean ones (never shown as clean, HS4)
 WORST_FIRST = ("CRITICAL", "HIGH", "MEDIUM", "LOW", "NOT CHECKED", "UNKNOWN", "NO KNOWN CVE")
+RISK_ORDER = (*WORST_FIRST, "no lookup", "no open port")  # a scan's ``risk``, the worst first
 PROTOCOL_CHOICE = {("tcp",): "tcp", ("udp",): "udp", ("tcp", "udp"): "both"}
 DEFAULT_SWITCHES = {"scan_unresponsive": False, "nvd": True, "ai": True, "abuseipdb": True}
 NMAP_DEFAULTS = {"service_detection": "normal", "timing": "normal", "scripts": "",
@@ -99,6 +100,26 @@ def summary(record: Mapping[str, Any]) -> dict[str, Any]:
         "open_ports": len(record["entries"]), "worst": worst, "worst_unconfirmed": unconfirmed,
         "exit_code": record["exit_code"],
     }
+
+
+def risk(scan: Mapping[str, Any]) -> str:
+    """A saved scan's risk in a word (its ``summary``): its worst severity, "no lookup" when
+    none of its open ports was looked up, "no open port" when it found none."""
+    if scan["worst"] is not None:
+        return str(scan["worst"])
+    return "no lookup" if scan["open_ports"] else "no open port"
+
+
+def targets_at_risk(scans: list[Mapping[str, Any]]) -> list[dict[str, Any]]:
+    """The dashboard's targets (F10): the newest scan of each target among ``scans`` (newest
+    first, as ``saved_scans`` lists them), the riskiest first, the newest first within a risk."""
+    newest: dict[str, Mapping[str, Any]] = {}
+    for scan in scans:
+        newest.setdefault(scan["target"], scan)
+    rows = [{"target": scan["target"], "scan_id": scan["scan_id"], "started": scan["started"],
+             "risk": risk(scan), "unconfirmed": scan["worst_unconfirmed"],
+             "open_ports": scan["open_ports"]} for scan in newest.values()]
+    return sorted(rows, key=lambda row: RISK_ORDER.index(row["risk"]))
 
 
 def saved_scan(scan_id: str, directory: str | Path | None = None) -> dict[str, Any]:
