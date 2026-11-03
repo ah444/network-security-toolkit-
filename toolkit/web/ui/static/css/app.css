@@ -1581,6 +1581,13 @@ textarea:focus-visible,
   min-width: 44px;
 }
 
+/* a file's name (a run id, a model, ".importance.") is longer than a phone is wide: it wraps
+   (gate 5.3) */
+#deleteView li,
+#storageView li {
+  overflow-wrap: anywhere;
+}
+
 .compare-runs,
 .compare-models {
   display: grid;
