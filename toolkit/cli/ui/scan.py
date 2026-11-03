@@ -340,6 +340,14 @@ class ConsoleScan:
         """Shows where the report was saved."""
         print(f"Results exported to {path}")
 
+    def saved_to_history(self, scan_id: str) -> None:
+        """Shows the scan's id in the scan history (F6a)."""
+        print(f"Saved in the scan history as {scan_id}.")
+
+    def not_saved_to_history(self, reason: str) -> None:
+        """Says why the scan is not in the history; the results above are as they were."""
+        print(f"Not saved in the scan history: {reason}")
+
 
 def utf8_output() -> None:
     """UTF-8 output even when redirected (Windows would use cp1252 and crash on banners)."""

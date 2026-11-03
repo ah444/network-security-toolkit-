@@ -10,8 +10,8 @@ and the limits checked; a refusal is a 400 at once. NVD, AbuseIPDB and the AI ex
 are on by default, each with its switch, and the last two only with their key (HS4b, RD5: a
 service without its key is off and the answer says why, never a refusal); a private address
 never goes to AbuseIPDB (the core scan's rule); the keys never leave the server. Nothing is asked during the scan: the form
-answered everything. The last finished scan stays in the session (never saved, 4a); a
-cancelled one keeps nothing.
+answered everything. A finished scan is saved in the scan history by the core scan (F6a, which
+replaced 4a) and stays in the session for the download; a cancelled one keeps nothing.
 """
 
 from __future__ import annotations

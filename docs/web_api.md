@@ -322,15 +322,18 @@ and its ports are `NOT CHECKED`. The API keys stay on the server:
  "reputation": {}, "entries": [{"port": 22, "protocol": "tcp", "software": "OpenSSH 8.9", ...}],
  "summary": {"targets": 1, "open_ports": 2, "failed_lookups": [], "seconds": 4.2,
              "sent": {"NVD": 2, "AI (OpenRouter)": 0, "AbuseIPDB": 0}, "unavailable": {}},
- "failed_targets": []}
+ "failed_targets": [], "saved": {"scan_id": "20261103T101500Z-5d2e7a41"}}
 ```
 
 `entries` are the report's entries (the JSON download's), `hosts[].state` is `scanned`,
-`skipped` (didn't answer ping) or `failed` (the engine couldn't scan it). The last finished
-scan stays in the session, in memory only (nothing is saved on the server):
+`skipped` (didn't answer ping) or `failed` (the engine couldn't scan it). A finished scan
+is saved in the scan history (`instance/scan_history/<scan id>.json`, F6a): `saved` is
+`{"scan_id": ...}`, or `{"error": ...}` when it could not be written (a full disk); a
+cancelled one saves nothing. The last finished scan also stays in the session:
 `GET /api/v1/scan/report?format=txt|json|csv` gives it as a file to save (UTF-8, CSV cells
-that look like formulas as text). The web log (`web.log`) has one line per scan: the
-target, the hosts, the ports, the engine, how it ended.
+that look like formulas as text). The web log (`web.log`) has a line when a scan starts and
+one when it ends, with the same id: the target, the hosts, the ports, the engine, how it
+ended.
 
 ## Opened to the network
 

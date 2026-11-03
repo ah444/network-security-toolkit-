@@ -144,7 +144,8 @@ def test_a_scan_runs_and_its_answer_is_kept(net, runner, caplog):
     assert lines[0].startswith("scanme.example resolved to 10.0.0.9")
     assert "Scanning 10.0.0.9" in lines and any(line.startswith("Open: 22/tcp ssh")
                                                 for line in lines)
-    assert lines[-1].startswith("Done: 1 host(s), 2 open port(s)")
+    assert lines[-2].startswith("Done: 1 host(s), 2 open port(s)")
+    assert lines[-1].startswith("Saved in the scan history as ")  # F6a
     assert job.notes(len(lines) - 1) == lines[-1:]
     # the record of the scan (HS3, tests/recon/test_scan_record.py), not a line of the job's
     logged = [r.getMessage() for r in caplog.records if r.getMessage().startswith("Scan ")]

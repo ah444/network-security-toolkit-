@@ -109,6 +109,7 @@ no Flask, no argparse. Read by `cli/` and `web/`, it imports neither
 | `toolkit/core/services/recon/os_guess.py` | services | the OS guess from the TTL, the banners, the open ports and nmap's OS match, with its evidence; this computer said |
 | `toolkit/core/services/recon/report.py` | services | one report entry per open port, its network text cleaned |
 | `toolkit/core/services/recon/record.py` | services | the record of every scan (HS3): a JSON line in the tool's log when `run_scan` starts and one when it ends, with the request's source |
+| `toolkit/core/services/recon/history.py` | services | the scan history (F6a): `ScanNotes`, the view `run_scan` reports to, which notes how each host ended; every finished scan's record saved under its log id; a stopped one saves nothing |
 | `toolkit/core/data/__init__.py` | data | the shared data: files, the network, the environment |
 | `toolkit/core/data/settings.py` | data | every tunable setting, the `TOOLKIT_*` variables, the data folder, `.env` reading |
 | `toolkit/core/data/logs.py` | data | one rotating log file per tool, secrets redacted |
@@ -134,6 +135,7 @@ no Flask, no argparse. Read by `cli/` and `web/`, it imports neither
 | `toolkit/core/data/recon/nmap_xml.py` | data | nmap's XML as the scanner's `PortResult`s (the built-in scanner's states, nmap's own in `reason`), the OS matches and host scripts; every text from the network cleaned and cut |
 | `toolkit/core/data/recon/local.py` | data | whether an address is this computer's own (nothing sent), and its OS |
 | `toolkit/core/data/recon/text.py` | data | makes text from the network safe to show and export |
+| `toolkit/core/data/recon/scan_records.py` | data | the scan history's records, `instance/scan_history/<scan id>.json`, written once (HR3a) |
 | `toolkit/core/data/recon/scan_files.py` | data | scan reports as JSON, CSV or TXT: as text (`report_text`, for a download) or a file in `instance/scans/` (with the engine and nmap's CPE names) |
 | `toolkit/core/data/recon/findings.py` | data | what the intel gateways return (`CveEntry`, `IntelFinding`) |
 | `toolkit/core/data/recon/nvd.py` | data | CVEs and CVSS scores from the NVD API, by version (CPE names) or by keyword (an `IntelProvider`); each CVE carries its `match`, "version" or "name" |

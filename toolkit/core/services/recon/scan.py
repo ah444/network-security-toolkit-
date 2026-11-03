@@ -1,11 +1,11 @@
 """A scan, start to end (B11, S16, step 1.4e): each target pinged, its ports checked, the
-open ones looked up online (each product once, in parallel), the report entries made and,
-if asked, saved. What the user sees and answers on the way goes through a ``ScanView``
+open ones looked up online (each product once, in parallel), the report entries made, the
+scan saved in the history (F6a, ``history``) and, if asked, its report saved. What the user sees and answers on the way goes through a ``ScanView``
 (``toolkit.cli.ui.scan.ConsoleScan``), so this module never prints or asks.
 
 A scan can be stopped (v5.2 step 2.4c, the web scan's Cancel): once its ``stop`` event is
 set, nothing more is sent, to the targets or online, and ``run_scan`` raises ScanStopped
-without a summary or a file.
+without a summary or a file (nor a record in the history).
 """
 
 from __future__ import annotations
@@ -35,6 +35,7 @@ from ...data.recon.scanner import Progress
 from ...data.recon.text import one_line as one_line  # network text, shown on one line
 from ...data.settings import ScanConfig
 from .engines import DEFAULT_ENGINE, describe, engine_named
+from .history import ScanNotes, save_scan
 from .intel import Intel, LookupResult
 from .online import OnlinePlan as OnlinePlan
 from .online import online_plan
@@ -162,6 +163,13 @@ class ScanView(Protocol):
 
     def exported(self, path: Path) -> None:
         """The report was saved as ``path``, a new file (never overwriting one)."""
+
+    def saved_to_history(self, scan_id: str) -> None:
+        """After the summary (F6a): the scan was saved in the scan history as ``scan_id``."""
+
+    def not_saved_to_history(self, reason: str) -> None:
+        """After the summary (F6a): the scan could not be saved in the history (``reason``: a
+        full disk, a folder it can't write); the scan itself is as it was."""
 
 
 def resolve_targets(text: str, limits: ScanConfig, view: ScanView) -> list[str]:
@@ -307,16 +315,18 @@ def _scan_all(request: ScanRequest, intel: Intel, view: ScanView,
 
 def run_scan(request: ScanRequest, keys: Mapping[str, str], start_time: float,
              view: ScanView, stop: threading.Event | None = None) -> int:
-    """Scan every target, show the summary, export (asked, or ``--export``); the exit code:
-    1 when the engine could not scan a target (the others are still scanned), else 0.
-    ScanStopped once ``stop`` is set (``scan_target``), with no summary and no file. The log
-    gets a line when the scan starts and one when its scanning ends, before the summary and the
-    export (``record``, HS3)."""
+    """Scan every target, show the summary, save the scan in the history (F6a), export (asked,
+    or ``--export``); the exit code: 1 when the engine could not scan a target (the others are
+    still scanned), else 0. ScanStopped once ``stop`` is set (``scan_target``), with no summary,
+    no record and no file. The log gets a line when the scan starts and one when its scanning
+    ends, before the summary and the export (``record``, HS3); the record has the same id."""
     plan = online_plan(request, keys)
     scan_id = scan_started(request.source, request.target_text, request.targets, request.ports,
                            request.protocols, request.engine,
                            {"nvd": plan.nvd, "ai": plan.ai, "abuseipdb": plan.abuseipdb})
-    began, outcome = time.monotonic(), "failed"
+    notes = ScanNotes(view, request.targets)  # passes everything on to the view
+    view = notes
+    started, began, outcome = time.time(), time.monotonic(), "failed"
     entries: list[ReportEntry] = []
     engine_failed = 0
     try:
@@ -329,13 +339,15 @@ def run_scan(request: ScanRequest, keys: Mapping[str, str], start_time: float,
         outcome = "stopped"
         raise
     finally:
-        scan_ended(scan_id, outcome, len(entries), engine_failed, time.monotonic() - began)
+        seconds = time.monotonic() - began
+        scan_ended(scan_id, outcome, len(entries), engine_failed, seconds)
     code = 1 if engine_failed else 0
 
     failed =[f"{e['port']}/{e['protocol']} {error}" for e in entries
               for error in e["lookup_errors"]]
     view.summary(len(request.targets), len(entries), failed, time.time() - start_time,
                  intel.sent(), intel.unavailable())
+    save_scan(scan_id, request, plan, notes, started, seconds, code)
 
     if not entries:
         if request.interactive or request.export:

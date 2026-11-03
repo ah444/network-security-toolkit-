@@ -13,11 +13,11 @@ from __future__ import annotations
 
 import json
 import logging
-import secrets
 from collections.abc import Mapping, Sequence
 from typing import Any
 
 from ...data.recon.nmap import port_ranges
+from .history import new_scan_id
 
 log = logging.getLogger(__name__)
 
@@ -33,8 +33,8 @@ def scan_started(source: str, target: str, addresses: Sequence[str], ports: Sequ
                  protocols: Sequence[str], engine: str, online: Mapping[str, str]) -> str:
     """Writes the line of a scan that starts: where its request came from, the target as typed,
     the addresses it was resolved to, the ports as ranges, the protocols, the engine and what
-    may go online; the scan's id, which its end line repeats."""
-    scan_id = secrets.token_urlsafe(6)
+    may go online; the scan's id, which its end line and its record in the history (F6a) repeat."""
+    scan_id = new_scan_id()
     _line("started", {"scan_id": scan_id, "source": source, "target": target,
                       "addresses": list(addresses), "ports": port_ranges(ports),
                       "protocols": list(protocols), "engine": engine, "online": dict(online)})

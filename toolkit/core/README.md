@@ -9,7 +9,8 @@ core/
   services/        what the tools do, with no I/O
     ids/           the ML core: load, split, leakage guard, train, evaluate, bundles, predict,
                    saved runs compared, what a model relies on and why it predicts
-    recon/         the scan, start to end: targets and limits, the scan, lookups, report
+    recon/         the scan, start to end: targets and limits, the scan, lookups, report,
+                   the scan history (F6a)
     ports.py       the three interfaces between layers: ModelStore, IntelProvider, ProgressSink
     storage.py     the storage report: every file of the instance by kind (HR4b; only reads)
   data/            files, the network and the environment
@@ -24,7 +25,7 @@ core/
     ids/           bundle files and the signing key, run records, importance results
                    (HR2), dataset files
     recon/         port checks, banner probes, ping, names to addresses, NVD, OpenRouter,
-                   AbuseIPDB, scan report files
+                   AbuseIPDB, scan report files, the scan history's records (F6a)
 ```
 
 Rules that matter here:

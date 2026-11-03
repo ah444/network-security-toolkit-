@@ -79,6 +79,7 @@ class WebScan:
         self.online: OnlinePlan | None = None
         self.failed: list[str] = []
         self.totals: dict[str, Any] = {}
+        self.saved: dict[str, str] = {}  # {"scan_id": ...}, or {"error": ...} (F6a)
         self.down = ""  # the last host that didn't answer the ping
 
     def note(self, line: str) -> None:
@@ -233,8 +234,18 @@ class WebScan:
         pass
 
     def exported(self, path: Path) -> None:
-        """Never called: nothing is saved."""
-        pass  # never: nothing is saved
+        """Never called: no report file is saved (the download gives the files)."""
+        pass  # never: no report file (the history keeps the scan, F6a)
+
+    def saved_to_history(self, scan_id: str) -> None:
+        """The scan's id in the scan history, for the answer."""
+        self.saved = {"scan_id": scan_id}
+        self.note(f"Saved in the scan history as {scan_id}.")
+
+    def not_saved_to_history(self, reason: str) -> None:
+        """Why the scan is not in the history, for the answer; nothing else changes."""
+        self.saved = {"error": one_line(reason, 300)}
+        self.note(f"Not saved in the scan history: {one_line(reason, 300)}")
 
     # --- The job's result -------------------------------------------------------------------
     def answer(self, request: ScanRequest, code: int) -> dict[str, Any]:
@@ -255,6 +266,7 @@ class WebScan:
             "entries": self.entries,
             "summary": self.totals,
             "failed_targets": self.failed,
+            "saved": self.saved,
         }
 
 

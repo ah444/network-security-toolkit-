@@ -129,6 +129,7 @@ The ones that shape later work. The checklists have every step's details.
 | F2 | Saved Runs read only the records, never a bundle; 50 per page; differences only when both runs scored the same test rows; a record is data, its id checked before a path is made | Fast, safe, and no misleading comparison |
 | F3 | Permutation importance (not SHAP), on the test split (a stratified sample of 5,000 rows, 5 repeats, the run's seed), one feature at a time so a job can show progress and stop; the explanation of one row by the typical value of each feature | No new dependency; the same method for all 11 models; immediate explanations |
 | v5.3 review | The hardening section H before the rest of F3; the committee's RD1–RD4 | The review's conditions for calling v5.3 complete |
+| F6 | Every finished scan, the CLI's and the web's, saved as a file written once in `instance/scan_history/`, under its log id; a stopped one saves nothing; nothing deleted on its own; the trainings' history is Saved Runs (F2, HR5) | Like every training (RD3); F10 and the comparison of two scans need them |
 
 ## 9. Superseded
 
@@ -136,6 +137,7 @@ The ones that shape later work. The checklists have every step's details.
 |---|---|
 | Plan F6: the history in SQLite (D7-C, "a disk workspace when history arrives") | RD3 and RD4: every training's record and every result are files written once in `instance/`; F6 builds the history, its retention and its deletion on them (HR4, HR5) |
 | D12 steps 4 and 6: ship a default CLI model and its record | The 0.5 revision: no model is shipped |
+| 5.2 step 2.4, 4a: no automatic save of a web scan (the last one in the session only) | F6 (2026-11-03): every finished scan is saved in the scan history |
 | v5.0's plain description "works offline" | Local-first with optional outside services (HC4) |
 | "The test split is scored once" as a literal statement | Section 4: scored once per model for the leaderboard; reused afterwards only as a diagnosis (HC1) |
 | The F2 and F3 decisions replaced in the review | Listed in [REVIEW_DECISIONS.md](REVIEW_DECISIONS.md), "Superseded" |

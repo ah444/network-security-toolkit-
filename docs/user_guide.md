@@ -142,6 +142,7 @@ Total open ports found: 1
 Failed lookups: 0
 Requests sent online: NVD 1, AI (OpenRouter) 0, AbuseIPDB 0
 Elapsed time: 2.40 seconds
+Saved in the scan history as 20261024T185838Z-5d2e7a41.
 Do you want to export the results to a file? (Y/N): y
 Enter desired file extension (txt, json, csv): json
 Results exported to <project>\instance\scans\scan-20261024T185841Z.json
@@ -239,6 +240,7 @@ Total open ports found: 1
 Failed lookups: 0
 Requests sent online: NVD 1, AI (OpenRouter) 0, AbuseIPDB 0
 Elapsed time: 2.29 seconds
+Saved in the scan history as 20261024T185848Z-c40b91e7.
 Results exported to <project>\instance\scans\scan-20261024T185851Z.csv
 ```
 
@@ -348,6 +350,7 @@ Total open ports found: 2
 Failed lookups: 0
 Requests sent online: NVD 2, AI (OpenRouter) 0, AbuseIPDB 0
 Elapsed time: 9.19 seconds
+Saved in the scan history as 20261026T101512Z-8a17f0d3.
 ```
 
 - **Scan engine:** which nmap runs, and each choice. nmap's service detection always runs
@@ -500,6 +503,19 @@ This computer's own browser, at 127.0.0.1, needs no token.
   a message (both exit code 2). On Windows the firewall may ask, the first time, whether
   Python may accept connections; allow it for private networks only.
 - Stop it with Ctrl+C when you are done.
+
+### 3.8 The scan history
+
+Every scan that finishes, from the terminal or the web page, is saved on this computer in
+`instance\scan_history\`, one file per scan named by its id: the line `Saved in the scan
+history as …` gives it, and the scan's two lines in the log (`scanner.log` or `web.log`) have
+the same id. It holds what was asked (the target as typed, its addresses, the ports, the
+protocols, the engine and its choices, and whether this computer or another one asked),
+what could go online, how each host ended (scanned; skipped, because it didn't answer the
+ping; or failed, with why), AbuseIPDB's answers and every open port as in the report. Never
+an API key. A scan you cancel, or that reaches its time limit, saves nothing. Nothing is
+deleted on its own. When the disk is too full (`TOOLKIT_MIN_FREE_MB`), the scan still shows
+its results and says `Not saved in the scan history: …`.
 
 ## 4. Train a model in the web trainer
 
@@ -1017,6 +1033,7 @@ Everything the toolkit keeps is in the `instance` folder of the project folder
 | `instance\bundles\` | your exports, one `.bundle` file each |
 | `instance\runs\` | the record of each training: data, split, settings, scores |
 | `instance\scans\` | exported scan reports |
+| `instance\scan_history\` | the record of each finished scan ([section 3.8](#38-the-scan-history)) |
 | `instance\logs\` | one log file per tool (`web.log`, `scanner.log`, `ids_cli.log`) |
 | `instance\uploads\` | temporary copies of the datasets uploaded to the web trainer |
 | `instance\signing.key` | the key that signs your exports |
@@ -1058,7 +1075,7 @@ Back up these three, together:
 | `instance\bundles\` | your exports |
 | `instance\runs\` | the record of each run, to retrain from if a bundle is lost, and the importance results saved beside it |
 
-The logs and the uploads need no backup, and the scan reports only if you want to keep them.
+The logs and the uploads need no backup, and the scan reports and the scan history only if you want to keep them.
 
 To restore, on this computer or on a new install: start the web trainer once
 (`python -m toolkit web`, then stop it with Ctrl+C: it makes the `instance` folder and

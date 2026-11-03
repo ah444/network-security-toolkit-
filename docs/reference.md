@@ -108,8 +108,8 @@ starts and one when its scanning ends (HS3): `instance/logs/scanner.log` for `sc
 with a line break or quotes stays inside its own line:
 
 ```
-2026-11-03T10:00:01 INFO toolkit.core.services.recon.record: Scan started {"scan_id": "k2Pq9xAb", "source": "192.168.56.20", "target": "10.0.0.0/30", "addresses": ["10.0.0.1", "10.0.0.2"], "ports": "22,80-82,443", "protocols": ["tcp"], "engine": "builtin", "online": {"nvd": "on, the software name and version only", "ai": "off: not asked for (--ai)", "abuseipdb": "off: no public address (a private one is never sent)"}}
-2026-11-03T10:00:09 INFO toolkit.core.services.recon.record: Scan ended {"scan_id": "k2Pq9xAb", "outcome": "done", "open_ports": 3, "engine_failed": 0, "seconds": 8.1}
+2026-11-03T10:00:01 INFO toolkit.core.services.recon.record: Scan started {"scan_id": "20261103T100001Z-5d2e7a41", "source": "192.168.56.20", "target": "10.0.0.0/30", "addresses": ["10.0.0.1", "10.0.0.2"], "ports": "22,80-82,443", "protocols": ["tcp"], "engine": "builtin", "online": {"nvd": "on, the software name and version only", "ai": "off: not asked for (--ai)", "abuseipdb": "off: no public address (a private one is never sent)"}}
+2026-11-03T10:00:09 INFO toolkit.core.services.recon.record: Scan ended {"scan_id": "20261103T100001Z-5d2e7a41", "outcome": "done", "open_ports": 3, "engine_failed": 0, "seconds": 8.1}
 ```
 
 - `source`: `this computer` (always for `scan`), or the address of the other computer whose
@@ -119,7 +119,15 @@ with a line break or quotes stays inside its own line:
   may send to NVD, the AI and AbuseIPDB, as its opening notice says.
 - `outcome`: `done`, `stopped` (Cancel, the time limit or Ctrl+C) or `failed` (an error
   nobody expected); `engine_failed`: targets the engine could not scan; `open_ports` is 0
-  when the scan didn't end `done`. The same `scan_id` joins the two lines.
+  when the scan didn't end `done`. The same `scan_id` joins the two lines, and names the
+  scan's record in the scan history when it ended `done`.
+- The scan history (F6a): every scan that ends `done` is also saved as
+  `instance/scan_history/<scan id>.json`, a file written once: the request (as in the start
+  line), each host's state (`scanned`, `skipped`: it didn't answer the ping, or `failed`,
+  with why), AbuseIPDB's answers, the report entries (as in `--export json`) and the totals.
+  The scan prints `Saved in the scan history as <scan id>.`, or `Not saved in the scan
+  history: <why>` (a full disk, `TOOLKIT_MIN_FREE_MB`) without changing its exit code. A
+  stopped or failed scan saves nothing.
 - No API key or access token is written.
 - How far back: each log rotates at 1 MB with three older files, the oldest deleted (about
   4 MB per tool; a scan of 256 addresses writes a start line of about 4 KB).
