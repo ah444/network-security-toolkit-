@@ -29,7 +29,7 @@ from pathlib import Path
 from ...core.services.ids.bundle import Bundle, BundleError, BundleVersionWarning
 from ...core.services.ids.comparison import NotARun, compare_saved, saved_runs
 from ...core.services.ids.datasets import DatasetError
-from ...core.services.ids.exports import BundleStore
+from ...core.services.ids.exports import EXPORTED, BundleStore
 from ...core.services.ids.prediction import (
     json_rows,
     label_column,
@@ -47,11 +47,11 @@ LARGE_BUNDLE = 500 * 2**20  # bytes: say that loading takes a while
 
 
 def load_model(bundle_path: str | Path | None = None) -> Bundle:
-    """A bundle signed by this install: ``bundle_path``, else the newest export.
+    """A bundle signed by this install: ``bundle_path``, else the newest whole export.
 
     Raises BundleError (with a message for the user) for anything else."""
     if bundle_path is None:
-        exports = MODEL_STORE.list_bundles()
+        exports = [info for info in MODEL_STORE.list_bundles() if info.state == EXPORTED]
         if not exports:
             raise BundleError("NO_EXPORT", screen.NO_EXPORT)
         bundle_path = exports[0].path

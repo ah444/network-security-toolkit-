@@ -143,8 +143,8 @@ refused).
 
 | Flag | Default | What it does |
 |---|---|---|
-| `--bundle BUNDLE` | ask (without a prompt: the newest export) | the `.bundle` file to use |
-| `--list` | | lists the exports (newest first) without loading them, then exits |
+| `--bundle BUNDLE` | ask (without a prompt: the newest whole export) | the `.bundle` file to use |
+| `--list` | | lists the exports (newest first) without loading them, then exits; a bundle that is only part of its file is listed with `[INCOMPLETE: the export was interrupted; ...]` and never removed on its own |
 | `--runs` | | lists the saved runs, newest first and 50 at a time, then exits |
 | `--before RUN_ID` | | with `--runs`: the runs saved before this one (the list's last line names it) |
 | `--compare RUN_ID RUN_ID` | | the two saved runs A and B side by side, then exits: each model of both, with Δ = B − A only when both scored the same test rows (otherwise why not), the models of one run only and the settings that differ |

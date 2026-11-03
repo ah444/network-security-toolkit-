@@ -92,7 +92,7 @@ no Flask, no argparse. Read by `cli/` and `web/`, it imports neither
 | `toolkit/core/services/ids/run_json.py` | services | the record's plain-JSON form (`TrainingRun.to_dict()`): any value as JSON types, what is kept of the profile, split, training and pipelines |
 | `toolkit/core/services/ids/bundle.py` | services | packs and checks signed bundles (bytes only) |
 | `toolkit/core/services/ids/legacy_names.py` | services | the old names (`toolkit.ids_core`, before step 1.5d; `toolkit.services.ids`, until v5.2 step 2.3a), only while a bundle saved with them loads |
-| `toolkit/core/services/ids/exports.py` | services | saves, lists and loads runs and bundles; `BundleStore` is the `ModelStore` |
+| `toolkit/core/services/ids/exports.py` | services | saves, lists and loads runs and bundles, each bundle with its state (HR3d); `BundleStore` is the `ModelStore` |
 | `toolkit/core/services/ids/comparison.py` | services | the saved runs (records only, never a bundle): a run's summary, the view its charts need, whether two runs scored the same test rows, two runs side by side |
 | `toolkit/core/services/ids/batch.py` | services | labels every row of a table: the CLI's `--csv` and the web's "Predict a CSV file" |
 | `toolkit/core/services/ids/prediction.py` | services | the IDS command's predictions: one row, a table, a CSV file into a new file |
@@ -493,6 +493,15 @@ names it and why. Ctrl+C stops the scan with exit code 130.
   would replace). After a crash of the process the file is whole or absent, and a `.tmp`
   file may be left (no listing reads it); after a power cut it is best effort. A file
   system without hard links (on Linux and macOS) is refused with a message.
+- A bundle's state comes from its header (HR3d, `bundle.header_state`): the format records
+  its lengths, so its first bytes and the file's size say whether it is whole, with no HMAC
+  and nothing unpickled, and no length is read past the file's size. **Exported**: the
+  lengths give its size (its signature is checked when it is used); **Incomplete**: they
+  don't, or the file stops before them (an export cut off before HR3a wrote the final name
+  directly); **Verification failed**: a load in this process refused it for its signature
+  (kept by `BundleStore` in memory: the file is never changed, RD4). An incomplete bundle is
+  listed, never deleted on its own; an export it blocks says so. **Not exported** (a run
+  without a bundle) comes with the record of every training (HR5).
 - One web server per instance (`toolkit/web/data/instance_lock.py`, HR3b): an operating-system
   lock on `instance/web.lock` (`msvcrt`, `fcntl`), taken before the port and released by the
   system when the process ends; the holder writes its process id and address after the

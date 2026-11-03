@@ -26,12 +26,15 @@ from ...data.ids.bundle_files import (
     write_new,
 )
 from ...data.ids.run_files import read_record, write_record
+from .bundle import EXPORTED as EXPORTED  # the states, for the callers
+from .bundle import INCOMPLETE as INCOMPLETE
+from .bundle import VERIFICATION_FAILED as VERIFICATION_FAILED
 from .bundle import (
     HEADER_BYTES,
     Bundle,
-    manifest_length,
+    header_bytes,
+    header_state,
     pack,
-    parse_manifest,
     peek_manifest,
     unpack,
 )
@@ -48,43 +51,64 @@ class SavedBundle:
 
 @dataclass(frozen=True)
 class BundleInfo:
-    """A bundle file as listed: its path, its size and its manifest, read without checking the
-    signature, so for lists and messages only (never to load from)."""
+    """A bundle file as listed: its path, its size, its manifest, read without checking the
+    signature, so for lists and messages only (never to load from), and its state (HR3d):
+    EXPORTED, INCOMPLETE (then the manifest may be empty) or VERIFICATION_FAILED."""
     path: Path
     size: int  # bytes
     manifest: dict[str, Any]  # read without checking the signature: for lists and messages only
+    state: str = EXPORTED
+
+
+class BundleExists(FileExistsError):
+    """A bundle of this run is already there and is never replaced; ``state`` is its state
+    (INCOMPLETE: an interrupted export left it), None when it can't be read."""
+
+    def __init__(self, path: Path, state: str | None):
+        super().__init__(path)
+        self.path, self.state = path, state
 
 
 def save_bundle(run: TrainingRun, directory: str | Path | None = None, *,
                 key_file: str | Path | None = None) -> SavedBundle:
-    """Write ``<run id>.bundle``; raises FileExistsError rather than replace one."""
-    path = new_bundle_path(run.run_id, directory)
+    """Write ``<run id>.bundle``; raises BundleExists rather than replace one."""
+    try:
+        path = new_bundle_path(run.run_id, directory)
+    except FileExistsError as error:
+        raise _exists(Path(error.args[0])) from None
     data = pack(run, signing_key(key_file, create=True))
-    write_new(path, data)
+    try:
+        write_new(path, data)
+    except FileExistsError:
+        raise _exists(path) from None  # it appeared meanwhile
     sha256 = hashlib.sha256(data).hexdigest()
     return SavedBundle(path, sha256, dataclasses.replace(run, bundle_sha256=sha256))
 
 
-def read_manifest_header(path: str | Path) -> dict[str, Any] | None:
-    """A bundle file's manifest, reading only the start of the file (never its models, so
-    listing multi-GB bundles is instant). Unchecked: None if it isn't a bundle."""
+def read_state(path: str | Path) -> tuple[str | None, dict[str, Any] | None]:
+    """A bundle file's state and manifest from its first bytes and its size (never its models,
+    so listing multi-GB bundles is instant; no length read past the file's size).
+    Unchecked: (None, None) if it isn't a bundle or can't be read."""
     try:
-        length = manifest_length(read_start(path, HEADER_BYTES))
-        if length is None:
-            return None
-        return parse_manifest(read_start(path, HEADER_BYTES + length)[HEADER_BYTES:])
+        size = Path(path).stat().st_size
+        start = read_start(path, min(HEADER_BYTES, size))
+        needed = min(header_bytes(start), size)
+        if needed > len(start):
+            start = read_start(path, needed)
+        return header_state(start, size)
     except OSError:
-        return None
+        return None, None
 
 
 def list_bundles(directory: str | Path | None = None) -> list[BundleInfo]:
-    """The bundles in ``instance/bundles`` (this install's exports), newest first."""
+    """The bundles in ``instance/bundles`` (this install's exports), newest first, the
+    incomplete ones too (never deleted on their own)."""
     found = []
     for path, size, mtime in stored_bundles(directory):
-        manifest = read_manifest_header(path)
-        if manifest is not None:
-            found.append((str(manifest.get("created_at", "")), mtime,
-                          BundleInfo(path, size, manifest)))
+        state, manifest = read_state(path)
+        if state is not None:
+            found.append((str((manifest or {}).get("created_at", "")), mtime,
+                          BundleInfo(path, size, manifest or {}, state)))
     return [info for *_, info in sorted(found, key=lambda item: item[:2], reverse=True)]
 
 
@@ -99,24 +123,34 @@ class BundleStore:
 
     ``directory`` and ``key_file`` default to ``instance/bundles`` and
     ``instance/signing.key``, resolved at each call (so ``TOOLKIT_INSTANCE_DIR`` applies).
+    A file a load refused for its signature is listed as VERIFICATION_FAILED while the store
+    lives (HR3d): the file itself is never changed (RD4).
     """
 
     def __init__(self, directory: str | Path | None = None, *,
                  key_file: str | Path | None = None):
         self.directory = directory
         self.key_file = key_file
+        self._failed: set[tuple[str, int, int]] = set()
 
     def save(self, run: TrainingRun) -> SavedBundle:
         """``save_bundle`` in the store's folder, signed with its key."""
         return save_bundle(run, self.directory, key_file=self.key_file)
 
     def list_bundles(self) -> list[BundleInfo]:
-        """``list_bundles`` of the store's folder."""
-        return list_bundles(self.directory)
+        """``list_bundles`` of the store's folder, with the files that failed a load."""
+        return [dataclasses.replace(info, state=VERIFICATION_FAILED)
+                if info.state == EXPORTED and _identity(info.path) in self._failed else info
+                for info in list_bundles(self.directory)]
 
     def load(self, path: str | Path) -> Bundle:
         """``load_bundle`` with the store's key: signed by this install, or refused."""
-        return load_bundle(path, key_file=self.key_file)
+        try:
+            return load_bundle(path, key_file=self.key_file)
+        except BundleError as error:
+            if error.code == "BAD_SIGNATURE":
+                self._failed.add(_identity(path))
+            raise
 
     def open(self, data: bytes) -> Bundle:
         """``open_bundle`` with the store's key (bytes already in memory)."""
@@ -145,6 +179,20 @@ def open_bundle(data: bytes, *, key_file: str | Path | None = None,
                           "to make a new bundle. Keep a backup copy of the instance/ folder "
                           "to avoid this.") from None
     return unpack(data, key=key)
+
+
+def _exists(path: Path) -> BundleExists:
+    """The BundleExists of the file at ``path``, with its state."""
+    return BundleExists(path, read_state(path)[0])
+
+
+def _identity(path: str | Path) -> tuple[str, int, int]:
+    """A file as it is now: its path, size and modification time (0, 0 once it is gone)."""
+    try:
+        stat = Path(path).stat()
+        return str(Path(path).resolve()), stat.st_size, stat.st_mtime_ns
+    except OSError:
+        return str(path), 0, 0
 
 
 def write_run(run: TrainingRun, directory: str | Path | None = None) -> Path:

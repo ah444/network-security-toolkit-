@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any, cast
 
 from ...core.services.ids.bundle import Bundle
-from ...core.services.ids.exports import BundleInfo
+from ...core.services.ids.exports import EXPORTED, INCOMPLETE, VERIFICATION_FAILED, BundleInfo
 from ...core.services.ids.prediction import model_order
 from ...core.services.ids.registry import MODELS
 
@@ -19,6 +19,12 @@ from ...core.services.ids.registry import MODELS
 NORMAL_LABELS = {"benign", "normal"}
 NO_EXPORT = ("No exported model yet: train one in the web trainer and click Export (it is "
              "saved in instance/bundles), or pass --bundle.")
+# What a listed bundle that isn't a whole export says (HR3d); it is never removed on its own
+STATE_NOTES = {
+    INCOMPLETE: "  [INCOMPLETE: the export was interrupted; remove the file to export again]",
+    VERIFICATION_FAILED: "  [VERIFICATION FAILED: its signature does not match this install's "
+                         "key]",
+}
 
 # Plain-language notes for the split codes a model card can show
 SPLIT_NOTES = {
@@ -36,14 +42,17 @@ def size_text(size: int) -> str:
 
 
 def export_line(info: BundleInfo) -> str:
-    """One export, from its manifest header (read without loading the models)."""
+    """One export, from its manifest header (read without loading the models), and its state
+    when it is not a whole export (HR3d)."""
     manifest = info.manifest
+    if not manifest:  # cut off before its manifest ended
+        return f"{info.path.stem}  ({size_text(info.size)})" + STATE_NOTES.get(info.state, "")
     dataset = ((manifest.get("run") or {}).get("dataset") or {}).get("name", "unknown data")
     selected = manifest.get("selected", "")
     title = MODELS[selected].title if selected in MODELS else selected
     others = len(manifest.get("models", [])) - 1
     return (f"{info.path.stem}  {dataset}  {title}" + (f" +{others}" if others > 0 else "")
-            + f"  ({size_text(info.size)})")
+            + f"  ({size_text(info.size)})" + STATE_NOTES.get(info.state, ""))
 
 
 def model_card(bundle: Bundle) -> str:
@@ -175,12 +184,13 @@ def exports_list(exports: Sequence[BundleInfo]) -> None:
 
 
 def choose_export(exports: Sequence[BundleInfo]) -> Path:
-    """The export the user picks (newest first; Enter = the newest)."""
+    """The export the user picks (newest first; Enter = the newest whole one)."""
     print("\n📂 Models exported from the web trainer (newest first):")
     for i, info in enumerate(exports, 1):
         print(f"  {i}. {export_line(info)}")
-    picked = choose(f"\nChoose an export (1-{len(exports)}, Enter = 1): ", len(exports),
-                    default=1)
+    default = next((i for i, info in enumerate(exports, 1) if info.state == EXPORTED), 1)
+    picked = choose(f"\nChoose an export (1-{len(exports)}, Enter = {default}): ", len(exports),
+                    default=default)
     return exports[picked - 1].path
 
 

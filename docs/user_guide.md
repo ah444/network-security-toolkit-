@@ -979,6 +979,7 @@ bundles saved with that key won't load once your old key is back.
 | `Port 5000 is already in use on this computer: ...` | The trainer may already be running: open the printed address. Or start it on another port: `python -m toolkit web --port 5001` |
 | `TOOLKIT_... must be ...` and the command stops | A setting has a wrong value: fix it or remove it ([reference.md, section 7.1](reference.md#71-toolkit_-settings)) |
 | `No exported model yet: train one in the web trainer and click Export ...` | Train and export a model first (section 4), or give a bundle with `--bundle` |
+| `[INCOMPLETE: the export was interrupted; ...]` after an export in `--list`, or `An incomplete bundle of this run is in the bundles folder ...` on Export | Part of a bundle is under its name: an export cut off by an older version of the toolkit, or a copy that stopped (the toolkit never removes it on its own). Delete that `<run id>.bundle` from `instance/bundles`, then export again |
 | `The bundle's signature does not match this install's signing key: ...` | The bundle was made by another install or changed after it was saved; only bundles made here load |
 | `Host 127.0.0.1 did not respond to ping.` | The host may block ping: add `--scan-unresponsive` to scan it anyway |
 | `Lookup failed: NVD: timed out` | NVD didn't answer in time; scan again later or set an `NVD_API_KEY` |

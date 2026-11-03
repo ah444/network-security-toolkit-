@@ -230,6 +230,38 @@ def parse_manifest(body: bytes) -> dict[str, Any] | None:
         return None
 
 
+# --- a bundle's state from its header (HR3d, IA10) -------------------------------------------
+
+EXPORTED = "exported"  # whole: its signature is checked when it is used
+INCOMPLETE = "incomplete"  # its size is not the one its lengths give: an interrupted export
+VERIFICATION_FAILED = "verification failed"  # a use found a bad signature
+
+
+def header_bytes(head: bytes) -> int:
+    """How many of a file's first bytes ``header_state`` needs, from its first HEADER_BYTES:
+    up to the payload's length, or HEADER_BYTES when the manifest's length isn't there."""
+    length = manifest_length(head)
+    return HEADER_BYTES if length is None else HEADER_BYTES + length + _LENGTH_BYTES
+
+
+def header_state(start: bytes, size: int) -> tuple[str | None, dict[str, Any] | None]:
+    """A file's state and its unchecked manifest, from its first ``header_bytes`` bytes (all
+    of it when shorter) and its size: EXPORTED when the lengths give its size, INCOMPLETE
+    otherwise, also when cut off before them; (None, None) when it is not a bundle, its
+    manifest whole but not ours. No HMAC, nothing deserialized."""
+    if not (start.startswith(MAGIC) or MAGIC.startswith(start)):
+        return None, None
+    field = header_bytes(start[:HEADER_BYTES]) - _LENGTH_BYTES
+    if len(start) < HEADER_BYTES or len(start) < field + _LENGTH_BYTES:
+        return INCOMPLETE, None
+    manifest = parse_manifest(start[HEADER_BYTES:field])
+    if manifest is None:
+        return None, None
+    payload = int.from_bytes(start[field:field + _LENGTH_BYTES], "big")
+    whole = field + _LENGTH_BYTES + payload + _TAG_BYTES
+    return (EXPORTED if size == whole else INCOMPLETE), manifest
+
+
 def _layout(data: bytes) -> tuple[bytes, bytes]:
     """The manifest and payload bytes of ``data``, after checking its shape: the magic, both
     lengths, the signature's room, no byte after it. BundleError with the reason (``EMPTY``,

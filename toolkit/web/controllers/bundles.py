@@ -11,7 +11,7 @@ from typing import Any
 
 from flask import Blueprint, jsonify, request, send_file
 
-from ...core.services.ids.exports import write_run
+from ...core.services.ids.exports import INCOMPLETE, BundleExists, write_run
 from ...core.services.ids import registry
 from ...core.services.ids.bundle import Bundle, BundleError, BundleVersionWarning
 from ...core.services.ids.pipeline import FittedModel
@@ -121,6 +121,16 @@ def download_predictions(ws: Workspace) -> Answer:
                      mimetype="text/csv")
 
 
+def _exists_message(error: FileExistsError) -> str:
+    """What blocks an export: an incomplete bundle of the run (HR3d), never removed on its own,
+    or a whole one, never overwritten. The file's name, not its path."""
+    if isinstance(error, BundleExists) and error.state == INCOMPLETE:
+        return (f"An incomplete bundle of this run is in the bundles folder: its export was "
+                f"interrupted. Remove {error.path.name} from instance/bundles, then export "
+                "again (it is never removed on its own).")
+    return "A bundle for this run already exists; it was not overwritten."
+
+
 def _bundle_refused(error: BundleError) -> Answer:
     """BundleError messages are written for users and never contain paths (tested)."""
     return error_response(str(error), code=error.code)
@@ -144,9 +154,8 @@ def export(ws: Workspace) -> Answer:
             write_run(saved.run)
         except BundleError as error:
             return _bundle_refused(error)
-        except FileExistsError:
-            return error_response("A bundle for this run already exists; it was not overwritten.",
-                                  409)
+        except FileExistsError as error:
+            return error_response(_exists_message(error), 409)
         ws.export = ExportedBundle(saved, name)
     ws.export.name = name
     return jsonify(export_answer(ws.export))

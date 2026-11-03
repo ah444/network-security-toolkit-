@@ -187,12 +187,13 @@ def test_exports_listed_newest_first_from_headers(two_exports, monkeypatch):
     assert [e.path for e in exports] == [newer, older], "newest first; junk files skipped"
     assert exports[0].manifest["models"] == ["decision_tree"]
     assert exports[0].size == newer.stat().st_size
-    # only the header is read: a bundle cut off after its manifest is still listed
+    # only the header is read: a bundle cut off after its manifest is listed, incomplete (HR3d)
     data = older.read_bytes()
     body = int.from_bytes(data[len(core_bundle.MAGIC):len(core_bundle.MAGIC) + 8], "big")
     cut = bundle_files.bundles_dir() / "cut.bundle"
     cut.write_bytes(data[:len(core_bundle.MAGIC) + 8 + body + 10])
-    assert core_exports.read_manifest_header(cut) == core_bundle.peek_manifest(data)
+    assert core_exports.read_state(cut) == (core_exports.INCOMPLETE,
+                                            core_bundle.peek_manifest(data))
 
 
 def test_cli_without_exports(cli_module, capsys):

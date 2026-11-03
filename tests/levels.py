@@ -53,6 +53,7 @@ INTEGRATION = (
     "cli/test_start.py",
     "ml/test_branch_pins.py",
     "ml/test_bundle.py",
+    "ml/test_bundle_states.py",
     "ml/test_comparison.py",
     "ml/test_evaluation.py",
     "ml/test_explanation.py",
