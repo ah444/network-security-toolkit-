@@ -302,3 +302,8 @@ def test_the_dashboard_is_one_column_then_two_side_by_side(css):
     assert _media(css, "min-width: 1000px")[".dashboard-grid"]["grid-template-columns"] == \
         "repeat(2, minmax(0, 1fr))"
     assert ".features-grid" not in css and ".feature-card" not in css, "the old cards are gone"
+
+
+def test_the_dashboard_bars_fit_a_phone(css):
+    """Gate 5.4: a bar's name and number wrap, so a run's date and its macro-F1 fit at 320 px."""
+    assert _top_level(css, ".dash-bars")["grid-template-columns"] == "auto minmax(3rem, 1fr) auto"

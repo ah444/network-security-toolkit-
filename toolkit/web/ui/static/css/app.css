@@ -95,8 +95,6 @@
   /* the charts' marks (v5.3 F2d): each >= 3:1 on the cards */
   --chart-cv: var(--indigo-600);
   --chart-test: var(--orange-800);
-  /* a plain link (the dashboard's, v5.4 F10): >= 4.5:1 on the cards in both themes */
-  --link: var(--indigo-600);
   /* names for the result panels (the Upload Dataset card, the scan results): they follow
      the theme tokens they point to, so the dark blocks below need no copy of them */
   --muted: var(--placeholder);
@@ -158,7 +156,6 @@
     --cvss-medium: var(--amber-400);
     --chart-cv: var(--indigo-300);
     --chart-test: var(--orange-300);
-    --link: var(--indigo-300);
   }
 }
 
@@ -186,7 +183,6 @@
   --cvss-medium: var(--amber-400);
   --chart-cv: var(--indigo-300);
   --chart-test: var(--orange-300);
-  --link: var(--indigo-300);
 }
 
 /* ---------- Base ---------- */
@@ -456,13 +452,9 @@ textarea:focus-visible,
   font-size: 0.9rem;
 }
 
-.dashboard-grid a {
-  color: var(--link);
-}
-
 .dash-bars {
   display: grid;
-  grid-template-columns: max-content minmax(3rem, 1fr) max-content;
+  grid-template-columns: auto minmax(3rem, 1fr) auto;
   gap: 0.35rem 0.75rem;
   align-items: center;
   margin: 0.75rem 0 1rem;

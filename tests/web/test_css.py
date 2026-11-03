@@ -91,7 +91,7 @@ def test_chosen_dark_is_the_system_dark(css):
     assert list(_declarations(chosen).items()) == list(_declarations(dark).items())
     # + the scanner's 3 CVSS levels (v5.2 step 2.4e), the charts' 2 marks (v5.3 F2d), the
     # dashboard's links (v5.4 F10b)
-    assert len(_declarations(dark)) == 23
+    assert len(_declarations(dark)) == 22
 
 
 def test_dark_tokens_change_only_theme_tokens(css):

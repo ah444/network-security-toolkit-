@@ -4,6 +4,7 @@ the newest scans), and the models (the newest saved runs; what this session hold
 model is suggested from ports or CVEs. A session without a workspace gets nulls and no
 cookie; a part that can't be read says so and the other still shows."""
 
+import re
 from types import SimpleNamespace
 
 import pandas as pd
@@ -86,6 +87,14 @@ def test_the_home_page_shows_the_two_parts(client):
     script = (JS_DIR / "dashboard.js").read_text(encoding="utf-8")
     assert 'getJSON("/api/v1/dashboard")' in script and "innerHTML" not in script
     assert "kept in this session only" in script, "the predictions aren't said to be saved"
+
+
+def test_every_link_is_easy_to_tap():
+    """Gate 5.4: each link is a 44 px button-like link, as on the Port Scanner (F6b)."""
+    script = (JS_DIR / "dashboard.js").read_text(encoding="utf-8")
+    links = re.findall(r'el\("a", \{[^}]*\}', script)
+    assert len(links) == 4, links
+    assert all('class: "btn btn-secondary btn-sm"' in link for link in links), links
 
 
 def test_the_session_part_names_what_the_session_holds():

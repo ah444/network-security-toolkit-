@@ -15,7 +15,7 @@ const riskClass = risk => RISK_CLASS[risk] || "cvss-unknown";
 const plural = (count, word) => `${count} ${word}${count === 1 ? "" : "s"}`;
 
 function nothingYet(text, href, label) {
-  return el("p", {}, text + " ", el("a", { href }, label));
+  return el("p", {}, text + " ", el("a", { href, class: "btn btn-secondary btn-sm" }, label));
 }
 
 // One bar per value, its name before and its number after: a <meter>, so no inline style
@@ -33,9 +33,9 @@ function target(row) {
   return el("li", { class: "dash-item " + riskClass(row.risk) },
     el("strong", {}, row.target), " ", risk,
     el("div", { class: "dash-meta" },
-       `${plural(row.open_ports, "open port")}, scanned ${when(row.started)} · `,
+       `${plural(row.open_ports, "open port")}, scanned ${when(row.started)} `,
        el("a", { href: "/scans/" + encodeURIComponent(row.scan_id) + "/report", target: "_blank",
-                 rel: "noopener" }, "its report")));
+                 rel: "noopener", class: "btn btn-secondary btn-sm" }, "Open its report")));
 }
 
 function scansPart(part) {
@@ -55,7 +55,7 @@ function scansPart(part) {
     el("h3", {}, "The newest scans"),
     el("ul", { class: "dash-list" }, ...part.recent.map(scan => el("li", { class: "dash-item" },
       el("strong", {}, scan.target), ` ${when(scan.started)}, ${plural(scan.open_ports, "open port")}`))),
-    el("p", {}, el("a", { href: "/scans" }, "All saved scans")));
+    el("p", {}, el("a", { href: "/scans", class: "btn btn-secondary btn-sm" }, "All saved scans")));
 }
 
 function runsPart(part) {
@@ -73,7 +73,7 @@ function runsPart(part) {
     el("ul", { class: "dash-list" }, ...part.recent.map(run => el("li", { class: "dash-item" },
       el("strong", {}, run.selected_title || "no model selected"), ` on ${run.dataset.name || "a dataset"}`,
       el("div", { class: "dash-meta" }, `${when(run.created_at)} · run ${run.run_id}`)))),
-    el("p", {}, el("a", { href: "/runs" }, "All saved runs")));
+    el("p", {}, el("a", { href: "/runs", class: "btn btn-secondary btn-sm" }, "All saved runs")));
 }
 
 function sessionLines(session) {
