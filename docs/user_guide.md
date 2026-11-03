@@ -540,8 +540,9 @@ up ("no lookup" when none was), and where it was asked from. Then, for one scan:
   the older ones), `--show SCAN_ID` prints one as a scan prints its results and ends with
   the command that scans it again (`To scan it again: python -m toolkit scan 127.0.0.1 -p
   135,445,5100 --protocol tcp ...`; it asks for the authorization as any scan does),
-  `--compare SCAN_ID SCAN_ID` prints two compared as the page does, and `--delete SCAN_ID`
-  names the record and asks `Delete it? [y/N]`.
+  `--compare SCAN_ID SCAN_ID` prints two compared as the page does, `--delete SCAN_ID`
+  names the record and asks `Delete it? [y/N]`, and `--report SCAN_ID` saves the HTML report
+  as `instance\scans\report-SCAN_ID.html` (never over a file) to open in a browser.
 - **Compare**: tick two scans (Space on a box), then **Compare the two ticked scans**. A is
   the older. For each address both scanned, each port open in either scan says what
   happened: opened, closed, changed (and what: the service, the software, the severity, the

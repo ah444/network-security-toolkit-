@@ -75,9 +75,10 @@ permission to test.
 | `--show SCAN_ID` | | prints one saved scan as a scan prints its results, with the command that scans it again, and exits |
 | `--compare SCAN_ID SCAN_ID` | | prints two saved scans compared, the older as A, and exits |
 | `--delete SCAN_ID` | | names the saved scan's record, asks `Delete it? [y/N]` and removes it on a yes |
+| `--report SCAN_ID` | | saves the saved scan's HTML report as `instance/scans/report-<SCAN_ID>.html` (`-1`, `-2`... when the name is taken; never over a file), to read, print or save as PDF in a browser (F5c) |
 
 The flags other than `--i-am-authorized` work only with a `TARGET`, and the four nmap-only
-flags only with `--engine nmap`. `--history`, `--show`, `--compare` and `--delete` go alone
+flags only with `--engine nmap`. `--history`, `--show`, `--compare`, `--delete` and `--report` go alone
 (no `TARGET`, no other flag): they read `instance/scan_history/` and scan or send nothing; a
 bad or unknown scan id is exit code 2 with a message, and so is a record that couldn't be
 removed (another program has it open). Limits: `TOOLKIT_SCAN_MAX_HOSTS` hosts and

@@ -1,7 +1,7 @@
 """The scan history from the command line (v5.4 F6d): ``scan --history`` (``--before``),
-``--show SCAN_ID``, ``--compare A B`` and ``--delete SCAN_ID``. They read the saved scans
-(``toolkit.core.services.recon.saved_scans``) and never scan or send anything; a scan is
-deleted only after its record was named and the user said yes."""
+``--show SCAN_ID``, ``--compare A B``, ``--delete SCAN_ID`` and ``--report SCAN_ID`` (F5c).
+They read the saved scans (``toolkit.core.services.recon.saved_scans``) and never scan or
+send anything; a scan is deleted only after its record was named and the user said yes."""
 
 from __future__ import annotations
 
@@ -15,10 +15,11 @@ from ...core.services.recon.saved_scans import (
     scan_view,
 )
 from ...core.services.recon.scan_comparison import compare_saved
+from ...core.services.recon.scan_report import export_saved_report
 from ..ui import scan as screen
 from ..ui import scans as scans_screen
 
-HISTORY_FLAGS = ("history", "show", "compare", "delete")  # each alone, with no TARGET
+HISTORY_FLAGS = ("history", "show", "compare", "delete", "report")  # each alone, no TARGET
 
 
 def list_scans(before: str | None = None) -> int:
@@ -61,6 +62,21 @@ def delete_scan(scan_id: str) -> int:
     return 0
 
 
+def report_scan(scan_id: str) -> int:
+    """``--report SCAN_ID`` (F5c): the HTML report written as a new file in instance/scans/.
+    Exit code 0, or 2 when it couldn't be written (a full disk: nothing is left half-written).
+    See also: core/services/recon/scan_report.py (what the report says)."""
+    try:
+        path = export_saved_report(scan_id)
+    except (NotAScan, FileNotFoundError):
+        raise
+    except OSError as error:
+        screen.say(error)
+        return 2
+    scans_screen.report_written(path)
+    return 0
+
+
 def history(args: argparse.Namespace) -> int:
     """The history flag given; exit code 2 with the message for a bad scan id, a file that is
     not a scan, or a scan that isn't saved."""
@@ -71,6 +87,8 @@ def history(args: argparse.Namespace) -> int:
             return compare_scans(*args.compare)
         if args.delete:
             return delete_scan(args.delete)
+        if args.report:
+            return report_scan(args.report)
         return list_scans(args.before)
     except NotAScan as error:
         screen.say(error)

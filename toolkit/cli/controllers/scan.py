@@ -8,7 +8,8 @@ confirmation first (or ``--i-am-authorized`` in scripts) and has host/port limit
                                                no questions but the authorization one
     python -m toolkit scan ... --i-am-authorized   not even that one (scripts)
     python -m toolkit scan --history            the saved scans (F6d; also --show,
-                                               --compare and --delete): nothing is scanned
+                                               --compare, --delete and --report): nothing
+                                               is scanned
 
 (from the project folder; ``toolkit scan`` once installed; moved from
 tools/Port_scan/Port_Scan.py in v5.1 step 1.4a, flags in step 1.4c). With a TARGET nothing
@@ -213,6 +214,9 @@ def build_parser(prog: str | None = None) -> argparse.ArgumentParser:
                      help="compare two saved scans (the older is A) and exit")
     one.add_argument("--delete", metavar="SCAN_ID",
                      help="delete a saved scan's record: names it and asks first")
+    one.add_argument("--report", metavar="SCAN_ID",
+                     help="save a saved scan's HTML report in instance/scans (to read, print "
+                          "or save as PDF in a browser) and exit")
     saved.add_argument("--before", metavar="SCAN_ID",
                        help="with --history: the scans saved before this one")
     return parser
@@ -226,8 +230,8 @@ def check_flags(parser: argparse.ArgumentParser, args: argparse.Namespace) -> No
         parser.error("--before goes with --history")
     if any(getattr(args, name) for name in HISTORY_FLAGS):
         if args.target is not None or used or args.i_am_authorized:
-            parser.error("--history, --show, --compare and --delete go alone: no TARGET and "
-                         "no scan flag")
+            parser.error("--history, --show, --compare, --delete and --report go alone: no "
+                         "TARGET and no scan flag")
         return
     if args.target is None and used:
         parser.error(f"{', '.join(used)}: only with a TARGET (without one the scanner asks "

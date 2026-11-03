@@ -1,5 +1,6 @@
 """Scan report files: one entry per open port, saved as UTF-8 JSON, CSV or TXT in
-``instance/scans/`` without ever overwriting a file (B12). CSV cells that look like
+``instance/scans/`` without ever overwriting a file (B12); and a saved scan's HTML report
+(F5c, made by ``services/recon/scan_report.py``). CSV cells that look like
 formulas are written as text (S14); the entries are made (and their network text
 cleaned) by ``toolkit.core.services.recon.report``.
 """
@@ -13,6 +14,7 @@ from pathlib import Path
 from typing import TextIO, TypedDict
 
 from ..disk import require_free
+from ..publish import publish_text
 from ..settings import instance_dir, min_free_mb
 from .findings import CveEntry, match_label
 from .text import csv_cell
@@ -148,3 +150,17 @@ def export_results(entries: Sequence[ReportEntry], fmt: str,
             handle.write(text)
         return path
     raise FileExistsError(f"Too many reports named scan-{stamp} in {directory}")
+
+
+def export_html_report(scan_id: str, html: str, directory: str | Path | None = None) -> Path:
+    """A saved scan's HTML report (F5c) as the new file ``report-<scan id>.html`` in
+    instance/scans/ (``-1``, ``-2``... when taken): published whole, never over a file;
+    NoSpace on a full disk (HR4c)."""
+    directory = Path(directory) if directory else scans_dir()
+    for number in range(1000):
+        path = directory / f"report-{scan_id}{f'-{number}' if number else ''}.html"
+        try:
+            return publish_text(path, html)
+        except FileExistsError:
+            continue
+    raise FileExistsError(f"Too many reports named report-{scan_id} in {directory}")

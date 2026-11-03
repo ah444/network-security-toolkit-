@@ -6,6 +6,7 @@ scan prints it; ``--delete`` names the record and asks before anything is remove
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
+from pathlib import Path
 from typing import Any
 
 from ...core.services.recon.saved_scans import HOST_STATES, ONLINE, when
@@ -203,6 +204,12 @@ def confirm_delete() -> bool:
         return input("Delete it? [y/N] ").strip().lower() in YES
     except EOFError:
         return False
+
+
+def report_written(path: Path) -> None:
+    """After ``--report``: where the report is, and how to make a PDF of it."""
+    print(f"✅ Report saved: {path}")
+    print("Open it in a browser to read it; for a PDF: Print, then Save as PDF.")
 
 
 def deleted(scan_id: str | None) -> None:

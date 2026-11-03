@@ -205,7 +205,7 @@ With a target, every choice is a flag (`python -m toolkit scan --help`), and not
 | `--scan-unresponsive` (hosts that don't answer ping) | skipped |
 | `--export txt\|json\|csv` (to `instance/scans/`, never overwrites) | no export |
 | `--i-am-authorized` | asks |
-| `--history`, `--show ID`, `--compare A B`, `--delete ID` (the saved scans; alone, nothing scanned) | |
+| `--history`, `--show ID`, `--compare A B`, `--delete ID`, `--report ID` (the saved scans; alone, nothing scanned) | |
 
 ### IDS CLI
 ```bash

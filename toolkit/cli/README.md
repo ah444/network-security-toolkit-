@@ -9,13 +9,13 @@ cli/
     menu.py         the banner, the menu and its prompt
     scan.py         the scanner's questions, the authorization question, tables
     progress.py     the progress line of a verbose scan
-    scans.py        what scan --history, --show, --compare and --delete print
+    scans.py        what scan --history, --show, --compare, --delete and --report print
     ids.py          the IDS command's export list, model card, predictions and prompts
     runs.py         what ids --runs and --compare print: the saved runs, two side by side
   controllers/
     main.py         the menu, or scan / ids with the rest of the line; the toolkit's --help
     scan.py         the scanner's flags or questions, then the scan; the exit codes
-    scan_history.py scan --history, --show, --compare, --delete: the saved scans
+    scan_history.py scan --history, --show, --compare, --delete, --report: the saved scans
     ids.py          choose an export, predict one row, a CSV or a JSON file; the saved runs
                     (--runs, --compare); the exit codes
   data/

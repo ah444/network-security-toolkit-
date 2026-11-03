@@ -17,7 +17,7 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
-from ...data.recon import report_render
+from ...data.recon import report_render, scan_files
 from ...data.recon.findings import MATCH_LABELS
 from ...data.recon.text import clean_text, one_line
 from .saved_scans import HOST_STATES, ONLINE, WORST_FIRST, saved_scan, scan_view, summary, when
@@ -178,6 +178,12 @@ def saved_report_html(scan_id: str, directory: str | Path | None = None,
     ``stylesheet_url`` the web app's page); the errors of ``saved_scans.saved_scan``."""
     return report_render.report_html(report_model(saved_scan(scan_id, directory)),
                                      stylesheet_url)
+
+
+def export_saved_report(scan_id: str, directory: str | Path | None = None) -> Path:
+    """``scan --report`` (F5c): the report saved as a new file in instance/scans/, its path;
+    the errors of ``saved_scans.saved_scan``, NoSpace on a full disk."""
+    return scan_files.export_html_report(scan_id, saved_report_html(scan_id, directory))
 
 
 def report_stylesheet() -> str:

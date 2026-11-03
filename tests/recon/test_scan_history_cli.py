@@ -1,14 +1,17 @@
 """F6d: the scan history from the command line. ``scan --history`` lists the saved scans (newest
 first, 50 at a time, ``--before`` for the older ones), ``--show`` prints one as a scan prints
 its results, with the command that scans it again, ``--compare A B`` prints two compared as the
-web page does, and ``--delete`` names the record and asks first. They read the history only:
-nothing is scanned or sent, and they go with no TARGET and no scan flag."""
+web page does, and ``--delete`` names the record and asks first. ``--report`` (F5c) writes the
+HTML report in ``instance/scans/``, never over a file. They read the history only: nothing is
+scanned or sent, and they go with no TARGET and no scan flag."""
 
 import pytest
 
 from toolkit.cli.controllers import scan_history
 from toolkit.cli.ui import scans as scans_screen
-from toolkit.core.data.recon import scan_records
+from toolkit.core.data import publish
+from toolkit.core.data.disk import NoSpace
+from toolkit.core.data.recon import scan_files, scan_records
 
 from .test_saved_scans import A, B, C, entry, record, save
 
@@ -146,8 +149,40 @@ def test_a_record_that_cant_be_removed_is_exit_code_2(scanner, capsys, nothing_s
     assert scan_records.list_scans()
 
 
+def test_report_writes_the_html_report_in_the_scans_folder(scanner, capsys, nothing_sent):
+    save(A)
+    code, out = _run(scanner, capsys, "--report", A)
+    path = scan_files.scans_dir() / f"report-{A}.html"
+    assert code == 0 and path.is_file()
+    assert f"Scan report {A}" in path.read_text(encoding="utf-8")
+    assert str(path) in out and "Print, then Save as PDF" in out
+
+
+def test_report_never_writes_over_a_file(scanner, capsys, nothing_sent):
+    save(A)
+    first = scan_files.scans_dir() / f"report-{A}.html"
+    first.parent.mkdir(parents=True)
+    first.write_text("kept", encoding="utf-8")
+    code, out = _run(scanner, capsys, "--report", A)
+    assert code == 0 and first.read_text(encoding="utf-8") == "kept"
+    assert (first.parent / f"report-{A}-1.html").is_file()
+
+
+def test_report_on_a_full_disk_is_exit_code_2(scanner, capsys, nothing_sent, monkeypatch):
+    save(A)
+
+    def full(*_args):
+        raise NoSpace("Not saved: only 1 MB free on this disk.")
+
+    monkeypatch.setattr(publish, "require_free", full)
+    code, out = _run(scanner, capsys, "--report", A)
+    assert code == 2 and "Not saved: only 1 MB free" in out
+    assert not scan_files.scans_dir().exists() or not list(scan_files.scans_dir().iterdir())
+
+
 @pytest.mark.parametrize("argv", [["--show", "../x"], ["--show", A], ["--delete", A],
-                                  ["--compare", A, A], ["--history", "--before", "x"]])
+                                  ["--compare", A, A], ["--history", "--before", "x"],
+                                  ["--report", "../x"], ["--report", A]])
 def test_a_bad_or_missing_id_is_exit_code_2(scanner, capsys, nothing_sent, argv):
     code, out = _run(scanner, capsys, *argv)
     assert code == 2 and out.strip()
@@ -162,7 +197,8 @@ def test_a_file_that_isnt_a_scan_is_left_out_and_said(scanner, capsys, nothing_s
 
 @pytest.mark.parametrize("argv", [["10.0.0.5", "--history"], ["--history", "-p", "22"],
                                   ["--before", A], ["--show", A, "--export", "csv"],
-                                  ["--history", "--show", A]])
+                                  ["--history", "--show", A], ["--report", A, "-p", "22"],
+                                  ["--report", A, "--show", A]])
 def test_the_history_flags_go_alone(scanner, nothing_sent, argv):
     with pytest.raises(SystemExit) as stopped:
         scanner.main(argv)
