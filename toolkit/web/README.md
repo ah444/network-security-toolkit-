@@ -32,7 +32,9 @@ web/
     api.py           request and error helpers; the HTTP status of each ServiceError
   services/
     workspace.py     one in-memory workspace per browser session, with memory caps
-    jobs.py          the background jobs: a queue per kind (training, scan), progress, cancel
+    jobs.py          the background jobs: the heavy jobs' queue (training, importance) and
+                     the scan's, progress, cancel
+    importance.py    a model's permutation importance as a job, bound to its run (HR1)
     datasets.py      uploads read, files combined, the class filter, the training split
     training.py      training settings checked, the job queued, the run kept
     scan.py          the port scan: its choices checked (the authorization first), the job,

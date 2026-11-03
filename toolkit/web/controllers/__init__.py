@@ -25,7 +25,7 @@ from . import access, bundles, datasets, jobs, pages, resume, runs, scan, traini
 from .api import register_error_handlers
 from ..services.datasets import prepare_uploads
 from ..services.access import Access, is_this_computer
-from ..services.jobs import SCAN, TRAINING, JobRunner, instance_journal
+from ..services.jobs import IMPORTANCE, SCAN, TRAINING, JobRunner, instance_journal
 from .security import register_security
 from .state import WebState
 from ..services.workspace import WorkspaceStore
@@ -76,7 +76,7 @@ def create_app(config: WebConfig | None = None) -> Flask:
                                   max_data_bytes=config.max_data_mb * 2**20),
         model_store=BundleStore(),
         upload_dir=upload_dir,
-        training_jobs=JobRunner(TRAINING, refusal, journal),
+        training_jobs=JobRunner(TRAINING, refusal, journal, also=(IMPORTANCE,)),  # RD2
         scan_jobs=JobRunner(SCAN, refusal, journal),
         access=access,
     )

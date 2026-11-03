@@ -7,7 +7,7 @@
 import { getJSON, send } from "./api.js";
 import { byId, el, message, setContent, show } from "./dom.js";
 
-const KINDS = { training: "Training", scan: "Port scan" };
+const KINDS = { training: "Training", importance: "Importance", scan: "Port scan" };
 
 function elapsed(seconds) {
   const whole = Math.round(seconds);

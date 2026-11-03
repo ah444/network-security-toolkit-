@@ -16,13 +16,22 @@ def instance_in_use(folder: Path, pid: int | None, url: str) -> None:
           "it a folder of its own with TOOLKIT_INSTANCE_DIR.")
 
 
+# What a cut-off job of each kind lost (HR3c; a scan's is the default)
+LOST = {
+    "training": "The data uploaded to its workspace is gone: upload it again.",
+    "importance": "Nothing of it was kept: its run's models and test split were in memory "
+                  "only, so train again to calculate it.",
+}
+
+
 def interrupted_line(kind: str, asked: str, source: str, ran: bool) -> str:
     """HR3c: a job the last server cut off, and what is lost (the page shows the same)."""
     how = "while it ran" if ran else "before it started"
-    lost = ("The data uploaded to its workspace is gone: upload it again." if kind == "training"
-            else "Nothing of it was kept: start it again.")
-    return (f"INTERRUPTED: a {kind} asked for at {asked} from {source or 'an unknown place'} "
-            f"was cut off {how}, when the web server stopped. {lost}")
+    lost = LOST.get(kind, "Nothing of it was kept: start it again.")
+    article = "an" if kind[:1] in "aeiou" else "a"
+    return (f"INTERRUPTED: {article} {kind} asked for at {asked} from "
+            f"{source or 'an unknown place'} was cut off {how}, when the web server stopped. "
+            f"{lost}")
 
 
 def interrupted(line: str) -> None:

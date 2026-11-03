@@ -183,7 +183,8 @@ The page, its routes and jobs, and the `web` command; it never imports the comma
 | `toolkit/web/controllers/api.py` | controllers | request and error helpers; the HTTP status of each `ServiceError` |
 | `toolkit/web/services/__init__.py` | services | the web trainer's services |
 | `toolkit/web/services/workspace.py` | services | one in-memory workspace per browser session, with memory caps |
-| `toolkit/web/services/jobs.py` | services | the background jobs: a queue per kind (training, scan), one job of a kind at a time, progress, cancel; where each job was asked for (`Origin`, HS1) |
+| `toolkit/web/services/jobs.py` | services | the background jobs: two queues (the heavy jobs: training and importance, RD2; the scan), one job of a queue at a time, progress, cancel; where each job was asked for (`Origin`, HS1) |
+| `toolkit/web/services/importance.py` | services | the permutation importance of a model of the workspace's run, as a job on the training's queue, bound when asked for to its run and model, one per run and model (HR1) |
 | `toolkit/web/services/errors.py` | services | the error codes and `ServiceError` |
 | `toolkit/web/services/datasets.py` | services | uploads read, files combined, the class filter, the training split |
 | `toolkit/web/services/training.py` | services | training settings checked, the job queued, the run kept |
@@ -406,9 +407,10 @@ The manifest embeds the TrainingRun. Nothing is unpickled until the size, layout
      |          prediction.py (one row, a whole file)               |
      |          workspace.py: one workspace per session, in memory  v
      |            (dataset, run, bundle, last predictions)   jobs.py: a worker
-     |                                                       thread per kind, one
-     |                                                       training and one scan
-     |                                                       at a time; progress
+     |                                                       thread per queue, one
+     |                                                       heavy job (training or
+     |                                                       importance) and one
+     |                                                       scan at a time; progress
      |                                                       and cancel through
      v                                                       ProgressSink.advance()
  core/services/ids:  runs.train(...), bundles, batch predictions <-+
@@ -422,6 +424,14 @@ The manifest embeds the TrainingRun. Nothing is unpickled until the size, layout
 - A refusal is a `ServiceError` with a code (`toolkit/web/services/errors.py`); the routes
   answer it with the HTTP status it has always had (`toolkit/web/controllers/api.py`).
 - A cancelled or failed job leaves nothing behind: no run record, no bundle.
+- The heavy jobs share one queue and its one worker (RD2, HR1): a permutation importance
+  (`toolkit/web/services/importance.py`) waits behind a training and a training behind it,
+  so a full CIC-IDS2017 training and a KNN importance never run at once. An importance is
+  bound when it is asked for to its run and model (references to that fitted model, that
+  run's test rows, its label and evaluation seed), so a training after it changes nothing
+  it computes; those references keep the old run in memory until it ends. One job per run
+  and model; only the workspace's run can be calculated (RD3). It holds a lease on the
+  workspace, not its training lock. The scan keeps its own queue.
 - `GET /api/v1/workspace` repeats the earlier answers, so a reload resumes where it was.
 - The server listens on 127.0.0.1 only (waitress, `toolkit/web/controllers/server.py`), and
   the page opens in the browser once the port answers.

@@ -37,7 +37,8 @@ def dynamic_ids_page() -> str:
     """``GET /dynamic_ids``: the trainer's page, told when an idle workspace expires, and once
     of a training the last server cut off."""
     return render_template("dynamic_ids.html", idle_minutes=state().config.workspace_idle_minutes,
-                           interrupted=interrupted_once("training"))
+                           interrupted=interrupted_once("training")
+                           + interrupted_once("importance"))
 
 
 @bp.route("/scan")

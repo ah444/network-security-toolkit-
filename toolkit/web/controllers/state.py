@@ -28,7 +28,7 @@ class WebState:
     workspaces: WorkspaceStore
     model_store: ModelStore  # exports and loads: signed bundles in instance/bundles
     upload_dir: Path  # uploads are written here only while the loader reads them (S11)
-    training_jobs: JobRunner  # one training at a time for the whole server, others queued
+    training_jobs: JobRunner  # one heavy job (a training or an importance) at a time, RD2
     scan_jobs: JobRunner  # one scan at a time for the whole server, next to a training
     access: Access | None = None  # the access token when opened to the network (--host)
     # the last server's unfinished jobs, by kind ("training", "scan"): a line each, shown once
@@ -38,7 +38,7 @@ class WebState:
     def runner(self, kind: JobKind) -> JobRunner:
         """The runner whose queue holds the jobs of ``kind``."""
         for runner in (self.training_jobs, self.scan_jobs):
-            if runner.kind == kind:
+            if kind in runner.kinds:
                 return runner
         raise LookupError(f"no runner for {kind.name} jobs")
 

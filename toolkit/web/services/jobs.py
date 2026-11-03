@@ -1,10 +1,11 @@
 """Background jobs (D8, D22): a training or a scan runs outside the request, with progress
 and cancel.
 
-Each kind of job has its own queue (v5.2 step 2.4b): one worker thread per kind runs **one
-job of that kind at a time for the whole server**; the others wait, so a laptop never
-trains twice at full load (each training already uses ``TOOLKIT_MAX_WORKERS`` cores) nor
-scans twice at once, while a scan doesn't wait for a training. A job is its own
+Each queue has one worker thread that runs **one job at a time for the whole server**
+(v5.2 step 2.4b); the others wait, so a laptop never trains twice at full load (each
+training already uses ``TOOLKIT_MAX_WORKERS`` cores) nor scans twice at once, while a scan
+doesn't wait for a training. The heavy jobs share the training's queue (RD2, HR1): a
+training and a permutation importance never run at once. A job is its own
 ``ProgressSink``: every ``advance()`` updates the step count and is the point where a
 cancel or the time limit takes effect, so the current step (a model's fit) always
 finishes first (cooperative cancel). A job that doesn't end in ``done`` leaves nothing
@@ -40,13 +41,16 @@ class JobKind:
     """What differs between kinds of job: the name the page and the worker thread use, the
     word that starts its messages and the setting behind its time limit."""
 
-    name: str  # "Waiting for another <name> to finish"; the thread "<name>-jobs"
+    name: str  # the journal's and the page's kind; the thread "<name>-jobs"
     title: str  # "<title> cancelled. ..."
     time_limit: str  # the environment variable the job's max_seconds comes from
     logged: bool = False  # its view has the lines it wrote so far (``Job.note``)
+    waits_for: str = ""  # "Waiting for another <waits_for> to finish" (default: ``name``)
 
 
-TRAINING = JobKind("training", "Training", "TOOLKIT_JOB_MAX_MIN")
+HEAVY = "training or importance"  # what waits in the training's queue (RD2)
+TRAINING = JobKind("training", "Training", "TOOLKIT_JOB_MAX_MIN", waits_for=HEAVY)
+IMPORTANCE = JobKind("importance", "Importance", "TOOLKIT_JOB_MAX_MIN", waits_for=HEAVY)
 SCAN = JobKind("scan", "Scan", "TOOLKIT_SCAN_MAX_MIN", logged=True)
 MAX_LOG_LINES = 5000  # a job's log stops here, with a last line saying so
 
@@ -83,6 +87,7 @@ class Job:
     max_seconds: float
     steps: Callable[[int, int], str]  # the phase text while it runs, from (done, total)
     origin: Origin = HERE  # who asked for it (HS1)
+    key: tuple[str, ...] | None = None  # what it is bound to, for one job per key (HR1)
     id: str = field(default_factory=lambda: secrets.token_urlsafe(9))
     state: str = QUEUED
     done: int = 0
@@ -155,7 +160,7 @@ class Job:
         """The page's text for where the job is: its state, or while it runs its kind's
         text for its step count (``steps``)."""
         if self.state == QUEUED:
-            return f"Waiting for another {self.kind.name} to finish"
+            return f"Waiting for another {self.kind.waits_for or self.kind.name} to finish"
         if self.state in FINISHED:
             return {DONE: "Finished", FAILED: "Failed", STOPPED: "Cancelled"}[self.state]
         return self.steps(self.done, self.total)
@@ -173,15 +178,17 @@ def instance_journal() -> JobJournal:
 
 
 class JobRunner:
-    """One kind's job queue and its one worker thread (started with the first job).
+    """A job queue and its one worker thread (started with the first job), for ``kind`` and
+    the kinds ``also`` that share it (RD2: the importance shares the training's).
     ``refusal`` (HS1) says why a queued job may no longer start, or None: the worker asks it
     as it takes each job, and cancels the job with that reason instead of running it.
     ``journal`` (HR3c), when given, gets a line when each job is asked for, starts and ends."""
 
     def __init__(self, kind: JobKind,
                  refusal: Callable[[Job], str | None] | None = None,
-                 journal: JobJournal | None = None) -> None:
+                 journal: JobJournal | None = None, also: tuple[JobKind, ...] = ()) -> None:
         self.kind = kind
+        self.kinds = (kind, *also)
         self._refusal = refusal
         self._journal = journal or JobJournal(None)  # None: writes nothing
         self._queue: queue.Queue[Job] = queue.Queue()
@@ -191,9 +198,9 @@ class JobRunner:
         self._thread: threading.Thread | None = None
 
     def submit(self, job: Job) -> None:
-        """Queues ``job``, which must be of this runner's kind; the worker thread is started
-        with the first job."""
-        if job.kind != self.kind:
+        """Queues ``job``, which must be of one of this runner's kinds; the worker thread is
+        started with the first job."""
+        if job.kind not in self.kinds:
             raise ValueError(f"a {job.kind.name} job can't wait in the {self.kind.name} queue")
         with self._lock:
             self._waiting.append(job)

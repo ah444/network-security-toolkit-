@@ -97,7 +97,7 @@ def test_second_session_waits_in_the_queue(web_app, client, columns, gate, fixtu
     second = other.post(TRAIN_URL, json=_body(_upload(other, fixtures_dir))).get_json()
     queued = other.get(second["url"]).get_json()
     assert (queued["state"], queued["queue_position"]) == ("queued", 1)
-    assert queued["phase"] == "Waiting for another training to finish"
+    assert queued["phase"] == "Waiting for another training or importance to finish"  # HR1
     release.set()
     assert wait_for(client, first["url"])["state"] == "done"
     assert wait_for(other, second["url"])["state"] == "done"
