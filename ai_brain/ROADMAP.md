@@ -1,8 +1,8 @@
 # Roadmap: from v4 to now, and what comes next
 
-How the project was changed, release by release, and what is planned. What exists today is in [PROJECT_STATUS.md](PROJECT_STATUS.md); the reasons are in [DECISIONS.md](DECISIONS.md) and [REVIEW_DECISIONS.md](REVIEW_DECISIONS.md); the original plan with every option weighed is [IMPROVEMENT_PLAN.md](../docs/IMPROVEMENT_PLAN.md); the day-to-day tasks are in the checklists (`V5.0_CHECKLIST.md` to `V5.3_CHECKLIST.md`).
+How the project was changed, release by release, and what is planned. What exists today is in [PROJECT_STATUS.md](PROJECT_STATUS.md); the reasons are in [DECISIONS.md](DECISIONS.md) and [REVIEW_DECISIONS.md](REVIEW_DECISIONS.md); the original plan with every option weighed is [IMPROVEMENT_PLAN.md](../docs/IMPROVEMENT_PLAN.md); the day-to-day tasks are in the checklists (`V5.0_CHECKLIST.md` to `V5.4_CHECKLIST.md`).
 
-**As of:** 2026-11-03. The plan ends with 5.4 (section 5).
+**As of:** 2026-11-03. The plan's last release, 5.4, is done (section 5); what is left is section 4.
 
 ---
 
@@ -45,6 +45,7 @@ Every tag is shippable: the app starts, every menu path works, the README lists 
 | 5.1 | 2026-10-25 | Clean architecture | `python -m toolkit`; the `/api/v1` API with one error shape; training as a job with progress and Cancel; the page restored after a reload; Predict a CSV; CSRF; `mypy --strict`; packaging with `pyproject.toml`; the full docs | 803 |
 | 5.2 | 2026-10-30 | The user's improvements | The theme button; every page at every size; the code arranged as `core`, `cli`, `web` with the same layers inside; the scanner reading banners, versions and OS evidence; optional nmap; the scan on the web; `--host` with a token | 1,484 |
 | 5.3 | 2026-11-03 | Impressive features, the first part, and the review's hardening | Saved Runs and the comparison; what a model relies on and **Why?**; a new token ends every remote session; a switch for each outside service; files published whole; one web server per data folder; `INTERRUPTED` after a stop; delete and storage; a record for every training | 1,864 |
+| 5.4 | 2026-11-03 | Impressive features, the last part | Every finished scan saved, Saved Scans and the comparison; a scan's HTML report, printed to PDF by the browser; the home page's dashboard | 1,981 |
 
 ### v5.3 in detail
 | Item | State |
@@ -72,11 +73,11 @@ features back. Until HV3, Linux and macOS are never called supported.
 | HV2 (last) | CI on Windows, Ubuntu and macOS. **Needs a push, the user's decision**, made with it |
 | HV4 | Later, not a gate condition: training on some days of CIC-IDS2017 and testing on others; leaving one attack out of training |
 
-The order: 5.4 (section 5) and its gate, then HV1, then HV3, and last HV2 with the push.
+The order: HV1, then HV3, and last HV2 with the push (5.4 and its gate are done).
 
 ---
 
-## 5. Next: 5.4, the last release
+## 5. 5.4, the last release: done
 
 Decided by the owner on 2026-11-03: 5.4 is the project's last planned release. The three
 features complete one use of the toolkit: a scan or a training, its result kept in the
@@ -89,7 +90,7 @@ stand. They come in this order, each proposed and approved as usual.
 | F5 Scan reports | An HTML report of a scan (open ports, CVEs with CVSS, advice), printable | A CVE matched by a version is a possible match to check, not a confirmed vulnerability: each shows how it was matched (version, or name only and unconfirmed), its source and the date of the lookup; the AI's text marked "may be wrong"; advice general and tied to its CVE. The PDF comes from the browser's print with a print stylesheet; every banner and CVE text put in as text (XSS); a file never overwritten. **Done 2026-11-03** ([V5.4_CHECKLIST.md](../docs/V5.4_CHECKLIST.md), F5a–F5d; DECISIONS F5) |
 | F10 Dashboard, with F7 | A home page with the recent jobs, models and scans | Built on F6. The scans and their risks in one part, the models, the trainings and the predictions in another, side by side: no link made between them, and no IDS model suggested from open ports or CVEs (the review's objection to F7 as first planned). **Done 2026-11-03** ([V5.4_CHECKLIST.md](../docs/V5.4_CHECKLIST.md), F10a–F10c; DECISIONS F10) |
 
-Then the gate and the tag `5.4`, after the owner approves it.
+**Gate 5.4** (2026-11-03, [record](../docs/release/5.4-gate.md)): passed after two fixes (the dashboard on a phone, the report by keyboard); the tag `5.4` after the owner approves it.
 
 ## 6. Not planned
 - Accounts, roles or per-user ownership (RD1: one project trust domain)

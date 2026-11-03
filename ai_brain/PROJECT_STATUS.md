@@ -2,7 +2,7 @@
 
 What the Network Security Toolkit is and does **now**, as built and tested. What is planned is in [ROADMAP.md](ROADMAP.md); why it is built this way is in [DECISIONS.md](DECISIONS.md) and [REVIEW_DECISIONS.md](REVIEW_DECISIONS.md); the tasks in progress are in [V5.4_CHECKLIST.md](../docs/V5.4_CHECKLIST.md).
 
-**As of:** 2026-11-03, branch `main`. Last release: **5.3** (2026-11-03, [gate record](../docs/release/5.3-gate.md)). Next: **5.4** ([ROADMAP.md](ROADMAP.md), section 5), in progress: F6, the scan history, done (unreleased; every finished scan saved, the Saved Scans page, `scan --history`, counted by Storage); F5, scan reports, done (unreleased; a saved scan's HTML report, opened or downloaded on Saved Scans, `scan --report` in the CLI, printed to PDF by the browser); F10 with F7, the home page's dashboard, done (unreleased; the scans and their risks beside the runs and the session, never linked). Next: the gate and the tag `5.4`, after the owner approves it. Nothing has been pushed to a remote.
+**As of:** 2026-11-03, branch `main`. Last release: **5.4** (2026-11-03, [gate record](../docs/release/5.4-gate.md)), the plan's last: the scan history (F6), the scan reports (F5) and the home page's dashboard (F10 with F7). Next: the review's condition (7), HV1, then HV3, and last HV2 (CI) with the push ([ROADMAP.md](ROADMAP.md), section 4). Nothing has been pushed to a remote.
 
 Every claim below names how it is known. Where something is only implemented and not verified, it says so.
 
@@ -16,13 +16,13 @@ A local-first network security toolkit with optional external intelligence servi
 
 | | Value | How it was measured |
 |---|---|---|
-| Commits | 209 | `git rev-list --count HEAD`, the release commit included |
-| Tags | 5.0-alpha, 5.0-beta, 5.0-rc1, 5.0-rc2, 5.0, 5.0.1, 5.1, 5.2, 5.3 | `git tag` |
-| Automated tests | 1,864 passed, 2 skipped on purpose | `python -m pytest` (the pre-commit hook), on the release commit |
-| Python in `toolkit/` | 15,560 lines | line count of every `*.py` |
-| JavaScript, HTML and CSS in `toolkit/` | 5,462 lines | line count |
-| Test code | 20,334 lines in 156 Python files | line count of `tests/**/*.py` |
-| Routes | 45, of which 40 under `/api/v1` | the app's URL map; `tests/web/test_api_routes.py` |
+| Commits | 225 | `git rev-list --count HEAD`, the release commit included |
+| Tags | 5.0-alpha, 5.0-beta, 5.0-rc1, 5.0-rc2, 5.0, 5.0.1, 5.1, 5.2, 5.3, 5.4 | `git tag` |
+| Automated tests | 1,981 passed, 2 skipped on purpose | `python -m pytest` (the pre-commit hook), on the release commit |
+| Python in `toolkit/` | 17,077 lines | line count of every `*.py` |
+| JavaScript, HTML and CSS in `toolkit/` | 6,289 lines | line count |
+| Test code | 21,805 lines in 165 Python files | line count of `tests/**/*.py` |
+| Routes | 54, of which 46 under `/api/v1` | the app's URL map; `tests/web/test_api_routes.py` |
 | ruff, mypy `--strict`, pip-audit | no findings | the hook; `pip-audit` at the end of each step |
 
 The Python lines by part (they add up to the total):
@@ -30,15 +30,15 @@ The Python lines by part (they add up to the total):
 | Part | Lines |
 |---|---|
 | `toolkit/core/services/ids` (the ML core) | 4,940 |
-| `toolkit/core/services/recon` (the scanner's logic) | 1,102 |
-| `toolkit/core/services` (`ports.py`, `storage.py`, `__init__.py`) | 260 |
-| `toolkit/core/data/recon` (sockets, nmap, NVD, AbuseIPDB, OpenRouter, report files) | 1,915 |
+| `toolkit/core/services/recon` (the scanner's logic) | 1,881 |
+| `toolkit/core/services` (`ports.py`, `storage.py`, `__init__.py`) | 273 |
+| `toolkit/core/data/recon` (sockets, nmap, NVD, AbuseIPDB, OpenRouter, report files, the scan history) | 2,024 |
 | `toolkit/core/data` (settings, logs, keys, publishing, disk space, permissions, the ML files) | 1,125 |
 | `toolkit/core/__init__.py` | 4 |
-| `toolkit/web` | 4,461 |
-| `toolkit/cli` | 1,715 |
+| `toolkit/web` | 4,711 |
+| `toolkit/cli` | 2,081 |
 | `toolkit/__init__.py`, `__main__.py`, `start.py` | 38 |
-| **Total** | **15,560** |
+| **Total** | **17,077** |
 
 The skipped tests are `tests/recon/test_nmap_run.py::test_nmap_that_ignores_the_request_is_killed` (on Windows, asking nmap to stop already kills it, so the case it tests can't happen there) and `tests/test_protect.py`'s check of the POSIX modes (on Windows the permissions are set with `icacls`, tested beside it).
 
@@ -170,7 +170,7 @@ load + profile → dedupe → split → leakage guard → CV on the training spl
 ### What is verified, and how
 | Level | What it covers here |
 |---|---|
-| Unit | Most of the 1,864 tests: one module with fakes |
+| Unit | Most of the 1,981 tests: one module with fakes |
 | Integration | Flask test-client tests through routes, services and files; the CLI through its entry point |
 | End-to-end | The browser checks of each gate (8 sizes, both themes, keyboard only) on Chromium; the fresh installs of each gate on Windows |
 | Manual | The gate records in `docs/release/`, dated |
@@ -194,11 +194,19 @@ From `docs/report/FINDINGS.md` (three runs per case on the v5 core; the 5.1 and 
 
 ---
 
-## 9. v5.3
+## 9. v5.3 and v5.4
+
+### v5.3
 - **F2, the full leaderboard: done** (F2a–F2g): Saved Runs, the comparison, the charts, `ids --runs` and `--compare`
 - **F3, explainability: done** (F3a–F3g): what a model relies on in the trainer and on Saved Runs, **Why?** under a prediction, the CLI's `--info`, reasons and `--json`
 - **The outside review's hardening (section H): done but HV** (HC1–HC4, HS1, HS3–HS5, HR1–HR5; HS2 dropped by the owner). The review's conditions (1)–(6) are met; **(7), real use shown (HV1–HV3), is open**, moved after 5.4 by the owner
 - **Gate 5.3** (2026-11-03): [record](../docs/release/5.3-gate.md)
+
+### v5.4
+- **F6, the scan history: done** (F6a–F6e): every finished scan saved, Saved Scans, the comparison, `scan --history`, `--show`, `--compare`, `--delete`, counted by Storage
+- **F5, scan reports: done** (F5a–F5d): a saved scan's HTML report, on the page and as one file, `scan --report`; printed to PDF by the browser
+- **F10 with F7, the dashboard: done** (F10a–F10c): the scans and their risks beside the runs and the session, never linked
+- **Gate 5.4** (2026-11-03): [record](../docs/release/5.4-gate.md)
 
 ---
 

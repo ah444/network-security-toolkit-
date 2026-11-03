@@ -580,10 +580,12 @@ under the other on a phone), and **Refresh** reads them again:
   training that runs, the last run, the loaded bundle, the last predictions (kept in the
   session only, not saved) and a scan.
 
-The two parts are never linked: a scan's open ports don't choose an IDS model. (The picture
-below shows the home page before v5.4.)
+The two parts are never linked: a scan's open ports don't choose an IDS model.
 
 ![The web trainer's home page](user-guide/01-home.jpg)
+
+(This picture: v5.4 on 2026-11-03, two real scans of this PC, a demo scan record made for the
+report's check (192.168.56.20-21), and a training on the CIC-IDS2017 sample of the tests.)
 
 Click **Dynamic Intrusion Detection System** at the top. The trainer has six steps; the
 buttons at the top (1. Data to 6. Use) move between the steps you have reached. Your

@@ -8,10 +8,24 @@ All notable changes to this project. Versions follow the roadmap in
 [docs/V5.1_CHECKLIST.md](docs/V5.1_CHECKLIST.md) (v5.1) and
 [docs/V5.0_CHECKLIST.md](docs/V5.0_CHECKLIST.md) (v5.0).
 
-## [Unreleased]
+## [5.4] — 2026-11-03
 
-v5.4, so far: the scan history (F6), the scan reports (F5) and the dashboard (F10, with F7)
-([checklist](docs/V5.4_CHECKLIST.md)).
+v5.4 "impressive features", the last part and the project's last planned release: the scan
+history (F6), the scan reports (F5) and the dashboard (F10, with F7)
+([checklist](docs/V5.4_CHECKLIST.md)). Project version: `5.4.0`.
+
+**Test result:** 1,981 automated tests pass; `ruff`, `mypy` and `pip-audit` are clean. The
+gate ([record](docs/release/5.4-gate.md)): every route 5.4 added is locked for another computer
+without the token (`--host`, from this PC's host-only address); a scan from the page and one
+from the CLI, both saved, compared, opened as a report and saved by `scan --report`, a training,
+and the home page, with the keyboard only; a fresh install on Windows passes every menu path,
+and `pip install .` carries the report's files; the 6 pages 5.4 touches at 8 sizes from 320 × 568 to
+1920 × 1080 in both themes, with no contrast failure. No ML file changed, so the ML report was
+not run again. Windows 10 Enterprise LTSC 2021, Python 3.14.3, scikit-learn 1.8.0.
+
+**Not done:** the review's condition (7), real use shown (a user who is not the developer,
+Linux and macOS, CI; HV1–HV3), comes after this release. Until then the toolkit is tested on
+Windows only, and Linux and macOS are not called supported.
 
 ### Added
 
@@ -46,6 +60,33 @@ v5.4, so far: the scan history (F6), the scan reports (F5) and the dashboard (F1
 
 - `jinja2` and `markupsafe` are pinned in `requirements.txt` and `pyproject.toml` (they
   already came with Flask): the scan report uses them, in one module only.
+
+### Security
+- **The report** puts every value in as text (a sandboxed template that escapes everything),
+  makes an NVD link only from a real CVE id, and as a file runs no script and loads nothing:
+  its own Content-Security-Policy allows its own style only, by its hash.
+- **A saved scan** keeps no key or token; a scan id is checked before any path is made from
+  it, and a file that isn't a scan record of this toolkit is left out, not read as one.
+- Every page and route 5.4 adds is locked for another computer like the others: without the
+  token, the pages send to `/unlock` and the API answers `LOCKED` (checked at the gate).
+
+### Upgrading from 5.3
+- Nothing to migrate. Scans were not kept before 5.4, so the history starts with the first
+  scan after the upgrade; reports exported with `--export` stay where they are.
+- The home page's four feature cards are gone; the same links are in the navbar and on the
+  dashboard.
+
+### Known limitations
+See **Known limitations** in the [README](README.md). New in this release:
+- The review's condition (7) is still open (above).
+- Saved scans are never deleted on their own: they count in Storage, which warns as the
+  space grows; delete them on Saved Scans or with `scan --delete`.
+- A CVE found by name is unconfirmed, and one found by version is a possible match to check;
+  the report says so for each, and what it can't say.
+- The PDF comes from the browser's own print; the print dialog was not driven at the gate.
+- The CLI takes no lock: a CLI scan that saves its record at the moment a web server on the
+  same data folder starts can lose that record (the scan still ends, and says it was not
+  saved).
 
 ## [5.3] — 2026-11-03
 
