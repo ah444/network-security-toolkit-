@@ -2,6 +2,7 @@
 the README points to every document, and the CHANGELOG's newest section is 5.1."""
 
 import re
+import subprocess
 
 import pytest
 
@@ -53,7 +54,7 @@ def test_readme_points_to_every_document(repo_root):
     linked = {target for target, _ in _links(repo_root / "README.md") if target in section}
     assert set(DOCUMENTS) <= linked, sorted(set(DOCUMENTS) - linked)
     assert "(#-documentation)" in readme, "in the table of contents"
-    assert "docs/V5.1_CHECKLIST.md" in readme[:readme.index("### Known limitations")]
+    assert "docs/release/5.4-gate.md" in readme[:readme.index("### Known limitations")]
 
 
 def test_install_steps_cover_what_a_fresh_windows_install_meets(repo_root):
@@ -89,4 +90,22 @@ def test_changelog_starts_with_5_4(repo_root):
         for heading in headings:
             assert f"\n### {heading}\n" in changelog[start:end], (version, heading)
     intro = changelog[:changelog.index("## [")]
-    assert all(f"docs/V5.{n}_CHECKLIST.md" in intro for n in (4, 3, 2, 1))
+    assert "docs/release/5.4-gate.md" in intro
+
+
+INTERNAL = ("ai_brain", "_CHECKLIST.md", "IMPROVEMENT_PLAN.md", "ui-screenshots", ".claude/skills")
+
+
+def test_no_published_file_points_to_the_internal_ones(repo_root):
+    """The working files are kept out of git (.gitignore): nothing published names them."""
+    tracked = subprocess.run(["git", "ls-files"], cwd=repo_root, capture_output=True,
+                             text=True, encoding="utf-8", check=True).stdout.split("\n")
+    pointing = []
+    for name in filter(None, tracked):
+        assert not any(part in name for part in INTERNAL), f"{name} is tracked"
+        if name == "tests/test_docs_links.py":
+            continue
+        if name.endswith((".md", ".py", ".toml", ".txt", ".js", ".html", ".css")):
+            text = (repo_root / name).read_text(encoding="utf-8")
+            pointing += [f"{name}: {part}" for part in INTERNAL if part in text]
+    assert pointing == [], pointing

@@ -126,3 +126,10 @@ instance/
 # ==============================
 .claude/settings.local.json
 .claude/launch.json
+
+# Internal working files, kept on this computer only
+/ai_brain/
+/.claude/
+/docs/IMPROVEMENT_PLAN.md
+/docs/V5.*_CHECKLIST.md
+/docs/ui-screenshots/

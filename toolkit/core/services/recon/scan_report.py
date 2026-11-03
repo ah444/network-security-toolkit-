@@ -7,7 +7,7 @@
 
 Every decision is taken here (the words, the advice, which link is made); the page only shows
 it. See also: data/recon/report_render.py (the HTML), data/recon/scan_report.html (the page's
-order), data/recon/scan_report.css (its look), DECISIONS F5.
+order), data/recon/scan_report.css (its look).
 """
 
 from __future__ import annotations

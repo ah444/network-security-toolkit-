@@ -1,10 +1,10 @@
 # Architecture
 
-How the code of the Network Security Toolkit is organised **today** (v5.2: arranged by
-interface since step 2.3, in layers since v5.1 step 1.5d). The reasons
-behind each choice are in [IMPROVEMENT_PLAN.md](IMPROVEMENT_PLAN.md) §2 (architecture styles)
-and §3 (decisions D1–D23); this page describes what was built, and section 10 lists where it
-differs from the plan's target structure.
+How the code of the Network Security Toolkit is organised **today** (v5.4: arranged by
+interface since v5.2 step 2.3, in layers since v5.1 step 1.5d). The choices were weighed
+in the project's improvement plan (§2, architecture styles; §3, decisions D1–D23), a working
+document not published with the code; this page describes what was built, and section 10
+lists where it differs from the plan's target structure.
 
 Diagrams are plain ASCII so they read the same in any editor, font or terminal.
 `tests/test_docs_architecture.py` fails when a module is missing from the map in section 2.
@@ -139,7 +139,7 @@ no Flask, no argparse. Read by `cli/` and `web/`, it imports neither
 | `toolkit/core/data/recon/local.py` | data | whether an address is this computer's own (nothing sent), and its OS |
 | `toolkit/core/data/recon/text.py` | data | makes text from the network safe to show and export |
 | `toolkit/core/data/recon/scan_records.py` | data | the scan history's records, `instance/scan_history/<scan id>.json`: written once (HR3a), read, listed, removed when the user deletes one |
-| `toolkit/core/data/recon/report_render.py` | data | the scan report's HTML (F5a), the only module outside the web that uses Jinja2 (DECISIONS F5): `scan_report.html` (the page's order) and `scan_report.css` (its look, light, dark and A4 print) filled with every value escaped, one file with its CSS inside and a CSP that allows that style only: no script, nothing loaded |
+| `toolkit/core/data/recon/report_render.py` | data | the scan report's HTML (F5a), the only module outside the web that uses Jinja2 (F5): `scan_report.html` (the page's order) and `scan_report.css` (its look, light, dark and A4 print) filled with every value escaped, one file with its CSS inside and a CSP that allows that style only: no script, nothing loaded |
 | `toolkit/core/data/recon/scan_files.py` | data | scan reports as JSON, CSV or TXT: as text (`report_text`, for a download) or a file in `instance/scans/` (with the engine and nmap's CPE names); a saved scan's HTML report as `report-<scan id>.html` there, published whole (F5c) |
 | `toolkit/core/data/recon/findings.py` | data | what the intel gateways return (`CveEntry`, `IntelFinding`) |
 | `toolkit/core/data/recon/nvd.py` | data | CVEs and CVSS scores from the NVD API, by version (CPE names) or by keyword (an `IntelProvider`); each CVE carries its `match`, "version" or "name" |
@@ -700,7 +700,8 @@ user. Real use is checked by hand, on Windows 10 Enterprise LTSC 2021 with Pytho
 | 2026-10-20 | A fresh clone, every menu path and the pages (5.0 final) | [5.0 final](release/5.0-final-ui-and-install.md) |
 | 2026-10-25 | The full dataset files, a fresh install, the browser (5.1 gate) | [5.1 gate](release/5.1-gate.md) |
 | 2026-10-26 to 2026-10-30 | The full files, a fresh install, the layout, contrast and keyboard audits (5.2 gate) | [5.2 gate](release/5.2-gate.md) |
-| 2026-11-02 | v5.3 steps: each change seen in the browser in a scratch instance | each step's entry in [V5.3_CHECKLIST.md](V5.3_CHECKLIST.md) |
+| 2026-11-03 | The review's conditions, the full files, a fresh install, the layout, contrast and keyboard audits (5.3 gate) | [5.3 gate](release/5.3-gate.md) |
+| 2026-11-03 | The new routes locked, the whole use by keyboard, a fresh install, the audits (5.4 gate) | [5.4 gate](release/5.4-gate.md) |
 
 Not checked yet: Linux and macOS on real machines, browsers other than Chromium, a screen
-reader, and a user who is not the developer (HV1–HV3 in the checklist).
+reader, and a user who is not the developer (HV1–HV3).

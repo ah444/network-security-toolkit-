@@ -5,7 +5,7 @@
 3. makes a file that stands alone: the CSS inside, a policy that allows that style only, so
    the browser runs no script and loads nothing.
 
-Jinja2 does this job and nothing else (DECISIONS F5): the template is ours, never made from
+Jinja2 does this job and nothing else (F5): the template is ours, never made from
 data; the data is plain text, numbers, lists and dicts; autoescape is on; a name the data
 lacks is an error; the sandbox refuses unsafe attributes. See also:
 tests/recon/test_scan_report.py (XSS in every field, no |safe in the template),

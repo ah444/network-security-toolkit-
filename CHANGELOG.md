@@ -1,18 +1,13 @@
 # Changelog
 
-All notable changes to this project. Versions follow the roadmap in
-[docs/IMPROVEMENT_PLAN.md](docs/IMPROVEMENT_PLAN.md); day-to-day progress is in
-[docs/V5.4_CHECKLIST.md](docs/V5.4_CHECKLIST.md) (v5.4),
-[docs/V5.3_CHECKLIST.md](docs/V5.3_CHECKLIST.md) (v5.3),
-[docs/V5.2_CHECKLIST.md](docs/V5.2_CHECKLIST.md) (v5.2),
-[docs/V5.1_CHECKLIST.md](docs/V5.1_CHECKLIST.md) (v5.1) and
-[docs/V5.0_CHECKLIST.md](docs/V5.0_CHECKLIST.md) (v5.0).
+All notable changes to this project, newest first; how each release was checked is in its gate record in 
+[docs/release/](docs/release/5.4-gate.md).
 
 ## [5.4] — 2026-11-03
 
 v5.4 "impressive features", the last part and the project's last planned release: the scan
-history (F6), the scan reports (F5) and the dashboard (F10, with F7)
-([checklist](docs/V5.4_CHECKLIST.md)). Project version: `5.4.0`.
+history (F6), the scan reports (F5) and the dashboard (F10, with F7). Project version:
+`5.4.0`.
 
 **Test result:** 1,981 automated tests pass; `ruff`, `mypy` and `pip-audit` are clean. The
 gate ([record](docs/release/5.4-gate.md)): every route 5.4 added is locked for another computer
@@ -92,7 +87,7 @@ See **Known limitations** in the [README](README.md). New in this release:
 
 v5.3 "impressive features", the first part: the full leaderboard and Saved Runs (F2), what a
 model relies on and why it predicts what it does (F3), and the hardening an outside review
-asked for (section H of the [checklist](docs/V5.3_CHECKLIST.md)): what the evaluation and the
+asked for (its section H): what the evaluation and the
 explanations can and can't say, remote access, the outside services, files published whole,
 one web server per data folder, deleting and storage. Project version: `5.3.0`. Scan reports,
 the history and the dashboard (F5, F6, F10) come in 5.4.
@@ -223,7 +218,7 @@ See **Known limitations** in the [README](README.md). New in this release:
 v5.2 "the user's improvements": a theme button, pages for every screen, the code arranged by
 interface, a port scanner that reads what it finds (with nmap as an optional engine), and the
 port scan in the web app, also from your own virtual machines behind an access token (steps
-2.1–2.4 of the [checklist](docs/V5.2_CHECKLIST.md)). Project version: `5.2.0`.
+2.1–2.4). Project version: `5.2.0`.
 
 **Test result:** 1,484 automated tests pass; `ruff`, `mypy` and `pip-audit` are clean. The
 gate ([record](docs/release/5.2-gate.md)): the full NSL-KDD files through the trainer with the
@@ -300,7 +295,7 @@ See **Known limitations** in the [README](README.md). New in this release:
 
 v5.1 "clean architecture": the same three tools as one package with one command, a
 versioned web API, training jobs you can follow and cancel, and the documentation
-(steps 1.1–1.5 of the [checklist](docs/V5.1_CHECKLIST.md)). Project version: `5.1.0`.
+(steps 1.1–1.5). Project version: `5.1.0`.
 
 **Test result:** 803 automated tests pass; `ruff`, `mypy` and `pip-audit` are clean. The v5.1
 checks of the plan's §8 pass: a cancelled training on the full NSL-KDD files stops, frees its
@@ -412,7 +407,7 @@ See **Known limitations** in the [README](README.md). New in this release:
   computer is not part of 5.1.
 - A bundle is held in memory two to three times while it loads, so the 1.98 GB random
   forest export of 5.0 doesn't load on a PC with 8 GB of memory.
-- Open, recorded in the [checklist](docs/V5.1_CHECKLIST.md): long checkbox lists take one
+- Open at the time: long checkbox lists take one
   Tab stop per item; a native `confirm()` before Clear workspace; after a reload a session
   with a dataset and a loaded bundle shows the dataset path; the navbar takes about a
   quarter of the screen at 375 px; `--json` prints every digit of the confidence; `ids` with a missing file
@@ -683,7 +678,7 @@ Windows 10 Enterprise LTSC 2021, Python 3.14.3, scikit-learn 1.8.0, Flask 3.1.3.
   `TOOLKIT_DEBUG=1`.
 - UI: readable light and dark themes, system fonts (nothing downloaded), viewport and
   `lang` set, labels linked to inputs, visible keyboard focus; 0 contrast failures in
-  the audit. Before/after screenshots in `docs/ui-screenshots/`.
+  the audit.
 - Dependencies pinned (`requirements.txt`, full `requirements.lock`); Flask 3.1.3 and
   requests 2.33.0 to fix published advisories.
 

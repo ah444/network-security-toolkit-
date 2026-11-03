@@ -37,7 +37,7 @@ CONTROLLER_DATA = ("toolkit.core.data.settings", "toolkit.core.data.keys",
                    "toolkit.core.data.logs", "toolkit.web.data.net",
                    "toolkit.web.data.instance_lock", "toolkit.cli.data.processes")
 ARGPARSE_OUTSIDE_CLI = ("toolkit.web.controllers.command",)  # the web command's flags
-# Jinja2 outside the web: only the scan report's HTML, a file (DECISIONS F5). No other module.
+# Jinja2 outside the web: only the scan report's HTML, a file (F5). No other module.
 JINJA2_OUTSIDE_WEB = ("toolkit.core.data.recon.report_render",)
 WEB_FRAMEWORK = {"flask", "werkzeug", "jinja2", "waitress"}
 OUTSIDE = {"socket", "ssl", "requests", "urllib", "http", "subprocess", "webbrowser"}

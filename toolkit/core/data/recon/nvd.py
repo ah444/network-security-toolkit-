@@ -31,7 +31,7 @@ METRIC_ORDER = ("cvssMetricV40", "cvssMetricV31", "cvssMetricV30", "cvssMetricV2
 VERSION = re.compile(r"^\d+(?:\.\d+)*$")
 # NVD's vendor:product for each product name ``software.product_version`` gives, lower case.
 # Each was checked against NVD on 2026-10-25 with a version known to have CVEs (the list and
-# the counts: docs/V5.2_CHECKLIST.md, A4); nginx's CVEs are all under f5 now.
+# the counts: v5.2 step A4); nginx's CVEs are all under f5 now.
 CPE_PRODUCTS: dict[str, tuple[str, ...]] = {
     "openssh": ("openbsd:openssh",),
     "apache": ("apache:http_server",),

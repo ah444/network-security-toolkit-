@@ -11,7 +11,7 @@ A local-first network security toolkit with optional external intelligence servi
 
 ## ⚠️ Project status — read first
 
-**v5.4 ("impressive features", the last part: the scan history, the scan reports and the dashboard)** is released (tag `5.4`), the last planned release, after **v5.3 ("impressive features", the first part: Saved Runs, the explanations and the review's hardening)** (tag `5.3`), **v5.2 ("the user's improvements")** (tag `5.2`), **v5.1 ("clean architecture")** (tag `5.1`) and **v5.0 ("correct & safe")** (tags `5.0` and `5.0.1`). One condition of the outside review is still open: real use by someone who is not the developer, and Linux and macOS (see below). See [docs/IMPROVEMENT_PLAN.md](docs/IMPROVEMENT_PLAN.md), the day-to-day [docs/V5.4_CHECKLIST.md](docs/V5.4_CHECKLIST.md) (and [docs/V5.3_CHECKLIST.md](docs/V5.3_CHECKLIST.md), [docs/V5.2_CHECKLIST.md](docs/V5.2_CHECKLIST.md), [docs/V5.1_CHECKLIST.md](docs/V5.1_CHECKLIST.md) and [docs/V5.0_CHECKLIST.md](docs/V5.0_CHECKLIST.md) for the earlier versions), and what changed in each version in the [CHANGELOG](CHANGELOG.md). A measured baseline of the original version, v4 ([docs/baseline/FINDINGS.md](docs/baseline/FINDINGS.md)), showed that **earlier accuracy claims were not valid**:
+**v5.4 ("impressive features", the last part: the scan history, the scan reports and the dashboard)** is released (tag `5.4`), the last planned release, after **v5.3 ("impressive features", the first part: Saved Runs, the explanations and the review's hardening)** (tag `5.3`), **v5.2 ("the user's improvements")** (tag `5.2`), **v5.1 ("clean architecture")** (tag `5.1`) and **v5.0 ("correct & safe")** (tags `5.0` and `5.0.1`). One condition of the outside review is still open: real use by someone who is not the developer, and Linux and macOS (see below). What changed in each version is in the [CHANGELOG](CHANGELOG.md), and how each release was checked is in its gate record in [docs/release/](docs/release/5.4-gate.md). A measured baseline of the original version, v4 ([docs/baseline/FINDINGS.md](docs/baseline/FINDINGS.md)), showed that **earlier accuracy claims were not valid**:
 
 - **IDS CLI model (v4):** it uses `Attempted Category`, a feature derived from the attack label itself. Changing only that value flips the prediction (e.g. `-1` turns every sample into BENIGN), and none of the CLI's 4 built-in sample flows is classified as intended. **The previously stated ~97–98 % accuracy is withdrawn.** Its files were deleted in v5.0 step 0.5: the CLI now uses the models you train and export in the fixed web trainer, and shows each one's real metrics from its training record (see the CLI's [model card](docs/ids_cli_models.md)).
 - **Web IDS trainer (v4):** its results were **optimistic**. "Apply SMOTE" and "Recommend Features" ran on the *whole* dataset before the train/test split, duplicate rows could land in both train and test, and label-derived columns (e.g. NSL-KDD `level`) were not blocked. The recommender even ranked `level` among the top 10 features. The app reported accuracy and weighted F1 only, which hide weak minority classes: on NSL-KDD, random forest showed 99.8 % accuracy but 76.6 % macro-F1. **Since 5.0-rc1 (step 0.4g) the web trainer runs on the leakage-free ML core** described under "ML core" below. The same datasets and scenarios re-run on that core, before vs after, are in the **ML report**: [docs/report/FINDINGS.md](docs/report/FINDINGS.md).
@@ -340,29 +340,20 @@ Project/
 ├── LICENSE                          # MIT
 │
 ├── data/raw/                        # Local datasets (gitignored, see docs/datasets.md)
-├── docs/                            # Improvement plan, checklists, datasets, web API, baseline, ML report
+├── docs/                            # User guide, reference, web API, architecture, datasets, ML report, baseline, release checks
 ├── scripts/baseline_v4.py           # Reproduces the "before" baseline (docs/baseline/)
 ├── scripts/ml_report.py             # Re-runs it on the v5 ML core (docs/report/)
 ├── tests/                           # pytest suite + small fixtures
 │
-├── toolkit/                         # The package, in four layers with a folder per tool (docs/architecture.md)
-│   ├── __main__.py                  # python -m toolkit (the menu, or scan / ids / web)
-│   ├── ui/                          # What the user sees; the only code that prints or asks
-│   │   ├── web/                     #   the web trainer's page: templates/, static/ (css/, js/ ES modules)
-│   │   └── cli/                     #   the menu, the scanner's and the IDS's prompts and printing
-│   ├── controllers/                 # Requests and flags in, answers and exit codes out
-│   │   ├── web/                     #   the Flask app, its routes, run_server (waitress on 127.0.0.1)
-│   │   └── cli/                     #   the toolkit command: main (menu), scan, ids, web
-│   ├── services/                    # What the tools do: no user interface, no files, no network
-│   │   ├── ids/                     #   the leakage-free ML core (see "ML core" below), bundles, predictions
-│   │   ├── recon/                   #   targets and limits, the scan, the lookups, report entries
-│   │   └── web/                     #   workspaces, the training job runner, the work behind the routes
-│   └── data/                        # Files, the network, the environment (no database)
-│       ├── settings.py, keys.py     #   TOOLKIT_* settings, the data folder, API keys from .env
-│       ├── logs.py                  #   log files in instance/logs, secrets redacted
-│       ├── ids/                     #   bundle and run files, dataset files
-│       ├── recon/                   #   sockets, ping, banners, NVD / OpenRouter / AbuseIPDB, scan reports
-│       └── web/                     #   uploads (read, then deleted), the listening socket, the browser
+├── toolkit/                         # The package, a folder per interface (toolkit/README.md, docs/architecture.md)
+│   ├── start.py, __main__.py        # python -m toolkit: "web" starts web/, anything else cli/
+│   ├── core/                        # What both tools share; it imports neither interface
+│   │   ├── services/                #   the leakage-free ML core (ids/, see "ML core" below), the scanner (recon/), storage
+│   │   └── data/                    #   settings, API keys from .env, logs, files published whole, bundles and runs,
+│   │                                #   sockets, NVD / OpenRouter / AbuseIPDB, saved scans, the scan report's template
+│   ├── cli/                         # The command line: the menu, scan, ids (ui/, controllers/, data/)
+│   └── web/                         # The web trainer: pages, routes, jobs, the dashboard (ui/, controllers/, services/, data/)
+│                                    #   in each interface: ui/ shows, controllers/ take requests, services/ work, data/ reads and writes
 │
 └── docs/ids_cli_models.md           # Where the CLI's models come from (your exports)
 ```

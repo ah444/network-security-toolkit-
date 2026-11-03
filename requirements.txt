@@ -1,5 +1,5 @@
 # Runtime dependencies, pinned to the versions verified on the development PC
-# (Windows, Python 3.14). Supported Python: >= 3.11 (see docs/IMPROVEMENT_PLAN.md D19).
+# (Windows, Python 3.14). Supported Python: >= 3.11 (plan D19).
 # Install:  python -m pip install -r requirements.txt
 # Full, exact environment (incl. sub-dependencies): requirements.lock
 # The same pins are in pyproject.toml (pip install .), xgboost and lightgbm as its [boost]

@@ -6,7 +6,7 @@
    predictions, a scan); the predictions are kept in the session only.
 
 The two tools stay apart: nothing links a scan to a model, and no IDS model is suggested from
-open ports or CVEs (the review's objection to F7 as first planned; ROADMAP section 5).
+open ports or CVEs (the review's objection to F7 as first planned).
 See also: core/services/recon/saved_scans.py (the risks), core/services/ids/comparison.py
 (the runs), ui/static/js/dashboard.js (the page).
 """

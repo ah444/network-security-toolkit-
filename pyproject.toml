@@ -1,4 +1,4 @@
-# Packaging (v5.1 step 1.5b, docs/IMPROVEMENT_PLAN.md D18) and the tools' configuration.
+# Packaging (v5.1 step 1.5b, plan D18) and the tools' configuration.
 #   pip install ".[boost]"      the toolkit, with XGBoost and LightGBM; then: toolkit
 #   pip install -e ".[dev]"     from the project folder, for development
 # The pins are the ones in requirements.txt and requirements-dev.txt
