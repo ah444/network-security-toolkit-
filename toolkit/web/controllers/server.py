@@ -13,6 +13,7 @@ import time
 
 from ...core.data.logs import setup_logging
 from ...core.data.settings import WebConfig, web_config
+from ...core.services.storage import storage_report
 from ..data import instance_lock, net
 from ..services.access import is_this_computer
 from ..services.workspace import start_idle_sweep
@@ -84,6 +85,8 @@ def run_server(config: WebConfig | None = None) -> int:
                                          job.source, job.ran)
         messages.interrupted(line)
         interrupted.setdefault(job.kind, []).append(line)
+    for line in storage_report()["warnings"]:  # HR4c: said in the log; nothing is deleted
+        logging.getLogger(__name__).warning(line)
     try:
         return _serve(config, host, url, interrupted)
     finally:

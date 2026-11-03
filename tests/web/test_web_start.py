@@ -2,6 +2,7 @@
 answers, a port in use is a message (and never shared, even on Windows), --port and
 --no-browser, Ctrl+C stops cleanly. No test opens a real browser (see conftest.py)."""
 
+import logging
 import socket
 import webbrowser
 
@@ -193,3 +194,17 @@ def test_port_in_use_exits_2(monkeypatch):
     with pytest.raises(SystemExit) as stop:
         web_command.run([])
     assert stop.value.code == 2
+
+
+def test_the_storage_warnings_are_logged_at_the_start(started, monkeypatch, caplog):
+    """HR4c: past TOOLKIT_STORAGE_WARN_MB, the server's log says so when it starts (it
+    deletes nothing)."""
+    from toolkit.core.data.settings import instance_dir
+    monkeypatch.setenv("TOOLKIT_STORAGE_WARN_MB", "1")
+    (instance_dir() / "scans").mkdir(parents=True)
+    (instance_dir() / "scans" / "scan-20261025T200015Z.txt").write_bytes(b"x" * 2**21)
+    with caplog.at_level(logging.WARNING):
+        assert web.run_server(WebConfig(port=_free_port(), open_browser=False)) == 0
+    assert any(record.getMessage().startswith("The toolkit's files take 2.0 MB")
+               for record in caplog.records)
+    assert (instance_dir() / "scans" / "scan-20261025T200015Z.txt").exists()

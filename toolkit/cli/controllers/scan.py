@@ -34,6 +34,7 @@ This module is the command: its flags or questions make a ``ScanRequest``; the s
 from __future__ import annotations
 
 import argparse
+import errno
 import sys
 import time
 from collections.abc import Mapping, Sequence
@@ -235,6 +236,11 @@ def main(argv: Sequence[str] | None = None, prog: str | None = None) -> int:
     except (EOFError, KeyboardInterrupt):
         screen.cancelled()
         return 130
+    except OSError as error:  # the report not saved: the disk is (too) full (HR4c)
+        if error.errno != errno.ENOSPC:
+            raise
+        screen.say(error)
+        return 2
 
 
 def run(argv: Sequence[str] | None = None, prog: str | None = None) -> None:

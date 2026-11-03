@@ -34,7 +34,8 @@ def test_the_report_names_the_kept_bundle(client, kept):
     answer = client.get("/api/v1/storage")
     assert answer.status_code == 200
     body = answer.get_json()
-    assert set(body) == {"kinds", "total_bytes", "free_bytes"}
+    assert set(body) == {"kinds", "total_bytes", "free_bytes", "warn_bytes", "floor_bytes",
+                         "warnings"}
     kinds = _kinds(client)
     assert kinds["unregistered_bundles"]["files"] == [f"{kept[0]}.bundle"]
     assert kinds["records"]["count"] == 0

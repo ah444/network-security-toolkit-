@@ -100,6 +100,7 @@ export function storageView(report) {
         el("tbody", {}, kinds.map(item => el("tr", {},
           el("th", { scope: "row" }, item.title), el("td", {}, String(item.count)), el("td", {}, fileSize(item.bytes))))))),
     el("p", {}, `Total: ${fileSize(report.total_bytes)}; ${fileSize(report.free_bytes)} free on this disk.`),
+    report.warnings.map(text => el("p", { class: "warning-message" }, text)),
     kinds.filter(item => item.leftover).map(item => [
       el("h3", {}, item.title), el("ul", {}, item.files.map(name => leftover(item.kind, name)))]),
   ];

@@ -22,6 +22,9 @@ import secrets
 import sys
 from pathlib import Path
 
+from .disk import require_free
+from .settings import min_free_mb
+
 HARD_LINKS = sys.platform != "win32"  # how a file is published without replacing one
 # what a hard link is refused with (ENOTSUP and EOPNOTSUPP differ on macOS)
 NO_LINKS = {errno.EPERM, errno.EOPNOTSUPP, errno.ENOTSUP, errno.ENOSYS}
@@ -30,11 +33,13 @@ LEFTOVER = re.compile(r".+\.[0-9a-f]{8}\.tmp")  # the temporary file's name (tok
 
 def publish_bytes(path: str | Path, data: bytes) -> Path:
     """Publish ``data`` as the new file ``path`` (whole or not at all); FileExistsError
-    rather than replace a file."""
+    rather than replace a file, NoSpace when the disk would keep less free space than
+    ``TOOLKIT_MIN_FREE_MB`` (HR4c)."""
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     if path.exists():
         raise FileExistsError(path)
+    require_free(path.parent, len(data), min_free_mb())
     temporary = path.with_name(f"{path.name}.{secrets.token_hex(4)}.tmp")
     try:
         with temporary.open("xb") as handle:

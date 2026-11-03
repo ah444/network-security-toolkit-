@@ -12,7 +12,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import TextIO, TypedDict
 
-from ..settings import instance_dir
+from ..disk import require_free
+from ..settings import instance_dir, min_free_mb
 from .findings import CveEntry, match_label
 from .text import csv_cell
 
@@ -135,6 +136,7 @@ def export_results(entries: Sequence[ReportEntry], fmt: str,
     text = report_text(entries, fmt)
     directory = Path(directory) if directory else scans_dir()
     directory.mkdir(parents=True, exist_ok=True)
+    require_free(directory, len(text.encode("utf-8")), min_free_mb())  # HR4c: NoSpace
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     for number in range(1000):
         path = directory / f"scan-{stamp}{f'-{number}' if number else ''}.{fmt}"

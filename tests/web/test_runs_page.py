@@ -141,6 +141,9 @@ def test_the_storage_shows_each_kind_and_the_leftovers(rendered):
     assert XSS in _texts(rendered["storage"], "LI") and \
         not any(item["tag"] == "IMG" for item in rendered["storage"]), "text stays text"
     assert _texts(rendered["storage_empty"], "P")[0] == "Nothing saved yet."
+    warning = next(item for item in rendered["storage"] if item["class"] == "warning-message")
+    assert warning["text"] == XSS, "HR4c: each warning, as text"
+    assert not any(item["class"] == "warning-message" for item in rendered["storage_empty"])
 
 
 def test_sizes_as_the_cli_writes_them(rendered):

@@ -133,6 +133,8 @@ def storage(report: Mapping[str, Any]) -> None:
             print(f"  {item['title']}: {item['count']} file(s), {file_size(item['bytes'])}")
     print(f"Total: {file_size(report['total_bytes'])}; {file_size(report['free_bytes'])} free on "
           "this disk.")
+    for warning in report["warnings"]:  # HR4c: past the size, under the free-space floor
+        print(f"⚠️ {warning}")
     for item in report["kinds"]:
         if item["leftover"] and item["files"]:
             print(f"⚠️ {item['title']}:")

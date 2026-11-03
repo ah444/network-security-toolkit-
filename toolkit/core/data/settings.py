@@ -164,6 +164,24 @@ def whole_number(environ: Mapping[str, str], variable: str, default: int) -> int
     return value
 
 
+STORAGE_WARN_MB = 20_480  # the storage report warns past this size of the instance (HR4c)
+MIN_FREE_MB = 1024  # a new file is refused when the disk would keep less free than this
+
+
+def storage_warn_mb(environ: Mapping[str, str] | None = None) -> int:
+    """``TOOLKIT_STORAGE_WARN_MB``: past this size, the storage report warns (HR4c); it never
+    deletes anything."""
+    return whole_number(os.environ if environ is None else environ,
+                        "TOOLKIT_STORAGE_WARN_MB", STORAGE_WARN_MB)
+
+
+def min_free_mb(environ: Mapping[str, str] | None = None) -> int:
+    """``TOOLKIT_MIN_FREE_MB``: a new file is refused when the disk would keep less free
+    space than this (HR4c)."""
+    return whole_number(os.environ if environ is None else environ,
+                        "TOOLKIT_MIN_FREE_MB", MIN_FREE_MB)
+
+
 def switch(environ: Mapping[str, str], variable: str) -> bool:
     """An on/off setting: ``1`` is on, ``0`` or unset is off.
 
@@ -332,7 +350,7 @@ def nmap_path(environ: Mapping[str, str] | None = None) -> str:
 
 # The TOOLKIT_* settings each command reads, checked before it starts (v5.1 step 1.5e).
 # TOOLKIT_INSTANCE_DIR and TOOLKIT_SECRET_KEY take any value.
-SHARED_SETTINGS = ("TOOLKIT_LOG_LEVEL",)
+SHARED_SETTINGS = ("TOOLKIT_LOG_LEVEL", "TOOLKIT_STORAGE_WARN_MB", "TOOLKIT_MIN_FREE_MB")
 COMMAND_SETTINGS = {
     "scan": (*SHARED_SETTINGS, "TOOLKIT_SCAN_MAX_HOSTS", "TOOLKIT_SCAN_MAX_PROBES",
              "TOOLKIT_SCAN_MAX_MIN", "TOOLKIT_NMAP_PATH"),

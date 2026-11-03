@@ -56,7 +56,7 @@ the network").
 | GET | `/api/v1/run/confusion` | `model` (default: the selected one) | test-split confusion matrix |
 | POST | `/api/v1/run/predict` | `values`: {feature: value}, `model` | prediction |
 | POST | `/api/v1/run/predict-file` | multipart `file` (`.csv`/`.txt`), `model` | every row predicted: counts per class, matches, download (see below) |
-| POST | `/api/v1/run/export` | `name` (letters, digits, `_`, `-`; max 80) | signed bundle saved in `instance/bundles/` |
+| POST | `/api/v1/run/export` | `name` (letters, digits, `_`, `-`; max 80) | signed bundle saved in `instance/bundles/`; 507 `NO_SPACE` when the disk would keep less than `TOOLKIT_MIN_FREE_MB` free |
 | GET | `/api/v1/run/bundle` | none | the exported bundle as a download |
 | POST | `/api/v1/bundle` | multipart `file`: a `.bundle` exported by this install | the loaded models and their scores |
 | POST | `/api/v1/bundle/predict` | `values`, `model` | prediction with the loaded bundle |
@@ -76,7 +76,7 @@ the network").
 | GET | `/api/v1/runs/<run_id>` | none | one saved run: its summary, its leaderboard and each model's CV folds |
 | GET | `/api/v1/runs/compare` | `a`, `b`: two run ids | the two runs side by side; the differences only when they scored the same test rows |
 | GET | `/api/v1/runs/<run_id>/files` | none | what deleting the run removes, in the order it goes: `files`, each `{kind, name, size}` (`importance`, `bundle`, `record`) |
-| GET | `/api/v1/storage` | none | what is kept, by kind (HR4b): `kinds`, each `{kind, title, count, bytes, files, leftover}` (`files` names the leftovers), `total_bytes`, `free_bytes`; it deletes nothing |
+| GET | `/api/v1/storage` | none | what is kept, by kind (HR4b): `kinds`, each `{kind, title, count, bytes, files, leftover}` (`files` names the leftovers), `total_bytes`, `free_bytes`, `warn_bytes`, `floor_bytes` and `warnings` (past `TOOLKIT_STORAGE_WARN_MB`, under `TOOLKIT_MIN_FREE_MB`); it deletes nothing |
 | POST | `/api/v1/bundles/<run_id>/register` | none | a run deleted with its bundle kept is saved again from the record the bundle carries, once its signature is checked: `{run_id, record}`; 404 without a bundle, 409 `ALREADY_SAVED`, 400 `BAD_SIGNATURE` or `NOT_REGISTERED` (incomplete, or no record of this run in it) |
 | POST | `/api/v1/runs/<run_id>/delete` | `with_bundle`: true or false (default false: the bundle is kept) | the run deleted (HR4a): `removed` (in order) and `kept` (the bundle, or null); 409 `NOT_REMOVED` naming a file that couldn't be removed, the run kept |
 
@@ -347,6 +347,7 @@ Every error answer has the same shape; `details` is present only when there is m
 | `TOO_MANY_TRIES` | 429 | five wrong access tokens from one address within a minute |
 | `THIS_COMPUTER_ONLY` | 403 | a new access token, or the other computers' jobs, asked for from another computer |
 | `NOT_FOUND` | 404 | no such API route, or no such job in this session |
+| `NO_SPACE` | 507 | a new file (the export's bundle or record, a run registered again) refused: the disk would keep less free space than `TOOLKIT_MIN_FREE_MB`; nothing was deleted |
 | `ALREADY_SAVED` | 409 | registering a bundle's run again, when the run is saved already (a record is never replaced) |
 | `NOT_REGISTERED` | 400 | a bundle whose run can't be registered again: incomplete, not readable, or without a copy of this run's record |
 | `NOT_REMOVED` | 409 | deleting a run stopped at a file that couldn't be removed (on Windows: open in another program); the run is kept and still listed |

@@ -16,7 +16,8 @@ from ...core.services.ids import registry
 from ...core.services.ids.bundle import Bundle, BundleError, BundleVersionWarning
 from ...core.services.ids.pipeline import FittedModel
 from ...core.services.ids.runs import TrainingRun
-from ..services.errors import NO_MODEL_LOADED, NOT_FOUND, NOT_TRAINED, TOO_LARGE
+from ...core.services.storage import NoSpace
+from ..services.errors import NO_MODEL_LOADED, NO_SPACE, NOT_FOUND, NOT_TRAINED, TOO_LARGE
 from ..services import prediction
 from .api import Answer, error_response, json_body
 from .schemas import ExportRequest, PredictRequest, load
@@ -156,6 +157,8 @@ def export(ws: Workspace) -> Answer:
             return _bundle_refused(error)
         except FileExistsError as error:
             return error_response(_exists_message(error), 409)
+        except NoSpace as error:  # HR4c: the disk is too full to save it
+            return error_response(str(error), 507, NO_SPACE)
         ws.export = ExportedBundle(saved, name)
     ws.export.name = name
     return jsonify(export_answer(ws.export))

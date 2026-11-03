@@ -36,7 +36,7 @@ from ...core.services.ids.datasets import DatasetError
 from ...core.services.ids.exports import EXPORTED, BundleStore
 from ...core.services.ids.registration import register_bundle
 from ...core.services.ids.run_removal import not_removed, remove_run, run_files
-from ...core.services.storage import storage_report
+from ...core.services.storage import NoSpace, storage_report
 from ...core.services.ids.prediction import (
     json_rows,
     label_column,
@@ -122,7 +122,7 @@ def register_run(run_id: str) -> int:
     except FileNotFoundError:
         screen.error(FileNotFoundError(f"There is no bundle of run {run_id} in instance/bundles."))
         return 2
-    except (FileExistsError, BundleError) as error:
+    except (FileExistsError, BundleError, NoSpace) as error:
         screen.error(error)
         return 2
     runs_screen.registered(run_id)

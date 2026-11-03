@@ -13,8 +13,8 @@ from ...core.services.ids.bundle import BundleError
 from ...core.services.ids.comparison import NotARun, compare_saved, saved_run, saved_runs, view
 from ...core.services.ids.registration import register_bundle
 from ...core.services.ids.run_removal import BUNDLE, not_removed, remove_run, run_files
-from ...core.services.storage import storage_report
-from ..services.errors import ALREADY_SAVED, NOT_FOUND, NOT_REMOVED
+from ...core.services.storage import NoSpace, storage_report
+from ..services.errors import ALREADY_SAVED, NO_SPACE, NOT_FOUND, NOT_REMOVED
 from .api import Answer, error_response, json_body, query
 from .schemas import CompareRequest, DeleteRunRequest, RunsRequest, load
 from .state import state
@@ -98,6 +98,8 @@ def register(run_id: str) -> Answer:
         return error_response(NO_SUCH_BUNDLE, 404, NOT_FOUND)
     except FileExistsError as error:
         return error_response(str(error), 409, ALREADY_SAVED)
+    except NoSpace as error:
+        return error_response(str(error), 507, NO_SPACE)
     except BundleError as error:
         return error_response(str(error), code=error.code)
     return jsonify({"run_id": run_id, "record": record.name})

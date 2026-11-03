@@ -244,7 +244,7 @@ nothing. Its settings are
 |---|---|---|---|---|
 | 0 | the scan ended (also with nothing found) | done; also Ctrl+C or "5. Exit" | stopped with Ctrl+C | left the menu; `--help` |
 | 1 | nmap could not scan a target (missing or failed; the other targets were still scanned) | | | |
-| 2 | a bad flag or setting, a bad target or port list, over a limit, not authorised | a bad flag or setting, no export, a bundle refused (signature, format), an unknown model, a missing or unreadable file, an output file that exists | a bad flag or setting, a bad port, the port in use, an address this computer doesn't have, `TOOLKIT_DEBUG=1` with `--host` | an unknown command |
+| 2 | a bad flag or setting, a bad target or port list, over a limit, not authorised, the report not saved for lack of disk space (`TOOLKIT_MIN_FREE_MB`) | a bad flag or setting, no export, a bundle refused (signature, format), an unknown model, a missing or unreadable file, an output file that exists, a run not deleted or not registered, a record not saved for lack of disk space | a bad flag or setting, a bad port, the port in use, an address this computer doesn't have, `TOOLKIT_DEBUG=1` with `--host` | an unknown command |
 | 130 | cancelled (Ctrl+C, or the end of input at a question) | | | |
 
 `--help` exits with 0 everywhere. A bad flag is reported by the command's own parser with
@@ -267,6 +267,8 @@ doesn't stop a scan, and `--help` always works.
 | Setting | Read by | Allowed | Default | What it does |
 |---|---|---|---|---|
 | `TOOLKIT_LOG_LEVEL` | all | `DEBUG`, `INFO`, `WARNING`, `ERROR` (any case) | `INFO` | how much the log files in `instance/logs/` get |
+| `TOOLKIT_STORAGE_WARN_MB` | all | whole number | `20480` (20 GB) | past this size of `instance/`, the storage report (Saved Runs, `ids --storage`) and the web server's log at its start warn; nothing is deleted |
+| `TOOLKIT_MIN_FREE_MB` | all | whole number | `1024` (1 GB) | a new file (a record, an importance result, a bundle, a scan report) is refused when the disk would keep less free space than this: "Not saved: only … MB free …"; nothing is deleted |
 | `TOOLKIT_INSTANCE_DIR` | all | a folder | `instance/` in the project folder (installed: section 7.3) | where exports, runs, the signing key, scans and logs are kept |
 | `TOOLKIT_SCAN_MAX_HOSTS` | `scan` | whole number | `256` | hosts in one scan (one /24 network) |
 | `TOOLKIT_SCAN_MAX_PROBES` | `scan` | whole number | `65536` | host×port checks in one scan |

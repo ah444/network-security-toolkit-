@@ -18,6 +18,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from ...data.disk import NoSpace
 from ...data.ids import importance_files
 from ...data.ids.run_files import runs_dir
 from ...data.settings import ExplainConfig
@@ -57,6 +58,8 @@ def publish(run_id: str, model: str, found: Importance, config: ExplainConfig | 
             importance_files.write_importance(folder, run_id, model, result)
         except FileExistsError:
             pass  # published before: never replaced
+        except NoSpace as error:  # HR4c: the disk is too full; it says so
+            return str(error)
         except OSError:
             log.exception("Could not save the importance of %s of run %s", model, run_id)
             return NOT_WRITTEN

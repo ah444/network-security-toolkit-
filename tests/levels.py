@@ -109,6 +109,7 @@ INTEGRATION = (
     "test_publish.py",
     "test_repo.py",
     "test_smoke.py",
+    "test_storage_limits.py",
     "web/test_access.py",
     "web/test_api_errors.py",
     "web/test_api_routes.py",

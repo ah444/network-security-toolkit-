@@ -113,7 +113,7 @@ no Flask, no argparse. Read by `cli/` and `web/`, it imports neither
 | `toolkit/core/data/logs.py` | data | one rotating log file per tool, secrets redacted |
 | `toolkit/core/data/keys.py` | data | API keys and the AI model setting, from the environment or `.env` |
 | `toolkit/core/data/files.py` | data | the text files the commands read and write |
-| `toolkit/core/data/disk.py` | data | the instance's files with their sizes, and the disk's free space (HR4b); it only reads |
+| `toolkit/core/data/disk.py` | data | the instance's files with their sizes, and the disk's free space (HR4b); the free space a new file must leave, `NoSpace` (HR4c); it only reads |
 | `toolkit/core/data/publish.py` | data | a new file published whole or not at all, never replacing one (HR3a): a record, a bundle |
 | `toolkit/core/data/protect.py` | data | `instance/` and `.env` limited to this account (HS5): on Windows the ACL with `icacls`, elsewhere `chmod` |
 | `toolkit/core/data/ids/__init__.py` | data | the IDS's files |
@@ -542,6 +542,15 @@ names it and why. Ctrl+C stops the scan with exit code 130.
   among its own); with the file's SHA-256 it is the record as it was, byte for byte
   (tested). It is published under the one lock of the run files and never replaces a record.
   A bundle exported before the manifest held its record can't be registered.
+- The storage's limits (HR4c), neither of which deletes anything: `publish.publish_bytes`
+  (records, importance results, bundles) and the scan report's writer first check that the
+  disk keeps `TOOLKIT_MIN_FREE_MB` (1 GB) free after the new file (`disk.require_free`),
+  else `NoSpace` with its message, said by the web (507 `NO_SPACE`), the importance job
+  ("Not saved: …") and the CLI (exit 2); nothing is written then, not even a temporary file.
+  Past `TOOLKIT_STORAGE_WARN_MB` (20 GB), and under the floor, the storage report warns, and
+  the web server's log says so at its start. An export refused after its bundle was saved
+  leaves an unregistered bundle, which Register again turns back into the run once there is
+  room.
 - A bundle's state comes from its header (HR3d, `bundle.header_state`): the format records
   its lengths, so its first bytes and the file's size say whether it is whole, with no HMAC
   and nothing unpickled, and no length is read past the file's size. **Exported**: the
