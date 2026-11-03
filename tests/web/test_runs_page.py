@@ -95,7 +95,7 @@ def test_a_row_of_the_list(rendered):
     assert cells[1:] == ["2026-10-30 12:05 UTC20261030T120509Z-0000000a",
                          f"{XSS}12,345 rowstest file: KDDTest+.csv", "Label",
                          "stratified8,641 / 3,704", "★ Random Forestof 2 models", "0.912",
-                         "0.944", "ShowDelete"]
+                         "0.944", "Exported", "ShowDelete"]
     box = next(item for item in rendered["row"] if item["tag"] == "INPUT")
     assert box["attributes"]["aria-label"] == "Compare run 20261030T120509Z-0000000a"
     assert next(item for item in rendered["row"] if item["tag"] == "LABEL")["class"] == \
@@ -106,6 +106,14 @@ def test_a_row_of_the_list(rendered):
     assert delete["attributes"]["data-delete"] == "20261030T120509Z-0000000a"
     assert delete["attributes"]["aria-label"] == "Delete run 20261030T120509Z-0000000a"
     assert delete["class"] == "btn btn-sm btn-secondary" and delete["text"] == "Delete"
+
+
+def test_each_run_says_its_bundle(rendered):
+    """HR5b: every training is listed, exported or not; its bundle from the file's header."""
+    assert rendered["bundle_cells"] == [
+        "Not exported", "Exported", "Incomplete bundle (its export was interrupted)",
+        "Unreadable bundle"]
+    assert '<th scope="col">Bundle</th>' in RUNS_TEMPLATE.read_text(encoding="utf-8")
 
 
 def test_the_delete_names_every_file_and_keeps_the_bundle_by_default(rendered):

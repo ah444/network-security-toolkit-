@@ -19,7 +19,7 @@ const run = (runId, extra = {}) => ({
   test_dataset: null, profile: null, label: "Label", split: "stratified", train_rows: 8641,
   test_rows: 3704, balancing: "none", models: ["random_forest", "decision_tree"],
   selected: "random_forest", selected_title: "Random Forest", cv_macro_f1_mean: 0.9123,
-  test_macro_f1: 0.9444, ...extra,
+  test_macro_f1: 0.9444, bundle: "exported", ...extra,
 });
 const A = "20261030T120509Z-0000000a";
 const B = "20261031T090000Z-0000000b";
@@ -67,6 +67,8 @@ const shown = nodes => {
 console.log(JSON.stringify({
   row: shown(runRow(run(A))),
   row_cells: runRow(run(A, { test_dataset: "KDDTest+.csv" })).children.map(cell => cell.textContent),
+  bundle_cells: [null, "exported", "incomplete", "unreadable"].map(bundle =>
+    runRow(run(A, { bundle })).children[8].textContent),
   view: shown(runView({ summary: run(A), leaderboard: board, folds: { random_forest: [0.91, 0.912, 0.914] } })),
   comparable: shown(comparisonView(answer(true))),
   apart: shown(comparisonView(answer(false))),

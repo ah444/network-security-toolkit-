@@ -52,6 +52,7 @@ def test_an_exported_run_is_listed_shown_and_compared(client, exported):
     assert [r["run_id"] for r in listed["runs"]] == [exported["run_id"]]
     summary = listed["runs"][0]
     assert summary["dataset"] == {"name": CIC, "rows": 200} and summary["label"] == TARGET
+    assert summary.pop("bundle") == "exported", "the list's (HR5b): one run's view has no bundle"
 
     one = client.get(f"/api/v1/runs/{exported['run_id']}")
     assert one.status_code == 200

@@ -2,7 +2,9 @@
 runs can be compared and how they differ.
 
 Works on TrainingRun records as dicts, the way ``exports.read_run`` gives them back, and only
-reads the records (``instance/runs/*.json``), never a bundle: nothing is unpickled. A record on
+reads the records (``instance/runs/*.json``) and, for the list, each run's bundle's first bytes
+for its state (HR5b, from its header: HR3d), never its models: nothing is unpickled. Every
+training has a record (HR5), so the list has every run, exported or not. A record on
 disk is data someone could have edited, so a run id is checked against the form ``runs.train``
 writes before any path is made from it, and a record that isn't a TrainingRun is left out of a
 list and counted, never an error of the whole list.
@@ -18,11 +20,13 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
+from ...data.ids.bundle_files import bundle_path
 from ...data.ids.run_files import list_runs, runs_dir
-from .exports import read_run
+from .exports import read_run, read_state
 
 RUN_ID = re.compile(r"\d{8}T\d{6}Z-[0-9a-f]{8}")  # runs.train: f"{now:%Y%m%dT%H%M%SZ}-" + 8 hex
 PAGE_SIZE = 50  # runs in one list, newest first
+UNREADABLE = "unreadable"  # a run's bundle this toolkit can't read (not a bundle, or not ours)
 
 # The leaderboard's numbers each model is compared on, in the order the pages show them.
 METRICS = ("cv_macro_f1_mean", "cv_balanced_accuracy_mean", "test_macro_f1",
@@ -77,6 +81,17 @@ def summary(record: Mapping[str, Any]) -> dict[str, Any]:
         "cv_macro_f1_mean": row["cv_macro_f1_mean"] if row else None,
         "test_macro_f1": row["test_macro_f1"] if row else None,
     }
+
+
+def bundle_state(run_id: str, directory: str | Path | None = None) -> str | None:
+    """The state of ``run_id``'s bundle from its first bytes (``exports.read_state``, nothing
+    unpickled): "exported", "incomplete", UNREADABLE, or None when the run has none (not
+    exported). ``run_id`` is a checked run id."""
+    path = bundle_path(run_id, directory)
+    if not path.is_file():
+        return None
+    state, _manifest = read_state(path)
+    return state or UNREADABLE
 
 
 def folds(record: Mapping[str, Any]) -> dict[str, list[float]]:
@@ -196,8 +211,9 @@ def saved_run(run_id: str, directory: str | Path | None = None) -> dict[str, Any
 def saved_runs(before: str | None = None, limit: int = PAGE_SIZE,
                directory: str | Path | None = None) -> dict[str, Any]:
     """The summaries of the saved runs, newest first, at most ``limit``, older than ``before``
-    when given: ``{"runs", "more", "left_out"}``. ``left_out`` counts the files met while
-    filling this list that are not readable TrainingRun records (or not named as one)."""
+    when given, each with its bundle's state (``bundle_state``, HR5b): ``{"runs", "more",
+    "left_out"}``. ``left_out`` counts the files met while filling this list that are not
+    readable TrainingRun records (or not named as one)."""
     if before is not None and not is_run_id(before):
         raise NotARun("That is not a run id.")
     paths = [path for path in reversed(list_runs(directory))
@@ -213,7 +229,7 @@ def saved_runs(before: str | None = None, limit: int = PAGE_SIZE,
             left_out += 1
             continue
         try:
-            runs.append(summary(_checked(path)))
+            runs.append({**summary(_checked(path)), "bundle": bundle_state(path.stem)})
         except NotARun:
             left_out += 1
     return {"runs": runs, "more": read < len(paths), "left_out": left_out}

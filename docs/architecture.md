@@ -97,7 +97,7 @@ no Flask, no argparse. Read by `cli/` and `web/`, it imports neither
 | `toolkit/core/services/ids/run_removal.py` | services | deleting a saved run when the user asks (HR4a): its importance results, then its bundle if asked, its record last, under the run files' lock; a file that can't be removed keeps the record |
 | `toolkit/core/services/ids/registration.py` | services | a kept bundle's run registered again (HR4b): the whole file's signature checked in pieces, then the record copy it carries published as the record, never replacing one |
 | `toolkit/core/services/ids/saved_importance.py` | services | an importance result as a file of its own (HR2): named from checked ids, published once under the run files' lock while the record lists the model, read back as untrusted data |
-| `toolkit/core/services/ids/comparison.py` | services | the saved runs (records only, never a bundle): a run's summary, the view its charts need, whether two runs scored the same test rows, two runs side by side |
+| `toolkit/core/services/ids/comparison.py` | services | the saved runs (the records, and each run's bundle's state from its first bytes, HR5b; never a model): a run's summary, the view its charts need, whether two runs scored the same test rows, two runs side by side |
 | `toolkit/core/services/ids/batch.py` | services | labels every row of a table: the CLI's `--csv` and the web's "Predict a CSV file" |
 | `toolkit/core/services/ids/prediction.py` | services | the IDS command's predictions: one row, a table, a CSV file into a new file |
 | `toolkit/core/services/recon/__init__.py` | services | the scanner's logic |

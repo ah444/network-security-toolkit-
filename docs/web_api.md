@@ -141,7 +141,9 @@ and an id with no record is `NOT_FOUND` (404).
 
 `GET /api/v1/runs` answers `{"runs": [...], "more": true, "left_out": 0}`: each run's id, time,
 dataset (name and rows), test file, profile, label, split and its row counts, balancing,
-models, and the selected model with its CV and test macro-F1. `more` says there are older runs
+models, the selected model with its CV and test macro-F1, and `bundle`: its bundle's state
+from the file's first bytes (`"exported"`, `"incomplete"`, `"unreadable"`, or `null` when the
+run was not exported; every training is listed, HR5). `more` says there are older runs
 (ask again with `before` = the last id); `left_out` counts the files met that are not readable
 TrainingRun records (an edited file, a newer schema), which are skipped, not an error.
 

@@ -664,6 +664,9 @@ there, and no model is loaded.
 
 ![The saved runs](user-guide/18-saved-runs.jpg)
 
+- **Bundle** says whether the run was exported: **Exported**, **Not exported** (it can still
+  be shown, compared and deleted; to predict with it later, export it from its training's
+  session), or an incomplete or unreadable bundle.
 - **Show** opens one run: what it was trained on, its leaderboard and its charts.
 - Tick two runs and click **Compare the two ticked runs**. A is the older one, B the newer.
   Each model of both runs gets a table with every score of A and B and, per class, the test
@@ -884,7 +887,8 @@ are `guess_passwd` and `smurf`: the first is predicted wrongly, as `normal`.
 are in [reference.md, section 6](reference.md#6-exit-codes).
 
 **The saved runs** (section 4.8) are in the terminal too, without loading a model. The list,
-newest first (50 at a time; its last line gives the `--before` for the older ones):
+newest first (50 at a time; its last line gives the `--before` for the older ones); each line
+ends with its bundle: `exported` or `not exported` (an example from before that was added):
 
 ```
 > python -m toolkit ids --runs

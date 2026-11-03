@@ -1,6 +1,7 @@
 """Saved runs (v5.3 F2c): the list, one run, and two side by side. They only read the
-TrainingRun records in ``instance/runs/`` (``toolkit.core.services.ids.comparison``), never a
-bundle, and need no session: a saved run belongs to this install, not to a workspace. A run
+TrainingRun records in ``instance/runs/`` (``toolkit.core.services.ids.comparison``), every
+training's (HR5), and for the list each run's bundle's state from its first bytes (HR5b),
+never a model, and need no session: a saved run belongs to this install, not to a workspace. A run
 is deleted only when the user asks, after the page named its files (HR4a,
 ``toolkit.core.services.ids.run_removal``). The storage report only reads; registering a kept
 bundle again adds its record and deletes nothing (HR4b)."""

@@ -64,6 +64,16 @@ def test_a_run_is_listed(cli_module, capsys, exported, no_model):
     assert " of 2: CV " in line and "Older runs" not in out
 
 
+def test_each_run_says_its_bundle(cli_module, capsys, exported, no_model):
+    """HR5b: a run without a bundle (only trained) is listed too, and says so."""
+    _save(exported, OTHER_ID)
+    code, out = _run(cli_module, capsys, "--runs")
+    first, second = out.splitlines()[:2]
+    assert code == 0
+    assert first.startswith(f"1. {exported['run_id']}  ") and first.endswith("  exported")
+    assert second.startswith(f"2. {OTHER_ID}  ") and second.endswith("  not exported")
+
+
 def test_the_same_run_twice_is_comparable(cli_module, capsys, exported, no_model):
     code, out = _run(cli_module, capsys, "--compare", exported["run_id"], exported["run_id"])
     assert code == 0

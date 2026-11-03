@@ -49,8 +49,16 @@ function metric(value, key) {
   return key === "fit_seconds" ? seconds(value) : fmt(value, 3);
 }
 
-// One line of the list: a box to choose it for the comparison, a button to show it and one
-// to delete it (the page then names its files and asks, HR4a)
+// A run's bundle as the list says it (HR5b; the CLI's words too): every training is saved,
+// exported or not, and the state comes from the bundle file's first bytes
+export const BUNDLES = {
+  exported: "Exported",
+  incomplete: "Incomplete bundle (its export was interrupted)",
+  unreadable: "Unreadable bundle",
+};
+
+// One line of the list: a box to choose it for the comparison, its bundle, a button to show
+// it and one to delete it (the page then names its files and asks, HR4a)
 export function runRow(run) {
   return el("tr", {},
     el("td", {}, el("label", { class: "choice run-pick" },
@@ -64,6 +72,7 @@ export function runRow(run) {
        quiet(`of ${run.models.length} model${run.models.length === 1 ? "" : "s"}`)),
     el("td", {}, run.cv_macro_f1_mean === null ? "–" : fmt(run.cv_macro_f1_mean, 3)),
     el("td", {}, run.test_macro_f1 === null ? "–" : fmt(run.test_macro_f1, 3)),
+    el("td", {}, BUNDLES[run.bundle] || "Not exported"),
     el("td", {}, el("div", { class: "button-group" },
       el("button", { type: "button", class: "btn btn-sm", "data-run": run.run_id,
                      "aria-label": "Show run " + run.run_id }, "Show"),

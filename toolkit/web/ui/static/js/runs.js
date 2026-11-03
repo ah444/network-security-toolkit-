@@ -41,7 +41,7 @@ async function load() {
     byId("runsLeftOut").textContent = `${leftOut} file${leftOut === 1 ? " is" : "s are"} in the runs folder but not a run this toolkit can show (edited, or from a newer version): left out.`;
     show(byId("runsLeftOut"), leftOut > 0);
     if (listed === 0) {
-      message(byId("runsStatus"), "info", "No saved runs yet: train a model on the Dynamic IDS page and export it; each export is saved here.");
+      message(byId("runsStatus"), "info", "No saved runs yet: train a model on the Dynamic IDS page; each training is saved here.");
     } else {
       listedText = `${listed} run${listed === 1 ? "" : "s"} listed${answer.more ? ", older ones below" : ""}.`;
       setContent(byId("runsStatus"), listedText);

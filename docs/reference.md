@@ -137,8 +137,10 @@ refused).
   and which model, then offers: 1 enter features manually, 2 test with a real example
   from the model's test split, 3 switch model, 4 predict a CSV file, 5 exit.
 - With `--csv`, `--json` or `--info` it asks nothing.
-- `--runs` and `--compare` read the saved runs (`instance/runs`, one record per export: its
-  settings and scores) and open no model; they exit with 2 and the message for a bad run id
+- `--runs` and `--compare` read the saved runs (`instance/runs`, one record per training,
+  exported or not: its settings and scores) and open no model; `--runs` ends each line with
+  its bundle (`exported`, `not exported`, an incomplete or unreadable bundle, from the file's
+  first bytes); they exit with 2 and the message for a bad run id
   or a run that isn't saved. The importance results beside the records
   (`<run id>.importance.<model id>.json`, HR2) are not runs and are not counted.
 - `--delete RUN_ID` (HR4a) names the run's files and their sizes, then asks

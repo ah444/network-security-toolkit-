@@ -24,7 +24,7 @@
   <script src="{{ url_for('static', filename='js/navbar.js') }}"></script>
   {% if network_banner %}<p class="network-banner" role="note">{{ network_banner }}</p>{% endif %}
 
-  <!-- v5.3 F2: the runs exported from the trainer, read from their records only (never a
+  <!-- v5.3 F2: every training of the trainer (HR5), read from their records only (never a
        model); nothing is uploaded or trained here. runs.js fills it from GET /api/v1/runs. -->
   <div class="container">
     <h1>Saved Runs</h1>
@@ -36,7 +36,7 @@
       <div id="runsBox" class="table-container" tabindex="0" role="region" aria-label="Saved runs" hidden>
         <table class="metrics-table runs-table">
           <thead>
-            <tr><th scope="col">Compare</th><th scope="col">Saved</th><th scope="col">Dataset</th><th scope="col">Label</th><th scope="col">Split (train / test rows)</th><th scope="col">Selected model</th><th scope="col">CV macro-F1</th><th scope="col">Test macro-F1</th><th scope="col">Run</th></tr>
+            <tr><th scope="col">Compare</th><th scope="col">Saved</th><th scope="col">Dataset</th><th scope="col">Label</th><th scope="col">Split (train / test rows)</th><th scope="col">Selected model</th><th scope="col">CV macro-F1</th><th scope="col">Test macro-F1</th><th scope="col">Bundle</th><th scope="col">Run</th></tr>
           </thead>
           <tbody id="runsRows"></tbody>
         </table>

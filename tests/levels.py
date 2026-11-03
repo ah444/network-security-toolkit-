@@ -65,6 +65,7 @@ INTEGRATION = (
     "ml/test_profiles.py",
     "ml/test_run_removal.py",
     "ml/test_saved_importance.py",
+    "ml/test_saved_runs_bundles.py",
     "ml/test_split.py",
     "ml/test_storage_report.py",
     "ml/test_training_run.py",

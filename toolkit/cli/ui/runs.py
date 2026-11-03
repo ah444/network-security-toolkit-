@@ -10,8 +10,11 @@ from collections.abc import Mapping, Sequence
 from typing import Any
 
 
-NO_RUNS = ("No saved runs yet: train a model in the web trainer and click Export (each export "
-           "is saved in instance/runs).")
+NO_RUNS = ("No saved runs yet: train a model in the web trainer (each training is saved in "
+           "instance/runs).")
+BUNDLES = {"exported": "exported",  # a run's bundle, in the page's words (HR5b)
+           "incomplete": "incomplete bundle (its export was interrupted)",
+           "unreadable": "unreadable bundle"}
 METRICS = (("cv_macro_f1_mean", "CV macro-F1"), ("cv_balanced_accuracy_mean", "CV balanced acc."),
            ("test_macro_f1", "Test macro-F1"), ("test_balanced_accuracy", "Test balanced acc."),
            ("test_accuracy", "Test accuracy"), ("test_min_recall", "Weakest class recall"),
@@ -74,12 +77,13 @@ def run_line(run: Mapping[str, Any]) -> str:
 
 
 def runs_list(answer: Mapping[str, Any]) -> None:
-    """``--runs``: one line per saved run, newest first; how to see the older ones."""
+    """``--runs``: one line per saved run, newest first, with its bundle (HR5b); how to see
+    the older ones."""
     runs = answer["runs"]
     if not runs:
         print(NO_RUNS)
     for i, run in enumerate(runs, 1):
-        print(f"{i}. {run_line(run)}")
+        print(f"{i}. {run_line(run)}  {BUNDLES.get(run['bundle'], 'not exported')}")
     if answer["left_out"]:
         print(f"⚠️ {answer['left_out']} file(s) in instance/runs are not runs this toolkit can "
               "show (edited, or from a newer version): left out.")
