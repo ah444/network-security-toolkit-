@@ -156,12 +156,14 @@ The menu, `scan` and `ids`; it never imports the web trainer
 | `toolkit/cli/ui/__init__.py` | ui | the command line's prompts and printing |
 | `toolkit/cli/ui/menu.py` | ui | the banner, the menu and its prompt |
 | `toolkit/cli/ui/scan.py` | ui | the scanner's questions, authorization, tables and report; `ConsoleScan` is the scan's `ScanView` |
+| `toolkit/cli/ui/scans.py` | ui | what `scan --history`, `--show`, `--compare` and `--delete` print: the saved scans, one, two compared, the record to delete |
 | `toolkit/cli/ui/progress.py` | ui | `ConsoleProgress`: the progress line of a verbose scan |
 | `toolkit/cli/ui/ids.py` | ui | the IDS command's export list, model card, predictions, interactive menu and prompts |
 | `toolkit/cli/ui/runs.py` | ui | what `ids --runs` and `--compare` print: the saved runs, and two of them side by side |
 | `toolkit/cli/controllers/__init__.py` | controllers | the command line's commands |
 | `toolkit/cli/controllers/main.py` | controllers | the command line: the menu, or `scan`, `ids` with the rest of the line; the toolkit's `--help` (it lists `web` too) |
 | `toolkit/cli/controllers/scan.py` | controllers | the scanner's flags or questions, a `ScanRequest`, the exit codes |
+| `toolkit/cli/controllers/scan_history.py` | controllers | `scan --history`, `--show`, `--compare`, `--delete` (F6d): the saved scans, read only, a delete after a yes |
 | `toolkit/cli/controllers/ids.py` | controllers | the IDS command: choose an export, predict, `--csv`, `--json`, `--info`, the exit codes |
 | `toolkit/cli/data/__init__.py` | data | the command line's own data |
 | `toolkit/cli/data/processes.py` | data | the menu's child processes (`python -m toolkit <command>`) |

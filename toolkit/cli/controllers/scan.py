@@ -7,6 +7,8 @@ confirmation first (or ``--i-am-authorized`` in scripts) and has host/port limit
     python -m toolkit scan 192.168.1.10 -p 1-1024 --protocol both --export csv
                                                no questions but the authorization one
     python -m toolkit scan ... --i-am-authorized   not even that one (scripts)
+    python -m toolkit scan --history            the saved scans (F6d; also --show,
+                                               --compare and --delete): nothing is scanned
 
 (from the project folder; ``toolkit scan`` once installed; moved from
 tools/Port_scan/Port_Scan.py in v5.1 step 1.4a, flags in step 1.4c). With a TARGET nothing
@@ -24,7 +26,8 @@ What leaves this computer (step 0.6, plan D13-D15):
 API keys (all optional): environment variables OPENROUTER_API_KEY, ABUSEIPDB_API_KEY,
 NVD_API_KEY (and OPENROUTER_MODEL), or the same lines in a .env file in the project
 folder (S15). Results are saved as UTF-8 in instance/scans/, never overwriting a file
-(B12, S14).
+(B12, S14). Every finished scan is also saved in the scan history, instance/scan_history/
+(F6a).
 
 This module is the command: its flags or questions make a ``ScanRequest``; the scan is
 ``toolkit.core.services.recon.scan``, what the user sees ``toolkit.cli.ui.scan`` (v5.1 step
@@ -64,6 +67,7 @@ from ...core.services.recon.scan import (
 )
 from ...core.services.recon.targets import DEFAULT_PORTS, parse_port_range, parse_ports
 from ..ui import scan as screen
+from .scan_history import HISTORY_FLAGS, history
 
 NOT_AUTHORIZED = "Scan cancelled: only scan systems you are authorised to scan."
 # The flags that only make sense with a TARGET (without one, the scanner asks instead)
@@ -149,7 +153,8 @@ def build_parser(prog: str | None = None) -> argparse.ArgumentParser:
                     "authorization question. NVD, the AI and AbuseIPDB are used when their key\n"
                     "is set (NVD needs none) unless --no-nvd, --no-ai or --no-abuseipdb turns\n"
                     "them off.",
-        epilog="example:\n  %(prog)s 192.168.1.10 -p 1-1024 --protocol both --export csv")
+        epilog="examples:\n  %(prog)s 192.168.1.10 -p 1-1024 --protocol both --export csv\n"
+               "  %(prog)s --history")
     parser.add_argument("target", nargs="?", metavar="TARGET",
                         help="IPv4 or IPv6 address, network (e.g. 192.168.1.0/24) or domain")
     parser.add_argument("-p", "--ports", metavar="SPEC",
@@ -197,7 +202,39 @@ def build_parser(prog: str | None = None) -> argparse.ArgumentParser:
     nmap.add_argument("--os-detect", action="store_true",
                       help="nmap only: OS detection (-O; raw packets: Npcap on Windows, root "
                            "elsewhere)")
+    saved = parser.add_argument_group(
+        "scan history", "every finished scan is saved in instance/scan_history; these read it\n"
+                        "and scan nothing (no TARGET, no other flag)")
+    one = saved.add_mutually_exclusive_group()
+    one.add_argument("--history", action="store_true",
+                     help="list the saved scans (newest first, 50 at a time) and exit")
+    one.add_argument("--show", metavar="SCAN_ID", help="show one saved scan and exit")
+    one.add_argument("--compare", nargs=2, metavar="SCAN_ID",
+                     help="compare two saved scans (the older is A) and exit")
+    one.add_argument("--delete", metavar="SCAN_ID",
+                     help="delete a saved scan's record: names it and asks first")
+    saved.add_argument("--before", metavar="SCAN_ID",
+                       help="with --history: the scans saved before this one")
     return parser
+
+
+def check_flags(parser: argparse.ArgumentParser, args: argparse.Namespace) -> None:
+    """The flags that go together, or the parser's error (exit code 2): the scan flags only
+    with a TARGET, nmap's only with --engine nmap, the history flags alone (F6d)."""
+    used = ["--" + name.replace("_", "-") for name in SCAN_FLAGS if getattr(args, name)]
+    if args.before is not None and not args.history:
+        parser.error("--before goes with --history")
+    if any(getattr(args, name) for name in HISTORY_FLAGS):
+        if args.target is not None or used or args.i_am_authorized:
+            parser.error("--history, --show, --compare and --delete go alone: no TARGET and "
+                         "no scan flag")
+        return
+    if args.target is None and used:
+        parser.error(f"{', '.join(used)}: only with a TARGET (without one the scanner asks "
+                     "its questions)")
+    nmap_only = ["--" + name.replace("_", "-") for name in NMAP_FLAGS if getattr(args, name)]
+    if nmap_only and args.engine != "nmap":
+        parser.error(f"{', '.join(nmap_only)}: only with --engine nmap")
 
 
 def main(argv: Sequence[str] | None = None, prog: str | None = None) -> int:
@@ -206,13 +243,9 @@ def main(argv: Sequence[str] | None = None, prog: str | None = None) -> int:
     2 for a bad flag, target or limit or no authorization, 130 when cancelled."""
     parser = build_parser(prog)
     args = parser.parse_args(argv)
-    used = ["--" + name.replace("_", "-") for name in SCAN_FLAGS if getattr(args, name)]
-    if args.target is None and used:
-        parser.error(f"{', '.join(used)}: only with a TARGET (without one the scanner asks "
-                     "its questions)")
-    nmap_only = ["--" + name.replace("_", "-") for name in NMAP_FLAGS if getattr(args, name)]
-    if nmap_only and args.engine != "nmap":
-        parser.error(f"{', '.join(nmap_only)}: only with --engine nmap")
+    check_flags(parser, args)
+    if any(getattr(args, name) for name in HISTORY_FLAGS):
+        return history(args)  # the saved scans (F6d): nothing is scanned
     try:
         limits = scan_limits()
     except ValueError as error:

@@ -531,6 +531,12 @@ up ("no lookup" when none was), and where it was asked from. Then, for one scan:
   (nmap not installed, a service without its key) stays off, and the page says so.
 - **Delete** names the scan's file and asks first; it removes only that record, never a
   report you downloaded or exported.
+- In the terminal: `python -m toolkit scan --history` lists them (`--before SCAN_ID` for
+  the older ones), `--show SCAN_ID` prints one as a scan prints its results and ends with
+  the command that scans it again (`To scan it again: python -m toolkit scan 127.0.0.1 -p
+  135,445,5100 --protocol tcp ...`; it asks for the authorization as any scan does),
+  `--compare SCAN_ID SCAN_ID` prints two compared as the page does, and `--delete SCAN_ID`
+  names the record and asks `Delete it? [y/N]`.
 - **Compare**: tick two scans (Space on a box), then **Compare the two ticked scans**. A is
   the older. For each address both scanned, each port open in either scan says what
   happened: opened, closed, changed (and what: the service, the software, the severity, the

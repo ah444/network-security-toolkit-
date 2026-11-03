@@ -70,9 +70,17 @@ permission to test.
 | `--timing {polite,normal,aggressive}` | `normal` | nmap only: `-T2`, `-T3` or `-T4` |
 | `--scripts {safe}` | none | nmap only: also runs the toolkit's 8 allowed scripts (`banner`, `http-title`, `http-server-header`, `ssl-cert`, `ssh-hostkey`, `smb-protocols`, `smb2-time`, `rdp-ntlm-info`) |
 | `--os-detect` | off | nmap only: OS detection (`-O`); needs raw packets |
+| `--history` | | lists the saved scans (the scan history, F6), newest first, 50 at a time, and exits |
+| `--before SCAN_ID` | | with `--history`: the scans saved before this one |
+| `--show SCAN_ID` | | prints one saved scan as a scan prints its results, with the command that scans it again, and exits |
+| `--compare SCAN_ID SCAN_ID` | | prints two saved scans compared, the older as A, and exits |
+| `--delete SCAN_ID` | | names the saved scan's record, asks `Delete it? [y/N]` and removes it on a yes |
 
 The flags other than `--i-am-authorized` work only with a `TARGET`, and the four nmap-only
-flags only with `--engine nmap`. Limits: `TOOLKIT_SCAN_MAX_HOSTS` hosts and
+flags only with `--engine nmap`. `--history`, `--show`, `--compare` and `--delete` go alone
+(no `TARGET`, no other flag): they read `instance/scan_history/` and scan or send nothing; a
+bad or unknown scan id is exit code 2 with a message, and so is a record that couldn't be
+removed (another program has it open). Limits: `TOOLKIT_SCAN_MAX_HOSTS` hosts and
 `TOOLKIT_SCAN_MAX_PROBES` host×port checks (TCP and UDP count separately); nmap also stops
 after `TOOLKIT_SCAN_MAX_MIN` minutes per host.
 
@@ -97,6 +105,8 @@ With `--engine nmap`:
 ```
 python -m toolkit scan 192.168.1.10 -p 1-1024 --protocol both --export csv
 python -m toolkit scan 127.0.0.1 -p 1-1024 --engine nmap --scripts safe
+python -m toolkit scan --history
+python -m toolkit scan --compare 20261103T162307Z-ac3efe6c 20261103T163745Z-8e4e2731
 ```
 
 ### 3.1 The record of every scan
