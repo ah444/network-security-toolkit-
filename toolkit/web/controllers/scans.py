@@ -1,7 +1,8 @@
-"""Saved scans (v5.4 F6b): the list, one scan, its report, and its delete. They only read the
-scan history (``instance/scan_history/``, ``toolkit.core.services.recon.saved_scans``), every
-finished scan's (F6a), and need no session: a saved scan belongs to this install, not to a
-workspace. A scan is deleted only when the user asks, after the page named it."""
+"""Saved scans (v5.4 F6b): the list, one scan, its report, two compared (F6c), and its delete.
+They only read the scan history (``instance/scan_history/``,
+``toolkit.core.services.recon.saved_scans``), every finished scan's (F6a), and need no session:
+a saved scan belongs to this install, not to a workspace. A scan is deleted only when the user
+asks, after the page named it."""
 
 from __future__ import annotations
 
@@ -15,10 +16,11 @@ from ...core.services.recon.saved_scans import (
     saved_scans,
     scan_view,
 )
+from ...core.services.recon.scan_comparison import compare_saved
 from ..services.errors import NOT_FOUND, NOT_REMOVED
 from ..services.scan import MIME_TYPES
 from .api import Answer, error_response, query
-from .schemas import ScanReportRequest, ScansRequest, load
+from .schemas import CompareScansRequest, ScanReportRequest, ScansRequest, load
 
 bp = Blueprint("scans", __name__, url_prefix="/api/v1")
 
@@ -33,6 +35,18 @@ def saved() -> Answer:
         return jsonify(saved_scans(before=req.before or None))
     except NotAScan as error:
         return error_response(str(error))
+
+
+@bp.route("/scans/compare", methods=["GET"])
+def compare() -> Answer:
+    """Two saved scans compared, address by address and port by port (A the older)."""
+    req = load(CompareScansRequest, query())
+    try:
+        return jsonify(compare_saved(req.a, req.b))
+    except NotAScan as error:
+        return error_response(str(error))
+    except FileNotFoundError:
+        return error_response(NO_SUCH_SCAN, 404, NOT_FOUND)
 
 
 @bp.route("/scans/<scan_id>", methods=["GET"])

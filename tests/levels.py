@@ -73,6 +73,7 @@ INTEGRATION = (
     "recon/test_export.py",
     "recon/test_scan_history.py",
     "recon/test_saved_scans.py",
+    "recon/test_scan_comparison.py",
     "recon/test_keys.py",
     "recon/test_llm.py",
     "recon/test_nmap.py",

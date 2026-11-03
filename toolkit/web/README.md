@@ -27,7 +27,7 @@ web/
     bundles.py       export, download and load bundles; predictions
     resume.py        GET /api/v1/workspace, so a reload resumes
     runs.py          the saved runs: the list, one run, two side by side (records only)
-    scans.py         the saved scans: the list, one scan, its report, its delete
+    scans.py         the saved scans: the list, one scan, its report, two compared, its delete
     workspace.py     the calling session's workspace, locked for the request
     state.py         what one app keeps between requests (no module globals)
     security.py      the security headers and CSP, the CSRF token, the cross-site check

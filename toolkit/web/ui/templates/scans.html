@@ -29,7 +29,7 @@
        here. scans.js fills it from GET /api/v1/scans; text from the network goes in as text. -->
   <div class="container">
     <h1>Saved Scans</h1>
-    <p class="field-hint">Each scan that finishes, on the Port Scanner page or in the terminal, is saved on this computer with its choices and results. A cancelled scan saves nothing. Show one to see its results again, or scan it again.</p>
+    <p class="field-hint">Each scan that finishes, on the Port Scanner page or in the terminal, is saved on this computer with its choices and results. A cancelled scan saves nothing. Show one to see its results again, or scan it again; tick two to compare them.</p>
 
     <section class="section" aria-labelledby="scansTitle">
       <h2 class="section-title" id="scansTitle">Scans, newest first</h2>
@@ -37,7 +37,7 @@
       <div id="scansBox" class="table-container" tabindex="0" role="region" aria-label="Saved scans" hidden>
         <table class="metrics-table runs-table">
           <thead>
-            <tr><th scope="col">Started</th><th scope="col">Target</th><th scope="col">Ports</th><th scope="col">Hosts</th><th scope="col">Open ports</th><th scope="col">Worst severity</th><th scope="col">Asked from</th><th scope="col">Scan</th></tr>
+            <tr><th scope="col">Compare</th><th scope="col">Started</th><th scope="col">Target</th><th scope="col">Ports</th><th scope="col">Hosts</th><th scope="col">Open ports</th><th scope="col">Worst severity</th><th scope="col">Asked from</th><th scope="col">Scan</th></tr>
           </thead>
           <tbody id="scansRows"></tbody>
         </table>
@@ -45,6 +45,10 @@
       <p id="scansLeftOut" class="warning-message" hidden></p>
       <div class="button-group">
         <button type="button" id="scansOlder" class="btn btn-secondary" hidden>Older scans</button>
+      </div>
+      <div id="compareControls" hidden>
+        <button type="button" id="compareScans" class="btn" disabled aria-describedby="compareHint">Compare the two ticked scans</button>
+        <p id="compareHint" class="field-hint" aria-live="polite"></p>
       </div>
     </section>
 
@@ -76,6 +80,11 @@
         <a id="reportJson" class="custom-btn" href="#" download>JSON</a>
         <a id="reportCsv" class="custom-btn" href="#" download>CSV</a>
       </div>
+    </section>
+
+    <section class="section" id="comparisonSection" aria-labelledby="comparisonTitle" hidden>
+      <h2 class="section-title" id="comparisonTitle" tabindex="-1">Comparison</h2>
+      <div id="comparisonView"></div>
     </section>
   </div>
   <script type="module" src="{{ url_for('static', filename='js/scans.js') }}"></script>

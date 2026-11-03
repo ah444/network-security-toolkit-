@@ -1,13 +1,14 @@
 // The saved scans' page (/scans, v5.4 F6b), loaded as an ES module: every finished scan, 50 at a
 // time and newest first (GET /api/v1/scans), one of them shown with the Port Scanner page's own
 // cards (scanresults.js), its report, and Scan again, which opens the Port Scanner with its
-// choices (the authorization asked again there). It reads the scan history only: nothing is
-// scanned here. A scan's id after the # (the Port Scanner links to it) shows that scan. Its
+// choices (the authorization asked again there), or two compared (F6c, scancompare.js). It
+// reads the scan history only: nothing is scanned here. A scan's id after the # (the Port Scanner links to it) shows that scan. Its
 // one change: a scan is deleted when the user asks, after the page named it.
 
 import { getJSON, send } from "./api.js";
 import { byId, el, message, setContent, show } from "./dom.js";
 import { code, quiet } from "./summary.js";
+import { comparisonView } from "./scancompare.js";
 import { hideResults, showResults } from "./scanresults.js";
 
 const SCAN_ID = /^\d{8}T\d{6}Z-[0-9a-f]{8}$/;
@@ -37,8 +38,23 @@ function worstText(scan) {
   return scan.worst + (scan.worst_unconfirmed ? " (unconfirmed)" : "");
 }
 
+function chosen() {
+  return Array.from(byId("scansRows").querySelectorAll("input[type=checkbox]:checked"))
+    .map(box => box.value);
+}
+
+// Compare needs exactly two scans
+function choiceChanged() {
+  const count = chosen().length;
+  byId("compareScans").disabled = count !== 2;
+  byId("compareHint").textContent = count === 2 ? "Two scans chosen." :
+    `Tick two scans to compare them (${count} ticked).`;
+}
+
 function scanRow(scan) {
   return el("tr", {},
+    el("td", {}, el("label", { class: "choice run-pick" },
+      el("input", { type: "checkbox", value: scan.scan_id, "aria-label": "Compare scan " + scan.scan_id }))),
     el("td", {}, when(scan.started), el("br"), quiet(scan.scan_id)),
     el("td", {}, code(scan.target)),
     el("td", {}, code(scan.ports), el("br"),
@@ -71,6 +87,7 @@ async function load() {
     const listed = byId("scansRows").children.length;
     show(byId("scansBox"), listed > 0);
     show(byId("scansOlder"), answer.more && answer.scans.length > 0);
+    show(byId("compareControls"), listed > 1);
     byId("scansLeftOut").textContent = `${leftOut} file${leftOut === 1 ? " is" : "s are"} in the scan history folder but not a scan this toolkit can show (edited, or from a newer version): left out.`;
     show(byId("scansLeftOut"), leftOut > 0);
     if (listed === 0) {
@@ -100,7 +117,25 @@ async function showScan(scanId) {
     for (const [id, fmt] of [["reportTxt", "txt"], ["reportJson", "json"], ["reportCsv", "csv"]]) {
       byId(id).href = "/api/v1/scans/" + encodeURIComponent(scanId) + "/report?format=" + fmt;
     }
+    show(byId("comparisonSection"), false);
     showResults(scan, true);
+  } catch (error) {
+    message(byId("scansStatus"), "error", "Error: " + error.message);
+  }
+}
+
+// A is the older of the two (a scan id starts with its time)
+async function compare() {
+  const [a, b] = chosen().sort();
+  message(byId("scansStatus"), "info", "Comparing the two scans...");
+  try {
+    const answer = await getJSON("/api/v1/scans/compare", { a: a, b: b });
+    setContent(byId("scansStatus"), listedText);
+    hideResults();
+    shown = null;
+    setContent(byId("comparisonView"), comparisonView(answer));
+    show(byId("comparisonSection"));
+    byId("comparisonTitle").focus();
   } catch (error) {
     message(byId("scansStatus"), "error", "Error: " + error.message);
   }
@@ -126,8 +161,11 @@ function dropRow(scanId) {
     hideResults();
     shown = null;
   }
+  show(byId("comparisonSection"), false);  // it may have compared that scan
   const listed = byId("scansRows").children.length;
   show(byId("scansBox"), listed > 0);
+  show(byId("compareControls"), listed > 1);
+  choiceChanged();
   listedSays(listed, false);
 }
 
@@ -152,6 +190,7 @@ function showFromHash() {
 }
 
 async function setup() {
+  byId("scansRows").addEventListener("change", choiceChanged);
   byId("scansRows").addEventListener("click", event => {
     const button = event.target.closest("button[data-scan]");
     if (button) {
@@ -166,7 +205,9 @@ async function setup() {
   byId("deleteConfirm").addEventListener("click", confirmDelete);
   byId("deleteCancel").addEventListener("click", closeDelete);
   byId("scansOlder").addEventListener("click", load);
+  byId("compareScans").addEventListener("click", compare);
   await load();
+  choiceChanged();
   showFromHash();
 }
 

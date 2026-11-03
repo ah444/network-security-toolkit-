@@ -531,6 +531,14 @@ up ("no lookup" when none was), and where it was asked from. Then, for one scan:
   (nmap not installed, a service without its key) stays off, and the page says so.
 - **Delete** names the scan's file and asks first; it removes only that record, never a
   report you downloaded or exported.
+- **Compare**: tick two scans (Space on a box), then **Compare the two ticked scans**. A is
+  the older. For each address both scanned, each port open in either scan says what
+  happened: opened, closed, changed (and what: the service, the software, the severity, the
+  highest CVSS) or the same, with the CVEs added and gone. A port is "closed" only when the
+  newer scan checked it, else "open in A; B didn't check this port"; CVEs are compared only
+  when both scans looked them up ("not checked in B" when NVD was off there, never "gone"). A
+  host that one scan skipped or couldn't scan is not compared, and scans of different targets
+  are compared on the addresses both had, which the page says.
 
 ## 4. Train a model in the web trainer
 

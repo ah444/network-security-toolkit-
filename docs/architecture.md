@@ -110,6 +110,7 @@ no Flask, no argparse. Read by `cli/` and `web/`, it imports neither
 | `toolkit/core/services/recon/report.py` | services | one report entry per open port, its network text cleaned |
 | `toolkit/core/services/recon/record.py` | services | the record of every scan (HS3): a JSON line in the tool's log when `run_scan` starts and one when it ends, with the request's source |
 | `toolkit/core/services/recon/saved_scans.py` | services | the saved scans read back (F6b): the list, newest first and 50 at a time, a file that isn't a scan record left out and counted; one scan as the scan page shows it, with the choices to scan again; its report; its delete; the id checked before a path is made |
+| `toolkit/core/services/recon/scan_comparison.py` | services | two saved scans compared (F6c), address by address and port by port: opened or closed only when the other scan checked the port, CVEs only when both looked them up, a host one scan didn't scan not compared, different targets on their common addresses |
 | `toolkit/core/services/recon/history.py` | services | the scan history (F6a): `ScanNotes`, the view `run_scan` reports to, which notes how each host ended; every finished scan's record saved under its log id; a stopped one saves nothing |
 | `toolkit/core/data/__init__.py` | data | the shared data: files, the network, the environment |
 | `toolkit/core/data/settings.py` | data | every tunable setting, the `TOOLKIT_*` variables, the data folder, `.env` reading |

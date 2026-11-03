@@ -28,8 +28,8 @@ def test_routes_match_the_documentation(repo_root, web_app):
     # + the scan's 4 (2.4d), the unlock (2.4f), the saved runs' 3 (v5.3 F2c), the access 3 (HS1),
     # a run's files and its delete (HR4a), the storage report and a bundle registered (HR4b),
     # a run saved again (HR5a), the importance job and a saved run's results (F3d), the saved
-    # scans' list, one, its report and its delete (F6b)
-    assert len(_documented(repo_root)) == 44
+    # scans' list, one, its report and its delete (F6b), two compared (F6c)
+    assert len(_documented(repo_root)) == 45
     assert _served(web_app) == _documented(repo_root)
 
 
@@ -55,10 +55,11 @@ def test_page_uses_only_api_routes():
     # other computers (HS1): their jobs and a new token (a job's Stop sends to its own url);
     # a run's files and its delete (HR4a); the storage report and a bundle registered (HR4b);
     # a run saved again (HR5a); the importance calculated and a saved run's results (F3e);
-    # the saved scans' page: the list, one scan and its delete, and Scan again's scan (F6b)
+    # the saved scans' page: the list, one scan and its delete, and Scan again's scan (F6b);
+    # two scans compared (F6c)
     urls = re.findall(r'(?:getJSON|send|predictWith)\("(/[^"?]*)|\burl: "(/[^"?]*)', all_js())
     urls = [call or part for call, part in urls]
-    assert len(urls) == 38 and all(url.startswith("/api/v1/") for url in urls), urls
+    assert len(urls) == 39 and all(url.startswith("/api/v1/") for url in urls), urls
 
 
 def test_page_sends_every_state_change_with_the_token():

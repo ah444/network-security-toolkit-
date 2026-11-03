@@ -221,6 +221,13 @@ class ScansRequest:
 
 
 @dataclasses.dataclass(frozen=True)
+class CompareScansRequest:
+    """``GET /scans/compare``: the two saved scans, by scan id (A the older)."""
+    a: str
+    b: str
+
+
+@dataclasses.dataclass(frozen=True)
 class CompareRequest:
     """``GET /runs/compare``: the two saved runs, by run id."""
     a: str

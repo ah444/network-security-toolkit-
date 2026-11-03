@@ -84,6 +84,7 @@ the network").
 | POST | `/api/v1/runs/<run_id>/delete` | `with_bundle`: true or false (default false: the bundle is kept) | the run deleted (HR4a): `removed` (in order) and `kept` (the bundle, or null); 409 `NOT_REMOVED` naming a file that couldn't be removed, the run kept |
 | GET | `/api/v1/scans` | `before`: a scan id (the next page; default: the newest) | the saved scans' summaries, newest first, 50 at a time (see Saved scans) |
 | GET | `/api/v1/scans/<scan_id>` | none | one saved scan, as a finished scan's answer, with `scan_id`, `started`, `source`, `port_list` and `again` (the choices to scan it again) |
+| GET | `/api/v1/scans/compare` | `a`, `b`: two scan ids | the two scans compared, address by address and port by port (see Saved scans) |
 | GET | `/api/v1/scans/<scan_id>/report` | `format`: `txt` (default), `json` or `csv` | the saved scan's report as a download |
 | POST | `/api/v1/scans/<scan_id>/delete` | none | the saved scan deleted: `{scan_id, removed}` (its record's name); 409 `NOT_REMOVED` when it couldn't be removed, the scan kept |
 
@@ -179,6 +180,18 @@ shape of a finished scan's answer (`ports` the number of ports), plus `scan_id`,
 `source`, `port_list` and `again`: `target`, `ports`, `protocol`, `engine`, nmap's choices with
 nmap, `scan_unresponsive`, `nvd`, `ai` and `abuseipdb` (a record from before F6b has the
 defaults). The delete removes the record only.
+
+`GET /api/v1/scans/compare?a=...&b=...` (two different ids; the page sends the older as `a`)
+answers both summaries, `same_target`, `common` (the addresses both had), `only_in_a`,
+`only_in_b`, `hosts` and `totals`. Each host of `common` has its state in each scan (`a`,
+`b`), `compared` (both `scanned`) and, when compared, `rows`: one per port open in either
+scan, with `status` (`opened`, `closed`, `changed`, `same`, `not_scanned_in_a`,
+`not_scanned_in_b`: open in one scan, not checked by the other), each scan's side (`service`,
+`software`, `severity`, `severity_unconfirmed`, `max_cvss`, `cves`: a count; null when it
+wasn't open), `changes` (of `service`, `software`, `severity`, `max_cvss`), and `cves_added`
+and `cves_gone` (CVE ids), or null with `cves_note` when one scan didn't look them up
+(`not checked in A`, `not checked in B`, `software not recognised`). `totals` counts the
+statuses and the CVEs added and gone.
 
 ## Security token
 

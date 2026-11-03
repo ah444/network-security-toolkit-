@@ -1,11 +1,16 @@
 """F6b: the Saved Scans page, /scans, and its routes. It reads the scan history
-(``instance/scan_history/``) through /api/v1/scans only: the list, one scan, its report; its one
-change is a scan's delete, a POST with the session's token. A bad scan id is a 400 before any
+(``instance/scan_history/``) through /api/v1/scans only: the list, one scan, its report, two
+compared (F6c); its one change is a scan's delete, a POST with the session's token. A bad scan id is a 400 before any
 path is made, a missing one a 404. The scan page says where its scan was saved, and Scan again
-fills its form from a saved scan with the authorization unticked."""
+fills its form from a saved scan with the authorization unticked. What scancompare.js shows is
+rendered in Node (``scans.mjs``), skipped where Node is not installed."""
 
 import json
 import re
+import shutil
+import subprocess
+
+import pytest
 
 from toolkit.core.data.recon import scan_records
 from toolkit.core.services.recon import history
@@ -117,7 +122,8 @@ def test_the_page_reads_the_history_and_only_deletes():
     assert "FormData" not in code
     assert re.findall(r"send\(([^,]+), \"(\w+)\"", code) == [
         ('"/api/v1/scans/" + encodeURIComponent(scanId) + "/delete"', "POST")]
-    assert set(re.findall(r'"(/api/v1/[^"]*)"', code)) == {"/api/v1/scans", "/api/v1/scans/"}
+    assert set(re.findall(r'"(/api/v1/[^"]*)"', code)) == {"/api/v1/scans", "/api/v1/scans/",
+                                                          "/api/v1/scans/compare"}
 
 
 def test_a_scan_in_the_address_is_checked_as_the_server_checks_it():
@@ -145,3 +151,53 @@ def test_scan_again_fills_the_form_and_asks_for_the_authorization_again():
     assert again.index('byId("scanTarget").value') < again.index("targetChanged()")
     assert "scanAuthorized\").checked = true" not in again
     assert (JS_DIR / "scans.js").is_file() and REPO_ROOT.is_dir()
+
+
+def test_two_scans_compared(client):
+    _save(A)
+    _save(B, entries=[])
+    answer = client.get("/api/v1/scans/compare", query_string={"a": A, "b": B})
+    assert answer.status_code == 200
+    [host] = answer.get_json()["hosts"]
+    assert [(r["port"], r["status"]) for r in host["rows"]] == [(22, "closed")]
+    for query, status in (({"a": A, "b": "x"}, 400), ({"a": A, "b": A}, 400),
+                          ({"a": A, "b": "20261109T100000Z-0000000f"}, 404), ({"a": A}, 400)):
+        assert client.get("/api/v1/scans/compare", query_string=query).status_code == status
+
+
+@pytest.fixture(scope="module")
+def rendered():
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("Node.js is not installed")
+    result = subprocess.run([node, str(REPO_ROOT / "tests" / "web" / "scans.mjs"), str(JS_DIR)],
+                            capture_output=True, text=True, encoding="utf-8", timeout=60)
+    assert result.returncode == 0, result.stderr
+    return json.loads(result.stdout)
+
+
+def _text(elements):
+    return " | ".join(item["text"] for item in elements if item["tag"] in ("P", "LI", "TR", "H4"))
+
+
+def test_the_comparison_says_what_happened_to_each_port(rendered):
+    text = _text(rendered["same"])
+    for words in ("22/tcp", "changed: software", "added: CVE-3", "gone: CVE-1", "80/tcpopened",
+                  "443/tcpclosed", "open in B; A didn't check this port", "not checked in B",
+                  "Not compared: in A it was scanned, in B skipped: it didn't answer ping.",
+                  "1 port opened, 1 closed, 1 changed, 1 the same, 1 open in one scan that "
+                  "the other didn't check; CVEs: 1 added, 1 gone"):
+        assert words in text, words
+    assert "different targets" not in text
+
+
+def test_scans_of_different_targets_say_so(rendered):
+    text = _text(rendered["apart"])
+    assert "different targets: only the addresses both scanned are compared" in text
+    assert "Only in B: 10.0.0.4 (not compared)." in text
+    assert "No address in common: there is nothing to compare." in _text(rendered["nothing"])
+
+
+def test_text_from_the_network_stays_text(rendered):
+    assert any(XSS in item["text"] for item in rendered["same"])
+    assert not any(item["tag"] == "IMG" for item in rendered["same"])
