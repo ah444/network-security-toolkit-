@@ -126,6 +126,7 @@ INTEGRATION = (
     "web/test_responsive.py",
     "web/test_resume.py",
     "web/test_run_delete.py",
+    "web/test_run_saved.py",
     "web/test_runaway.py",
     "web/test_runs_page.py",
     "web/test_runs_routes.py",

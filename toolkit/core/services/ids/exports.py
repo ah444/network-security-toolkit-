@@ -44,10 +44,11 @@ from .runs import SCHEMA_VERSION, TrainingRun
 
 @dataclass(frozen=True)
 class SavedBundle:
-    """A bundle just written: its path, its SHA-256 and the run that now records it."""
+    """A bundle just written: its path, its SHA-256 and the run it holds (whose record its
+    training saved, HR5: a record is written once and never changed)."""
     path: Path
     sha256: str
-    run: TrainingRun  # the run with ``bundle_sha256`` set; the caller saves its record
+    run: TrainingRun
 
 
 @dataclass(frozen=True)
@@ -83,7 +84,7 @@ def save_bundle(run: TrainingRun, directory: str | Path | None = None, *,
     except FileExistsError:
         raise _exists(path) from None  # it appeared meanwhile
     sha256 = hashlib.sha256(data).hexdigest()
-    return SavedBundle(path, sha256, dataclasses.replace(run, bundle_sha256=sha256))
+    return SavedBundle(path, sha256, run)
 
 
 def read_state(path: str | Path) -> tuple[str | None, dict[str, Any] | None]:

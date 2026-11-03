@@ -127,12 +127,13 @@ def test_the_web_export_and_registering_say_no_space(free, client, upload, fixtu
         "features": [c for c in columns if c != "Label"], "target": "Label",
         "balancing": "none", "test_size": 0.3, "models": ["decision_tree"]})
     run_id = trained.get_json()["run_id"]
+    record = (runs_dir() / f"{run_id}.json").read_bytes()  # saved by the training (HR5)
     free["bytes"] = 10 * MB
     answer = client.post("/api/v1/run/export", json={"name": "x"})
     assert answer.status_code == 507
     error = answer.get_json()["error"]
     assert error["code"] == "NO_SPACE" and error["message"].startswith("Not saved: only 10 MB")
-    assert not (runs_dir() / f"{run_id}.json").exists()
+    assert (runs_dir() / f"{run_id}.json").read_bytes() == record, "the record is untouched"
     registered = client.post(f"/api/v1/bundles/{run_id}/register")
     assert registered.status_code in (404, 507), "no bundle was saved, or no room for its record"
 

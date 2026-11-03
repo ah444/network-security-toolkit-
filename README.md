@@ -81,7 +81,7 @@ A local-first network security toolkit with optional external intelligence servi
 - 🎯 **Target Value Filtering** - Remove unwanted classes
 - 📉 **Confusion Matrix** - Visual model evaluation
 - 📊 **Charts of a run** - CV fold by fold, CV against test, recall per class, fit time
-- 🗂️ **Saved Runs** - every exported run listed; one shown, or two compared (a difference only when both scored the same test rows) ([user guide 4.8](docs/user_guide.md#48-compare-saved-runs))
+- 🗂️ **Saved Runs** - every training listed, exported or not; one shown, or two compared (a difference only when both scored the same test rows) ([user guide 4.8](docs/user_guide.md#48-compare-saved-runs))
 - 🔀 **Train/Test Split Slider** - Customize data splits
 - 💾 **Export / Load Models** - signed `.bundle` files (all models of a run plus its training record)
 - 📄 **Predict a CSV file** - label every row of a file with the session's model or a loaded bundle: rows per class with bars, how many match the file's label column, and the labelled CSV to download (the same file as the CLI's `--csv`; files up to 512 MB, `TOOLKIT_MAX_PREDICT_MB`)

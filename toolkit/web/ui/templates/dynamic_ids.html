@@ -231,6 +231,7 @@
             <span class="label" id="modelSelectionLabel">Select Models to Train:</span>
             <div id="modelSelection" class="checkbox-list" role="group" aria-labelledby="modelSelectionLabel"></div>
           </div>
+          <p class="field-hint">When a training ends, it is saved on this computer: its scores, the class names, the column names and typical values of each column, not the rows of your file. You can delete it on the Saved Runs page; nothing is deleted on its own.</p>
           <button type="submit" class="btn">Train Model</button>
           <div id="trainingProgress" class="training-progress" hidden aria-live="polite" tabindex="-1">
             <progress id="trainingProgressBar" max="100" value="0" aria-label="Training progress"></progress>

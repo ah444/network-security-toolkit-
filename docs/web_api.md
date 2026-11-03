@@ -51,12 +51,13 @@ the network").
 | POST | `/api/v1/dataset/feature-scores` | `target`, `k` (1-10,000, default 10), `test_size` | feature scores on the training split (`"inf"` for a feature with one value per class: JSON has no infinity) |
 | GET | `/api/v1/models` | none | the models that can be trained here |
 | POST | `/api/v1/jobs/training` | `target`, `features`, `models`, `balancing`, `test_size` | **202** and the job (see below) |
-| GET | `/api/v1/jobs/<job_id>` | `since` (a scan's log from this line on, default 0) | the job's state and progress; when done, the result: leaderboard, split, CV, leakage findings, confusion matrices (a training), or the scan's answer |
+| GET | `/api/v1/jobs/<job_id>` | `since` (a scan's log from this line on, default 0) | the job's state and progress; when done, the result: leaderboard, split, CV, leakage findings, confusion matrices and `saved`/`not_saved` (a training: its record saved, or why not), or the scan's answer |
 | DELETE | `/api/v1/jobs/<job_id>` | none | **202**: a queued job is cancelled at once, a running one at its next step |
 | GET | `/api/v1/run/confusion` | `model` (default: the selected one) | test-split confusion matrix |
 | POST | `/api/v1/run/predict` | `values`: {feature: value}, `model` | prediction |
 | POST | `/api/v1/run/predict-file` | multipart `file` (`.csv`/`.txt`), `model` | every row predicted: counts per class, matches, download (see below) |
-| POST | `/api/v1/run/export` | `name` (letters, digits, `_`, `-`; max 80) | signed bundle saved in `instance/bundles/`; 507 `NO_SPACE` when the disk would keep less than `TOOLKIT_MIN_FREE_MB` free |
+| POST | `/api/v1/run/save` | none | the session's run saved again when its training couldn't save its record (HR5), under the same run id: `run_id`, `saved`; 409 `ALREADY_SAVED` once it is saved, 507 `NO_SPACE` while the disk is too full |
+| POST | `/api/v1/run/export` | `name` (letters, digits, `_`, `-`; max 80) | signed bundle saved in `instance/bundles/` (the run's record was saved by its training and isn't touched); 507 `NO_SPACE` when the disk would keep less than `TOOLKIT_MIN_FREE_MB` free |
 | GET | `/api/v1/run/bundle` | none | the exported bundle as a download |
 | POST | `/api/v1/bundle` | multipart `file`: a `.bundle` exported by this install | the loaded models and their scores |
 | POST | `/api/v1/bundle/predict` | `values`, `model` | prediction with the loaded bundle |
@@ -181,7 +182,7 @@ shape its own route answered, or `null`:
 ```
 
 - `dataset`: as `POST /api/v1/dataset` answered (after a class filter: the rows left).
-- `run`: the last finished training, as its job's `result`.
+- `run`: the last finished training, as its job's `result` (`saved` and `not_saved` as they are now).
 - `job`: a training that is still `queued` or `running` (as `GET /api/v1/jobs/<id>`).
 - `export`: as `POST /api/v1/run/export` answered, once the run was exported.
 - `bundle`: as `POST /api/v1/bundle` answered.

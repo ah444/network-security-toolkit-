@@ -27,7 +27,7 @@ def workspace_contents(ws: Workspace) -> Answer:
     active = ws.active_job(TRAINING)  # queued or running; a scan is never this page's job
     return jsonify({
         "dataset": dataset_answer(ws.data, ws.data_bytes) if ws.data is not None else None,
-        "run": run_result(ws.run) if ws.run is not None else None,
+        "run": run_result(ws.run, ws.not_saved) if ws.run is not None else None,
         "job": job_view(active, state().training_jobs) if active else None,
         "export": export_answer(ws.export) if ws.export is not None else None,
         "bundle": bundle_answer(ws.loaded) if ws.loaded is not None else None,

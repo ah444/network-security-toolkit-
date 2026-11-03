@@ -5,7 +5,7 @@ of its run's record it was signed with, and records never change, so the record 
 published again from it: the whole file's signature is checked first, read in pieces (a
 bundle can be gigabytes) and with nothing in it deserialized; then the copy must be this
 run's record (its run id, a schema this toolkit understands, the bundle's models among its
-own), and with the bundle's SHA-256 it is the record as it was, byte for byte. It is
+own), and it is the record as its training saved it, byte for byte (HR5). It is
 published under the one lock of the run files and never replaces a record. Nothing is
 deleted.
 """
@@ -57,7 +57,7 @@ def register_bundle(run_id: str, runs: str | Path | None = None,
         raise NotRegistered(f"{path.name} is incomplete: its export was interrupted, so it "
                             "holds no whole record.")
     size = path.stat().st_size
-    matches, sha256 = signature_matches(bundle_files.read_chunks(path), size,
+    matches, _sha256 = signature_matches(bundle_files.read_chunks(path), size,
                                         bundle_files.signing_key(key_file))
     if not matches:
         raise bundle_files.BundleError(
@@ -65,7 +65,6 @@ def register_bundle(run_id: str, runs: str | Path | None = None,
             "key: it was changed after it was saved, or it was made on another install. "
             "Nothing was registered.")
     record = _record(manifest, run_id)
-    record["bundle_sha256"] = sha256
     with PUBLISHING:
         try:
             published = write_record(run_id, record, folder)

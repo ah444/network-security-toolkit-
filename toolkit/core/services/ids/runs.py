@@ -110,7 +110,7 @@ class TrainingRun:
     leakage: LeakageReport
     evaluation: EvaluationResult  # includes the fitted models (``evaluation.training``)
     versions: dict[str, str | None]
-    bundle_sha256: str | None = None  # set when the run is saved as a bundle (0.4f)
+    bundle_sha256: str | None = None  # set by Export before v5.3 HR5; None since (one write)
     schema_version: int = SCHEMA_VERSION
 
     @property

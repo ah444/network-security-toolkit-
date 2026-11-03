@@ -56,6 +56,8 @@ def test_the_bundle_is_kept_unless_asked(client, exported):
 
 
 def test_with_its_bundle_and_the_workspace_exports_it_again(client, exported):
+    """Export writes the bundle only (HR5): the deleted run stays deleted, and its new bundle
+    is an unregistered one, which Register again turns back into the run."""
     answer = _delete(client, exported, with_bundle=True)
     assert answer.status_code == 200
     assert [f["kind"] for f in answer.get_json()["removed"]] == ["bundle", "record"]
@@ -64,7 +66,10 @@ def test_with_its_bundle_and_the_workspace_exports_it_again(client, exported):
     assert client.get("/api/v1/run/bundle").status_code == 404, "the export is forgotten"
     again = client.post("/api/v1/run/export", json={"name": "again"})
     assert again.status_code == 200 and again.get_json()["run_id"] == exported
-    assert all(path.exists() for path in _files(exported))
+    assert (bundles_dir() / f"{exported}.bundle").exists()
+    assert not (runs_dir() / f"{exported}.json").exists(), "Export never writes the record"
+    kinds = {item["kind"]: item for item in client.get("/api/v1/storage").get_json()["kinds"]}
+    assert kinds["unregistered_bundles"]["files"] == [f"{exported}.bundle"]
 
 
 def test_a_file_that_cant_be_removed_is_a_409_and_the_run_stays(client, exported, monkeypatch):

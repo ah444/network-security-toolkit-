@@ -78,6 +78,7 @@ class Workspace:
         # (key, SplitResult): last training split used by the previews
         self.split: tuple[tuple[int, str, float], SplitResult] | None = None
         self.run: TrainingRun | None = None  # TrainingRun of the last training
+        self.not_saved: str | None = None  # why its record isn't saved (HR5); None once it is
         self.export: ExportedBundle | None = None  # once the run was exported
         self.loaded: Bundle | None = None  # bundle loaded back from a file
         self.predictions: BatchPredictions | None = None  # the last "Predict a CSV file"

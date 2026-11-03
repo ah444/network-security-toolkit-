@@ -259,14 +259,14 @@ def test_loaded_bundle_predicts_same_as_session_model(client, cic, fixtures_dir)
             assert from_file.get_json()["prediction"] == session.get_json()["prediction"]
 
 
-def test_export_writes_bundle_and_run_record(client, cic):
+def test_export_writes_the_bundle_and_keeps_the_record(client, cic):
     assert _train(client, cic["columns"]).status_code == 200
     exported = _export(client)
     bundle_path = bundle_files.bundles_dir() / exported["file"]
     assert bundle_path.is_file()
     record_path = bundle_files.instance_dir() / "runs" / f"{exported['run_id']}.json"
     record = json.loads(record_path.read_text(encoding="utf-8"))
-    assert record["bundle_sha256"] == exported["sha256"]
+    assert record["bundle_sha256"] is None, "saved by the training (HR5), never changed"
     assert str(bundle_files.instance_dir()) not in json.dumps(exported), "no server paths"
 
 

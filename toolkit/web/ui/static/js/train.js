@@ -7,6 +7,35 @@ import { byId, checkedValues, el, fillCheckboxList, fillSelect, message, scrollB
 import { balancingName, splitMessage } from "./format.js";
 import { emit, modelTitle, on, state, testSize } from "./state.js";
 
+// A training is saved on this computer when it ends (HR5). When it couldn't be (the disk too
+// full), the run is still here, and Save again saves it under the same run id, until the
+// next training replaces it
+function savedNote(result) {
+  if (result.saved) {
+    return el("p", {}, "Saved on this computer: it is on the Saved Runs page.");
+  }
+  const button = el("button", { type: "button", class: "btn btn-sm" }, "Save again");
+  const status = el("span", { role: "status" });
+  const note = el("div", { class: "warning-message" },
+    `Completed. ${result.not_saved} This run is replaced when the next training ends. `,
+    button, " ", status);
+  button.addEventListener("click", () => saveAgain(result, note, button, status));
+  return note;
+}
+
+async function saveAgain(result, note, button, status) {
+  button.disabled = true;
+  try {
+    await send("/api/v1/run/save", "POST");
+    result.saved = true;
+    note.replaceWith(savedNote(result));
+    byId("configResult").focus();  // the button it was on is gone
+  } catch (error) {
+    status.textContent = "❌ " + error.message;
+    button.disabled = false;
+  }
+}
+
 // Fill the target list and the feature list; the profile's label is preselected
 function populateColumns({ columns, dataset }) {
   const label = dataset.profile.label_column;
@@ -98,6 +127,7 @@ function trainingResult(result) {
   const warning = (text, title) => el("div", { class: "warning-message", title: title }, text);
   return [
     el("p", {}, result.message),
+    savedNote(result),
     el("div", { class: "info-message" },
        `Split: ${split.strategy} — ${split.train_rows.toLocaleString()} training rows, ${split.test_rows.toLocaleString()} test rows`,
        split.dedupe && split.dedupe.removed > 0 && `; ${split.dedupe.removed.toLocaleString()} duplicate rows removed before splitting`,

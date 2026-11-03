@@ -6,8 +6,8 @@ run id of the toolkit's form, a model id of the registry) before any path is mad
 published under the one lock of the run files, and only while the run's record exists and
 lists that model, so a run deleted while its importance computed gets nothing. It is read
 back as untrusted data: its size, its schema (a newer one refused), its ids matching its
-name, its values; a file that fails is left out and counted, never an error. Until every
-training has a record (HR5), only an exported run's results can be saved.
+name, its values; a file that fails is left out and counted, never an error. Every
+training saves its record (HR5), so only a run whose save failed gets nothing.
 """
 
 from __future__ import annotations
@@ -31,7 +31,8 @@ from .runs import package_versions
 SCHEMA_VERSION = 1
 METHOD = "permutation_importance"
 METHOD_VERSION = 1  # a change of method gets a new version, never a silent replacement
-NO_RECORD = "Not saved: the run isn't saved yet. Export it to keep its results."
+NO_RECORD = ("Not saved: the run itself isn't saved, so its results can't be kept (when its "
+             "save failed, Save again on the Train step saves it).")
 NOT_WRITTEN = "Not saved: it could not be written (details in the server log)."
 
 log = logging.getLogger(__name__)

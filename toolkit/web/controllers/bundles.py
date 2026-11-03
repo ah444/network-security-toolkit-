@@ -11,7 +11,7 @@ from typing import Any
 
 from flask import Blueprint, jsonify, request, send_file
 
-from ...core.services.ids.exports import INCOMPLETE, BundleExists, write_run
+from ...core.services.ids.exports import INCOMPLETE, BundleExists
 from ...core.services.ids import registry
 from ...core.services.ids.bundle import Bundle, BundleError, BundleVersionWarning
 from ...core.services.ids.pipeline import FittedModel
@@ -140,8 +140,9 @@ def _bundle_refused(error: BundleError) -> Answer:
 @bp.route("/run/export", methods=["POST"])
 @with_workspace()
 def export(ws: Workspace) -> Answer:
-    """Save the session's run as a signed bundle in instance/bundles/ (never overwritten)
-    and its TrainingRun in instance/runs/; the browser downloads it from /api/v1/run/bundle."""
+    """Save the session's run as a signed bundle in instance/bundles/ (never overwritten);
+    the browser downloads it from /api/v1/run/bundle. Its record was saved by its training
+    (HR5): Export never touches it."""
     req = load(ExportRequest, json_body())
     try:
         name = safe_model_basename(req.name)
@@ -152,7 +153,6 @@ def export(ws: Workspace) -> Answer:
     if ws.export is None:
         try:
             saved = state().model_store.save(ws.run)
-            write_run(saved.run)
         except BundleError as error:
             return _bundle_refused(error)
         except FileExistsError as error:

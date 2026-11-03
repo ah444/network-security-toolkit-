@@ -1,5 +1,6 @@
-"""Training routes: the models that can be trained, a training job started, and its results
-(the job's state and cancel: ``jobs.py``)."""
+"""Training routes: the models that can be trained, a training job started, its results, and
+its run saved again when its training couldn't save it (HR5; the job's state and cancel:
+``jobs.py``)."""
 
 from __future__ import annotations
 
@@ -14,11 +15,11 @@ from ...core.services.ids.comparison import folds
 from ...core.services.ids.pipeline import FittedModel
 from ...core.services.ids.runs import TrainingRun
 from ..services.datasets import require_data
-from ..services.errors import NOT_TRAINED, TRAINING_FAILED
+from ..services.errors import ALREADY_SAVED, NOT_TRAINED, TRAINING_FAILED, ServiceError
 from .access import origin
 from .api import Answer, ApiError, error_response, json_body, query
 from .jobs import job_view
-from ..services.training import start_job, training_settings
+from ..services.training import save_run, start_job, training_settings
 from .schemas import ConfusionRequest, TrainRequest, load
 from .state import state
 from ..services.workspace import Workspace
@@ -55,7 +56,8 @@ def start_training() -> Answer:
         settings = training_settings(data, req.target, req.features, req.models,
                                      req.balancing, req.test_size)
         job = start_job(ws, data, settings, state().training_jobs,
-                        state().config.job_max_minutes * 60, run_result, origin())
+                        state().config.job_max_minutes * 60,
+                        lambda run: run_result(run, ws.not_saved), origin())
         return jsonify(job_view(job, state().training_jobs)), 202
 
 
@@ -74,9 +76,10 @@ def _blocked(leakage_record: Mapping[str, Any]) -> list[dict[str, Any]]:
     return [{"column": c, "reason": reasons.get(c, "BLOCKED")} for c in leakage_record["blocked"]]
 
 
-def run_result(run: TrainingRun) -> dict[str, Any]:
+def run_result(run: TrainingRun, not_saved: str | None) -> dict[str, Any]:
     """A finished training's result: the job's result, and the run part of
-    GET /api/v1/workspace after a reload (step 1.3c)."""
+    GET /api/v1/workspace after a reload (step 1.3c); ``not_saved`` says why its record
+    isn't saved (HR5), None once it is."""
     evaluation = run.evaluation
     if evaluation.selected is None:  # never stored: _run_training refuses such runs
         raise ApiError("No model could be trained.", TRAINING_FAILED)  # never stored
@@ -89,6 +92,8 @@ def run_result(run: TrainingRun) -> dict[str, Any]:
                    f"(best mean macro-F1 over {evaluation.cv_folds} CV folds of the training "
                    "split); the test split was used only after the choice.",
         "run_id": run.run_id,
+        "saved": not_saved is None,
+        "not_saved": not_saved,
         "selected": evaluation.selected,
         "selection_metric": evaluation.selection_metric,
         "leaderboard": result["leaderboard"],
@@ -109,6 +114,24 @@ def run_result(run: TrainingRun) -> dict[str, Any]:
         "features_info": features_info(selected),
         "notes": result["notes"],
     }
+
+
+@bp.route("/run/save", methods=["POST"])
+@with_workspace()
+def save_again(ws: Workspace) -> Answer:
+    """``POST /run/save``: the session's run its training couldn't save (HR5), saved under the
+    same run id; 409 once it is saved, 507 NO_SPACE while the disk is too full."""
+    if ws.run is None:
+        return error_response("Train a model first.", code=NOT_TRAINED)
+    if ws.not_saved is None:
+        return error_response("This run was saved already.", 409, ALREADY_SAVED)
+    try:
+        save_run(ws.run)
+    except ServiceError as error:
+        ws.not_saved = error.message
+        raise
+    ws.not_saved = None
+    return jsonify({"run_id": ws.run.run_id, "saved": True, "not_saved": None})
 
 
 @bp.route("/run/confusion", methods=["GET"])

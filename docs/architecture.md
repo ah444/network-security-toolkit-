@@ -518,8 +518,18 @@ names it and why. Ctrl+C stops the scan with exit code 130.
   (`importance_files.PUBLISHING`, which a record's write and a delete take too) only while the record
   lists that model, and never replaced. Read back, a file larger than 1 MiB, not JSON, of a
   newer schema, whose ids are not its name's or whose values are not a result's is left out
-  and counted. The saved runs' list skips these names. Until every training has a record
-  (HR5), only an exported run's results are saved; the job says "Not saved" otherwise.
+  and counted. The saved runs' list skips these names. Every training saves its record (HR5), so
+  every run's results are saved; the job says "Not saved" only when the record isn't.
+- Every successful training saves its record when it ends (HR5, RD3: `save_run` in
+  `toolkit/web/services/training.py`), before the run is stored in the workspace. The record
+  holds aggregated metrics, class names, feature metadata and typical feature values, never
+  the dataset's rows; the page says so above Train. Export writes the bundle only and never
+  touches the record, so a record is written once and never changed (its `bundle_sha256`
+  stays None; records exported before HR5 keep theirs). When the record can't be saved
+  (`NoSpace`, or another write error), the run is "Completed, not saved": the workspace keeps
+  it with why (`Workspace.not_saved`), and `POST /api/v1/run/save` (Save again) publishes it
+  under the same run id, even while another training runs. The next finished training
+  replaces it, and nothing keeps it across a restart (not promised).
 - A saved run is deleted only when the user asks, after the page or the CLI named its
   files and their sizes (HR4a, `toolkit/core/services/ids/run_removal.py`; nothing is ever
   deleted on its own). Under the one lock of the run files, its importance results go first,
@@ -539,8 +549,8 @@ names it and why. Ctrl+C stops the scan with exit code 130.
   was signed with, and records never change. The whole file's HMAC is checked first, read
   1 MiB at a time (`bundle.signature_matches`), with nothing deserialized; then the copy must
   be this run's record (its run id, a schema this toolkit understands, the bundle's models
-  among its own); with the file's SHA-256 it is the record as it was, byte for byte
-  (tested). It is published under the one lock of the run files and never replaces a record.
+  among its own); it is the record as its training saved it, byte for byte (tested; it
+  doesn't name its bundle, HR5). It is published under the one lock of the run files and never replaces a record.
   A bundle exported before the manifest held its record can't be registered.
 - The storage's limits (HR4c), neither of which deletes anything: `publish.publish_bytes`
   (records, importance results, bundles) and the scan report's writer first check that the
@@ -548,9 +558,8 @@ names it and why. Ctrl+C stops the scan with exit code 130.
   else `NoSpace` with its message, said by the web (507 `NO_SPACE`), the importance job
   ("Not saved: …") and the CLI (exit 2); nothing is written then, not even a temporary file.
   Past `TOOLKIT_STORAGE_WARN_MB` (20 GB), and under the floor, the storage report warns, and
-  the web server's log says so at its start. An export refused after its bundle was saved
-  leaves an unregistered bundle, which Register again turns back into the run once there is
-  room.
+  the web server's log says so at its start. A training whose record is refused is
+  "Completed, not saved" until Save again (HR5).
 - A bundle's state comes from its header (HR3d, `bundle.header_state`): the format records
   its lengths, so its first bytes and the file's size say whether it is whole, with no HMAC
   and nothing unpickled, and no length is read past the file's size. **Exported**: the

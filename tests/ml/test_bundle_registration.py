@@ -76,11 +76,12 @@ def test_the_same_record_as_before_byte_for_byte(kept):
     assert [r["run_id"] for r in saved_runs()["runs"]] == [run_id]
 
 
-def test_its_sha256_is_the_files(kept):
+def test_it_is_not_changed_to_name_its_bundle(kept):
+    """HR5: a record is written once, by its training; its bundle is found by its file."""
     run_id, _record = kept
     registration.register_bundle(run_id)
     stored = json.loads((runs_dir() / f"{run_id}.json").read_text(encoding="utf-8"))
-    assert stored["bundle_sha256"] == hashlib.sha256(_bundle(run_id).read_bytes()).hexdigest()
+    assert stored["bundle_sha256"] is None
 
 
 @pytest.mark.parametrize("where", [-1, HEADER_BYTES + 5, "payload"])

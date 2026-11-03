@@ -597,6 +597,14 @@ Check the target, tick the models and click **Train Model**. Training runs in th
 background with a progress bar; **Cancel training** stops it, and nothing of a cancelled
 run is kept.
 
+When a training ends, it is saved on this computer, exported or not: its scores, the class
+names, the column names and typical values of each column, but not the rows of your file.
+It is then on the **Saved Runs** page, where you can delete it; nothing is deleted on its
+own. If it can't be saved (for example the disk is too full, section 4.8), the result says
+**Completed, not saved** and why, with a **Save again** button that saves the same run.
+Save it before the next training ends: that one replaces it, and so does a restart of the
+web server.
+
 ![Training in progress](user-guide/11-training.jpg)
 
 When it ends, the leaderboard compares the models:
@@ -635,8 +643,8 @@ the file also has the label column, the predictions are compared with it. Here 3
 ![Predictions for a file](user-guide/15-predict-file.jpg)
 
 **Export Model** saves all models of the run as one signed `.bundle` file in
-`instance\bundles\`, with the record of how they were trained. A bundle loads only on the
-toolkit install that made it.
+`instance\bundles\` (the record of how they were trained was saved when the training
+ended). A bundle loads only on the toolkit install that made it.
 
 ![The export](user-guide/16-export.jpg)
 
@@ -649,9 +657,9 @@ shows its models and scores; Step 6 then predicts with them, one row or a file.
 
 ### 4.8 Compare saved runs
 
-Each export also saves the run's record: its data, split, settings and scores, without the
-models. **Saved Runs** in the navbar (or **See it in Saved Runs** after an export) lists
-them, newest first, 50 at a time (**Older runs** shows more). Nothing is uploaded or trained
+Each training saves the run's record when it ends: its data, split, settings and scores,
+without the models (runs exported before version 5.3 were saved by their export).
+**Saved Runs** in the navbar (or **See it in Saved Runs** after an export) lists them, newest first, 50 at a time (**Older runs** shows more). Nothing is uploaded or trained
 there, and no model is loaded.
 
 ![The saved runs](user-guide/18-saved-runs.jpg)
@@ -938,7 +946,7 @@ Everything the toolkit keeps is in the `instance` folder of the project folder
 | Path | What |
 |---|---|
 | `instance\bundles\` | your exports, one `.bundle` file each |
-| `instance\runs\` | the record of each exported run: data, split, settings, scores |
+| `instance\runs\` | the record of each training: data, split, settings, scores |
 | `instance\scans\` | exported scan reports |
 | `instance\logs\` | one log file per tool (`web.log`, `scanner.log`, `ids_cli.log`) |
 | `instance\uploads\` | temporary copies of the datasets uploaded to the web trainer |

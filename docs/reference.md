@@ -185,7 +185,7 @@ and need several times their size in memory.
 ## 5. `web`: the web trainer and the port scanner
 
 `python -m toolkit web [flags]`: serves the trainer (`/dynamic_ids`), the port scanner
-(`/scan`) and the saved runs (`/runs`: the exported runs' records, one shown or two
+(`/scan`) and the saved runs (`/runs`: the trainings' records, one shown or two
 compared; it reads them only) on this computer only (`127.0.0.1`) unless `--host` opens them to the network,
 prints the address and opens it in the default browser once the port answers. Ctrl+C
 stops it ("Web trainer stopped.").

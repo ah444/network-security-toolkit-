@@ -90,7 +90,8 @@ def test_a_published_result_is_never_replaced(saved, found):
 
 def test_without_a_record_nothing_is_published(run, found):
     assert saved_importance.publish(run.run_id, "decision_tree", found) == (
-        "Not saved: the run isn't saved yet. Export it to keep its results.")
+        "Not saved: the run itself isn't saved, so its results can't be kept (when its save "
+        "failed, Save again on the Train step saves it).")
     assert not _path(run).exists()
 
 
