@@ -10,7 +10,8 @@ All notable changes to this project. Versions follow the roadmap in
 
 ## [Unreleased]
 
-v5.4, so far: the scan history (F6, [checklist](docs/V5.4_CHECKLIST.md)).
+v5.4, so far: the scan history (F6) and the scan reports (F5)
+([checklist](docs/V5.4_CHECKLIST.md)).
 
 ### Added
 
@@ -25,6 +26,18 @@ v5.4, so far: the scan history (F6, [checklist](docs/V5.4_CHECKLIST.md)).
   `--delete`.
 - Storage counts the saved scans as a kind of its own; the web server clears a stopped
   save's temporary files at its start.
+- A saved scan's **report** in HTML: the ports to look at first, each CVE with how it was
+  found (by version: a possible match to check; by name: unconfirmed), the advice for each
+  port, the AI's text marked "may be wrong", and what the report can't say. **Open the
+  report** on Saved Scans (and **Open its report** on the Port Scanner) to read or print it;
+  Print, then Save as PDF, makes the PDF. **HTML** downloads it as one file that opens in
+  any browser, with no script and nothing loaded; `python -m toolkit scan --report SCAN_ID`
+  saves the same file in `instance/scans/`, never over another.
+
+### Changed
+
+- `jinja2` and `markupsafe` are pinned in `requirements.txt` and `pyproject.toml` (they
+  already came with Flask): the scan report uses them, in one module only.
 
 ## [5.3] — 2026-11-03
 

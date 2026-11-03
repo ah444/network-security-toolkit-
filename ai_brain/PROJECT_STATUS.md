@@ -2,7 +2,7 @@
 
 What the Network Security Toolkit is and does **now**, as built and tested. What is planned is in [ROADMAP.md](ROADMAP.md); why it is built this way is in [DECISIONS.md](DECISIONS.md) and [REVIEW_DECISIONS.md](REVIEW_DECISIONS.md); the tasks in progress are in [V5.4_CHECKLIST.md](../docs/V5.4_CHECKLIST.md).
 
-**As of:** 2026-11-03, branch `main`. Last release: **5.3** (2026-11-03, [gate record](../docs/release/5.3-gate.md)). Next: **5.4** ([ROADMAP.md](ROADMAP.md), section 5), in progress: F6, the scan history, done (unreleased; every finished scan saved, the Saved Scans page, `scan --history`, counted by Storage); F5, scan reports, in progress (F5a: the HTML report made from a saved scan, not yet reachable from the web or the CLI); then F10 with F7. Nothing has been pushed to a remote.
+**As of:** 2026-11-03, branch `main`. Last release: **5.3** (2026-11-03, [gate record](../docs/release/5.3-gate.md)). Next: **5.4** ([ROADMAP.md](ROADMAP.md), section 5), in progress: F6, the scan history, done (unreleased; every finished scan saved, the Saved Scans page, `scan --history`, counted by Storage); F5, scan reports, done (unreleased; a saved scan's HTML report, opened or downloaded on Saved Scans, `scan --report` in the CLI, printed to PDF by the browser); then F10 with F7. Nothing has been pushed to a remote.
 
 Every claim below names how it is known. Where something is only implemented and not verified, it says so.
 
