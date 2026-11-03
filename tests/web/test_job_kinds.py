@@ -67,7 +67,7 @@ def test_a_training_says_how_it_stopped(web_app, client, columns, gate, fixtures
     other = web_app.test_client()
     second = other.post(TRAIN_URL, json=_body(_upload(other, fixtures_dir))).get_json()
     queued = other.get(second["url"]).get_json()
-    assert queued["phase"] == "Waiting for another training to finish"
+    assert queued["phase"] == "Waiting for another training or importance to finish"  # HR1
     assert other.delete(second["url"]).get_json()["error"] == {
         "code": "CANCELLED", "message": "Training cancelled before it started."}
     assert client.delete(first["url"]).get_json()["state"] == "cancelling"

@@ -53,7 +53,7 @@ def test_cli_loads_web_export(ids_screen, cli_module, exported):
     assert bundle.trust == "signature"
     assert set(bundle.models) == {"decision_tree", "logistic_regression"}
     assert len(bundle.features) == 14 and set(bundle.classes) == {"BENIGN", "DDoS"}
-    card = ids_screen.model_card(bundle)
+    card = ids_screen.model_card(bundle, {"importances": [], "left_out": 0})
     assert bundle.run_id in card and "cic_ddos_sample.csv" in card
     assert "macro-F1" in card
 
@@ -62,7 +62,7 @@ def test_cli_and_web_same_prediction(ids_prediction, cli_module, client, exporte
     bundle = cli_module.load_model(exported)
     rows = frame.iloc[[0, 1, 2, 100, 150, 199]]
     for model in ("decision_tree", "logistic_regression"):
-        cli = ids_prediction.predict_rows(bundle, rows, model=model)
+        cli = ids_prediction.prediction_table(bundle.model(model), rows)  # what label_file uses
         for (_, row), predicted in zip(rows.iterrows(), cli["prediction"], strict=True):
             values = {c: str(v) for c, v in row.items() if c != TARGET}
             web = client.post("/api/v1/run/predict", json={"values": values, "model": model})
@@ -187,12 +187,13 @@ def test_exports_listed_newest_first_from_headers(two_exports, monkeypatch):
     assert [e.path for e in exports] == [newer, older], "newest first; junk files skipped"
     assert exports[0].manifest["models"] == ["decision_tree"]
     assert exports[0].size == newer.stat().st_size
-    # only the header is read: a bundle cut off after its manifest is still listed
+    # only the header is read: a bundle cut off after its manifest is listed, incomplete (HR3d)
     data = older.read_bytes()
     body = int.from_bytes(data[len(core_bundle.MAGIC):len(core_bundle.MAGIC) + 8], "big")
     cut = bundle_files.bundles_dir() / "cut.bundle"
     cut.write_bytes(data[:len(core_bundle.MAGIC) + 8 + body + 10])
-    assert core_exports.read_manifest_header(cut) == core_bundle.peek_manifest(data)
+    assert core_exports.read_state(cut) == (core_exports.INCOMPLETE,
+                                            core_bundle.peek_manifest(data))
 
 
 def test_cli_without_exports(cli_module, capsys):
@@ -246,7 +247,8 @@ def test_no_v4_artifacts_remain(repo_root):
 def test_prediction_status_names_normal_traffic(ids_screen, capsys):
     """CIC-IDS2017 calls normal flows BENIGN, NSL-KDD calls them normal (real labels)."""
     def status(label, classes):
-        ids_screen.display_prediction({"prediction": label, "confidence": None, "top": []},
+        ids_screen.display_prediction({"prediction": label, "confidence": None, "top": [],
+                                       "why": None},
                                       classes=classes)
         return next(line for line in capsys.readouterr().out.splitlines() if "Status" in line)
 

@@ -20,6 +20,7 @@ from ...core.services.recon.scan import (
     ReportEntry,
     ScanRequest,
     one_line,
+    severity_text,
 )
 from .jobs import Job
 
@@ -104,8 +105,8 @@ class WebScan:
         self.note(f"{one_line(text, 200)} resolved to {address}")
 
     def abuse_skipped(self, target: str) -> None:
-        """Never called: AbuseIPDB without a key is refused before the scan."""
-        pass  # never: AbuseIPDB without a key is refused before the scan
+        """Never called: only an interactive scan says so (the answer's plan says it here)."""
+        pass  # never: not interactive; the plan says "off: no ABUSEIPDB_API_KEY"
 
     def ask_abuse(self, target: str) -> bool:
         """Never asked (not interactive): no."""
@@ -179,8 +180,9 @@ class WebScan:
     def entry(self, entry: ReportEntry, first: bool) -> None:
         """One open port's entry, kept for the answer and the download."""
         self.entries.append(entry)
-        found = f"{len(entry['cves'])} CVE(s), {entry['severity']}" if entry["software"] else \
-            "software not recognised (no CVE lookup)"
+        found = "software not recognised (no CVE lookup)" if not entry["software"] else \
+            "CVEs not checked" if entry["severity"] == "NOT CHECKED" else \
+            f"{len(entry['cves'])} CVE(s), {severity_text(entry)}"
         self.note(f"{entry['port']}/{entry['protocol']} {one_line(entry['service'], 30)}: "
                   f"{one_line(entry['software'], 60) or '-'}: {found}")
 
@@ -209,10 +211,12 @@ class WebScan:
         self.tally(self.index * HOST_UNITS)
 
     def summary(self, targets: int, entries: int, failed: Sequence[str], seconds: float,
-                sent: Mapping[str, int]) -> None:
-        """The scan's totals, kept for the answer."""
+                sent: Mapping[str, int], unavailable: Mapping[str, str]) -> None:
+        """The scan's totals, kept for the answer; ``unavailable``: the services that failed
+        and were not asked again, with why (HS4)."""
         self.totals = {"targets": targets, "open_ports": entries, "failed_lookups": list(failed),
-                       "seconds": round(seconds, 1), "sent": dict(sent)}
+                       "seconds": round(seconds, 1), "sent": dict(sent),
+                       "unavailable": dict(unavailable)}
         self.note(f"Done: {targets} host(s), {entries} open port(s), {len(failed)} failed "
                   f"lookup(s), {seconds:.1f} s")
 

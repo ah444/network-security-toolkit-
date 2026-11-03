@@ -27,6 +27,7 @@
   --indigo-500: #4361ee;
   --indigo-600: #3f37c9;
   --indigo-800: #3a0ca3;
+  --indigo-300: #a5b4fc;
   --green-700: #15803d;
   --green-300: #4ade80;
   --red-700: #b91c1c;
@@ -91,6 +92,9 @@
   --cvss-critical: var(--red-700);
   --cvss-high: var(--orange-800);
   --cvss-medium: var(--yellow-900);
+  /* the charts' marks (v5.3 F2d): each >= 3:1 on the cards */
+  --chart-cv: var(--indigo-600);
+  --chart-test: var(--orange-800);
   /* names for the result panels (the Upload Dataset card, the scan results): they follow
      the theme tokens they point to, so the dark blocks below need no copy of them */
   --muted: var(--placeholder);
@@ -104,6 +108,7 @@
   --on-accent: var(--white);
   --table-bg: var(--white);
   --table-text: var(--gray-700);
+  --table-muted: var(--gray-600);  /* a remark in a table (the tables stay light in dark) */
   --table-border: var(--gray-100);
   --table-stripe: var(--gray-50);
   --table-hover: var(--blue-50);
@@ -149,6 +154,8 @@
     --cvss-critical: var(--red-300);
     --cvss-high: var(--orange-300);
     --cvss-medium: var(--amber-400);
+    --chart-cv: var(--indigo-300);
+    --chart-test: var(--orange-300);
   }
 }
 
@@ -174,6 +181,8 @@
   --cvss-critical: var(--red-300);
   --cvss-high: var(--orange-300);
   --cvss-medium: var(--amber-400);
+  --chart-cv: var(--indigo-300);
+  --chart-test: var(--orange-300);
 }
 
 /* ---------- Base ---------- */
@@ -910,6 +919,46 @@ textarea:focus-visible,
   background: var(--table-hover);
 }
 
+/* The leaderboard and the saved runs' tables (v5.3 F2g: the class had no rule, so their
+   cells had no padding and touched): the preview table's look, the column headers in the
+   accent colour and a row's own header in bold */
+.metrics-table {
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  background: var(--table-bg);
+}
+
+.metrics-table th,
+.metrics-table td {
+  padding: 8px 12px;
+  border: 1px solid var(--table-border);
+  text-align: left;
+  color: var(--table-text);
+  white-space: nowrap;
+}
+
+.metrics-table thead th {
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 600;
+  position: sticky;
+  top: 0;
+}
+
+.metrics-table tbody th {
+  font-weight: 600;
+}
+
+/* a remark in a cell: the page's muted colour is light in the dark theme, but the table
+   stays light */
+.metrics-table .quiet {
+  color: var(--table-muted);
+}
+
+.metrics-table tbody tr:nth-child(even) {
+  background: var(--table-stripe);
+}
+
 /* ---------- Lists, slider, progress ---------- */
 /* Checkbox lists instead of Ctrl+Click multi-selects: they work on touch screens (U5, 0.4g) */
 /* Columns where there is room: more choices in view (v5.2 step 2.2b) */
@@ -1422,6 +1471,143 @@ textarea:focus-visible,
   padding: 4px 6px;
   min-width: 2.5rem;
   font-size: 0.8rem;
+}
+
+/* ---------- Charts of a run (v5.3 F2d) ---------- */
+/* charts.js draws them as SVG at their own size (the text stays 13 px); a narrow screen
+   scrolls the box. The marks' colours are tokens, so both themes work. */
+.run-charts {
+  margin-top: 1rem;
+}
+
+.run-charts > summary {
+  min-height: 44px;
+  padding: 0.625rem 0;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.chart {
+  margin-top: 1rem;
+}
+
+.chart figcaption {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.chart-note {
+  font-size: 0.875rem;
+  margin-bottom: 0.5rem;
+}
+
+.chart-drawing {
+  display: block;
+  max-width: none;
+}
+
+.chart-drawing text {
+  font-size: 13px;
+  fill: var(--text);
+}
+
+/* dashed so it stays light, at the fields' edge colour so it is >= 3:1 on the card */
+.chart-grid {
+  stroke: var(--input-border);
+  stroke-width: 1;
+  stroke-dasharray: 2 4;
+}
+
+.chart-spread {
+  stroke: var(--chart-cv);
+  stroke-width: 2;
+}
+
+.chart-mean {
+  stroke: var(--text);
+  stroke-width: 3;
+}
+
+.chart-fold {
+  fill: none;
+  stroke: var(--chart-cv);
+  stroke-width: 1.5;
+}
+
+.chart-cv {
+  fill: var(--chart-cv);
+}
+
+.chart-test {
+  fill: var(--chart-test);
+}
+
+/* what a model relies on (v5.3 F3e): the mean drop as a bar from 0, the 0 line in the text's
+   colour */
+.chart-drop {
+  fill: var(--chart-cv);
+}
+
+.chart-zero {
+  stroke: var(--text);
+  stroke-width: 1.5;
+}
+
+/* a prediction's "Why?" (F3e): its lists' bullets inside the card; its summary a 44 px
+   target (F3g) */
+.why ul {
+  padding-left: 1.5rem;
+}
+
+.why > summary {
+  min-height: 44px;
+  padding: 0.625rem 0;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* ---------- Saved runs (v5.3 F2e) ---------- */
+/* runs.html: the list scrolls in its box; two runs' panels and each model's numbers sit side
+   by side where there is room, one under the other on a narrow screen */
+/* each cell's lines are set apart by the page, so the cells may wrap to fit the card */
+.runs-table th,
+.runs-table td {
+  vertical-align: top;
+  white-space: normal;
+}
+
+.run-pick {
+  justify-content: center;
+  min-width: 44px;
+}
+
+/* a file's name (a run id, a model, ".importance.") is longer than a phone is wide: it wraps
+   (gate 5.3) */
+#deleteView li,
+#storageView li {
+  overflow-wrap: anywhere;
+}
+
+.compare-runs,
+.compare-models {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+/* a run's tiles need the room: side by side only on a wide screen */
+.compare-runs {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 28rem), 1fr));
+}
+
+.compare-group {
+  text-align: left;
+  font-weight: 600;
+}
+
+#compareControls {
+  margin-top: 1rem;
 }
 
 /* ---------- Use: one row by hand (v5.2 step 2.2b) ---------- */

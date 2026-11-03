@@ -2,9 +2,39 @@
 // the results (split, leakage guard, leaderboard) and the confusion matrices.
 
 import { getJSON, send } from "./api.js";
+import { leaderboardTable, runCharts } from "./charts.js";
 import { byId, checkedValues, el, fillCheckboxList, fillSelect, message, scrollBox, setContent, show } from "./dom.js";
-import { balancingName, fmt, splitMessage } from "./format.js";
+import { balancingName, splitMessage } from "./format.js";
 import { emit, modelTitle, on, state, testSize } from "./state.js";
+
+// A training is saved on this computer when it ends (HR5). When it couldn't be (the disk too
+// full), the run is still here, and Save again saves it under the same run id, until the
+// next training replaces it
+function savedNote(result) {
+  if (result.saved) {
+    return el("p", {}, "Saved on this computer: it is on the Saved Runs page.");
+  }
+  const button = el("button", { type: "button", class: "btn btn-sm" }, "Save again");
+  const status = el("span", { role: "status" });
+  const note = el("div", { class: "warning-message" },
+    `Completed. ${result.not_saved} This run is replaced when the next training ends. `,
+    button, " ", status);
+  button.addEventListener("click", () => saveAgain(result, note, button, status));
+  return note;
+}
+
+async function saveAgain(result, note, button, status) {
+  button.disabled = true;
+  try {
+    await send("/api/v1/run/save", "POST");
+    result.saved = true;
+    note.replaceWith(savedNote(result));
+    byId("configResult").focus();  // the button it was on is gone
+  } catch (error) {
+    status.textContent = "❌ " + error.message;
+    button.disabled = false;
+  }
+}
 
 // Fill the target list and the feature list; the profile's label is preselected
 function populateColumns({ columns, dataset }) {
@@ -97,6 +127,7 @@ function trainingResult(result) {
   const warning = (text, title) => el("div", { class: "warning-message", title: title }, text);
   return [
     el("p", {}, result.message),
+    savedNote(result),
     el("div", { class: "info-message" },
        `Split: ${split.strategy} — ${split.train_rows.toLocaleString()} training rows, ${split.test_rows.toLocaleString()} test rows`,
        split.dedupe && split.dedupe.removed > 0 && `; ${split.dedupe.removed.toLocaleString()} duplicate rows removed before splitting`,
@@ -108,14 +139,8 @@ function trainingResult(result) {
       warning("Left out by the leakage guard: " + result.leakage.blocked.map(b => b.column + " (" + b.reason + ")").join(", ")),
     el("p", {}, `Balancing: ${balancingName(result.balancing.method)}${result.balancing.requested === "recommended" ? " (recommended from the training split)" : ""}.`),
     el("strong", {}, "Leaderboard"), " (ranked by CV macro-F1; ★ = selected):", el("br"),
-    scrollBox("Leaderboard", el("table", { class: "metrics-table" },
-      el("thead", {}, el("tr", {}, ["Model", "CV macro-F1", "Test macro-F1", "Test balanced acc.",
-                                    "Test accuracy", "Weakest class recall", "Fit time"].map(text => el("th", {}, text)))),
-      el("tbody", {}, result.leaderboard.map(row => el("tr", {},
-        [(row.selected ? "★ " : "") + row.title,
-         `${fmt(row.cv_macro_f1_mean, 3)} ± ${fmt(row.cv_macro_f1_std, 3)}`,
-         fmt(row.test_macro_f1, 3), fmt(row.test_balanced_accuracy, 3), fmt(row.test_accuracy, 3),
-         fmt(row.test_min_recall, 3), `${fmt(row.fit_seconds, 1)} s`].map(text => el("td", {}, text))))))),
+    leaderboardTable(result.leaderboard),
+    runCharts(result.leaderboard, result.folds),
     result.failures.map(failure => warning(`${modelTitle(failure.name)} failed and was left out.`)),
     result.skipped.map(([name, reason]) => warning(`${modelTitle(name)} skipped: ${reason}`)),
     result.classes_only_in_test.length > 0 &&

@@ -140,6 +140,9 @@ class TrainingOutcome:
     workers: int
     train_rows: int
     notes: tuple[str, ...]
+    # each feature's typical training value (v5.3 F3): the median of a number, the most
+    # frequent category; None for a column with no value
+    typical: tuple[tuple[str, Any], ...] = ()
 
 
 def _finite(values: Any) -> np.ndarray:
@@ -152,6 +155,23 @@ def _finite(values: Any) -> np.ndarray:
     array = np.array(values, dtype=np.float32)
     array[~np.isfinite(array)] = np.nan
     return array
+
+
+def typical_values(frame: pd.DataFrame, numeric: Sequence[str],
+                   categorical: Sequence[str]) -> tuple[tuple[str, Any], ...]:
+    """Each feature's typical value in ``frame``: the median of the finite numbers (as the
+    pipeline imputes them, in float32), the most frequent category as text (ties: the first in order);
+    None when the column has no value."""
+    typical: dict[str, Any] = {}
+    for column in numeric:
+        values = _finite(frame[column])
+        values = values[~np.isnan(values)]
+        # the float32 median's shortest text: 0.01, not 0.009999999776482582 (the same float32)
+        typical[column] = float(str(np.median(values))) if values.size else None
+    for column in categorical:
+        counts = frame[column].dropna().astype(str).value_counts()
+        typical[column] = min(counts.index[counts == counts.max()]) if len(counts) else None
+    return tuple((column, typical[column]) for column in frame.columns if column in typical)
 
 
 def _signed_log(values: Any) -> np.ndarray:
@@ -314,4 +334,5 @@ def train_models(
         workers=workers,
         train_rows=len(data),
         notes=tuple(notes),
+        typical=typical_values(X, numeric, categorical),
     )

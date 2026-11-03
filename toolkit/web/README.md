@@ -7,8 +7,8 @@ Upload a dataset, train and compare models, export a signed bundle, predict with
 ```
 web/
   ui/
-    templates/       the pages (home.html, dynamic_ids.html, scan.html; unlock.html for
-                     other computers when --host opens the toolkit to the network)
+    templates/       the pages (home.html, dynamic_ids.html, scan.html, runs.html; unlock.html
+                     for other computers when --host opens the toolkit to the network)
     static/          css/app.css (one stylesheet, colours as tokens) and js/ (ES modules;
                      api.js holds the only fetch)
     console.py       what the web command prints in the terminal
@@ -16,7 +16,7 @@ web/
     command.py       the web command: its settings, --port, --no-browser, then the server
     __init__.py      create_app(): the Flask app with its own state
     server.py        waitress on 127.0.0.1, the port bound exclusively, the browser opened
-    pages.py         the three HTML pages: home, the trainer, the port scanner
+    pages.py         the HTML pages: home, the trainer, the port scanner, the saved runs
     access.py        the unlock page and route: other computers type the access token
     datasets.py      upload, preview, class filter, the analyses before training
     training.py      the model list, a training job started, its results
@@ -24,6 +24,7 @@ web/
     scan.py          the port scan: its options, a scan started, the report download
     bundles.py       export, download and load bundles; predictions
     resume.py        GET /api/v1/workspace, so a reload resumes
+    runs.py          the saved runs: the list, one run, two side by side (records only)
     workspace.py     the calling session's workspace, locked for the request
     state.py         what one app keeps between requests (no module globals)
     security.py      the security headers and CSP, the CSRF token, the cross-site check
@@ -31,7 +32,9 @@ web/
     api.py           request and error helpers; the HTTP status of each ServiceError
   services/
     workspace.py     one in-memory workspace per browser session, with memory caps
-    jobs.py          the background jobs: a queue per kind (training, scan), progress, cancel
+    jobs.py          the background jobs: the heavy jobs' queue (training, importance) and
+                     the scan's, progress, cancel
+    importance.py    a model's permutation importance as a job, bound to its run (HR1)
     datasets.py      uploads read, files combined, the class filter, the training split
     training.py      training settings checked, the job queued, the run kept
     scan.py          the port scan: its choices checked (the authorization first), the job,
@@ -43,6 +46,8 @@ web/
   data/
     uploads.py       uploads on disk, only while they are read
     net.py           the listening socket, and opening the page in the browser
+    instance_lock.py one web server per instance (HR3b)
+    journal.py       the jobs journal, so a stop says what it cut off (HR3c)
 ```
 
 Rules that matter here:

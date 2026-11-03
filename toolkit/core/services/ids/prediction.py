@@ -1,5 +1,5 @@
 """Predictions with a bundle exported by the web trainer (plan D5, step 0.5): one row of
-values, every row of a table, or a whole CSV file labelled into a new file (the same table
+values, or a whole CSV file labelled into a new file (the same table
 as the web trainer's "Predict a CSV file", ``batch``, step 1.4f)."""
 
 from __future__ import annotations
@@ -10,12 +10,12 @@ from pathlib import Path
 from typing import Any, cast
 
 import numpy as np
-import pandas as pd
 
 from ...data.files import read_text, write_new_text
 from .batch import prediction_csv, prediction_summary, prediction_table
 from .bundle import Bundle
 from .datasets import load_dataset
+from .explanation import why
 
 
 def label_column(bundle: Bundle) -> str | None:
@@ -32,21 +32,10 @@ def model_order(bundle: Bundle) -> list[str]:
         [name for name in bundle.models if name not in ranked]
 
 
-def predict_rows(bundle: Bundle, frame: pd.DataFrame, model: str | None = None) -> pd.DataFrame:
-    """Predictions (and confidence, when the model has probabilities) for every row."""
-    missing = [f for f in bundle.features if f not in frame.columns]
-    if missing:
-        raise ValueError(f"Missing feature column(s): {', '.join(missing)}")
-    fitted = bundle.model(model)
-    result = pd.DataFrame({"prediction": fitted.predict(frame)}, index=frame.index)
-    proba = fitted.predict_proba(frame)
-    result["confidence"] = proba.max(axis=1) if proba is not None else np.nan
-    return result
-
-
 def predict_values(bundle: Bundle, values: Mapping[str, Any],
                    model: str | None = None) -> dict[str, Any]:
-    """One row of feature values (text or numbers) -> {prediction, confidence, top}."""
+    """One row of feature values (text or numbers) -> {prediction, confidence, top, why}:
+    ``why`` as the web API gives it (F3f)."""
     fitted = bundle.model(model)
     row = fitted.input_frame(values)
     proba = fitted.predict_proba(row)
@@ -56,6 +45,7 @@ def predict_values(bundle: Bundle, values: Mapping[str, Any],
         order = np.argsort(proba[0])[::-1][:5]
         result["confidence"] = float(proba[0].max())
         result["top"] = [[fitted.classes[i], float(proba[0][i])] for i in order]
+    result["why"] = why(fitted, row, bundle.run.get("training"))
     return result
 
 

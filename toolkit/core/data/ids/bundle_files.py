@@ -2,7 +2,8 @@
 
 The key is created once, on the first save, in ``instance/signing.key`` (gitignored;
 ``TOOLKIT_INSTANCE_DIR`` moves ``instance/``). Loading never creates a key. Bundles live in
-``instance/bundles/<run id>.bundle`` and are never overwritten. What the bytes mean (format,
+``instance/bundles/<run id>.bundle`` and are never overwritten; each is published whole or not
+at all (``toolkit.core.data.publish``, HR3a). What the bytes mean (format,
 signature, models) is ``toolkit.core.services.ids.bundle``; saving, listing and loading runs is
 ``toolkit.core.services.ids.exports``.
 """
@@ -11,12 +12,15 @@ from __future__ import annotations
 
 import os
 import secrets
-from collections.abc import Mapping
+from collections.abc import Iterator, Mapping
 from pathlib import Path
 
+from ..protect import protect
+from ..publish import publish_bytes
 from ..settings import instance_dir
 
 KEY_BYTES = 32
+CHUNK_BYTES = 2**20  # what read_chunks reads at a time
 
 
 class BundleError(ValueError):
@@ -44,6 +48,7 @@ def signing_key(path: str | Path | None = None, *, create: bool = False) -> byte
         if not create:
             raise BundleError("NO_KEY", f"This install has no signing key ({path.name})")
         path.parent.mkdir(parents=True, exist_ok=True)
+        protect(path.parent)  # HS5: the key inherits the folder's permissions
         try:
             with path.open("x", encoding="ascii", newline="\n") as handle:
                 handle.write(secrets.token_bytes(KEY_BYTES).hex() + "\n")
@@ -51,7 +56,7 @@ def signing_key(path: str | Path | None = None, *, create: bool = False) -> byte
             pass  # made at the same moment by another process: use that one
         else:
             try:
-                os.chmod(path, 0o600)  # owner only (Windows keeps its own ACLs)
+                os.chmod(path, 0o600)  # owner only (on Windows: the folder's ACL, protect)
             except OSError:
                 pass
     try:
@@ -64,20 +69,22 @@ def signing_key(path: str | Path | None = None, *, create: bool = False) -> byte
     return key
 
 
+def bundle_path(run_id: str, directory: str | Path | None = None) -> Path:
+    """``<directory>/<run id>.bundle`` (the run id already checked)."""
+    return (Path(directory) if directory is not None else bundles_dir()) / f"{run_id}.bundle"
+
+
 def new_bundle_path(run_id: str, directory: str | Path | None = None) -> Path:
     """Where ``<run id>.bundle`` goes; raises FileExistsError rather than replace one."""
-    directory = Path(directory) if directory is not None else bundles_dir()
-    path = directory / f"{run_id}.bundle"
+    path = bundle_path(run_id, directory)
     if path.exists():
         raise FileExistsError(path)
     return path
 
 
 def write_new(path: Path, data: bytes) -> None:
-    """Write a new file (FileExistsError if it appeared meanwhile)."""
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("xb") as handle:
-        handle.write(data)
+    """Publish a new file, whole or not at all (FileExistsError if it appeared meanwhile)."""
+    publish_bytes(path, data)
 
 
 def read_start(path: str | Path, size: int) -> bytes:
@@ -90,6 +97,14 @@ def read_all(path: str | Path) -> bytes:
     """A bundle file's bytes, read whole; they are checked (``ids.bundle.unpack``) before anything
     in them is deserialized."""
     return Path(path).read_bytes()
+
+
+def read_chunks(path: str | Path) -> Iterator[bytes]:
+    """A file's bytes, ``CHUNK_BYTES`` at a time (HR4b: a bundle of gigabytes is checked
+    without being read into memory whole)."""
+    with Path(path).open("rb") as handle:
+        while chunk := handle.read(CHUNK_BYTES):
+            yield chunk
 
 
 def stored_bundles(directory: str | Path | None = None) -> list[tuple[Path, int, float]]:

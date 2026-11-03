@@ -1,6 +1,7 @@
 """Serving the web trainer on this computer only (127.0.0.1, S6), or, with ``--host`` (v5.2
-step 2.4f), on an address of the network too: the port bound exclusively, the browser opened
-once it answers, waitress (or Flask's debug server, on this computer only)."""
+step 2.4f), on an address of the network too: one server per instance (its lock, HR3b), the
+port bound exclusively, the browser opened once it answers, waitress (or Flask's debug
+server, on this computer only)."""
 
 from __future__ import annotations
 
@@ -8,10 +9,12 @@ import errno
 import ipaddress
 import logging
 import threading
+import time
 
 from ...core.data.logs import setup_logging
 from ...core.data.settings import WebConfig, web_config
-from ..data import net
+from ...core.services.storage import storage_report
+from ..data import instance_lock, net
 from ..services.access import is_this_computer
 from ..services.workspace import start_idle_sweep
 from ..ui import console as messages
@@ -53,6 +56,7 @@ def run_server(config: WebConfig | None = None) -> int:
     - TOOLKIT_DEBUG=1: Flask's debug server, for development only (one process, no
       reloader). Never use it when other people can reach the machine: its debugger can
       run code.
+    - One web server per instance (HR3b): another one holding it is a message, exit code 2.
     - TOOLKIT_PORT: port number (default 5000); a port in use is a message, exit code 2.
     - The default browser opens the page once the port answers (TOOLKIT_NO_BROWSER=1: no).
     - --host ADDRESS (v5.2 step 2.4f): also on that address (0.0.0.0: all of this computer's
@@ -67,6 +71,32 @@ def run_server(config: WebConfig | None = None) -> int:
     if config.debug and not local:
         messages.debug_refused(config.host)
         return 2
+    try:
+        lock = instance_lock.take(url)
+    except instance_lock.InstanceBusy as busy:
+        holder = busy.holder
+        messages.instance_in_use(busy.folder, holder.pid if holder else None,
+                                 holder.url if holder else "")
+        return 2
+    interrupted: dict[str, list[str]] = {}
+    for job in lock.interrupted:  # HR3c: said in the terminal now, on its page once
+        line = messages.interrupted_line(job.kind, time.strftime("%Y-%m-%d %H:%M",
+                                                                 time.localtime(job.asked)),
+                                         job.source, job.ran)
+        messages.interrupted(line)
+        interrupted.setdefault(job.kind, []).append(line)
+    for line in storage_report()["warnings"]:  # HR4c: said in the log; nothing is deleted
+        logging.getLogger(__name__).warning(line)
+    try:
+        return _serve(config, host, url, interrupted)
+    finally:
+        lock.release()
+
+
+def _serve(config: WebConfig, host: str, url: str, interrupted: dict[str, list[str]]) -> int:
+    """``run_server`` once the instance is held: the port bound, the app served until it
+    stops; the exit code."""
+    port, local = config.port, is_this_computer(config.host)
     hosts = [config.host] if local or config.host == ALL_IPV4 else [config.host, HOST]
     try:
         sockets = net.bind_ports(hosts, port)
@@ -78,6 +108,7 @@ def run_server(config: WebConfig | None = None) -> int:
         return 2
     try:
         app = create_app(config)
+        app.extensions["toolkit"].interrupted = interrupted
         start_idle_sweep(app.extensions["toolkit"].workspaces)  # frees memory without requests
         messages.running(url)
         access = app.extensions["toolkit"].access

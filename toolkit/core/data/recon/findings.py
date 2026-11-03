@@ -6,14 +6,25 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Any, TypedDict
 
+# How a CVE was found, as the reports name it
+MATCH_LABELS = {"version": "version match", "name": "name match, unconfirmed"}
+
 
 class CveEntry(TypedDict):
-    """One CVE as every "cves" provider reports it; ``severity`` comes from the score."""
+    """One CVE as every "cves" provider reports it; ``severity`` comes from the score.
+    ``match`` says how it was found: "version" (NVD lists the version as affected) or "name"
+    (a search on the product's name: the version was not checked, so it is unconfirmed)."""
 
     id: str
     cvss: float | None
     cvss_version: str
     severity: str
+    match: str
+
+
+def match_label(cve: CveEntry) -> str:
+    """How ``cve`` was found, in the reports' words."""
+    return MATCH_LABELS.get(cve["match"], "match unknown")
 
 
 @dataclass(frozen=True)

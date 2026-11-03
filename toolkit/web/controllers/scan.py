@@ -17,6 +17,7 @@ from ..services.scan import (
     start_scan,
 )
 from ..services.workspace import Workspace
+from .access import origin
 from .api import Answer, json_body, query
 from .jobs import job_view
 from .schemas import ScanReportRequest, load
@@ -40,7 +41,7 @@ def start() -> Answer:
     choices = load(ScanChoices, json_body())
     require_authorized(choices)
     with workspace(create=True) as ws:
-        job = start_scan(ws, choices, state().scan_jobs, scan_limits())
+        job = start_scan(ws, choices, state().scan_jobs, scan_limits(), origin())
         return jsonify(job_view(job, state().scan_jobs)), 202
 
 

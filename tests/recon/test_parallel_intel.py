@@ -36,7 +36,7 @@ class SlowCves:
                 self.fail.discard(subject)  # fails once
                 raise requests.Timeout("read timed out")
             return IntelFinding(cves=({"id": f"CVE-2026-{len(subject):04d}", "cvss": 5.0,
-                                       "severity": "MEDIUM"},))
+                                       "severity": "MEDIUM", "match": "version"},))
         finally:
             with self.lock:
                 self.running -= 1
@@ -64,14 +64,16 @@ def test_each_product_once_per_scan():
     assert sorted(source.asked) == ["Apache 2.4.49", "OpenSSH 8.9", "nginx 1.25"]
 
 
-def test_a_failed_lookup_is_tried_again_on_the_next_host():
+def test_a_failed_service_is_not_asked_again_in_this_scan():
+    """HS4 (RD5) replaces "a failed lookup is tried again on the next host": the service is
+    off for the rest of the scan, and its ports say "NOT CHECKED"."""
     source = SlowCves(delay=0, fail={"OpenSSH 8.9"})
     intel = recon_intel.Intel({}, providers=[source])
     first = intel.lookup_many(["OpenSSH 8.9"])["OpenSSH 8.9"]
-    assert first["errors"] == ["Slow: timed out"] and first["severity"] == "UNKNOWN"
+    assert first["errors"] == ["Slow: timed out"] and first["severity"] == "NOT CHECKED"
     second = intel.lookup_many(["OpenSSH 8.9"])["OpenSSH 8.9"]
-    assert second["errors"] == [] and second["severity"] == "MEDIUM"
-    assert source.asked == ["OpenSSH 8.9", "OpenSSH 8.9"]
+    assert second["errors"] == [] and second["severity"] == "NOT CHECKED"
+    assert source.asked == ["OpenSSH 8.9"] and intel.unavailable() == {"Slow": "timed out"}
 
 
 def test_results_in_the_order_given():
@@ -162,11 +164,11 @@ def test_scan_prints_entries_in_port_order(fake_ports, scan_service, scanner, mo
             with self.lock:
                 self.running[0] -= 1
             return IntelFinding(cves=({"id": "CVE-2026-0001", "cvss": 9.8,
-                                       "severity": "CRITICAL"},))
+                                       "severity": "CRITICAL", "match": "version"},))
 
     source = Uneven()
     real_intel = recon_intel.Intel
-    monkeypatch.setattr(scan_service, "Intel", lambda keys, use_ai=False, stop=None:
+    monkeypatch.setattr(scan_service, "Intel", lambda keys, use_ai=False, stop=None, nvd=True:
                         real_intel(keys, use_ai, providers=[source], stop=stop))
     open_ports = [PortResult(21, "tcp", "open", "ftp", "220 (vsFTPd 3.0.3)"),
                   PortResult(22, "tcp", "open", "ssh", "SSH-2.0-OpenSSH_8.9p1"),
@@ -182,4 +184,4 @@ def test_scan_prints_entries_in_port_order(fake_ports, scan_service, scanner, mo
     assert ports == ["21/tcp", "22/tcp", "80/tcp", "2222/tcp", "9000/tcp"]
     assert sorted(source.asked) == ["Apache 2.4.49", "OpenSSH 8.9", "vsFTPd 3.0.3"]
     assert source.most[0] == 3, "the scan looks its products up at the same time"
-    assert out.count("CVE-2026-0001 (CVSS 9.8, CRITICAL)") == 4  # not the unknown banner
+    assert out.count("CVE-2026-0001 (CVSS 9.8, CRITICAL, version match)") == 4  # not the unknown banner

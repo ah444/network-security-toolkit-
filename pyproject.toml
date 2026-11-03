@@ -10,7 +10,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "network-security-toolkit"
-version = "5.2.0"
+version = "5.3.0"
 description = "Network reconnaissance + ML intrusion detection toolkit"
 requires-python = ">=3.11"
 # The code's licence (step 1.5g); the datasets keep their own terms (docs/datasets.md).
@@ -65,6 +65,12 @@ testpaths = ["tests"]
 # The repo root is importable, so tests can use the toolkit/ package before it is installable.
 pythonpath = ["."]
 addopts = "-ra"
+# Every test's level comes from tests/levels.py (HC4); docs/architecture.md section 12
+markers = [
+    "unit: logic in memory, with fakes; the checks on the repository's own files",
+    "integration: the Flask test client, temporary files, a fitted model, local sockets",
+    "e2e: the toolkit as its own process, or a real program of this computer",
+]
 
 [tool.ruff]
 # Flags syntax newer than Python 3.11 so the code stays runnable on older

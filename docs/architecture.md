@@ -11,6 +11,8 @@ Diagrams are plain ASCII so they read the same in any editor, font or terminal.
 
 ## 1. Overview
 
+The toolkit is a local-first network security toolkit with optional external intelligence services: a **port scanner** with CVE lookups, and an **IDS model trainer and predictor** for flow datasets (CIC-IDS2017, NSL-KDD or your own CSV). It is not a live network IDS: it doesn't capture or watch traffic (PCAP files and live capture are stretch items, not built).
+
 One installable Python package, `toolkit/`, with three tools that share its code:
 
 | Command | Tool | What it does |
@@ -70,6 +72,7 @@ no Flask, no argparse. Read by `cli/` and `web/`, it imports neither
 |---|---|---|
 | `toolkit/core/__init__.py` | - | what both tools share (v5.2 step 2.3b): `core/services/` and `core/data/` |
 | `toolkit/core/services/__init__.py` | services | the shared services |
+| `toolkit/core/services/storage.py` | services | the storage report (HR4b): every file of the instance counted once by kind with its size, the leftovers named, the total and the free space; it only reads, and never unpickles a bundle |
 | `toolkit/core/services/ports.py` | services | the four ports: `ModelStore`, `IntelProvider`, `ProgressSink`, `ScanEngine` |
 | `toolkit/core/services/ids/__init__.py` | services | the ML core: no web framework, no `print()`, no network |
 | `toolkit/core/services/ids/datasets.py` | services | a CSV/TXT dataset understood: encoding, separator, profile, header, dtypes, a load report |
@@ -83,12 +86,18 @@ no Flask, no argparse. Read by `cli/` and `web/`, it imports neither
 | `toolkit/core/services/ids/registry.py` | services | the model, balancer and feature-selector registries |
 | `toolkit/core/services/ids/pipeline.py` | services | builds and fits one pipeline per model; `FittedModel` predicts |
 | `toolkit/core/services/ids/evaluation.py` | services | cross-validation on train, model choice, one score on test, the leaderboard |
+| `toolkit/core/services/ids/importance.py` | services | what a model relies on: permutation importance on the test split (a stratified sample above 5,000 rows), one feature at a time so a job shows its progress and stops; the importance concentration warning when one feature carries more than half of the effect (a copy of the label is one possible cause). It reuses the test split after the evaluation: a diagnosis, never a way to choose |
+| `toolkit/core/services/ids/explanation.py` | services | why one prediction came out as it did: each feature's value replaced by its typical training value (an approximation, not SHAP); the typical values from the record, or an older bundle's imputer medians. Its limits: approximate, not causal; correlated features share and hide each other's effect; one feature set to its typical value alone can make a row that never occurs; the probabilities are not calibrated. `why` gives it as the answer's `why`, the one place the web (F3d) and the CLI (F3f) take it from |
 | `toolkit/core/services/ids/preview.py` | services | train-only previews for the web trainer (feature scores, class counts) |
 | `toolkit/core/services/ids/runs.py` | services | `train()` and the `TrainingRun` record of how a model was made |
 | `toolkit/core/services/ids/run_json.py` | services | the record's plain-JSON form (`TrainingRun.to_dict()`): any value as JSON types, what is kept of the profile, split, training and pipelines |
 | `toolkit/core/services/ids/bundle.py` | services | packs and checks signed bundles (bytes only) |
 | `toolkit/core/services/ids/legacy_names.py` | services | the old names (`toolkit.ids_core`, before step 1.5d; `toolkit.services.ids`, until v5.2 step 2.3a), only while a bundle saved with them loads |
-| `toolkit/core/services/ids/exports.py` | services | saves, lists and loads runs and bundles; `BundleStore` is the `ModelStore` |
+| `toolkit/core/services/ids/exports.py` | services | saves, lists and loads runs and bundles, each bundle with its state (HR3d); `BundleStore` is the `ModelStore` |
+| `toolkit/core/services/ids/run_removal.py` | services | deleting a saved run when the user asks (HR4a): its importance results, then its bundle if asked, its record last, under the run files' lock; a file that can't be removed keeps the record |
+| `toolkit/core/services/ids/registration.py` | services | a kept bundle's run registered again (HR4b): the whole file's signature checked in pieces, then the record copy it carries published as the record, never replacing one |
+| `toolkit/core/services/ids/saved_importance.py` | services | an importance result as a file of its own (HR2): named from checked ids, published once under the run files' lock while the record lists the model, read back as untrusted data |
+| `toolkit/core/services/ids/comparison.py` | services | the saved runs (the records, and each run's bundle's state from its first bytes, HR5b; never a model): a run's summary, the view its charts need, whether two runs scored the same test rows, two runs side by side |
 | `toolkit/core/services/ids/batch.py` | services | labels every row of a table: the CLI's `--csv` and the web's "Predict a CSV file" |
 | `toolkit/core/services/ids/prediction.py` | services | the IDS command's predictions: one row, a table, a CSV file into a new file |
 | `toolkit/core/services/recon/__init__.py` | services | the scanner's logic |
@@ -98,14 +107,19 @@ no Flask, no argparse. Read by `cli/` and `web/`, it imports neither
 | `toolkit/core/services/recon/engines.py` | services | the scan engines by name: the built-in one (the toolkit's own scanner) and nmap (`NmapEngine`; `NmapProgress`: nmap's phases as one bar); `engine_problem` (why an engine can't do a scan here, asked before the authorization) and `describe` (the opening notice's lines) |
 | `toolkit/core/services/recon/os_guess.py` | services | the OS guess from the TTL, the banners, the open ports and nmap's OS match, with its evidence; this computer said |
 | `toolkit/core/services/recon/report.py` | services | one report entry per open port, its network text cleaned |
+| `toolkit/core/services/recon/record.py` | services | the record of every scan (HS3): a JSON line in the tool's log when `run_scan` starts and one when it ends, with the request's source |
 | `toolkit/core/data/__init__.py` | data | the shared data: files, the network, the environment |
 | `toolkit/core/data/settings.py` | data | every tunable setting, the `TOOLKIT_*` variables, the data folder, `.env` reading |
 | `toolkit/core/data/logs.py` | data | one rotating log file per tool, secrets redacted |
 | `toolkit/core/data/keys.py` | data | API keys and the AI model setting, from the environment or `.env` |
 | `toolkit/core/data/files.py` | data | the text files the commands read and write |
+| `toolkit/core/data/disk.py` | data | the instance's files with their sizes, and the disk's free space (HR4b); the free space a new file must leave, `NoSpace` (HR4c); it only reads |
+| `toolkit/core/data/publish.py` | data | a new file published whole or not at all, never replacing one (HR3a): a record, a bundle |
+| `toolkit/core/data/protect.py` | data | `instance/` and `.env` limited to this account (HS5): on Windows the ACL with `icacls`, elsewhere `chmod` |
 | `toolkit/core/data/ids/__init__.py` | data | the IDS's files |
 | `toolkit/core/data/ids/bundle_files.py` | data | the signing key and the bundle files, as bytes |
 | `toolkit/core/data/ids/run_files.py` | data | `TrainingRun` records on disk, as dicts (`instance/runs/`) |
+| `toolkit/core/data/ids/importance_files.py` | data | importance results on disk, `instance/runs/<run id>.importance.<model id>.json`, read up to 1 MiB; the one lock of the run files (HR2) |
 | `toolkit/core/data/ids/dataset_files.py` | data | a dataset file's first bytes, SHA-256 and row chunks |
 | `toolkit/core/data/recon/__init__.py` | data | the scanner's network access and report files |
 | `toolkit/core/data/recon/scanner.py` | data | TCP and UDP port checks of one host |
@@ -121,7 +135,7 @@ no Flask, no argparse. Read by `cli/` and `web/`, it imports neither
 | `toolkit/core/data/recon/text.py` | data | makes text from the network safe to show and export |
 | `toolkit/core/data/recon/scan_files.py` | data | scan reports as JSON, CSV or TXT: as text (`report_text`, for a download) or a file in `instance/scans/` (with the engine and nmap's CPE names) |
 | `toolkit/core/data/recon/findings.py` | data | what the intel gateways return (`CveEntry`, `IntelFinding`) |
-| `toolkit/core/data/recon/nvd.py` | data | CVEs and CVSS scores from the NVD API, by version (CPE names) or by keyword (an `IntelProvider`) |
+| `toolkit/core/data/recon/nvd.py` | data | CVEs and CVSS scores from the NVD API, by version (CPE names) or by keyword (an `IntelProvider`); each CVE carries its `match`, "version" or "name" |
 | `toolkit/core/data/recon/openrouter.py` | data | the optional AI explanation through OpenRouter (an `IntelProvider`) |
 | `toolkit/core/data/recon/abuseipdb.py` | data | the optional IP reputation from AbuseIPDB (an `IntelProvider`) |
 | `toolkit/core/data/recon/lookup.py` | data | the HTTP session (it counts the requests to each host), lookup time limits, expected failures and their names |
@@ -138,6 +152,7 @@ The menu, `scan` and `ids`; it never imports the web trainer
 | `toolkit/cli/ui/menu.py` | ui | the banner, the menu and its prompt |
 | `toolkit/cli/ui/scan.py` | ui | the scanner's questions, authorization, progress line, tables and report; `ConsoleScan` is the scan's `ScanView` |
 | `toolkit/cli/ui/ids.py` | ui | the IDS command's export list, model card, predictions, interactive menu and prompts |
+| `toolkit/cli/ui/runs.py` | ui | what `ids --runs` and `--compare` print: the saved runs, and two of them side by side |
 | `toolkit/cli/controllers/__init__.py` | controllers | the command line's commands |
 | `toolkit/cli/controllers/main.py` | controllers | the command line: the menu, or `scan`, `ids` with the rest of the line; the toolkit's `--help` (it lists `web` too) |
 | `toolkit/cli/controllers/scan.py` | controllers | the scanner's flags or questions, a `ScanRequest`, the exit codes |
@@ -158,13 +173,14 @@ The page, its routes and jobs, and the `web` command; it never imports the comma
 | `toolkit/web/controllers/command.py` | controllers | the web trainer's command (from `toolkit.start`): its settings checked, `--port` and `--no-browser`, then the server |
 | `toolkit/web/controllers/__init__.py` | controllers | `create_app()`: the Flask app with its own state, serving `toolkit/web/ui` |
 | `toolkit/web/controllers/server.py` | controllers | `run_server()`: waitress on 127.0.0.1, the port bound exclusively, the browser opened |
-| `toolkit/web/controllers/pages.py` | controllers | the three HTML pages: home, the trainer (`/dynamic_ids`), the port scanner (`/scan`) |
+| `toolkit/web/controllers/pages.py` | controllers | the HTML pages: home, the trainer (`/dynamic_ids`), the port scanner (`/scan`), the saved runs (`/runs`) |
 | `toolkit/web/controllers/datasets.py` | controllers | upload, preview, class filter and the analyses before training |
 | `toolkit/web/controllers/training.py` | controllers | the model list, a training job started, its results |
 | `toolkit/web/controllers/jobs.py` | controllers | any job's state, progress and cancel (`GET`/`DELETE /api/v1/jobs/<id>`), a scan's log |
-| `toolkit/web/controllers/access.py` | controllers | the unlock page and `POST /api/v1/unlock`: other computers type the access token when `--host` opens the toolkit to the network |
+| `toolkit/web/controllers/access.py` | controllers | the unlock page and `POST /api/v1/unlock`: other computers type the access token when `--host` opens the toolkit to the network; on this computer only, a new token and the other computers' jobs (`/api/v1/access/...`, HS1) |
 | `toolkit/web/controllers/scan.py` | controllers | the port scan's routes: its options, a scan started (the authorization checked first), the session's scan, the report download |
 | `toolkit/web/controllers/bundles.py` | controllers | export, download and load bundles; predictions, one row or a CSV file |
+| `toolkit/web/controllers/runs.py` | controllers | the saved runs: the list, one run, two side by side (they read the records only, with no session) |
 | `toolkit/web/controllers/resume.py` | controllers | `GET /api/v1/workspace`, so the page resumes after a reload |
 | `toolkit/web/controllers/workspace.py` | controllers | the calling session's workspace (the cookie holds its ID), locked for the request |
 | `toolkit/web/controllers/state.py` | controllers | what one app keeps between requests (no module globals) |
@@ -173,16 +189,19 @@ The page, its routes and jobs, and the `web` command; it never imports the comma
 | `toolkit/web/controllers/api.py` | controllers | request and error helpers; the HTTP status of each `ServiceError` |
 | `toolkit/web/services/__init__.py` | services | the web trainer's services |
 | `toolkit/web/services/workspace.py` | services | one in-memory workspace per browser session, with memory caps |
-| `toolkit/web/services/jobs.py` | services | the background jobs: a queue per kind (training, scan), one job of a kind at a time, progress, cancel |
+| `toolkit/web/services/jobs.py` | services | the background jobs: two queues (the heavy jobs: training and importance, RD2; the scan), one job of a queue at a time, progress, cancel; where each job was asked for (`Origin`, HS1) |
+| `toolkit/web/services/importance.py` | services | the permutation importance of a model of the workspace's run, as a job on the training's queue, bound when asked for to its run and model, one per run and model (HR1); asked for by `POST /api/v1/jobs/importance` (F3d) |
 | `toolkit/web/services/errors.py` | services | the error codes and `ServiceError` |
 | `toolkit/web/services/datasets.py` | services | uploads read, files combined, the class filter, the training split |
 | `toolkit/web/services/training.py` | services | training settings checked, the job queued, the run kept |
 | `toolkit/web/services/scan.py` | services | the web port scan: the choices checked (the authorization first, nothing sent before it), the scan queued as a job, the last scan kept for the download |
-| `toolkit/web/services/access.py` | services | the access token of a start (`--host`): made, checked (five wrong tries a minute per address), loopback told apart |
+| `toolkit/web/services/access.py` | services | the access token of a start (`--host`): made, checked (five wrong tries a minute per address), loopback told apart; a new one made on this computer locks every other computer out and cancels their waiting jobs (`lock_out`, HS1) |
 | `toolkit/web/services/scan_view.py` | services | `WebScan`, the page's `ScanView`: a running scan's log, its progress host by host and its answer, no path of this computer shown |
-| `toolkit/web/services/prediction.py` | services | one row or a whole file predicted |
+| `toolkit/web/services/prediction.py` | services | one row or a whole file predicted; a row's `why`, the local explanation (F3d) |
 | `toolkit/web/data/__init__.py` | data | the web trainer's files and sockets |
 | `toolkit/web/data/uploads.py` | data | uploads on disk, only while they are read |
+| `toolkit/web/data/journal.py` | data | the jobs journal: a line when a job is asked for, starts and ends; the unfinished ones read at the next start (HR3c) |
+| `toolkit/web/data/instance_lock.py` | data | one web server per instance: the OS lock on `instance/web.lock`, and the clearing of a stopped export's temporary files (HR3b) |
 | `toolkit/web/data/net.py` | data | the listening socket, and opening the page in the browser |
 
 ## 3. Dependency rules
@@ -344,7 +363,7 @@ upload route loads the file; `train()` starts from the loaded table.
    2. K-fold CV on train  --> mean macro-F1 per model        |
    3. fit every model on the whole train split               |
    4. choose the model by CV (never by test score)           |
-   5. score each model on the test split once  <-------------+
+   5. score each model on the test split  <------------------+
      |
      v
  TrainingRun (settings, profile, split, leakage, CV and test scores, versions)
@@ -352,6 +371,12 @@ upload route loads the file; `train()` starts from the loaded table.
      +--> bundle.pack + sign     -> instance/bundles/<run id>.bundle
      +--> exports.write_run      -> instance/runs/<run id>.json
 ```
+
+The test split plays no part in training or in choosing the model. The permutation
+importance (`importance.py`, F3) reuses it after training and evaluation: its result is a
+diagnosis, never a way to choose features, models or hyperparameters. Repeated experiments
+to choose features, if ever needed, would use a validation split cut from the training
+split.
 
 One pipeline per model, all fitted on the training rows only
 (`toolkit/core/services/ids/pipeline.py`):
@@ -388,9 +413,10 @@ The manifest embeds the TrainingRun. Nothing is unpickled until the size, layout
      |          prediction.py (one row, a whole file)               |
      |          workspace.py: one workspace per session, in memory  v
      |            (dataset, run, bundle, last predictions)   jobs.py: a worker
-     |                                                       thread per kind, one
-     |                                                       training and one scan
-     |                                                       at a time; progress
+     |                                                       thread per queue, one
+     |                                                       heavy job (training or
+     |                                                       importance) and one
+     |                                                       scan at a time; progress
      |                                                       and cancel through
      v                                                       ProgressSink.advance()
  core/services/ids:  runs.train(...), bundles, batch predictions <-+
@@ -404,6 +430,14 @@ The manifest embeds the TrainingRun. Nothing is unpickled until the size, layout
 - A refusal is a `ServiceError` with a code (`toolkit/web/services/errors.py`); the routes
   answer it with the HTTP status it has always had (`toolkit/web/controllers/api.py`).
 - A cancelled or failed job leaves nothing behind: no run record, no bundle.
+- The heavy jobs share one queue and its one worker (RD2, HR1): a permutation importance
+  (`toolkit/web/services/importance.py`) waits behind a training and a training behind it,
+  so a full CIC-IDS2017 training and a KNN importance never run at once. An importance is
+  bound when it is asked for to its run and model (references to that fitted model, that
+  run's test rows, its label and evaluation seed), so a training after it changes nothing
+  it computes; those references keep the old run in memory until it ends. One job per run
+  and model; only the workspace's run can be calculated (RD3). It holds a lease on the
+  workspace, not its training lock. The scan keeps its own queue.
 - `GET /api/v1/workspace` repeats the earlier answers, so a reload resumes where it was.
 - The server listens on 127.0.0.1 only (waitress, `toolkit/web/controllers/server.py`), and
   the page opens in the browser once the port answers.
@@ -417,7 +451,7 @@ screen and every question goes through the `ScanView` (`ConsoleScan` in
 ```
  target (IP, name or range) + ports + protocols   core/services/recon/targets.py: limits first
      |
-     +--> public IP, a key, --abuseipdb (or yes)? --> AbuseIPDB    core/data/recon/abuseipdb.py
+     +--> public IP, a key, no --no-abuseipdb (or yes)? --> AbuseIPDB  core/data/recon/abuseipdb.py
      v
  ping --> no answer: skipped unless --scan-unresponsive        core/data/recon/ping.py
      |
@@ -438,15 +472,16 @@ screen and every question goes through the `ScanView` (`ConsoleScan` in
      |
      v
  Intel.lookup_many: up to INTEL_WORKERS at a time               core/services/recon/intel.py
-     |   NVD (always; spaced as NVD asks): by version, else by keyword
-     |   OpenRouter (--ai or yes, and a key)
+     |   NVD (unless --no-nvd; spaced as NVD asks): by version, else by keyword
+     |   OpenRouter (a key, unless --no-ai or no)
      v
  report entries (network text cleaned)                          core/services/recon/report.py
      --> table on screen --> export (--export json|csv|txt)     core/data/recon/scan_files.py
 ```
 
-A failed lookup is recorded in the report and the scan goes on. Ctrl+C stops the scan with
-exit code 130.
+A failed lookup is recorded in the report and the scan goes on; that service is not asked
+again in this scan (`Intel.unavailable`, RD5), its ports say `NOT CHECKED`, and the summary
+names it and why. Ctrl+C stops the scan with exit code 130.
 
 ## 9. Data on disk and what leaves the computer
 
@@ -467,23 +502,119 @@ exit code 130.
   `~/Library/Application Support` on macOS, `$XDG_DATA_HOME` or `~/.local/share` on Linux;
   then `network-security-toolkit`. `toolkit --help` prints the folder in use
   (`toolkit/core/data/settings.py`).
+- A record and a bundle are published whole or not at all, and never replace a file
+  (`toolkit/core/data/publish.py`, HR3a): the bytes go to `<name>.<random>.tmp` in the same
+  folder, are flushed to the disk (`fsync`) and their size checked, then the file is
+  published with `os.rename` on Windows or a hard link on Linux and macOS (whose `rename`
+  would replace). After a crash of the process the file is whole or absent, and a `.tmp`
+  file may be left (no listing reads it); after a power cut it is best effort. A file
+  system without hard links (on Linux and macOS) is refused with a message.
+- An importance result is a file of its own beside its run's record (HR2,
+  `toolkit/core/services/ids/saved_importance.py`): `<run id>.importance.<model id>.json`,
+  named from a run id of the toolkit's form and a model id of the registry, checked before
+  any path is made. It holds its run and model, its schema and the method's version, the
+  settings (rows, per class, repeats, seed, metric), the numbers and the library versions.
+  It is computed outside any lock and published under the one lock of the run files
+  (`importance_files.PUBLISHING`, which a record's write and a delete take too) only while the record
+  lists that model, and never replaced. Read back, a file larger than 1 MiB, not JSON, of a
+  newer schema, whose ids are not its name's or whose values are not a result's is left out
+  and counted. The saved runs' list skips these names. Every training saves its record (HR5), so
+  every run's results are saved; the job says "Not saved" only when the record isn't.
+- Every successful training saves its record when it ends (HR5, RD3: `save_run` in
+  `toolkit/web/services/training.py`), before the run is stored in the workspace. The record
+  holds aggregated metrics, class names, feature metadata and typical feature values, never
+  the dataset's rows; the page says so above Train. Export writes the bundle only and never
+  touches the record, so a record is written once and never changed (its `bundle_sha256`
+  stays None; records exported before HR5 keep theirs). When the record can't be saved
+  (`NoSpace`, or another write error), the run is "Completed, not saved": the workspace keeps
+  it with why (`Workspace.not_saved`), and `POST /api/v1/run/save` (Save again) publishes it
+  under the same run id, even while another training runs. The next finished training
+  replaces it, and nothing keeps it across a restart (not promised).
+- A saved run is deleted only when the user asks, after the page or the CLI named its
+  files and their sizes (HR4a, `toolkit/core/services/ids/run_removal.py`; nothing is ever
+  deleted on its own). Under the one lock of the run files, its importance results go first,
+  then its bundle if the user ticked it (kept, it is an unregistered bundle on purpose), its
+  record last. A file that can't be removed (on Windows: open in another program) stops the
+  delete: the record stays, the run is still listed, and the delete can be tried again. An
+  importance result computed meanwhile finds no record and is not published. A workspace
+  holding the run's export forgets it once its bundle is gone, so Export saves it again.
+- The storage report (HR4b, `toolkit/core/services/storage.py`) counts every file of the
+  instance once, by kind, with its size, then the total and the disk's free space, and names
+  the leftovers: an importance result without its record or for a model the record doesn't
+  list, an unregistered bundle (its run was deleted), an incomplete bundle, a damaged file
+  (or one of a newer version), a temporary file a stop left. It only reads: it deletes
+  nothing, and a bundle's kind comes from its header, never unpickled.
+- An unregistered bundle can be registered again (HR4b,
+  `toolkit/core/services/ids/registration.py`): the bundle carries the copy of its record it
+  was signed with, and records never change. The whole file's HMAC is checked first, read
+  1 MiB at a time (`bundle.signature_matches`), with nothing deserialized; then the copy must
+  be this run's record (its run id, a schema this toolkit understands, the bundle's models
+  among its own); it is the record as its training saved it, byte for byte (tested; it
+  doesn't name its bundle, HR5). It is published under the one lock of the run files and never replaces a record.
+  A bundle exported before the manifest held its record can't be registered.
+- The storage's limits (HR4c), neither of which deletes anything: `publish.publish_bytes`
+  (records, importance results, bundles) and the scan report's writer first check that the
+  disk keeps `TOOLKIT_MIN_FREE_MB` (1 GB) free after the new file (`disk.require_free`),
+  else `NoSpace` with its message, said by the web (507 `NO_SPACE`), the importance job
+  ("Not saved: …") and the CLI (exit 2); nothing is written then, not even a temporary file.
+  Past `TOOLKIT_STORAGE_WARN_MB` (20 GB), and under the floor, the storage report warns, and
+  the web server's log says so at its start. A training whose record is refused is
+  "Completed, not saved" until Save again (HR5).
+- A bundle's state comes from its header (HR3d, `bundle.header_state`): the format records
+  its lengths, so its first bytes and the file's size say whether it is whole, with no HMAC
+  and nothing unpickled, and no length is read past the file's size. **Exported**: the
+  lengths give its size (its signature is checked when it is used); **Incomplete**: they
+  don't, or the file stops before them (an export cut off before HR3a wrote the final name
+  directly); **Verification failed**: a load in this process refused it for its signature
+  (kept by `BundleStore` in memory: the file is never changed, RD4). An incomplete bundle is
+  listed, never deleted on its own; an export it blocks says so. **Not exported** (a run
+  without a bundle) comes with the record of every training (HR5).
+- One web server per instance (`toolkit/web/data/instance_lock.py`, HR3b): an operating-system
+  lock on `instance/web.lock` (`msvcrt`, `fcntl`), taken before the port and released by the
+  system when the process ends; the holder writes its process id and address after the
+  locked byte, so a second server says which one holds the folder. Only the holder clears
+  publish's temporary files in `runs/` and `bundles/`, at its start. The command line takes
+  no lock: it writes in neither.
+- The jobs and the workspaces are in the server's memory, so a stop loses them; the jobs
+  journal says which (`toolkit/web/data/journal.py`, HR3c): `JobRunner` writes a JSON line
+  to `instance/jobs.journal` when a job is asked for, starts and ends (flushed, `fsync`;
+  a failure is a warning, never a stop). The lock holder reads it at its start: a job asked
+  for and never ended is `INTERRUPTED`, said in the terminal and once per session on its
+  page, and the journal starts again empty. A torn line is not JSON and is left out.
 
 ```
  this computer                                  the internet
  +------------------------------------+
  | web trainer, IDS, bundles, datasets| ---- nothing ----
  |                                    |
- | scanner ---- product names --------|------> NVD (CVE lookups; always)
- |         ---- product names --------|------> OpenRouter (--ai, or yes; and a key)
- |         ---- the public IP --------|------> AbuseIPDB (--abuseipdb, or yes; and a key)
+ | scanner ---- product names --------|------> NVD (CVE lookups; unless --no-nvd)
+ |         ---- product names --------|------> OpenRouter (a key; unless --no-ai or no)
+ |         ---- the public IP --------|------> AbuseIPDB (a key; unless --no-abuseipdb or no)
  +------------------------------------+
 ```
 
-"or yes" is the scanner's question when it runs without flags. Each scan prints, before the
-first target, what it may send to each service or why it sends nothing (`online_plan` in
-`toolkit/core/services/recon/scan.py`: no key, not asked for, the answer no, no public
-address), and in its summary how many requests went to each (`Intel.sent`, counted by the
+"or no" is the scanner's question when it runs without flags (yes on Enter). Each scan
+prints, before the first target, what it may send to each service or why it sends nothing
+(`online_plan` in `toolkit/core/services/recon/scan.py`: no key, turned off, the answer no,
+no public address), and in its summary how many requests went to each (`Intel.sent`, counted by the
 scan's `Session` in `toolkit/core/data/recon/lookup.py`).
+
+Where each outside connection is made, all in the data layer:
+
+| Module | Connects to |
+|---|---|
+| `toolkit/core/data/recon/nvd.py` | NVD (CVE lookups), through the scan's session in `lookup.py` |
+| `toolkit/core/data/recon/openrouter.py` | OpenRouter (the AI explanation), the same session |
+| `toolkit/core/data/recon/abuseipdb.py` | AbuseIPDB (IP reputation), the same session |
+| `toolkit/core/data/recon/resolve.py` | DNS: a target's name to its addresses (before the authorization question) |
+| `toolkit/core/data/recon/ping.py` | the target, through this computer's `ping` program |
+| `toolkit/core/data/recon/scanner.py`, `probes.py`, `services.py` | the target's ports: TCP connections and UDP probes |
+| `toolkit/core/data/recon/nmap.py`, `nmap_run.py` | the target, through nmap when it is chosen |
+
+`tests/test_architecture.py` keeps sockets, HTTP and child processes out of the services
+layer (and `tests/ml/test_core_rules.py` out of the ML core). That test proves this rule
+only: where the code may connect, not what it sends. What is sent, and when, is pinned by
+`tests/recon/test_scan_contract.py`.
 
 ## 10. Where this differs from the plan's target structure
 
@@ -529,3 +660,33 @@ stays in its folder.
 | keep a function above complexity 10, or a file of `toolkit/` above 400 lines | first see whether splitting it helps; if not, `# noqa: C901` with its reason (an entry in `SUPPRESSIONS`), or the file's exact length and a reason in `LONG_FILES` (`tests/exceptions_inventory.py`) | - | ruff (C901), `tests/test_exceptions_inventory.py`, `tests/test_file_sizes.py` |
 | show a result on a page as a panel of label/value tiles | `summaryPanel`, `statTile`, `code`, `quiet` and `chips` in `toolkit/web/ui/static/js/summary.js` (every value set as text); the styles are `.summary-panel`, `.stat-grid`, `.stat-tile` and `.chip` in `toolkit/web/ui/static/css/app.css`; render from the answer's fields, never by parsing its `message` | the answer's fields in [web_api.md](web_api.md) | `tests/web/test_upload_card.py`, `tests/security/test_xss.py` |
 | add a class, function or method to `toolkit/` | a docstring: what it is or returns, and what is not obvious (what may leave the computer, a check that must come first, a limit, why); dunder methods and functions defined inside a function need none, their parent's docstring says what matters about them | - | `tests/test_docstrings.py` |
+
+## 12. Test levels and manual checks
+
+Every test file has one level, in `tests/levels.py`; `tests/conftest.py` marks each test
+with it, so `pytest -m unit` (or `integration`, `e2e`) runs one level, and
+`tests/test_levels.py` fails when a test file has none. A file's level is its heaviest
+test's, so the integration count includes some tests that would be unit tests on their own.
+
+| Level | What it covers | Tests at HC4 (2026-11-02) |
+|---|---|---:|
+| unit | logic in memory, with fakes for the network and the OS; the checks that read the repository's own files (docs, layers, sizes, docstrings) | 320 |
+| integration | the Flask test client, files written to a temporary folder or read from `tests/fixtures/`, a model really fitted, local sockets, a helper process (node for the page's modules, a stand-in for nmap) | 1,185 |
+| e2e | the toolkit run as its own process (`python -m toolkit ...`), or a real program of this computer (`ping`) | 113 |
+
+A count of tests says how much is checked automatically, not that the toolkit works for a
+user. Real use is checked by hand, on Windows 10 Enterprise LTSC 2021 with Python 3.14.3:
+
+| Date | Manual check | Record |
+|---|---|---|
+| 2026-10-20 | Every menu path, by a script that types the answers (5.0-alpha, 5.0-rc2) | [alpha](release/5.0-alpha-menu-walkthrough.md), [rc2](release/5.0-rc2-menu-walkthrough.md) |
+| 2026-10-20 | The old web flow replayed after the alpha changes (5.0-beta) | [5.0-beta](release/5.0-beta-old-web-flow.md) |
+| 2026-10-20 | The web trainer on the v5 core, every step clicked, at phone width (5.0-rc1) | [5.0-rc1](release/5.0-rc1-web-trainer.md) |
+| 2026-10-20 | The CLI and the web give the same predictions on real data; the scanner's fixes (5.0-rc2) | [5.0-rc2](release/5.0-rc2-cli-and-scanner.md) |
+| 2026-10-20 | A fresh clone, every menu path and the pages (5.0 final) | [5.0 final](release/5.0-final-ui-and-install.md) |
+| 2026-10-25 | The full dataset files, a fresh install, the browser (5.1 gate) | [5.1 gate](release/5.1-gate.md) |
+| 2026-10-26 to 2026-10-30 | The full files, a fresh install, the layout, contrast and keyboard audits (5.2 gate) | [5.2 gate](release/5.2-gate.md) |
+| 2026-11-02 | v5.3 steps: each change seen in the browser in a scratch instance | each step's entry in [V5.3_CHECKLIST.md](V5.3_CHECKLIST.md) |
+
+Not checked yet: Linux and macOS on real machines, browsers other than Chromium, a screen
+reader, and a user who is not the developer (HV1–HV3 in the checklist).

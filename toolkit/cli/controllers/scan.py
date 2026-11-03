@@ -34,6 +34,7 @@ This module is the command: its flags or questions make a ``ScanRequest``; the s
 from __future__ import annotations
 
 import argparse
+import errno
 import sys
 import time
 from collections.abc import Mapping, Sequence
@@ -67,8 +68,8 @@ from ..ui import scan as screen
 NOT_AUTHORIZED = "Scan cancelled: only scan systems you are authorised to scan."
 # The flags that only make sense with a TARGET (without one, the scanner asks instead)
 NMAP_FLAGS = ("service_detection", "timing", "scripts", "os_detect")  # only with --engine nmap
-SCAN_FLAGS = ("ports", "protocol", "verbose", "ai", "abuseipdb", "scan_unresponsive", "export",
-              "engine", *NMAP_FLAGS)
+SCAN_FLAGS = ("ports", "protocol", "verbose", "no_nvd", "no_ai", "ai", "no_abuseipdb", "abuseipdb",
+              "scan_unresponsive", "export", "engine", *NMAP_FLAGS)
 
 
 def check_engine(engine: str, options: NmapOptions, protocols: list[str]) -> None:
@@ -107,9 +108,10 @@ def ask_request(keys: Mapping[str, str], limits: ScanConfig, authorized: bool,
     if not screen.confirm_authorized(target_text, authorized):
         raise ValueError(NOT_AUTHORIZED)
     verbose = screen.ask_verbose()
+    nvd = screen.ask_nvd()
     use_ai = screen.ask_ai(ai_model()) if keys["openrouter"] else False
     return ScanRequest(target_text, targets, ports, protocols, verbose, use_ai,
-                       interactive=True, engine=engine, nmap_options=options)
+                       interactive=True, engine=engine, nmap_options=options, nvd=nvd)
 
 
 def request_from_flags(args: argparse.Namespace, keys: Mapping[str, str],
@@ -126,15 +128,16 @@ def request_from_flags(args: argparse.Namespace, keys: Mapping[str, str],
     check_engine(engine, options, protocols)
     if not screen.confirm_authorized(args.target, args.i_am_authorized):
         raise ValueError(NOT_AUTHORIZED)
-    use_ai = args.ai and bool(keys["openrouter"])
+    # HS4: each service is on when its key is set, unless its --no- flag turns it off
+    use_ai = not args.no_ai and bool(keys["openrouter"])
     if args.ai:
         screen.flag_notice("--ai", None if use_ai else KEY_VARIABLES["openrouter"], ai_model())
-    abuseipdb = args.abuseipdb and bool(keys["abuseipdb"])
+    abuseipdb = not args.no_abuseipdb and bool(keys["abuseipdb"])
     if args.abuseipdb:
         screen.flag_notice("--abuseipdb", None if abuseipdb else KEY_VARIABLES["abuseipdb"])
     return ScanRequest(args.target, targets, ports, protocols, args.verbose, use_ai,
                        abuseipdb, args.scan_unresponsive, args.export, engine=engine,
-                       nmap_options=options)
+                       nmap_options=options, nvd=not args.no_nvd)
 
 
 def build_parser(prog: str | None = None) -> argparse.ArgumentParser:
@@ -143,8 +146,9 @@ def build_parser(prog: str | None = None) -> argparse.ArgumentParser:
         prog=prog, formatter_class=argparse.RawDescriptionHelpFormatter,
         description="Port scanner. Only scan systems you are authorised to scan.\n\n"
                     "Without a TARGET it asks its questions. With one it asks nothing but the\n"
-                    "authorization question, and sends nothing online but the CVE lookups\n"
-                    "unless --ai or --abuseipdb says so.",
+                    "authorization question. NVD, the AI and AbuseIPDB are used when their key\n"
+                    "is set (NVD needs none) unless --no-nvd, --no-ai or --no-abuseipdb turns\n"
+                    "them off.",
         epilog="example:\n  %(prog)s 192.168.1.10 -p 1-1024 --protocol both --export csv")
     parser.add_argument("target", nargs="?", metavar="TARGET",
                         help="IPv4 or IPv6 address, network (e.g. 192.168.1.0/24) or domain")
@@ -155,13 +159,22 @@ def build_parser(prog: str | None = None) -> argparse.ArgumentParser:
                         help="default tcp")
     parser.add_argument("-v", "--verbose", action="store_true",
                         help="show the progress while scanning")
-    parser.add_argument("--ai", action="store_true",
-                        help="send the detected software names (never the raw banner) to "
-                             f"OpenRouter for an AI explanation (needs "
-                             f"{KEY_VARIABLES['openrouter']})")
-    parser.add_argument("--abuseipdb", action="store_true",
-                        help="send public target IPs to AbuseIPDB for a reputation check "
-                             f"(needs {KEY_VARIABLES['abuseipdb']})")
+    parser.add_argument("--no-nvd", action="store_true",
+                        help="don't look up the known CVEs in NVD (on by default: it gets the "
+                             "detected software name and version)")
+    ai = parser.add_mutually_exclusive_group()
+    ai.add_argument("--no-ai", action="store_true",
+                    help="don't send the detected software names (never the raw banner) to "
+                         f"OpenRouter for an AI explanation (on when "
+                         f"{KEY_VARIABLES['openrouter']} is set)")
+    ai.add_argument("--ai", action="store_true",
+                    help="the default when the key is set; kept for older commands")
+    abuse = parser.add_mutually_exclusive_group()
+    abuse.add_argument("--no-abuseipdb", action="store_true",
+                       help="don't send public target IPs to AbuseIPDB for a reputation check "
+                            f"(on when {KEY_VARIABLES['abuseipdb']} is set)")
+    abuse.add_argument("--abuseipdb", action="store_true",
+                       help="the default when the key is set; kept for older commands")
     parser.add_argument("--scan-unresponsive", action="store_true",
                         help="also scan hosts that don't answer ping (default: skip them)")
     parser.add_argument("--export", type=str.lower, choices=list(EXPORT_FORMATS),
@@ -223,6 +236,11 @@ def main(argv: Sequence[str] | None = None, prog: str | None = None) -> int:
     except (EOFError, KeyboardInterrupt):
         screen.cancelled()
         return 130
+    except OSError as error:  # the report not saved: the disk is (too) full (HR4c)
+        if error.errno != errno.ENOSPC:
+            raise
+        screen.say(error)
+        return 2
 
 
 def run(argv: Sequence[str] | None = None, prog: str | None = None) -> None:

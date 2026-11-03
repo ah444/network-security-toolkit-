@@ -55,12 +55,14 @@ def _cve(cve_id, score):
 
 
 def test_parses_cves_and_cvss(nvd_reply):
-    cves = nvd.parse_nvd(nvd_reply(OPENSSH))
+    cves = nvd.parse_nvd(nvd_reply(OPENSSH), "name")
     assert cves == [
-        {"id": "CVE-2023-28531", "cvss": 9.8, "cvss_version": "3.1", "severity": "CRITICAL"},
-        {"id": "CVE-2021-36368", "cvss": 3.7, "cvss_version": "3.1", "severity": "LOW"},
+        {"id": "CVE-2023-28531", "cvss": 9.8, "cvss_version": "3.1", "severity": "CRITICAL",
+         "match": "name"},
+        {"id": "CVE-2021-36368", "cvss": 3.7, "cvss_version": "3.1", "severity": "LOW",
+         "match": "name"},
     ], "worst first; CVSS 3.1 primary score preferred over v2 and secondary sources"
-    assert nvd.parse_nvd(nvd_reply(EMPTY)) == []
+    assert nvd.parse_nvd(nvd_reply(EMPTY), "name") == []
 
 
 def test_severity_bands():
@@ -78,8 +80,9 @@ def test_bad_entries_are_skipped():
             {"type": "Primary", "cvssData": {"version": "3.1", "baseScore": 42}}]}}},
         {"cve": {}},
     ]}
-    assert nvd.parse_nvd(data) == [
-        {"id": "CVE-2024-12345", "cvss": None, "cvss_version": "", "severity": "UNKNOWN"}]
+    assert nvd.parse_nvd(data, "version") == [
+        {"id": "CVE-2024-12345", "cvss": None, "cvss_version": "", "severity": "UNKNOWN",
+         "match": "version"}]
 
 
 @pytest.mark.parametrize(("software", "names"), [
@@ -108,6 +111,7 @@ def test_a_known_product_is_matched_by_version(nvd_reply, fake_session, no_nvd_w
     assert [c["cvss"] or 0 for c in found["cves"]] == sorted(
         (c["cvss"] or 0 for c in found["cves"]), reverse=True), "worst first"
     assert found["cve_source"] == f"version match ({OPENSSH_CPE})"
+    assert {c["match"] for c in found["cves"]} == {"version"} and not found["severity_unconfirmed"]
     ((method, url, kwargs),) = session.calls
     assert url == nvd.NVD_URL and kwargs["params"] == {
         "virtualMatchString": OPENSSH_CPE, "resultsPerPage": nvd.PAGE, "startIndex": 0,
@@ -122,6 +126,7 @@ def test_another_product_is_looked_up_by_keyword(nvd_reply, fake_session, no_nvd
     found = recon_intel.Intel({}, session=session).lookup("Jetty 9.4.1")
     assert [c["id"] for c in found["cves"]] == ["CVE-2023-28531", "CVE-2021-36368"]
     assert found["cve_source"] == "keyword search (no version match for this product)"
+    assert {c["match"] for c in found["cves"]} == {"name"} and found["severity_unconfirmed"],         "found by the name only: the version was not checked"
     ((_, _, kwargs),) = session.calls
     assert kwargs["params"] == {"keywordSearch": "Jetty 9.4.1", "resultsPerPage": nvd.NVD_RESULTS,
                                 "noRejected": ""}
@@ -137,6 +142,7 @@ def test_no_version_match_falls_back_to_the_keyword_search(nvd_reply, no_nvd_wai
     assert len(found["cves"]) == 2
     nothing = recon_intel.Intel({}, session=ByQuery({})).lookup("nginx 1.25.3")
     assert (nothing["severity"], nothing["cves"]) == ("NO KNOWN CVE", [])
+    assert not nothing["severity_unconfirmed"]
 
 
 def test_every_cpe_name_once_each_cve_once(no_nvd_wait):
@@ -179,7 +185,7 @@ def test_pages_stop_at_the_limit_and_at_an_empty_page(no_nvd_wait):
 @pytest.mark.parametrize("reply", [[1, 2], "text", None])
 def test_a_reply_that_is_not_an_object_is_a_lookup_error(fake_session, no_nvd_wait, reply):
     found = recon_intel.Intel({}, session=fake_session(get=reply)).lookup("Jetty 9.4.1")
-    assert found["errors"] == ["NVD: ValueError"] and found["severity"] == "UNKNOWN"
+    assert found["errors"] == ["NVD: ValueError"] and found["severity"] == "NOT CHECKED"
 
 
 def test_requests_are_spaced_without_a_key(nvd_reply, fake_session):
@@ -210,17 +216,19 @@ def test_the_source_is_shown_and_saved(tmp_path, capsys):
     from toolkit.core.services.recon import report
 
     found = {"cves": [{"id": "CVE-2024-6387", "cvss": 8.1, "cvss_version": "3.1",
-                       "severity": "HIGH"}], "cve_source": f"version match ({OPENSSH_CPE})",
+                       "severity": "HIGH", "match": "version"}],
+             "cve_source": f"version match ({OPENSSH_CPE})", "severity_unconfirmed": False,
              "max_cvss": 8.1, "severity": "HIGH", "ai_explanation": "", "errors": []}
     entry = report.make_entry("10.0.0.5", PortResult(22, "tcp", "open", "ssh", "SSH-2.0-x"),
                               "OpenSSH 8.9", found)
     screen.print_entry(entry)
     out = capsys.readouterr().out
-    assert "CVEs (NVD): CVE-2024-6387 (CVSS 8.1, HIGH)\n" in out
+    assert "CVEs (NVD): CVE-2024-6387 (CVSS 8.1, HIGH, version match)\n" in out
     assert f"CVE source: version match ({OPENSSH_CPE})\n" in out
     csv_file = scan_files.export_results([entry], "csv", tmp_path)
     header, row = csv_file.read_text(encoding="utf-8").splitlines()
-    assert header.endswith(",CVE source,Engine,CPE (nmap)")
-    assert row.endswith(f",version match ({OPENSSH_CPE}),builtin,")
+    assert header.endswith(",CVE source,Engine,CPE (nmap),Severity confirmed,"
+                           "Unconfirmed CVEs (name match)"), "the new columns come last"
+    assert row.endswith(f",version match ({OPENSSH_CPE}),builtin,,yes,")
     txt = scan_files.export_results([entry], "txt", tmp_path).read_text(encoding="utf-8")
     assert f"CVE source: version match ({OPENSSH_CPE})\n" in txt

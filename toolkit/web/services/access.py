@@ -8,6 +8,10 @@ the look-alikes 0, O, 1 and I (80 bits), grouped in fours to be typed. An unlock
 holds the start's ``run_id``, so a token or an unlock of an earlier start never works
 again. Five wrong tokens from one address within a minute lock that address out for the
 rest of the minute.
+
+A new token made on this computer (``lock_out``, HS1, RD1) changes the token and the
+``run_id`` at once, so every session unlocked before is locked again; the jobs those
+sessions asked for that still wait are cancelled and never start, a running one goes on.
 """
 
 from __future__ import annotations
@@ -19,10 +23,12 @@ import secrets
 import threading
 import time
 from collections import deque
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 
 from ...core.data.logs import add_secrets
 from .errors import TOO_MANY_TRIES, WRONG_TOKEN, ServiceError
+from .jobs import THIS_COMPUTER, Job, JobRunner
 
 log = logging.getLogger(__name__)
 
@@ -67,6 +73,23 @@ class Access:
     def __post_init__(self) -> None:
         add_secrets(self.token, normalized(self.token))
 
+    def renew(self) -> str:
+        """A new token and a new ``run_id``: every session unlocked before is locked again at
+        once. The new token is a registered secret before it is used."""
+        token = new_token()
+        add_secrets(token, normalized(token))
+        with self._lock:
+            self.token, self.run_id = token, secrets.token_hex(16)
+        return token
+
+    def refusal(self, job: Job) -> str | None:
+        """Why ``job`` may not start: it was asked for under an unlock older than the last new
+        token (None: this computer's job, or one of the current unlock)."""
+        if job.origin.unlock in (None, self.run_id):
+            return None
+        return (f"{job.kind.title} cancelled before it started: the access token was changed "
+                "on the toolkit's computer.")
+
     def unlock(self, typed: str, address: str) -> str:
         """The ``run_id`` an unlocked session keeps, when ``typed`` is the token;
         WRONG_TOKEN (401) otherwise, TOO_MANY_TRIES (429) after MAX_TRIES wrong ones."""
@@ -86,3 +109,25 @@ class Access:
         log.warning("A wrong access token from %s", address)
         raise ServiceError("That isn't the access token. It is shown in the terminal where "
                            "the toolkit was started.", WRONG_TOKEN)
+
+
+def lock_out(access: Access, runners: Iterable[JobRunner]) -> tuple[str, int]:
+    """A new token (``Access.renew``), then the jobs other computers asked for under an older
+    unlock that still wait are cancelled (a running one goes on): the new token and how many
+    were cancelled."""
+    token = access.renew()
+    cancelled = 0
+    for runner in runners:
+        for job in runner.active():
+            reason = access.refusal(job)
+            if reason is not None and runner.cancel_waiting(job, reason):
+                cancelled += 1
+    log.info("A new access token was made on this computer; waiting jobs of other computers "
+             "cancelled: %d", cancelled)
+    return token, cancelled
+
+
+def remote_jobs(runners: Iterable[JobRunner]) -> list[tuple[JobRunner, Job]]:
+    """The jobs other computers asked for that wait or run, with their runner."""
+    return [(runner, job) for runner in runners for job in runner.active()
+            if job.origin.source != THIS_COMPUTER]

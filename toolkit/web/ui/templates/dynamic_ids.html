@@ -18,11 +18,13 @@
       <li class="nav-item"><a href="/" class="nav-link">Home</a></li>
       <li class="nav-item"><a href="/dynamic_ids" class="nav-link">Dynamic Intrusion Detection System</a></li>
       <li class="nav-item"><a href="/scan" class="nav-link">Port Scanner</a></li>
+      <li class="nav-item"><a href="/runs" class="nav-link">Saved Runs</a></li>
       <li class="nav-item"><button type="button" id="themeToggle" class="nav-link theme-toggle" hidden>Theme: Auto</button></li>
     </ul>
   </nav>
   <script src="{{ url_for('static', filename='js/navbar.js') }}"></script>
   {% if network_banner %}<p class="network-banner" role="note">{{ network_banner }}</p>{% endif %}
+  {% for line in interrupted %}<p class="warning-message interrupted-notice" role="status">{{ line }}</p>{% endfor %}
 
   <div class="container">
     <h1>Dynamic IDS Model Trainer</h1>
@@ -131,7 +133,7 @@
             <input type="range" id="trainTestSlider" name="trainTestSlider" min="10" max="50" value="20" step="5">
             <span id="splitLabel" class="slider-label">Train: 80% | Test: 20%</span>
           </div>
-          <p class="section-description">Models are compared by 3-fold cross-validation on the training rows; the test rows are scored once, at the end. Datasets with an official test file (NSL-KDD) use it instead.</p>
+          <p class="section-description">Models are compared by 3-fold cross-validation on the training rows; the test rows are scored only after the choice, at the end. Datasets with an official test file (NSL-KDD) use it instead.</p>
         </div>
         <button id="analyzeClassBtn" class="btn">Analyze Class Distribution</button>
         <div id="classDistributionResult" class="message" role="status"></div>
@@ -229,6 +231,7 @@
             <span class="label" id="modelSelectionLabel">Select Models to Train:</span>
             <div id="modelSelection" class="checkbox-list" role="group" aria-labelledby="modelSelectionLabel"></div>
           </div>
+          <p class="field-hint">When a training ends, it is saved on this computer: its scores, the class names, the column names and typical values of each column, not the rows of your file. You can delete it on the Saved Runs page; nothing is deleted on its own.</p>
           <button type="submit" class="btn">Train Model</button>
           <div id="trainingProgress" class="training-progress" hidden aria-live="polite" tabindex="-1">
             <progress id="trainingProgressBar" max="100" value="0" aria-label="Training progress"></progress>
@@ -246,6 +249,23 @@
             <button id="showConfusionMatrixBtn" class="btn btn-sm">Show Matrix</button>
           </div>
           <div id="confusionMatrixDisplay" class="confusion-matrix-container"></div>
+        </div>
+
+        <!-- v5.3 F3e: what a model relies on, calculated only when Calculate is clicked (explain.js) -->
+        <div id="importanceSection" class="subsection" hidden>
+          <h3>What the model relies on</h3>
+          <p class="field-hint">Each feature's values are shuffled in turn on the test rows, and the drop in macro-F1 is measured: the bigger the drop, the more the model relies on that feature. It takes about as long as a training of that model. Nothing starts until you click Calculate.</p>
+          <div class="form-group">
+            <label for="importanceModel" class="label">Model:</label>
+            <select id="importanceModel" name="importanceModel"></select>
+            <button type="button" id="importanceBtn" class="btn btn-sm">Calculate</button>
+          </div>
+          <div id="importanceProgress" class="training-progress" hidden aria-live="polite" tabindex="-1">
+            <progress id="importanceProgressBar" max="100" value="0" aria-label="Calculation progress"></progress>
+            <span id="importanceProgressText"></span>
+            <button type="button" id="cancelImportanceBtn" class="btn" disabled>Cancel</button>
+          </div>
+          <div id="importanceResult" class="message" role="status" tabindex="-1"></div>
         </div>
       </div>
       <div class="step-actions">
@@ -271,6 +291,7 @@
           </details>
         </form>
         <div id="predictionResult" class="message" role="status"></div>
+        <div id="predictionWhy"></div>
         <div class="predict-file">
           <h4>Predict a CSV File</h4>
           <p class="section-description">Labels every row of a .csv or .txt file with the algorithm chosen above. The file needs the model's feature columns; if it also has the label column, the predictions are compared with it.</p>
@@ -316,6 +337,7 @@
           </details>
         </form>
         <div id="loadedPredictionResult" class="message" role="status"></div>
+        <div id="loadedPredictionWhy"></div>
         <div class="predict-file">
           <h4>Predict a CSV File</h4>
           <p class="section-description">Labels every row of a .csv or .txt file with the algorithm chosen above (loaded bundle). The file needs the model's feature columns; if it also has the label column, the predictions are compared with it.</p>

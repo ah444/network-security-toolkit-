@@ -7,7 +7,9 @@ Each tool calls ``setup_logging(tool)`` once when it starts (never on import):
 - console (stderr) at ``console_level``;
 - one plain-text line per record: ISO time, level, logger name, message;
 - library warnings (``warnings.warn``) are logged too, so they stay visible (B19);
-- third-party HTTP libraries are capped at WARNING, so DEBUG shows our own lines only.
+- third-party HTTP libraries are capped at WARNING, so DEBUG shows our own lines only;
+- first, ``instance/`` and ``.env`` are limited to this account (``protect``, HS5): a path
+  that can't be is a warning, never a stop.
 
 Redaction happens in the formatter, so it also covers tracebacks and third-party records:
 the exact values of known secrets (the API keys and ``TOOLKIT_SECRET_KEY`` from the
@@ -26,6 +28,7 @@ from collections.abc import Mapping
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
+from .protect import protect_private_data
 from .settings import instance_dir, log_level
 
 REDACTED = "[REDACTED]"
@@ -84,6 +87,7 @@ def setup_logging(tool: str, *, console_level: int = logging.WARNING,
     file_level = log_level(environ)
     add_secrets(*(environ.get(name, "") for name in SECRET_VARIABLES))
 
+    problems = protect_private_data(environ)  # HS5: before anything is written in instance/
     path = instance_dir(environ) / "logs" / f"{tool}.log"
     path.parent.mkdir(parents=True, exist_ok=True)
     formatter = RedactingFormatter(LINE_FORMAT, TIME_FORMAT)
@@ -105,4 +109,6 @@ def setup_logging(tool: str, *, console_level: int = logging.WARNING,
     for name in QUIET_LIBRARIES:
         logging.getLogger(name).setLevel(max(logging.WARNING, file_level))
     logging.captureWarnings(True)
+    for problem in problems:
+        logging.getLogger(__name__).warning(problem)  # in the log and on the console
     return path

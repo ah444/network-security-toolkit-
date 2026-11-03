@@ -12,14 +12,16 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import TextIO, TypedDict
 
-from ..settings import instance_dir
-from .findings import CveEntry
+from ..disk import require_free
+from ..settings import instance_dir, min_free_mb
+from .findings import CveEntry, match_label
 from .text import csv_cell
 
 EXPORT_FORMATS = ("txt", "json", "csv")
 CSV_HEADER = ["Target", "Port", "Protocol", "Service", "Banner", "Software", "Severity (CVSS)",
               "Max CVSS", "CVEs (NVD)", "AI explanation (may be wrong)", "Lookup errors",
-              "OS hint", "CVE source", "Engine", "CPE (nmap)"]
+              "OS hint", "CVE source", "Engine", "CPE (nmap)", "Severity confirmed",
+              "Unconfirmed CVEs (name match)"]  # the last two since HC3, at the end
 
 
 class ReportEntry(TypedDict):
@@ -35,6 +37,7 @@ class ReportEntry(TypedDict):
     cve_source: str  # how NVD found them: by version (CPE names) or by keyword
     max_cvss: float | None
     severity: str
+    severity_unconfirmed: bool  # the worst CVE was found by the product's name only
     ai_explanation: str
     lookup_errors: list[str]
     os_hint: str  # the host's OS guess and its evidence, the same on each of its entries
@@ -46,6 +49,24 @@ def _cve_list(entry: ReportEntry) -> str:
     """The entry's CVEs as ``ID (CVSS)``, separated by commas (``?`` for no score)."""
     return ", ".join(f"{c['id']} ({c['cvss'] if c['cvss'] is not None else '?'})"
                      for c in entry["cves"])
+
+
+def _matched_cves(entry: ReportEntry) -> str:
+    """The entry's CVEs as ``ID (CVSS, how it was found)``, separated by commas."""
+    return ", ".join(f"{c['id']} ({c['cvss'] if c['cvss'] is not None else '?'}, "
+                     f"{match_label(c)})" for c in entry["cves"])
+
+
+def severity_text(entry: ReportEntry) -> str:
+    """The severity, with "(unconfirmed)" when the worst CVE was found by name only."""
+    return entry["severity"] + (" (unconfirmed)" if entry["severity_unconfirmed"] else "")
+
+
+def _confirmed(entry: ReportEntry) -> str:
+    """The CSV's "Severity confirmed": empty without a CVE."""
+    if not entry["cves"]:
+        return ""
+    return "no (name match only)" if entry["severity_unconfirmed"] else "yes"
 
 
 def _write_json(entries: Sequence[ReportEntry], handle: TextIO) -> None:
@@ -63,7 +84,14 @@ def _write_csv(entries: Sequence[ReportEntry], handle: TextIO) -> None:
             e["target"], e["port"], e["protocol"], e["service"], e["banner"], e["software"],
             e["severity"], e["max_cvss"], _cve_list(e), e["ai_explanation"],
             "; ".join(e["lookup_errors"]), e["os_hint"], e["cve_source"], e["engine"],
-            " ".join(e["cpe"]))])
+            " ".join(e["cpe"]), _confirmed(e),
+            ", ".join(c["id"] for c in e["cves"] if c["match"] != "version"))])
+
+
+def _no_cves(entry: ReportEntry) -> str:
+    """What the CVE line says without a CVE: ``not checked`` when they were not looked up
+    (HS4: never shown as clean), else ``none``."""
+    return "not checked" if entry["severity"] == "NOT CHECKED" else "none"
 
 
 def _write_txt(entries: Sequence[ReportEntry], handle: TextIO) -> None:
@@ -72,8 +100,8 @@ def _write_txt(entries: Sequence[ReportEntry], handle: TextIO) -> None:
         handle.write(f"Target: {e['target']}\nOS hint: {e['os_hint'] or 'none'}\n"
                      f"Port: {e['port']}/{e['protocol']}\n"
                      f"Service: {e['service']}\nBanner: {e['banner']}\n"
-                     f"Software: {e['software']}\nSeverity (CVSS): {e['severity']}\n"
-                     f"CVEs (NVD): {_cve_list(e) or 'none'}\n"
+                     f"Software: {e['software']}\nSeverity (CVSS): {severity_text(e)}\n"
+                     f"CVEs (NVD): {_matched_cves(e) or _no_cves(e)}\n"
                      f"CVE source: {e['cve_source'] or 'none'}\n"
                      f"AI explanation (may be wrong): {e['ai_explanation']}\n"
                      f"Lookup errors: {'; '.join(e['lookup_errors']) or 'none'}\n"
@@ -108,6 +136,7 @@ def export_results(entries: Sequence[ReportEntry], fmt: str,
     text = report_text(entries, fmt)
     directory = Path(directory) if directory else scans_dir()
     directory.mkdir(parents=True, exist_ok=True)
+    require_free(directory, len(text.encode("utf-8")), min_free_mb())  # HR4c: NoSpace
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     for number in range(1000):
         path = directory / f"scan-{stamp}{f'-{number}' if number else ''}.{fmt}"

@@ -65,12 +65,6 @@ def test_nmaps_choices_are_sent_only_with_nmap(modules):
         assert request.index(field + ":") > request.index('if (body.engine === "nmap")'), field
 
 
-def test_choices_without_their_key_are_off(page, modules):
-    for box in ("scanAbuse", "scanAi"):
-        assert re.search(rf'id="{box}" aria-describedby="{box}Note"', page)
-    assert 'byId(box).disabled = !options.keys[key]' in modules["scan.js"]
-
-
 def test_the_log_is_asked_for_from_its_last_line(page, modules):
     assert 'getJSON(jobUrl, { since: logSize })' in modules["scanrun.js"]
     assert ('<ol id="scanLog" class="scan-log" tabindex="0" role="log" aria-live="off" '
@@ -82,6 +76,12 @@ def test_cve_ids_are_text_never_links(modules):
     results = modules["scanresults.js"]
     assert 'el("a"' not in results and "href" not in results and "nvd.nist.gov" not in results
     assert 'el("span", { class: "mono" }, cve.id)' in results
+
+
+def test_every_cve_shows_how_it_was_matched(modules):
+    results = modules["scanresults.js"]
+    assert '"version match"' in results and '"name match, unconfirmed"' in results
+    assert results.count("severityText(entry)") == 2, "the summary and the details"
 
 
 def test_the_downloads_are_the_report_route(page):

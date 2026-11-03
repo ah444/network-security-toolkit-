@@ -46,7 +46,7 @@ def _scan(repo_root, name):
     return scanner
 
 
-@pytest.mark.parametrize("name", ["home.html", "dynamic_ids.html", "scan.html"])
+@pytest.mark.parametrize("name", ["home.html", "dynamic_ids.html", "scan.html", "runs.html"])
 def test_viewport_lang_and_labels(repo_root, name):
     page = _scan(repo_root, name)
     assert page.html_lang == "en", f"{name}: <html lang> missing"
@@ -83,6 +83,7 @@ def test_status_messages_are_announced(repo_root):
     """Step 1.3e (plan §8, accessibility): every message area is a polite live region."""
     html = (repo_root / TEMPLATES / "dynamic_ids.html").read_text(encoding="utf-8")
     areas = re.findall(r'<div id="(\w+)" class="message"([^>]*)>', html)
-    assert len(areas) == 13  # + the two "Predict a CSV file" results (step 1.4f)
+    assert len(areas) == 14  # + the two "Predict a CSV file" results (step 1.4f), the importance
+    # (v5.3 F3e)
     assert [name for name, attrs in areas if 'role="status"' not in attrs] == []
     assert re.search(r'id="trainingProgress"[^>]*aria-live="polite"', html)

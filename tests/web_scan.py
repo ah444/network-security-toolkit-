@@ -62,7 +62,7 @@ class FakeCves:
     def lookup(self, subject):
         self.rec.sent["cves"].append(subject)
         return IntelFinding(cves=({"id": "CVE-2023-1", "cvss": 7.5, "cvss_version": "3.1",
-                                   "severity": "HIGH"},), source="offline")
+                                   "severity": "HIGH", "match": "version"},), source="offline")
 
 
 class FakeReputation(FakeCves):
@@ -95,8 +95,9 @@ def fake_network(monkeypatch):
     monkeypatch.setattr(FakeEngine, "rec", rec)
     monkeypatch.setitem(engines.ENGINES, "builtin", FakeEngine)
     monkeypatch.setattr(core_scan, "ping_host", ping)
-    monkeypatch.setattr(core_scan, "Intel", lambda keys, use_ai=False, stop=None: real_intel(
-        keys, use_ai, providers=[FakeCves(rec), FakeReputation(rec)], stop=stop))
+    monkeypatch.setattr(core_scan, "Intel", lambda keys, use_ai=False, stop=None, nvd=True:
+                        real_intel(keys, use_ai, stop=stop, providers=[
+                            *([FakeCves(rec)] if nvd else []), FakeReputation(rec)]))
     monkeypatch.setattr(targets, "first_address", resolve)
     monkeypatch.setattr(scan, "engine_problem", engine_problem)
     monkeypatch.setattr(scan, "load_api_keys", lambda: dict(rec.keys))

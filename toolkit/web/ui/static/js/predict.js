@@ -3,6 +3,7 @@
 
 import { send } from "./api.js";
 import { byId, el, fillSelect, scrollBox, setContent, show, table, watchFileInput } from "./dom.js";
+import { whyView } from "./explain.js";
 import { on } from "./state.js";
 
 // A one-row form with more features than this starts closed: a CSV file is the quicker
@@ -40,14 +41,18 @@ function formValues(containerId) {
   return values;
 }
 
-function predictWith(url, inputsId, algorithmId, resultId) {
+// One row predicted; its "Why?" (F3e) goes under the result, outside its live region, so a
+// screen reader announces the prediction only
+function predictWith(url, inputsId, algorithmId, resultId, whyId) {
   return async event => {
     event.preventDefault();
     const resultDiv = byId(resultId);
     resultDiv.textContent = "Predicting...";
+    setContent(byId(whyId));
     try {
       const result = await send(url, "POST", { values: formValues(inputsId), model: byId(algorithmId).value });
       resultDiv.textContent = "Predicted Value: " + result.prediction;
+      setContent(byId(whyId), whyView(result.why));
     } catch (error) {
       resultDiv.textContent = "Error: " + error.message;
     }
@@ -115,8 +120,11 @@ function showExport(result) {
   setContent(byId("exportResult"),
     el("p", {}, result.message),
     el("p", {}, "Run " + result.run_id + ", SHA-256 " + result.sha256.substring(0, 16) + "…"),
+    el("p", {}, "Its settings and scores are also saved with the other runs."),
     el("a", { href: result.download_url, download: result.download_name, class: "btn btn-sm" },
-       "Download " + result.download_name));
+       "Download " + result.download_name),
+    " ",
+    el("a", { href: "/runs#" + result.run_id, class: "btn btn-secondary btn-sm" }, "See it in Saved Runs"));
 }
 
 // A signed bundle, then a download link
@@ -133,9 +141,9 @@ async function exportRun(event) {
 
 export function setup() {
   byId("predictionForm").addEventListener("submit",
-    predictWith("/api/v1/run/predict", "dynamicInputs", "algorithmSelect", "predictionResult"));
+    predictWith("/api/v1/run/predict", "dynamicInputs", "algorithmSelect", "predictionResult", "predictionWhy"));
   byId("predictLoadedForm").addEventListener("submit",
-    predictWith("/api/v1/bundle/predict", "loadedDynamicInputs", "loadedAlgorithmSelect", "loadedPredictionResult"));
+    predictWith("/api/v1/bundle/predict", "loadedDynamicInputs", "loadedAlgorithmSelect", "loadedPredictionResult", "loadedPredictionWhy"));
   byId("exportForm").addEventListener("submit", exportRun);
   for (const parts of Object.values(BATCH)) {
     byId(parts.form).addEventListener("submit", predictFile(parts));
@@ -149,6 +157,8 @@ export function setup() {
     show(byId("predictionSection"));
     show(byId("exportSection"));
     setContent(byId("exportResult"));
+    setContent(byId("predictionResult"));  // a new run: the last row's answer came from the old one
+    setContent(byId("predictionWhy"));
     clearBatch(BATCH.run);  // a new run: the last file's labels came from the old one
   });
   on("bundle:loaded", result => {
@@ -156,6 +166,8 @@ export function setup() {
       value: model.id, text: model.name, selected: model.id === result.selected })));
     buildPredictionForm("loadedDynamicInputs", "loaded-feature-", result.features_info);
     show(byId("loadedFeaturesSection"));
+    setContent(byId("loadedPredictionResult"));
+    setContent(byId("loadedPredictionWhy"));
     clearBatch(BATCH.bundle);
   });
   on("workspace:resumed", answer => {  // after train.js has shown the run

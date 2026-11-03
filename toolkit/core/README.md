@@ -7,15 +7,22 @@ neither, and has no user interface: nothing here prints, asks, or uses Flask or 
 ```
 core/
   services/        what the tools do, with no I/O
-    ids/           the ML core: load, split, leakage guard, train, evaluate, bundles, predict
+    ids/           the ML core: load, split, leakage guard, train, evaluate, bundles, predict,
+                   saved runs compared, what a model relies on and why it predicts
     recon/         the scan, start to end: targets and limits, the scan, lookups, report
     ports.py       the three interfaces between layers: ModelStore, IntelProvider, ProgressSink
+    storage.py     the storage report: every file of the instance by kind (HR4b; only reads)
   data/            files, the network and the environment
     settings.py    every tunable setting and TOOLKIT_* variable, the data folder, .env
     keys.py        API keys and the AI model setting
     logs.py        one rotating log per tool, secrets redacted
     files.py       the text files the commands read and write
-    ids/           bundle files and the signing key, run records, dataset files
+    protect.py     instance/ and .env limited to this account (HS5)
+    publish.py     a new file published whole or not at all (HR3a)
+    disk.py        the instance's files and sizes, the disk's free space (HR4b) and
+                   the free space a new file must leave (HR4c)
+    ids/           bundle files and the signing key, run records, importance results
+                   (HR2), dataset files
     recon/         port checks, banner probes, ping, names to addresses, NVD, OpenRouter,
                    AbuseIPDB, scan report files
 ```
@@ -24,8 +31,9 @@ Rules that matter here:
 
 - `services/` never opens a file or a socket: it goes through `data/` or a port.
 - `ids` and `recon` never import each other.
-- The ML core sees the test split only once, after the model is chosen by cross-validation
-  on the training split; the leakage guard and the balancing recommendation read the
+- The ML core uses the test split only after the model is chosen by cross-validation on the
+  training split, never to train or to choose; the permutation importance reuses it
+  afterwards, as a diagnosis only; the leakage guard and the balancing recommendation read the
   training split only.
 - Nothing leaves the computer except through `data/recon/`: NVD gets product names and
   versions, OpenRouter (`--ai` or a yes) the same, AbuseIPDB (`--abuseipdb` or a yes) a

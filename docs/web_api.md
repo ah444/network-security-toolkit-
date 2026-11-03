@@ -51,24 +51,37 @@ the network").
 | POST | `/api/v1/dataset/feature-scores` | `target`, `k` (1-10,000, default 10), `test_size` | feature scores on the training split (`"inf"` for a feature with one value per class: JSON has no infinity) |
 | GET | `/api/v1/models` | none | the models that can be trained here |
 | POST | `/api/v1/jobs/training` | `target`, `features`, `models`, `balancing`, `test_size` | **202** and the job (see below) |
-| GET | `/api/v1/jobs/<job_id>` | `since` (a scan's log from this line on, default 0) | the job's state and progress; when done, the result: leaderboard, split, CV, leakage findings, confusion matrices (a training), or the scan's answer |
+| POST | `/api/v1/jobs/importance` | `model` (default: the selected one) | **202** and the job: the permutation importance of one of the session's models (see Explanations) |
+| GET | `/api/v1/jobs/<job_id>` | `since` (a scan's log from this line on, default 0) | the job's state and progress; when done, the result: leaderboard, split, CV, leakage findings, confusion matrices and `saved`/`not_saved` (a training: its record saved, or why not), or the scan's answer |
 | DELETE | `/api/v1/jobs/<job_id>` | none | **202**: a queued job is cancelled at once, a running one at its next step |
 | GET | `/api/v1/run/confusion` | `model` (default: the selected one) | test-split confusion matrix |
-| POST | `/api/v1/run/predict` | `values`: {feature: value}, `model` | prediction |
+| POST | `/api/v1/run/predict` | `values`: {feature: value}, `model` | `prediction`, `model` and `why` (see Explanations) |
 | POST | `/api/v1/run/predict-file` | multipart `file` (`.csv`/`.txt`), `model` | every row predicted: counts per class, matches, download (see below) |
-| POST | `/api/v1/run/export` | `name` (letters, digits, `_`, `-`; max 80) | signed bundle saved in `instance/bundles/` |
+| POST | `/api/v1/run/save` | none | the session's run saved again when its training couldn't save its record (HR5), under the same run id: `run_id`, `saved`; 409 `ALREADY_SAVED` once it is saved, 507 `NO_SPACE` while the disk is too full |
+| POST | `/api/v1/run/export` | `name` (letters, digits, `_`, `-`; max 80) | signed bundle saved in `instance/bundles/` (the run's record was saved by its training and isn't touched); 507 `NO_SPACE` when the disk would keep less than `TOOLKIT_MIN_FREE_MB` free |
 | GET | `/api/v1/run/bundle` | none | the exported bundle as a download |
 | POST | `/api/v1/bundle` | multipart `file`: a `.bundle` exported by this install | the loaded models and their scores |
-| POST | `/api/v1/bundle/predict` | `values`, `model` | prediction with the loaded bundle |
+| POST | `/api/v1/bundle/predict` | `values`, `model` | prediction with the loaded bundle, with `why` |
 | POST | `/api/v1/bundle/predict-file` | multipart `file`, `model` | the same with the loaded bundle |
 | GET | `/api/v1/predictions` | none | the last predicted file's labelled CSV as a download (404 `NOT_FOUND` before any) |
 | GET | `/api/v1/workspace` | none | what the session holds, to resume after a reload (see below) |
 | DELETE | `/api/v1/workspace` | none | the session's dataset, models and last scan are forgotten (409 `BUSY` while a training or a scan runs) |
 | GET | `/api/v1/scan/options` | none | the scan engines (nmap: whether it can run here), the choices, the limits, whether each API key is set (see Port scan) |
-| POST | `/api/v1/jobs/scan` | `authorized`, `target`, `ports`, `protocol`, `engine`, nmap's choices, `abuseipdb`, `ai`, `scan_unresponsive` | **202** and the scan's job (see Port scan) |
+| POST | `/api/v1/jobs/scan` | `authorized`, `target`, `ports`, `protocol`, `engine`, nmap's choices, `nvd`, `abuseipdb`, `ai`, `scan_unresponsive` | **202** and the scan's job (see Port scan) |
 | GET | `/api/v1/scan` | none | the session's scan still queued or running, and its last finished one |
 | POST | `/api/v1/unlock` | `token` | another computer's session unlocked, when `--host` opened the toolkit to the network (see Opened to the network) |
+| POST | `/api/v1/access/token` | none | this computer only: a new access token, printed in the terminal; every other computer is locked out and its waiting jobs are cancelled (see Opened to the network) |
+| GET | `/api/v1/access/jobs` | none | this computer only: the jobs other computers asked for that run or wait |
+| DELETE | `/api/v1/access/jobs/<job_id>` | none | this computer only: **202**, one of those jobs stopped, a waiting one at once, a running one at its next step |
 | GET | `/api/v1/scan/report` | `format`: `txt` (default), `json` or `csv` | the last finished scan as a download (404 `NO_SCAN` before one) |
+| GET | `/api/v1/runs` | `before`: a run id (the next page; default: the newest) | the saved runs' summaries, newest first, 50 at a time (see Saved runs) |
+| GET | `/api/v1/runs/<run_id>` | none | one saved run: its summary, its leaderboard and each model's CV folds |
+| GET | `/api/v1/runs/<run_id>/importance` | none | a saved run's importance results: `run_id`, `importances` (one per model, as saved), `left_out`; read only, nothing computed |
+| GET | `/api/v1/runs/compare` | `a`, `b`: two run ids | the two runs side by side; the differences only when they scored the same test rows |
+| GET | `/api/v1/runs/<run_id>/files` | none | what deleting the run removes, in the order it goes: `files`, each `{kind, name, size}` (`importance`, `bundle`, `record`) |
+| GET | `/api/v1/storage` | none | what is kept, by kind (HR4b): `kinds`, each `{kind, title, count, bytes, files, leftover}` (`files` names the leftovers), `total_bytes`, `free_bytes`, `warn_bytes`, `floor_bytes` and `warnings` (past `TOOLKIT_STORAGE_WARN_MB`, under `TOOLKIT_MIN_FREE_MB`); it deletes nothing |
+| POST | `/api/v1/bundles/<run_id>/register` | none | a run deleted with its bundle kept is saved again from the record the bundle carries, once its signature is checked: `{run_id, record}`; 404 without a bundle, 409 `ALREADY_SAVED`, 400 `BAD_SIGNATURE` or `NOT_REGISTERED` (incomplete, or no record of this run in it) |
+| POST | `/api/v1/runs/<run_id>/delete` | `with_bundle`: true or false (default false: the bundle is kept) | the run deleted (HR4a): `removed` (in order) and `kept` (the bundle, or null); 409 `NOT_REMOVED` naming a file that couldn't be removed, the run kept |
 
 ## Dataset upload
 
@@ -119,6 +132,32 @@ label column. `GET /api/v1/predictions` downloads the labelled CSV with the colu
 by `toolkit.core.services.ids.batch`). Only the last result is kept, in the session's workspace;
 `GET /api/v1/workspace` repeats its answer as `predictions`.
 
+## Saved runs (v5.3 F2)
+
+A run is saved, as its TrainingRun record in `instance/runs/<run id>.json`, when it is
+exported. These three routes only read those records, never a bundle (nothing is unpickled),
+and need no session: they answer the same whichever browser asks (another computer needs the
+access token first, as for every route). A run id has the form the toolkit writes,
+`20261030T120000Z-7cf3ced5`; anything else is refused (400) before a file name is made from it,
+and an id with no record is `NOT_FOUND` (404).
+
+`GET /api/v1/runs` answers `{"runs": [...], "more": true, "left_out": 0}`: each run's id, time,
+dataset (name and rows), test file, profile, label, split and its row counts, balancing,
+models, the selected model with its CV and test macro-F1, and `bundle`: its bundle's state
+from the file's first bytes (`"exported"`, `"incomplete"`, `"unreadable"`, or `null` when the
+run was not exported; every training is listed, HR5). `more` says there are older runs
+(ask again with `before` = the last id); `left_out` counts the files met that are not readable
+TrainingRun records (an edited file, a newer schema), which are skipped, not an error.
+
+`GET /api/v1/runs/compare?a=...&b=...` answers both summaries, `comparable` and `reasons`,
+each model of both runs with its numbers in `a` and `b`, the recall of the classes in both, the
+models of one run only (`only_in_a`, `only_in_b`), every model's `title` in `titles`, and the
+settings that differ (features,
+models, balancing, selection). Two runs are comparable when they scored the same test rows;
+otherwise `reasons` lists what differs (`DIFFERENT_DATASET`, `DIFFERENT_TEST_FILE`,
+`DIFFERENT_LABEL`, `DIFFERENT_SPLIT`, `DIFFERENT_ROWS`) and every `delta` is null. A `delta` is
+b − a. A finished training's result (`GET /api/v1/jobs/<id>`) carries `folds` too.
+
 ## Security token
 
 Each browser session has one random token, kept in the signed session cookie and shown
@@ -147,7 +186,7 @@ shape its own route answered, or `null`:
 ```
 
 - `dataset`: as `POST /api/v1/dataset` answered (after a class filter: the rows left).
-- `run`: the last finished training, as its job's `result`.
+- `run`: the last finished training, as its job's `result` (`saved` and `not_saved` as they are now).
 - `job`: a training that is still `queued` or `running` (as `GET /api/v1/jobs/<id>`).
 - `export`: as `POST /api/v1/run/export` answered, once the run was exported.
 - `bundle`: as `POST /api/v1/bundle` answered.
@@ -157,6 +196,49 @@ shape its own route answered, or `null`:
 A session without a workspace gets all `null`s; nothing is created. The page uses this
 route on every load; results of the explore routes (distribution, previews, scores) are
 not kept and are asked for again.
+
+## Explanations (v5.3 F3)
+
+Both are worked out on this computer from the run's own rows; nothing is sent anywhere.
+They are approximations that show what the model relies on, not causes.
+
+**What a model relies on** (`POST /api/v1/jobs/importance`, `{"model": "..."}`): the
+permutation importance on the test split (a sample of 5,000 rows above that, 5 repeats, the
+run's seed): each feature's values are shuffled and the drop in macro-F1 measured. It is a
+job of the kind `importance`, in the training's queue (one heavy job at a time: it waits for
+a training and a training waits for it), followed and cancelled through `/api/v1/jobs/<id>`
+like a training, one step per feature. It is bound when asked for to the session's run and
+that model; asked again for the same ones, it answers the same job (unless that one failed
+or was cancelled). Only the session's run can be calculated: a saved run's test split is not
+in memory. Its `result`: `run_id`, `model`, `rows` (scored), `test_rows`, `repeats`, `seed`,
+`baseline_macro_f1`, `features` (each `{feature, mean, std}`: the drop, ranked),
+`concentrated` (the feature that carries more than half of the summed positive drops, else
+null: a reason to check it, a copy of the label being one possible cause), and
+`saved`, `not_saved`: it is saved as a file of its own beside the run's record
+(`<run id>.importance.<model id>.json`), read back with `GET /api/v1/runs/<run_id>/importance`
+until the run is deleted.
+
+**Why one prediction** (`why` in `/api/v1/run/predict` and `/api/v1/bundle/predict`; a CSV
+prediction has none): each feature's value is replaced by its typical value in the training
+split (the median of a number, the most frequent category) and the change in the predicted
+class's probability measured.
+
+```json
+{"prediction": "DDoS", "probability": 0.97, "source": "training", "problem": null,
+ "toward": [{"feature": "...", "value": 1480.0, "typical": 0.0, "effect": 0.41}],
+ "away": [], "without_typical": []}
+```
+
+- `toward` and `away`: at most 5 each, the features that raised (`effect` > 0) or lowered the
+  predicted class's probability most; a feature already at its typical value is no reason.
+- `source`: `training` (the typical values in the run's record), or `pipeline` (a bundle
+  saved before v5.3 F3: the medians its pipeline learnt, numbers only; its categories are in
+  `without_typical`).
+- `problem`: `NO_PROBABILITIES` for a model without probabilities (the linear SVM): no
+  reasons, and the prediction stands. `why` is null if the explanation itself failed (in the
+  server log).
+- Its limits: approximate, not causal; correlated features share their effect; one feature
+  changed alone can make a row that never occurs; the probabilities are not calibrated.
 
 ## Training jobs
 
@@ -173,7 +255,7 @@ session can read and predict, but not change its dataset or start a second train
  "total": 22, "percent": 32, "phase": "Cross-validation, fold 2 of 3", "elapsed_seconds": 72.4}
 ```
 
-- `kind`: `training` (or `scan`); the job routes answer for either kind.
+- `kind`: `training` (or `importance`, or `scan`); the job routes answer for every kind.
 - `state`: `queued` (with `queue_position`: jobs of its kind that run first; at 0 the phase is
   `Starting`, as the worker is about to pick it up), `running`, `cancelling`
   (cancel asked, waiting for the current model's fit to end), `done` (with `result`),
@@ -202,8 +284,9 @@ queued):
    `1-1024`); `engine` is `builtin` (default) or `nmap`; nmap's choices only with nmap:
    `service_detection` (`light`, `normal`, `all`), `timing` (`polite`, `normal`,
    `aggressive`), `scripts` (`true`: the toolkit's allowed scripts, as `--scripts safe`),
-   `os_detect`. `abuseipdb` and `ai` are refused when their key is not set on the server.
-   Every yes/no value is JSON's `true` or `false`.
+   `os_detect`. `nvd`, `abuseipdb` and `ai` are `true` by default (RD5); `abuseipdb` and
+   `ai` without their key on the server are off, not refused, and `online` says why
+   (`off: no ABUSEIPDB_API_KEY`). Every yes/no value is JSON's `true` or `false`.
 3. One scan at a time in a session (`BUSY`, 409).
 4. The engine (`ENGINE_UNAVAILABLE`): nmap installed, and raw packets for UDP or OS
    detection. The message never names this computer's folders.
@@ -222,9 +305,12 @@ more packets, no more lookups; it keeps nothing. After `TOOLKIT_SCAN_MAX_MIN` mi
 same setting is nmap's time for one host).
 
 **What goes online:** as on the command line: NVD gets the software name and version
-only; the AI explanation (OpenRouter) the same, only with `"ai": true`; AbuseIPDB a public
-target address only, with `"abuseipdb": true`, never a private one. The API keys stay on
-the server: `GET /api/v1/scan/options` says only whether each is set.
+only; the AI explanation (OpenRouter) the same, with its key; AbuseIPDB a public target
+address only, with its key, never a private one. Each is on unless its field is `false`
+(`online` then says `off: turned off on the page`). A service that fails during the scan is
+not asked again in it: `summary.unavailable` names it and why (`{"NVD": "no connection"}`)
+and its ports are `NOT CHECKED`. The API keys stay on the server:
+`GET /api/v1/scan/options` says only whether each is set.
 
 **The answer** (the job's `result`, and `last` in `GET /api/v1/scan`):
 
@@ -235,7 +321,7 @@ the server: `GET /api/v1/scan/options` says only whether each is set.
  "hosts": [{"target": "10.0.0.5", "state": "scanned", "os": "Linux (...)"}],
  "reputation": {}, "entries": [{"port": 22, "protocol": "tcp", "software": "OpenSSH 8.9", ...}],
  "summary": {"targets": 1, "open_ports": 2, "failed_lookups": [], "seconds": 4.2,
-             "sent": {"NVD": 2, "AI (OpenRouter)": 0, "AbuseIPDB": 0}},
+             "sent": {"NVD": 2, "AI (OpenRouter)": 0, "AbuseIPDB": 0}, "unavailable": {}},
  "failed_targets": []}
 ```
 
@@ -258,9 +344,23 @@ address of the network; `127.0.0.1` stays bound. Then:
   `POST /api/v1/unlock` and the static files stay open.
 - `POST /api/v1/unlock` with `{"token": "K7QX-M2PD-9RTA-W4HE"}` (case, spaces and dashes
   don't matter; the CSRF token is needed as for every POST) unlocks the session until the
-  toolkit stops: `{"message": "Unlocked: ..."}`. Another token is `WRONG_TOKEN` (401); five
-  wrong ones from one address within a minute are `TOO_MANY_TRIES` (429) until the oldest is
-  a minute old. From this computer it answers that no token is needed.
+  toolkit stops or a new token is made: `{"message": "Unlocked: ..."}`. Another token is
+  `WRONG_TOKEN` (401); five wrong ones from one address within a minute are `TOO_MANY_TRIES`
+  (429) until the oldest is a minute old. From this computer it answers that no token is
+  needed.
+- `POST /api/v1/access/token`, from this computer only (HS1): a new access token, printed in
+  the terminal and never in the answer: `{"message": "New token made: ...", "cancelled": 1}`.
+  Every session unlocked before is locked again at once (every request answers `LOCKED`, a
+  job's state included). A job another computer asked for under the old unlock that still
+  waits is cancelled and never starts (`cancelled` counts them; its error says the access
+  token was changed); a running one goes on; this computer's jobs are not touched.
+- `GET /api/v1/access/jobs`, from this computer only: `{"jobs": [...]}`, the jobs other
+  computers asked for that run or wait, the running one first; each has `id`, `url`, `kind`,
+  `source` (the computer's address), `state`, `phase` and `elapsed_seconds`, never a result
+  or a log. `DELETE` on a job's `url` stops it, as `DELETE /api/v1/jobs/<id>` does for its own
+  session (`NOT_FOUND` once it ended).
+- The three answer `THIS_COMPUTER_ONLY` (403) to another computer, and `NOT_FOUND` (404)
+  when the toolkit isn't open to the network.
 - Every page shows a banner saying the toolkit is open to the network and where.
 
 ## Errors
@@ -293,7 +393,12 @@ Every error answer has the same shape; `details` is present only when there is m
 | `LOCKED` | 401 | another computer, before it typed the access token (`--host` only) |
 | `WRONG_TOKEN` | 401 | that isn't the access token |
 | `TOO_MANY_TRIES` | 429 | five wrong access tokens from one address within a minute |
+| `THIS_COMPUTER_ONLY` | 403 | a new access token, or the other computers' jobs, asked for from another computer |
 | `NOT_FOUND` | 404 | no such API route, or no such job in this session |
+| `NO_SPACE` | 507 | a new file (the export's bundle or record, a run registered again) refused: the disk would keep less free space than `TOOLKIT_MIN_FREE_MB`; nothing was deleted |
+| `ALREADY_SAVED` | 409 | registering a bundle's run again, when the run is saved already (a record is never replaced) |
+| `NOT_REGISTERED` | 400 | a bundle whose run can't be registered again: incomplete, not readable, or without a copy of this run's record |
+| `NOT_REMOVED` | 409 | deleting a run stopped at a file that couldn't be removed (on Windows: open in another program); the run is kept and still listed |
 | `METHOD_NOT_ALLOWED` | 405 | the route exists, the method doesn't |
 | `BUSY` | 409 | a training run is in progress in this workspace: a second training, an upload, a class filter or clearing the workspace has to wait for it; or a scan is: a second scan or clearing the workspace has to wait for it |
 | `TOO_LARGE` | 413 | the upload is above `TOOLKIT_MAX_UPLOAD_MB` |

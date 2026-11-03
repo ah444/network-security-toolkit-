@@ -89,7 +89,8 @@ def test_chosen_dark_is_the_system_dark(css):
     """The two copies of the dark tokens are the same, value for value and in order."""
     _, dark, chosen = _token_blocks(css)
     assert list(_declarations(chosen).items()) == list(_declarations(dark).items())
-    assert len(_declarations(dark)) == 20  # + the scanner's 3 CVSS levels (v5.2 step 2.4e)
+    # + the scanner's 3 CVSS levels (v5.2 step 2.4e), the charts' 2 marks (v5.3 F2d)
+    assert len(_declarations(dark)) == 22
 
 
 def test_dark_tokens_change_only_theme_tokens(css):
@@ -153,6 +154,31 @@ def test_a_fields_edge_is_visible_in_both_themes(around):
     for name, theme in (("light", light), ("dark", dark)):
         ratio = contrast(colour("--input-border", theme, light), colour(around, theme, light))
         assert ratio >= 3, (name, around, round(ratio, 2))
+
+
+@pytest.mark.parametrize("mark", ["--chart-cv", "--chart-test", "--text"])
+def test_a_charts_marks_are_visible_in_both_themes(mark):
+    """v5.3 F2d (WCAG 1.4.11): the charts' dots, squares and lines are at least 3:1 against
+    the card they are drawn on, in both themes (the mean's bar is the text colour)."""
+    light, dark = themes()
+    for name, theme in (("light", light), ("dark", dark)):
+        ratio = contrast(colour(mark, theme, light), colour("--surface", theme, light))
+        assert ratio >= 3, (name, mark, round(ratio, 2))
+
+
+def test_the_metrics_tables_are_styled_and_their_remarks_readable(css):
+    """v5.3 F2g: .metrics-table (the leaderboard, the saved runs) had no rule, so its cells had
+    no padding and touched. The tables stay light in the dark theme, so a remark in a cell
+    can't use the page's muted colour (1.41:1 on the table in dark): it has its own token."""
+    body = css[css.index(".metrics-table th,\n.metrics-table td {"):]
+    assert "padding: 8px 12px;" in body[:body.index("}")]
+    rule = css[css.index(".metrics-table .quiet {"):]
+    assert "color: var(--table-muted);" in rule[:rule.index("}")]
+    light, dark = themes()
+    for name, theme in (("light", light), ("dark", dark)):
+        for background in ("--table-bg", "--table-stripe"):
+            ratio = contrast(colour("--table-muted", theme, light), colour(background, theme, light))
+            assert ratio >= 4.5, (name, background, round(ratio, 2))
 
 
 def test_every_field_uses_the_field_border(css):

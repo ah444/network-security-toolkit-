@@ -52,13 +52,16 @@ def test_intel_builds_providers_from_keys_and_consent():
 
 def test_offline_provider_swapped_in():
     offline = OfflineCves({"Apache 2.4.49": [
-        {"id": "CVE-2021-41773", "cvss": 7.5, "cvss_version": "3.1", "severity": "HIGH"},
-        {"id": "CVE-2021-42013", "cvss": 9.8, "cvss_version": "3.1", "severity": "CRITICAL"}]})
+        {"id": "CVE-2021-41773", "cvss": 7.5, "cvss_version": "3.1", "severity": "HIGH",
+         "match": "version"},
+        {"id": "CVE-2021-42013", "cvss": 9.8, "cvss_version": "3.1", "severity": "CRITICAL",
+         "match": "name"}]})
     intel = recon_intel.Intel({}, session=NoNetwork(), providers=[offline])
 
     found = intel.lookup("Apache 2.4.49")
     assert [c["id"] for c in found["cves"]] == ["CVE-2021-42013", "CVE-2021-41773"]  # worst first
     assert found["max_cvss"] == 9.8 and found["severity"] == "CRITICAL"
+    assert found["severity_unconfirmed"], "the worst CVE was found by the name only"
     assert found["errors"] == [] and found["ai_explanation"] == ""
     assert intel.lookup("nginx 1.25")["severity"] == "NO KNOWN CVE"
     assert offline.asked == ["Apache 2.4.49", "nginx 1.25"]
@@ -73,7 +76,7 @@ def test_failed_provider_is_named_and_scan_goes_on():
             raise requests.ConnectionError("down")
 
     found = recon_intel.Intel({}, session=NoNetwork(), providers=[Broken()]).lookup("x 1.0")
-    assert found["errors"] == ["Mirror: no connection"] and found["severity"] == "UNKNOWN"
+    assert found["errors"] == ["Mirror: no connection"] and found["severity"] == "NOT CHECKED"
 
 
 def test_ip_reputation_through_the_port():

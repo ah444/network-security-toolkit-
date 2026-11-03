@@ -241,6 +241,18 @@ def test_the_one_row_form_is_columns_and_its_summary_easy_to_tap(css):
     assert _top_level(css, ".row-entry > summary")["min-height"] == "44px"
 
 
+def test_a_long_file_name_wraps_on_saved_runs(css):
+    """Gate 5.3: "<run id>.importance.decision_tree.json" in the Delete panel ran 34 px past a
+    320 px screen; the Storage leftovers are names like it."""
+    for box in ("#deleteView li", "#storageView li"):
+        assert _top_level(css, box)["overflow-wrap"] == "anywhere", box
+
+
+def test_why_is_easy_to_tap(css):
+    """F3g: "Why?" under a prediction was 26 px high, measured at the 8 sizes."""
+    assert _top_level(css, ".why > summary")["min-height"] == "44px"
+
+
 def test_every_scroll_box_can_be_reached_with_the_keyboard(css):
     """A box that scrolls needs focus to scroll with the arrow keys, and a name to be told apart."""
     dom = js_sources()["dom.js"]

@@ -17,7 +17,9 @@ from ...core.services.recon.scan import (
     OsHint,
     PortResult,
     ReportEntry,
+    match_label,
     one_line,
+    severity_text,
 )
 
 AUTHORIZATION = ("\nOnly scan systems you own or have written permission to test. Scanning "
@@ -130,12 +132,15 @@ def print_entry(entry: ReportEntry) -> None:
     print(f"Software: {entry['software']}")
     cves = entry["cves"]
     shown = ", ".join(f"{c['id']} (CVSS {c['cvss'] if c['cvss'] is not None else '?'}, "
-                      f"{c['severity']})" for c in cves[:10])
+                      f"{c['severity']}, {match_label(c)})" for c in cves[:10])
     more = f" ... +{len(cves) - 10} more" if len(cves) > 10 else ""
-    print(f"CVEs (NVD): {shown + more if cves else 'none found'}")
+    none = "not checked" if entry["severity"] == "NOT CHECKED" else "none found"  # HS4
+    print(f"CVEs (NVD): {shown + more if cves else none}")
     if entry["cve_source"]:
         print(f"CVE source: {entry['cve_source']}")
-    print(f"Severity (from CVSS): {entry['severity']}")
+    print(f"Severity (from CVSS): {severity_text(entry)}")
+    if entry["severity_unconfirmed"]:
+        print("Unconfirmed: found by the product's name only; the version was not checked")
     if entry["ai_explanation"]:
         print("AI explanation (may be wrong):")
         print(entry["ai_explanation"])
@@ -143,9 +148,10 @@ def print_entry(entry: ReportEntry) -> None:
         print(f"Lookup failed: {error}")
 
 
-def ask_yes_no(question: str) -> bool:
-    """True for y or yes (any case); any other answer is no."""
-    return input(question).strip().lower() in ("y", "yes")
+def ask_yes_no(question: str, default: bool = False) -> bool:
+    """True for y or yes (any case); an empty answer is ``default``; any other answer is no."""
+    answer = input(question).strip().lower()
+    return default if not answer else answer in ("y", "yes")
 
 
 def ask_protocols() -> list[str]:
@@ -205,12 +211,18 @@ def ask_verbose() -> bool:
     return ask_yes_no("Enable verbose mode? (Y/N): ")
 
 
+def ask_nvd() -> bool:
+    """Whether this scan looks up the known CVEs in NVD (HS4: yes unless the answer is no)."""
+    return ask_yes_no("Look up the known CVEs in NVD (sends the detected software name and "
+                      "version, e.g. 'OpenSSH 8.9')? (Y/n): ", default=True)
+
+
 def ask_ai(model: str) -> bool:
     """Whether this scan sends the detected software names to OpenRouter (``model``); asked only
-    when a key is set."""
+    when a key is set (HS4: yes unless the answer is no)."""
     return ask_yes_no(
         f"Send the detected software names (e.g. 'OpenSSH 8.9', never the raw banner) "
-        f"to OpenRouter ({model}) for an AI explanation? (Y/N): ")
+        f"to OpenRouter ({model}) for an AI explanation? (Y/n): ", default=True)
 
 
 def flag_notice(flag: str, variable: str | None = None, model: str = "") -> None:
@@ -247,7 +259,8 @@ class ConsoleScan:
 
     def ask_abuse(self, target: str) -> bool:
         """Asks whether ``target`` may be sent to AbuseIPDB."""
-        return ask_yes_no(f"Send {target} to AbuseIPDB to check its reputation? (Y/N): ")
+        return ask_yes_no(f"Send {target} to AbuseIPDB to check its reputation? (Y/n): ",
+                          default=True)
 
     def abuse_report(self, target: str, data: Mapping[str, Any] | None,
                      error: str | None) -> None:
@@ -346,14 +359,18 @@ class ConsoleScan:
         print("=" * 60)
 
     def summary(self, targets: int, entries: int, failed: Sequence[str], seconds: float,
-                sent: Mapping[str, int]) -> None:
-        """Shows the summary report, with the requests sent online."""
+                sent: Mapping[str, int], unavailable: Mapping[str, str]) -> None:
+        """Shows the summary report, with the requests sent online and the services that failed
+        and were not asked again (HS4)."""
         print("\nScan Summary Report")
         print("-------------------")
         print(f"Total targets scanned: {targets}")
         print(f"Total open ports found: {entries}")
         print(f"Failed lookups: {len(failed)}" + (f" ({'; '.join(failed)})" if failed else ""))
         print("Requests sent online: " + ", ".join(f"{name} {n}" for name, n in sent.items()))
+        if unavailable:
+            print("Unavailable: " + "; ".join(f"{name} ({why})"
+                                              for name, why in unavailable.items()))
         print(f"Elapsed time: {seconds:.2f} seconds")
 
     def nothing_to_export(self) -> None:

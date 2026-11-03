@@ -29,6 +29,8 @@ from ...data.recon.scan_files import EXPORT_FORMATS as EXPORT_FORMATS
 from ...data.recon.scan_files import ReportEntry as ReportEntry  # what the UI shows
 from ...data.recon.scan_files import export_results
 from ...data.recon.scan_files import report_text as report_text  # a download's text
+from ...data.recon.scan_files import severity_text as severity_text  # with "(unconfirmed)"
+from ...data.recon.findings import match_label as match_label  # how a CVE was found
 from ...data.recon.scanner import PortResult as PortResult
 from ...data.recon.scanner import ScanStopped as ScanStopped  # raised once a scan is stopped
 from ...data.recon.scanner import Progress
@@ -38,6 +40,7 @@ from .engines import DEFAULT_ENGINE, describe, engine_named
 from .intel import Intel, LookupResult
 from .os_guess import OsHint as OsHint  # what the UI shows
 from .os_guess import guess_os, os_hint
+from .record import THIS_COMPUTER, scan_ended, scan_started
 from .report import make_entry
 from .targets import check_limits, is_ip_literal, is_public_ip, parse_target
 
@@ -62,6 +65,9 @@ class ScanRequest:
     interactive: bool = False
     engine: str = DEFAULT_ENGINE  # a name in engines.ENGINES (step N1)
     nmap_options: NmapOptions = NmapOptions()  # nmap's choices, for --engine nmap (step N4)
+    source: str = THIS_COMPUTER  # where the request came from: another computer's address (HS3)
+    nvd: bool = True  # the CVE lookups (HS4: on unless turned off)
+    from_page: bool = False  # the choices are the web page's switches (HS4b), not flags
 
 
 @dataclass(frozen=True)
@@ -73,13 +79,21 @@ class OnlinePlan:
     abuseipdb: str
 
 
+def _turned_off(request: ScanRequest, flag: str) -> str:
+    """Why a service with its key is off: the answer no, its switch on the web page, or its
+    ``--no-`` flag (HS4)."""
+    if request.interactive:
+        return "off: you said no"
+    return "off: turned off on the page" if request.from_page else f"off: turned off ({flag})"
+
+
 def _ai_plan(request: ScanRequest, keys: Mapping[str, str]) -> str:
-    """The AI explanation: on, or why not (no key, not asked for, the answer no)."""
+    """The AI explanation: on, or why not (no key, turned off, the answer no)."""
     if request.use_ai:
         return "on, the software name and version only"
     if not keys.get("openrouter"):
         return f"off: no {KEY_VARIABLES['openrouter']}"
-    return "off: you said no" if request.interactive else "off: not asked for (--ai)"
+    return _turned_off(request, "--no-ai")
 
 
 def _abuse_plan(request: ScanRequest, keys: Mapping[str, str]) -> str:
@@ -91,7 +105,7 @@ def _abuse_plan(request: ScanRequest, keys: Mapping[str, str]) -> str:
     if request.interactive:
         return "asked before each public address"
     return "on, the public addresses only" if request.abuseipdb else \
-        "off: not asked for (--abuseipdb)"
+        _turned_off(request, "--no-abuseipdb")
 
 
 def online_plan(request: ScanRequest, keys: Mapping[str, str]) -> OnlinePlan:
@@ -99,8 +113,9 @@ def online_plan(request: ScanRequest, keys: Mapping[str, str]) -> OnlinePlan:
     and the keys that are set."""
     pace = "" if keys.get("nvd") else (
         f"; no {KEY_VARIABLES['nvd']}, so one request every {NVD_INTERVAL[False]:g} s")
-    return OnlinePlan(f"on, the software name and version only{pace}",
-                      _ai_plan(request, keys), _abuse_plan(request, keys))
+    nvd = f"on, the software name and version only{pace}" if request.nvd else \
+        _turned_off(request, "--no-nvd")
+    return OnlinePlan(nvd, _ai_plan(request, keys), _abuse_plan(request, keys))
 
 
 class ScanView(Protocol):
@@ -177,10 +192,11 @@ class ScanView(Protocol):
         """After each target, scanned or skipped."""
 
     def summary(self, targets: int, entries: int, failed: Sequence[str], seconds: float,
-                sent: Mapping[str, int]) -> None:
+                sent: Mapping[str, int], unavailable: Mapping[str, str]) -> None:
         """After the last target: the targets, the entries, the failed lookups (as ``port/protocol
-        error``), the seconds since the command started and the requests sent to each online
-        service (``Intel.sent``)."""
+        error``), the seconds since the command started, the requests sent to each online
+        service (``Intel.sent``) and the services that failed and were not asked again, with
+        why (``Intel.unavailable``, HS4)."""
 
     def nothing_to_export(self) -> None:
         """No entries, and an export was asked for (interactive or ``--export``)."""
@@ -272,6 +288,7 @@ def _entries(target: str, open_ports: list[PortResult], intel: Intel, view: Scan
         found: LookupResult = (
             looked_up[software] if software else
             {"cves": [], "cve_source": "", "max_cvss": None, "severity": "UNKNOWN",
+             "severity_unconfirmed": False,
              "ai_explanation": "", "errors": []})
         entry = make_entry(target, result, software, found, os_text, engine)
         view.entry(entry, first=not entries)
@@ -319,30 +336,54 @@ def scan_target(target: str, request: ScanRequest, intel: Intel, view: ScanView,
                     engine.name)
 
 
-def run_scan(request: ScanRequest, keys: Mapping[str, str], start_time: float,
-             view: ScanView, stop: threading.Event | None = None) -> int:
-    """Scan every target, show the summary, export (asked, or ``--export``); the exit code:
-    1 when the engine could not scan a target (the others are still scanned), else 0.
-    ScanStopped once ``stop`` is set (``scan_target``), with no summary and no file."""
-    intel = Intel(keys, request.use_ai, stop=stop)
-    view.engine_notice(describe(request.engine, request.nmap_options))
-    view.lookups_notice(online_plan(request, keys))
-
+def _scan_all(request: ScanRequest, intel: Intel, view: ScanView,
+              stop: threading.Event | None) -> tuple[list[ReportEntry], int]:
+    """Every target scanned (``scan_target``): the entries, and how many targets the engine
+    could not scan (the others are still scanned)."""
     entries: list[ReportEntry] = []
-    code = 0
+    failed = 0
     for target in request.targets:
         try:
             entries.extend(scan_target(target, request, intel, view, stop))
         except (NmapMissing, NmapFailed) as error:
             view.scan_failed(target, str(error))
-            code = 1
+            failed += 1
         view.target_done()
     check_stop(stop)
+    return entries, failed
+
+
+def run_scan(request: ScanRequest, keys: Mapping[str, str], start_time: float,
+             view: ScanView, stop: threading.Event | None = None) -> int:
+    """Scan every target, show the summary, export (asked, or ``--export``); the exit code:
+    1 when the engine could not scan a target (the others are still scanned), else 0.
+    ScanStopped once ``stop`` is set (``scan_target``), with no summary and no file. The log
+    gets a line when the scan starts and one when its scanning ends, before the summary and the
+    export (``record``, HS3)."""
+    plan = online_plan(request, keys)
+    scan_id = scan_started(request.source, request.target_text, request.targets, request.ports,
+                           request.protocols, request.engine,
+                           {"nvd": plan.nvd, "ai": plan.ai, "abuseipdb": plan.abuseipdb})
+    began, outcome = time.monotonic(), "failed"
+    entries: list[ReportEntry] = []
+    engine_failed = 0
+    try:
+        intel = Intel(keys, request.use_ai, stop=stop, nvd=request.nvd)
+        view.engine_notice(describe(request.engine, request.nmap_options))
+        view.lookups_notice(plan)
+        entries, engine_failed = _scan_all(request, intel, view, stop)
+        outcome = "done"
+    except (ScanStopped, KeyboardInterrupt):
+        outcome = "stopped"
+        raise
+    finally:
+        scan_ended(scan_id, outcome, len(entries), engine_failed, time.monotonic() - began)
+    code = 1 if engine_failed else 0
 
     failed =[f"{e['port']}/{e['protocol']} {error}" for e in entries
               for error in e["lookup_errors"]]
     view.summary(len(request.targets), len(entries), failed, time.time() - start_time,
-                 intel.sent())
+                 intel.sent(), intel.unavailable())
 
     if not entries:
         if request.interactive or request.export:

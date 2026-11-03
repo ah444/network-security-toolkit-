@@ -99,6 +99,7 @@ Select protocol for scanning (TCP/UDP/both): tcp
 Only scan systems you own or have written permission to test. Scanning other systems can be illegal.
 Type 'yes' if you are authorised to scan 127.0.0.1: yes
 Enable verbose mode? (Y/N): n
+Look up the known CVEs in NVD (sends the detected software name and version, e.g. 'OpenSSH 8.9')? (Y/n):
 Scan engine:
   built-in (the toolkit's own scanner: a TCP connection or a UDP probe per port, nothing installed)
 Online in this scan:
@@ -129,7 +130,7 @@ Port: 47822/tcp
 Service: ssh
 Banner: SSH-2.0-OpenSSH_8.9p1 Ubuntu-3ubuntu0.10
 Software: OpenSSH 8.9
-CVEs (NVD): CVE-2023-28531 (CVSS 9.8, CRITICAL), CVE-2023-38408 (CVSS 9.8, CRITICAL), CVE-2026-60002 (CVSS 9.4, CRITICAL), CVE-2024-6387 (CVSS 8.1, HIGH), CVE-2026-35385 (CVSS 8.1, HIGH), CVE-2026-35414 (CVSS 8.1, HIGH), CVE-2026-106583 (CVSS 7.8, HIGH), CVE-2026-106553 (CVSS 7.5, HIGH), CVE-2026-106555 (CVSS 7.5, HIGH), CVE-2026-59999 (CVSS 7.5, HIGH) ... +22 more
+CVEs (NVD): CVE-2023-28531 (CVSS 9.8, CRITICAL, version match), CVE-2023-38408 (CVSS 9.8, CRITICAL, version match), CVE-2026-60002 (CVSS 9.4, CRITICAL, version match), CVE-2024-6387 (CVSS 8.1, HIGH, version match), CVE-2026-35385 (CVSS 8.1, HIGH, version match), CVE-2026-35414 (CVSS 8.1, HIGH, version match), CVE-2026-106583 (CVSS 7.8, HIGH, version match), CVE-2026-106553 (CVSS 7.5, HIGH, version match), CVE-2026-106555 (CVSS 7.5, HIGH, version match), CVE-2026-59999 (CVSS 7.5, HIGH, version match) ... +22 more
 CVE source: version match (cpe:2.3:a:openbsd:openssh:8.9)
 Severity (from CVSS): CRITICAL
 ============================================================
@@ -164,7 +165,12 @@ protocol, which engine to use (Enter keeps its own), and for nmap its choices
   whose affected versions, as NVD records them, include this one; for about 20 products
   the scanner knows NVD's name for, such as OpenSSH, Apache, nginx, MySQL, MariaDB), or a
   **keyword search** on the name and version (any other product, or when the version
-  match found none), which can list CVEs of other versions and miss some.
+  match found none), which can list CVEs of other versions and miss some. Each CVE says
+  which: `version match`, or `name match, unconfirmed`. When no version match has the worst
+  score, the severity is marked too (`CRITICAL (unconfirmed)`), and a line says the version
+  was not checked. The CSV has the same in its last two columns, `Severity confirmed` and
+  `Unconfirmed CVEs (name match)`; the JSON has `match` on each CVE and
+  `severity_unconfirmed` on each port.
 - **OS:** the first line is the guess from the time-to-live (TTL) of the ping reply alone.
   After the ports, the scanner weighs all it saw: the TTL, words in the banners
   (`Ubuntu`, `Debian`, `Microsoft-IIS`, `OpenSSH_for_Windows`, ...) and open ports only
@@ -221,7 +227,7 @@ Port: 47822/tcp
 Service: ssh
 Banner: SSH-2.0-OpenSSH_8.9p1 Ubuntu-3ubuntu0.10
 Software: OpenSSH 8.9
-CVEs (NVD): CVE-2023-28531 (CVSS 9.8, CRITICAL), CVE-2023-38408 (CVSS 9.8, CRITICAL), CVE-2026-60002 (CVSS 9.4, CRITICAL), CVE-2024-6387 (CVSS 8.1, HIGH), CVE-2026-35385 (CVSS 8.1, HIGH), CVE-2026-35414 (CVSS 8.1, HIGH), CVE-2026-106583 (CVSS 7.8, HIGH), CVE-2026-106553 (CVSS 7.5, HIGH), CVE-2026-106555 (CVSS 7.5, HIGH), CVE-2026-59999 (CVSS 7.5, HIGH) ... +22 more
+CVEs (NVD): CVE-2023-28531 (CVSS 9.8, CRITICAL, version match), CVE-2023-38408 (CVSS 9.8, CRITICAL, version match), CVE-2026-60002 (CVSS 9.4, CRITICAL, version match), CVE-2024-6387 (CVSS 8.1, HIGH, version match), CVE-2026-35385 (CVSS 8.1, HIGH, version match), CVE-2026-35414 (CVSS 8.1, HIGH, version match), CVE-2026-106583 (CVSS 7.8, HIGH, version match), CVE-2026-106553 (CVSS 7.5, HIGH, version match), CVE-2026-106555 (CVSS 7.5, HIGH, version match), CVE-2026-59999 (CVSS 7.5, HIGH, version match) ... +22 more
 CVE source: version match (cpe:2.3:a:openbsd:openssh:8.9)
 Severity (from CVSS): CRITICAL
 ============================================================
@@ -238,24 +244,29 @@ Results exported to <project>\instance\scans\scan-20261024T185851Z.csv
 
 The flags: `-p` (ports, for example `22,80,8000-8100`), `--protocol tcp|udp|both`, `-v`
 (progress line), `--export txt|json|csv`, `--scan-unresponsive` (also hosts that don't
-answer ping), `--ai`, `--abuseipdb`, `--i-am-authorized`, and `--engine nmap` with its own
+answer ping), `--no-nvd`, `--no-ai`, `--no-abuseipdb`, `--i-am-authorized`, and `--engine nmap` with its own
 flags ([section 3.5](#35-scan-with-nmap)). Their defaults are in
 [reference.md, section 3](reference.md#3-scan-the-port-scanner).
 
 ### 3.4 What leaves your computer
 
 Every scan says first, under `Online in this scan`, what it may send to each service or
-why it sends nothing (`off: no OPENROUTER_API_KEY`, `off: not asked for (--ai)`, `off: you
+why it sends nothing (`off: no OPENROUTER_API_KEY`, `off: turned off (--no-ai)`, `off: you
 said no`, `off: no public address`), and at the end, under `Requests sent online`, how many
-requests went to each.
+requests went to each. All three services are on by default; the AI and AbuseIPDB need their
+key in `.env`, and putting it there is the choice to use them. A service that fails during
+the scan (no connection, a timeout, the key refused, too many requests) is not asked again in
+that scan: the summary adds a line such as `Unavailable: NVD (no connection)`, and its ports
+say `NOT CHECKED` rather than `NO KNOWN CVE`. The next scan tries again.
 
 - **The CVE lookup** sends only the software name and version (here `OpenSSH 8.9`, or
   as NVD names it, `cpe:2.3:a:openbsd:openssh:8.9`) to the public NVD API, never the
   banner or the address you scanned.
-- **The AI explanation** (OpenRouter) is asked only when an `OPENROUTER_API_KEY` is set,
-  and with a target only with `--ai`. It receives the same name and version.
-- **The IP reputation check** (AbuseIPDB) runs only for public addresses, only with an
-  `ABUSEIPDB_API_KEY`, and with a target only with `--abuseipdb`.
+- **The CVE lookup** can be turned off with `--no-nvd`, or no to its question.
+- **The AI explanation** (OpenRouter) runs when an `OPENROUTER_API_KEY` is set, unless
+  `--no-ai` or no to its question. It receives the same name and version.
+- **The IP reputation check** (AbuseIPDB) runs only for public addresses, when an
+  `ABUSEIPDB_API_KEY` is set, unless `--no-abuseipdb` or no to its question.
 - **nmap** (only with `--engine nmap`) runs on your computer and sends its packets only to
   the target; what goes to NVD is still only the name and version.
 
@@ -316,7 +327,7 @@ Service: ssh
 Banner: OpenSSH for_Windows_8.1 (protocol 2.0)
 CPE (nmap): cpe:/a:openbsd:openssh:for_windows_8.1
 Software: OpenSSH 8.1
-CVEs (NVD): CVE-2023-38408 (CVSS 9.8, CRITICAL), CVE-2026-60002 (CVSS 9.4, CRITICAL), CVE-2026-35385 (CVSS 8.1, HIGH), CVE-2026-35414 (CVSS 8.1, HIGH), CVE-2026-106583 (CVSS 7.8, HIGH), CVE-2026-106553 (CVSS 7.5, HIGH), CVE-2026-106555 (CVSS 7.5, HIGH), CVE-2026-59999 (CVSS 7.5, HIGH), CVE-2026-60000 (CVSS 7.5, HIGH), CVE-2020-15778 (CVSS 7.4, HIGH) ... +24 more
+CVEs (NVD): CVE-2023-38408 (CVSS 9.8, CRITICAL, version match), CVE-2026-60002 (CVSS 9.4, CRITICAL, version match), CVE-2026-35385 (CVSS 8.1, HIGH, version match), CVE-2026-35414 (CVSS 8.1, HIGH, version match), CVE-2026-106583 (CVSS 7.8, HIGH, version match), CVE-2026-106553 (CVSS 7.5, HIGH, version match), CVE-2026-106555 (CVSS 7.5, HIGH, version match), CVE-2026-59999 (CVSS 7.5, HIGH, version match), CVE-2026-60000 (CVSS 7.5, HIGH, version match), CVE-2020-15778 (CVSS 7.4, HIGH, version match) ... +24 more
 CVE source: version match (cpe:2.3:a:openbsd:openssh:8.1)
 Severity (from CVSS): CRITICAL
 
@@ -325,7 +336,7 @@ Service: ssh
 Banner: OpenSSH 8.9p1 Ubuntu 3ubuntu0.10 (Ubuntu Linux; protocol 2.0)
 CPE (nmap): cpe:/a:openbsd:openssh:8.9p1 cpe:/o:linux:linux_kernel
 Software: OpenSSH 8.9
-CVEs (NVD): CVE-2023-28531 (CVSS 9.8, CRITICAL), CVE-2023-38408 (CVSS 9.8, CRITICAL), CVE-2026-60002 (CVSS 9.4, CRITICAL), CVE-2024-6387 (CVSS 8.1, HIGH), CVE-2026-35385 (CVSS 8.1, HIGH), CVE-2026-35414 (CVSS 8.1, HIGH), CVE-2026-106583 (CVSS 7.8, HIGH), CVE-2026-106553 (CVSS 7.5, HIGH), CVE-2026-106555 (CVSS 7.5, HIGH), CVE-2026-59999 (CVSS 7.5, HIGH) ... +22 more
+CVEs (NVD): CVE-2023-28531 (CVSS 9.8, CRITICAL, version match), CVE-2023-38408 (CVSS 9.8, CRITICAL, version match), CVE-2026-60002 (CVSS 9.4, CRITICAL, version match), CVE-2024-6387 (CVSS 8.1, HIGH, version match), CVE-2026-35385 (CVSS 8.1, HIGH, version match), CVE-2026-35414 (CVSS 8.1, HIGH, version match), CVE-2026-106583 (CVSS 7.8, HIGH, version match), CVE-2026-106553 (CVSS 7.5, HIGH, version match), CVE-2026-106555 (CVSS 7.5, HIGH, version match), CVE-2026-59999 (CVSS 7.5, HIGH, version match) ... +22 more
 CVE source: version match (cpe:2.3:a:openbsd:openssh:8.9)
 Severity (from CVSS): CRITICAL
 ============================================================
@@ -373,7 +384,10 @@ section 4) and open **Port Scanner** in the menu bar, or `http://127.0.0.1:5000/
    (when it isn't, the nmap choice is greyed out and the page says how to install it). With
    nmap you also choose its service detection, timing, the toolkit's 8 scripts and OS
    detection; the page shows the same note about nmap's own version scripts as section 3.5.
-   AbuseIPDB and the AI explanation can only be ticked when their key is set (section 1).
+   The online lookups, NVD, AbuseIPDB and the AI explanation, are ticked by default; untick
+   one to leave it out of this scan. AbuseIPDB and the AI need their key (section 1): without
+   it the box is greyed out and says "No API key: add ABUSEIPDB_API_KEY to .env, then
+   refresh this page"; once the key is in `.env`, refresh the page (no restart needed).
 2. **Tick the authorization.** It names your target: "I own 192.168.1.10 or have written
    permission to scan it." Changing the target unticks it, so it is asked again for each
    target, and the server refuses a scan without it before sending anything, not even a
@@ -385,9 +399,12 @@ section 4) and open **Port Scanner** in the menu bar, or `http://127.0.0.1:5000/
    is kept from a cancelled scan. One scan runs at a time on the server, and a second one
    waits for it; a scan never waits for a training.
 4. **Read the results.** A summary (the target, the engine, the ports, the time and the
-   requests sent online), each host with its OS guess, and a card per open port. Click a
+   requests sent online; and, when one failed during the scan, the service and why, such
+   as "NVD: unavailable, no connection"), each host with its OS guess, and a card per open
+   port. A port whose CVEs were not looked up says `NOT CHECKED` and "not checked". Click a
    card (or press Enter on it) to open its banner, software, CVEs (the 10 worst, with their
-   CVSS scores), how they were found, and the AI's explanation if you asked for one.
+   CVSS scores and how each was found: `version match` or `name match, unconfirmed`), and
+   the AI's explanation if you asked for one.
 5. **Download the report** as TXT, JSON or CSV: the same files as `--export` on the command
    line. The results stay in your browser session (in memory, nothing is saved on the
    server) until you scan again, clear the workspace or close the web app; a reload shows
@@ -436,31 +453,48 @@ Do this **only on a network you trust**, such as VirtualBox's host-only network:
 can reach the toolkit and has its access token can upload data, train models and run port
 scans *from this computer*, and the connection is plain HTTP. `--host 0.0.0.0` listens on
 all of this computer's addresses. A host name is refused, and there is no setting that
-opens it for you: you choose it at every start. This was printed on 2026-10-26:
+opens it for you: you choose it at every start. This was printed on 2026-11-02:
 
 ```
 IDS web app running at http://127.0.0.1:5091/  (press Ctrl+C to stop)
 ========================================================================
 WARNING: the toolkit is open to your network, not only to this computer.
 Anyone who can reach it and has the access token can upload data, train models
-and run port scans FROM THIS COMPUTER. The connection is plain HTTP: someone who
-can read your network's traffic could take over a session. Use it only on a
-network you trust (such as your virtual machines' host-only network), and stop
-it with Ctrl+C when you are done.
+and run port scans FROM THIS COMPUTER: a holder of the token has your rights over
+the saved runs, bundles and scans, not only a view of the pages. A new token, made
+on this computer's home page, locks every other computer out at once. The
+connection is plain HTTP: someone who can read your network's traffic could
+take over a session. Use it only on a network you trust (such as your virtual
+machines' host-only network), and stop it with Ctrl+C when you are done.
 
 Other computers open:
   http://192.168.56.1:5091/
-Access token (typed once in each of their browsers): LSMT-PYWK-8PVT-GN5L
+Access token (typed once in each of their browsers): MZ4S-AXS9-AAXS-KMR2
 This computer's own browser, at 127.0.0.1, needs no token.
 ========================================================================
 ```
 
 - **On the other computer**, open the address shown. Every page first sends you to
   **Unlock the toolkit**: type the access token (capitals, spaces and dashes don't matter)
-  and press **Unlock**; that browser then works until the toolkit stops. The token is new at
-  every start, so last time's no longer works. Five wrong tokens within a minute are refused
-  for the rest of the minute.
-- **On this computer**, the browser at `http://127.0.0.1:...` needs no token.
+  and press **Unlock**; that browser then works until the toolkit stops or a new token is
+  made. The token is new at every start, so last time's no longer works. Five wrong tokens
+  within a minute are refused for the rest of the minute. The unlock page says first what
+  the token gives: your rights over the saved runs, bundles and scans, not only a view.
+- **On this computer**, the browser at `http://127.0.0.1:...` needs no token, and its home
+  page has a section, **Other computers**:
+  - **New token** asks first, then locks every other computer out at once, without stopping
+    the toolkit. The new token is printed in the terminal, as at the start; type it on the
+    computers you still want in. A job they asked for that was still waiting is cancelled
+    (the message says how many); a running one goes on. On 2026-11-02 the terminal printed:
+    ```
+    ========================================================================
+    A new access token was made: every other computer is locked out until it types
+    the new one. New access token: 9RTG-MP4U-BWSH-4K28
+    ========================================================================
+    ```
+  - **Their jobs** lists what other computers are running or waiting for: the computer's
+    address, the job, where it is and for how long, with **Stop** for each. **Refresh**
+    reads it again. Your own jobs are not listed.
 - **Every page** shows a yellow banner while the toolkit is open to the network.
 - `TOOLKIT_DEBUG=1` is refused with `--host`, and an address this computer doesn't have is
   a message (both exit code 2). On Windows the firewall may ask, the first time, whether
@@ -563,13 +597,22 @@ Check the target, tick the models and click **Train Model**. Training runs in th
 background with a progress bar; **Cancel training** stops it, and nothing of a cancelled
 run is kept.
 
+When a training ends, it is saved on this computer, exported or not: its scores, the class
+names, the column names and typical values of each column, but not the rows of your file.
+It is then on the **Saved Runs** page, where you can delete it; nothing is deleted on its
+own. If it can't be saved (for example the disk is too full, section 4.8), the result says
+**Completed, not saved** and why, with a **Save again** button that saves the same run.
+Save it before the next training ends: that one replaces it, and so does a restart of the
+web server.
+
 ![Training in progress](user-guide/11-training.jpg)
 
 When it ends, the leaderboard compares the models:
 
 - **CV macro-F1:** the score in 3-fold cross-validation on the training rows. The model with
   the best one is selected (★).
-- **Test** columns: each model scored once on the test split.
+- **Test** columns: each model's score on the test split, which plays no part in training
+  or in choosing the model.
 - **Weakest class recall:** how well the model finds its hardest class.
 
 The yellow notes matter. Here the NSL-KDD test file has 17 attack types that the training
@@ -584,6 +627,22 @@ its own box, and the class names stay in view.
 
 ![The confusion matrix](user-guide/13-confusion-matrix.jpg)
 
+**What the model relies on** (under the matrix) shows which columns a model uses most.
+Choose the model (the selected one at first) and click **Calculate**: nothing starts until
+you do. Each column's values are shuffled in turn on the test rows (5,000 of them at most,
+5 times), and the drop in macro-F1 is measured: the bigger the drop, the more the model
+relies on that column. It takes about as long as training that model, with a progress bar
+and **Cancel**; if a training is running, it waits for it. The chart shows the 15 columns
+with the biggest drop (the bar: the mean drop; the line: how much it varied). A drop below 0
+means shuffling that column helped a little: the model doesn't need it.
+
+- If one column carries more than half of the effect, a yellow note says so: check that it
+  is not a copy of the label before trusting the scores.
+- It is a diagnosis of this run, not a way to choose columns or models, and it shows what
+  the model relies on, not what causes an attack.
+- The result is saved with the run, and **Saved Runs** shows it. It can only be calculated
+  here, right after the training: a saved run doesn't keep its test rows.
+
 ### 4.6 Step 6: Use
 
 **Make a Prediction** takes one row: choose the model and fill in each feature under
@@ -593,6 +652,21 @@ real `neptune` row from `KDDTest+`, predicted as `neptune`.
 
 ![A prediction for one row](user-guide/14-predict-row.jpg)
 
+**Why?** under the prediction (open at first; click it to close) says which values pushed
+the model toward the predicted class and which pushed it away. Each value is swapped, alone,
+for that column's typical value in the training rows (the median of a number, the most
+common category), and the probability of the predicted class is measured again: a value
+that raised it pushed toward the class (+), one that lowered it pushed away (−). At most 5 of
+each are shown, with the value and the typical value.
+
+- It is an approximation, not the cause: columns that go together share their effect, a row
+  with one value swapped may never occur in real traffic, and the probabilities are not
+  calibrated. The page says so under it.
+- A model without probabilities (the linear SVM) still predicts, but has no **Why?**.
+- A bundle saved before version 5.3 has typical values for its numbers only: its categories
+  are listed as not explained.
+- A whole CSV file gets no **Why?**: it is for one row.
+
 **Predict a CSV File** labels every row of a file that has the model's feature columns. If
 the file also has the label column, the predictions are compared with it. Here 300 other
 `KDDTest+` rows: 71.3% match. **Download** saves the file with a prediction per row.
@@ -600,8 +674,8 @@ the file also has the label column, the predictions are compared with it. Here 3
 ![Predictions for a file](user-guide/15-predict-file.jpg)
 
 **Export Model** saves all models of the run as one signed `.bundle` file in
-`instance\bundles\`, with the record of how they were trained. A bundle loads only on the
-toolkit install that made it.
+`instance\bundles\` (the record of how they were trained was saved when the training
+ended). A bundle loads only on the toolkit install that made it.
 
 ![The export](user-guide/16-export.jpg)
 
@@ -611,6 +685,50 @@ In Step 1 choose **Yes, I have a trained model**, then load the `.bundle` file. 
 shows its models and scores; Step 6 then predicts with them, one row or a file.
 
 ![A bundle loaded](user-guide/17-load-bundle.jpg)
+
+### 4.8 Compare saved runs
+
+Each training saves the run's record when it ends: its data, split, settings and scores,
+without the models (runs exported before version 5.3 were saved by their export).
+**Saved Runs** in the navbar (or **See it in Saved Runs** after an export) lists them, newest first, 50 at a time (**Older runs** shows more). Nothing is uploaded or trained
+there, and no model is loaded.
+
+![The saved runs](user-guide/18-saved-runs.jpg)
+
+- **Bundle** says whether the run was exported: **Exported**, **Not exported** (it can still
+  be shown, compared and deleted; to predict with it later, export it from its training's
+  session), or an incomplete or unreadable bundle.
+- **Show** opens one run: what it was trained on, its leaderboard, its charts, and what its
+  models rely on when it was calculated in the trainer (section 4.5); otherwise it says it
+  was not calculated.
+- Tick two runs and click **Compare the two ticked runs**. A is the older one, B the newer.
+  Each model of both runs gets a table with every score of A and B and, per class, the test
+  recall.
+- **Δ = B − A** is shown only when both runs scored the same test rows: the same file (and
+  test file), the same label, the same split and the same row counts. Otherwise the numbers
+  stand side by side and the page says why they can't be compared.
+- Below: the models of one run only, and the settings that differ (features, models,
+  balancing, feature selection).
+- **Delete** removes a run, only when you ask. The page first lists every file it removes
+  and its size, and asks: nothing is deleted before you click **Delete** there, and nothing
+  is ever deleted on its own. The run's bundle (the large file) is kept unless you tick
+  **Also delete its bundle**. If a file can't be removed (another program has it open), the
+  run stays listed: close that program and delete it again.
+- **Storage**, below the list, shows what the toolkit keeps on this computer: each kind of
+  file, how many and their size, the total and the free space on the disk, and any
+  leftovers by name. It only shows: nothing is deleted from there. A run you deleted with
+  its bundle kept is listed under **Unregistered bundles**; **Register again** brings it
+  back as a saved run (its bundle's signature is checked first).
+- Two limits keep the disk from filling up, and neither deletes anything. Past 20 GB of
+  files (`TOOLKIT_STORAGE_WARN_MB`), Storage shows a warning, and so does the web server's
+  log when it starts. When the disk would keep less than 1 GB free (`TOOLKIT_MIN_FREE_MB`),
+  a new export, importance result or scan report is not saved, and the message says so:
+  free some space (delete runs you no longer need), then try again. Both are set in `.env`.
+
+Here the two runs of the same NSL-KDD files differ only in balancing, none (A) and class
+weights (B): Random Forest's CV macro-F1 is the same, its test macro-F1 is 0.010 lower.
+
+![Two runs compared](user-guide/19-compare-runs.jpg)
 
 ## 5. Use your model in the terminal
 
@@ -640,6 +758,23 @@ use the export of section 4.
    Classes (23): back, buffer_overflow, ftp_write, guess_passwd, imap, ipsweep, land, loadmodule, multihop, neptune, nmap, normal, perl, phf, pod, portsweep, rootkit, satan, smurf, spy, teardrop, warezclient, warezmaster
    Features: 41
 ```
+
+Since version 5.3 the card ends with what the models rely on, when it was calculated in
+the web trainer (section 4.5; the CLI only reads it): the 5 columns with the biggest drop of
+each model, and the warning when one column carries more than half of the effect. For
+example, on the CIC-IDS2017 sample (a sample number, not a result):
+
+```
+   What the models rely on (the drop in test macro-F1 when a feature's values are shuffled; a diagnosis, not causes):
+   Random Forest:
+      Fwd IAT Std                  0.0234 ± 0.0082
+      Average Packet Size          0.0000 ± 0.0000
+      ...
+      ⚠️  Fwd IAT Std carries more than half of the effect: check that it is not a copy of the label.
+      Support Vector Machine (linear): not calculated
+```
+
+Otherwise it says "not calculated" and where to calculate it.
 
 **Interactively:** choose an export and a model, then predict. Option 2 takes a real row
 from the model's test split. The list of 38 examples is shortened here:
@@ -798,8 +933,79 @@ are `guess_passwd` and `smurf`: the first is predicted wrongly, as `normal`.
 ]
 ```
 
+Since version 5.3 each result also has `why`: the values that pushed the model toward the
+predicted class and away from it, as the web API gives it ([web_api.md](web_api.md),
+"Explanations"). An interactive prediction shows its top 3 reasons under the probabilities,
+an approximation, not causes:
+
+```
+   💡 Why: what pushed it toward DDoS (an approximation, not causes; --json gives every reason):
+      - Fwd IAT Std = 3421993.623 (typical 7698.2715): +0.380
+      - Avg Bwd Segment Size = 0.0 (typical 72.0): +0.270
+      - Bwd Packet Length Max = 0.0 (typical 72.0): +0.270
+```
+
+A model without probabilities (the linear SVM) says it can't say why; a row whose values are
+all typical says nothing pushed it.
+
 `--model` chooses a model of the bundle (default: its best). The exit codes, for scripts,
 are in [reference.md, section 6](reference.md#6-exit-codes).
+
+**The saved runs** (section 4.8) are in the terminal too, without loading a model. The list,
+newest first (50 at a time; its last line gives the `--before` for the older ones); each line
+ends with its bundle: `exported` or `not exported` (an example from before that was added):
+
+```
+> python -m toolkit ids --runs
+1. 20261102T020115Z-a8b5a214  2026-11-02 02:01 UTC  KDDTrain+_sample.txt (2,000 rows)  label attack, stratified 1,595/405  ★ Random Forest of 2: CV 0.638, test 0.751
+2. 20261102T020103Z-6bec0a5e  2026-11-02 02:01 UTC  KDDTrain+_sample.txt (2,000 rows), test file KDDTest+_sample.txt  label attack, official 2,000/1,000  ★ Random Forest of 3: CV 0.707, test 0.245
+3. 20261102T020053Z-8c45b90b  2026-11-02 02:00 UTC  KDDTrain+_sample.txt (2,000 rows), test file KDDTest+_sample.txt  label attack, official 2,000/1,000  ★ Random Forest of 3: CV 0.707, test 0.254
+```
+
+`--delete RUN_ID` deletes one, as the page's **Delete** does: it lists the files and asks
+`[y/N]` first, and keeps the bundle unless you add `--with-bundle`. `--storage` shows what is
+kept, as the page's Storage does (it deletes nothing), and `--register RUN_ID` brings back a
+run deleted with its bundle kept.
+
+`--compare A B` prints the two side by side, as the page does. The 23 classes and the other
+two models are shortened here:
+
+```
+> python -m toolkit ids --compare 20261102T020053Z-8c45b90b 20261102T020103Z-6bec0a5e
+A: 20261102T020053Z-8c45b90b  2026-11-02 02:00 UTC  KDDTrain+_sample.txt (2,000 rows), test file KDDTest+_sample.txt  label attack, official 2,000/1,000  ★ Random Forest of 3: CV 0.707, test 0.254
+B: 20261102T020103Z-6bec0a5e  2026-11-02 02:01 UTC  KDDTrain+_sample.txt (2,000 rows), test file KDDTest+_sample.txt  label attack, official 2,000/1,000  ★ Random Forest of 3: CV 0.707, test 0.245
+
+✅ Both runs scored the same test rows, so their numbers can be compared: Δ = B − A.
+
+Random Forest (★ selected in both)
+                                       A         B   Δ (B − A)
+  CV macro-F1                      0.707     0.707       0.000
+  CV balanced acc.                 0.705     0.711      +0.005
+  Test macro-F1                    0.254     0.245      −0.010
+  Test balanced acc.               0.291     0.284      −0.008
+  Test accuracy                    0.677     0.674      −0.003
+  Weakest class recall             0.000     0.000       0.000
+  Fit time                        0.33 s    0.28 s    −0.054 s
+  Test recall per class
+    apache2                        0.000     0.000       0.000
+    back                           0.941     0.941       0.000
+    buffer_overflow                0.250     0.000      −0.250
+...
+
+Settings that differ:
+  Balancing
+    A: none
+    B: class_weight
+```
+
+With the run of the training file alone (a stratified split) as B, there is no Δ, and why:
+
+```
+⚠️ These runs did not score the same test rows, so the numbers are side by side, without a difference:
+   - Their test rows came from different test files, or only one had a test file.
+   - Their splits differ (the strategy, the seed, the test size or the official mode).
+   - They had different numbers of training or test rows.
+```
 
 ## 6. Your files
 
@@ -809,22 +1015,68 @@ Everything the toolkit keeps is in the `instance` folder of the project folder
 | Path | What |
 |---|---|
 | `instance\bundles\` | your exports, one `.bundle` file each |
-| `instance\runs\` | the record of each exported run: data, split, settings, scores |
+| `instance\runs\` | the record of each training: data, split, settings, scores |
 | `instance\scans\` | exported scan reports |
 | `instance\logs\` | one log file per tool (`web.log`, `scanner.log`, `ids_cli.log`) |
+| `instance\uploads\` | temporary copies of the datasets uploaded to the web trainer |
 | `instance\signing.key` | the key that signs your exports |
 
-Back up `signing.key` together with your bundles: without it, the bundles can't be loaded.
 An installed copy (`pip install .`) keeps these in a per-user folder instead
-([reference.md, section 7.3](reference.md#73-where-the-data-folder-is)).
+([reference.md, section 7.3](reference.md#73-where-the-data-folder-is)). Your API keys are
+in `.env` in the project folder.
+
+### 6.1 Who can open them
+
+The toolkit trusts this computer: whoever is signed in to it as you, and whoever you give
+the web app's access token to (section 3.7), has the same rights over these files. Other
+accounts on the computer are kept out by the operating system's permissions only, so each
+tool (a scan, the IDS, the web trainer) sets them when it starts: `instance` and `.env` can be opened by your account, SYSTEM
+(which Windows needs for backups and services) and the Administrators only, and nothing is
+inherited from the folder above (on Windows a second drive such as `D:` often gives
+everyone full control). Every file made in `instance`, the signing key too, gets the same.
+On Linux and macOS the folder is `700` and `.env` `600`.
+
+When they can't be set, for example on a USB drive formatted FAT, which has no permissions,
+the tool says so as it starts and goes on:
+
+```
+Could not limit who may open E:\toolkit\instance (...): other accounts on this computer may be able to read it.
+```
+
+The signature of a bundle proves it was made with this install's key and not changed
+since. It hides nothing: whoever can read a bundle can read the model, its settings and its
+example rows. Whoever has a copy of `signing.key` can make bundles this install loads and
+open the ones it made, so keep its backups where only you can read them.
+
+### 6.2 Back up and restore
+
+Back up these three, together:
+
+| Path | Why |
+|---|---|
+| `instance\signing.key` | without it, no bundle made here loads again (a new key doesn't bring them back) |
+| `instance\bundles\` | your exports |
+| `instance\runs\` | the record of each run, to retrain from if a bundle is lost, and the importance results saved beside it |
+
+The logs and the uploads need no backup, and the scan reports only if you want to keep them.
+
+To restore, on this computer or on a new install: start the web trainer once
+(`python -m toolkit web`, then stop it with Ctrl+C: it makes the `instance` folder and
+protects it), then copy the three into it. Copy them rather than move
+them, so they get the folder's permissions (a file moved on the same drive keeps its old
+ones). Do it before your first export on a new install: an export makes a new key, and the
+bundles saved with that key won't load once your old key is back.
 
 ## 7. If something goes wrong
 
 | What you see | What to do |
 |---|---|
+| `INTERRUPTED: a training asked for at ... was cut off ...` (in the terminal as the trainer starts, and once on its page) | The last trainer stopped while that job ran or waited: its workspace is gone with it. Upload the dataset again and start the training again (for a scan: start it again) |
+| `Another toolkit web server is already using the data folder ...` | The trainer is already running (the message says its process and address): open that one, or stop it with Ctrl+C in its window. A second one needs a folder of its own: `TOOLKIT_INSTANCE_DIR` |
 | `Port 5000 is already in use on this computer: ...` | The trainer may already be running: open the printed address. Or start it on another port: `python -m toolkit web --port 5001` |
 | `TOOLKIT_... must be ...` and the command stops | A setting has a wrong value: fix it or remove it ([reference.md, section 7.1](reference.md#71-toolkit_-settings)) |
 | `No exported model yet: train one in the web trainer and click Export ...` | Train and export a model first (section 4), or give a bundle with `--bundle` |
+| `[INCOMPLETE: the export was interrupted; ...]` after an export in `--list`, or `An incomplete bundle of this run is in the bundles folder ...` on Export | Part of a bundle is under its name: an export cut off by an older version of the toolkit, or a copy that stopped (the toolkit never removes it on its own). Delete that `<run id>.bundle` from `instance/bundles`, then export again |
 | `The bundle's signature does not match this install's signing key: ...` | The bundle was made by another install or changed after it was saved; only bundles made here load |
 | `Host 127.0.0.1 did not respond to ping.` | The host may block ping: add `--scan-unresponsive` to scan it anyway |
 | `Lookup failed: NVD: timed out` | NVD didn't answer in time; scan again later or set an `NVD_API_KEY` |

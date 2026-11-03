@@ -1,5 +1,5 @@
 """The web trainer's training work: the settings checked, the job queued, the run kept in
-the session's workspace (a cancel or a failure keeps nothing)."""
+the session's workspace and its record saved (HR5; a cancel or a failure keeps nothing)."""
 
 from __future__ import annotations
 
@@ -10,19 +10,25 @@ from typing import Any
 
 from ...core.data.settings import SplitConfig
 from ...core.services.ids import registry
+from ...core.services.ids.exports import write_run
 from ...core.services.ids.runs import TrainingRun, TrainSettings
 from ...core.services.ids.runs import train as train_run
+from ...core.services.storage import NoSpace
 from .datasets import label_values
-from .errors import BUSY, TRAINING_FAILED, UNKNOWN_COLUMN, ServiceError
-from .jobs import TRAINING, Job, JobRunner
+from .errors import BUSY, NO_SPACE, TRAINING_FAILED, UNKNOWN_COLUMN, Failed, ServiceError
+from .jobs import HERE, TRAINING, Job, JobRunner, Origin
 from .workspace import UploadedData, Workspace
 
 log = logging.getLogger(__name__)
 
+NOT_WRITTEN = "Not saved: the run could not be written (details in the server log)."
+
 
 def start_job(ws: Workspace, data: UploadedData, settings: TrainSettings, jobs: JobRunner,
-              max_seconds: float, answer: Callable[[TrainingRun], dict[str, Any]]) -> Job:
-    """Queue a training of the session dataset; the job's result is ``answer(run)``.
+              max_seconds: float, answer: Callable[[TrainingRun], dict[str, Any]],
+              origin: Origin = HERE) -> Job:
+    """Queue a training of the session dataset, asked for from ``origin``; the job's result
+    is ``answer(run)``.
 
     One training at a time per workspace (``training`` lock, else BUSY); the lock and a
     lease (D22) are held from now until the job ends, so the dataset can't change and the
@@ -38,7 +44,7 @@ def start_job(ws: Workspace, data: UploadedData, settings: TrainSettings, jobs: 
         ws.training.release()
 
     job = Job(kind=TRAINING, work=lambda job: answer(run_training(ws, data, settings, job)),
-              on_end=release, max_seconds=max_seconds,
+              on_end=release, max_seconds=max_seconds, origin=origin,
               steps=training_steps(len(settings.models or ()), settings.evaluation.cv_folds))
     ws.split = None  # free the preview split: training makes its own
     ws.add_job(job)
@@ -92,7 +98,9 @@ def run_training(ws: Workspace, data: UploadedData, settings: TrainSettings,
                  job: Job) -> TrainingRun:
     """The job's work, in the worker thread. Without the workspace lock: dataset changes
     are refused (409) while the training lock is held. Only a finished training is
-    stored; a cancel (JobCancelled from ``job.advance``) or a failure stores nothing."""
+    stored, and its record saved (HR5, RD3); when the record can't be, ``ws.not_saved``
+    says why and the run stays for Save again. A cancel (JobCancelled from
+    ``job.advance``) or a failure stores nothing."""
     try:
         run = train_run(data.frame, profile=data.profile, settings=settings,
                         test_frame=data.test_frame, source=data.source,
@@ -107,6 +115,26 @@ def run_training(ws: Workspace, data: UploadedData, settings: TrainSettings,
         raise ServiceError("No model could be trained. Details are in the server log.",
                        TRAINING_FAILED,
                        details={"failures": [asdict(f) for f in evaluation.failures]})
+    try:
+        save_run(run)
+        not_saved = None
+    except ServiceError as error:
+        not_saved = error.message
     with ws.lock:
-        ws.run, ws.export = run, None
+        ws.run, ws.export, ws.not_saved = run, None, not_saved
     return run
+
+
+def save_run(run: TrainingRun) -> None:
+    """Publish ``run``'s record (HR5, RD3), never replacing one: one already there was saved
+    by an earlier try. Else ServiceError NO_SPACE (the disk too full, HR4c) or Failed, with
+    why not, for the user."""
+    try:
+        write_run(run)
+    except FileExistsError:
+        pass
+    except NoSpace as error:
+        raise ServiceError(str(error), NO_SPACE) from None
+    except OSError:
+        log.exception("Could not save the record of run %s", run.run_id)
+        raise Failed(NOT_WRITTEN) from None

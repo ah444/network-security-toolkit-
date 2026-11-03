@@ -22,7 +22,7 @@ python -m toolkit ids --bundle instance/bundles/<run id>.bundle --info
   (linear and distance models), categorical columns one-hot or ordinal, optional feature
   selection and resampling, then the model. Every step is fitted on the training split only.
 - **Model choice:** by cross-validated macro-F1 on the training split; the test split is
-  scored once, after the choice.
+  used only after the choice, never to train or to choose.
 - **Output:** a class label per row and, for models that have them, class probabilities.
 - **Bundle:** the fitted models plus the full TrainingRun record (data fingerprint, settings,
   split, leakage findings, scores, library versions), signed with this install's key. A
@@ -88,6 +88,12 @@ trained, and the report has not been re-run for them.
 - **Probabilities:** a random forest's probabilities can change in their last digits from
   one run to the next (its trees are summed in parallel); the CSV output rounds them to 4
   digits.
+- **Explanations** (v5.3, in the core only, not yet on the page or in the CLI): why one
+  prediction came out as it did is approximate, not causal; correlated features share and
+  hide each other's effect; one feature set to its typical value alone can make a row that
+  never occurs; the probabilities are not calibrated. The importance concentration warning
+  (one feature carries more than half of the effect) has more than one possible cause, a
+  copy of the label among them.
 
 ## Ethical considerations
 

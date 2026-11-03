@@ -77,8 +77,6 @@ def test_the_authorization_is_checked_first(net, runner):
     ({"scripts": True}, "choose the nmap engine"),
     ({"engine": "nmap", "service_detection": "max"}, "'service_detection' must be one of"),
     ({"engine": "nmap", "timing": "insane"}, "'timing' must be one of"),
-    ({"ai": True}, "No OPENROUTER_API_KEY is set on the server"),
-    ({"abuseipdb": True}, "No ABUSEIPDB_API_KEY is set on the server"),
 ])
 def test_bad_choices_are_refused_before_any_network(net, runner, options, words):
     refused = _refused(Workspace(), _choices("scanme.example", **options), runner)
@@ -122,7 +120,7 @@ def test_nmap_missing_is_refused_without_this_computers_paths(net, runner):
 
 def test_a_scan_runs_and_its_answer_is_kept(net, runner, caplog):
     ws = Workspace()
-    caplog.set_level(logging.INFO, "toolkit.web.services.scan")
+    caplog.set_level(logging.INFO, "toolkit.core.services.recon.record")
     job = scan.start_scan(ws, _choices("scanme.example"), runner, LIMITS)
     assert ws.scanning.locked() and ws.leased
     _wait(job)
@@ -148,9 +146,11 @@ def test_a_scan_runs_and_its_answer_is_kept(net, runner, caplog):
                                                 for line in lines)
     assert lines[-1].startswith("Done: 1 host(s), 2 open port(s)")
     assert job.notes(len(lines) - 1) == lines[-1:]
+    # the record of the scan (HS3, tests/recon/test_scan_record.py), not a line of the job's
     logged = [r.getMessage() for r in caplog.records if r.getMessage().startswith("Scan ")]
-    assert logged == [logged[0]] and logged[0].startswith(
-        "Scan done: 'scanme.example', 1 host(s), 2 port(s) x tcp, engine builtin, 2 open")
+    assert [line.split(" ", 2)[1] for line in logged] == ["started", "ended"]
+    assert '"target": "scanme.example", "addresses": ["10.0.0.9"]' in logged[0]
+    assert '"outcome": "done", "open_ports": 2' in logged[1]
 
 
 def test_hosts_that_dont_answer_are_skipped_unless_asked(net, runner):

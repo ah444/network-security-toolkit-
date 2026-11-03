@@ -71,7 +71,7 @@ def test_the_default_app_has_no_token_and_no_banner(web_app):
 
 # --- Another computer --------------------------------------------------------------------
 
-@pytest.mark.parametrize("url", ["/", "/dynamic_ids", "/scan"])
+@pytest.mark.parametrize("url", ["/", "/dynamic_ids", "/scan", "/runs"])
 def test_another_computers_pages_go_to_the_unlock_page(open_app, url):
     response = _other(open_app).get(url)
     assert response.status_code == 302 and response.headers["Location"] == "/unlock"
@@ -79,6 +79,9 @@ def test_another_computers_pages_go_to_the_unlock_page(open_app, url):
 
 @pytest.mark.parametrize("method, url", [("GET", "/api/v1/scan/options"),
                                          ("GET", "/api/v1/workspace"),
+                                         ("GET", "/api/v1/runs"),
+                                         ("GET", "/api/v1/runs/20261030T120000Z-0000000a"),
+                                         ("GET", "/api/v1/runs/compare"),
                                          ("POST", "/api/v1/jobs/scan"),
                                          ("DELETE", "/api/v1/workspace")])
 def test_another_computers_api_is_locked(open_app, method, url):
@@ -170,7 +173,7 @@ def test_this_computer_needs_no_token(open_app):
                                          ("::", "all of this computer&#39;s addresses")])
 def test_every_page_says_where_it_is_open(make_app, host, where):
     test_client = make_app(WebConfig(host=host)).test_client()
-    for url in ("/", "/dynamic_ids", "/scan"):
+    for url in ("/", "/dynamic_ids", "/scan", "/runs"):
         assert f"This toolkit is open to your network ({where}" in test_client.get(url).get_data(
             as_text=True), url
 

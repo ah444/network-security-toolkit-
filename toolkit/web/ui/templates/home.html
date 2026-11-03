@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  {% if other_computers %}<meta name="csrf-token" content="{{ csrf_token() }}">{% endif %}
   <title>Home - Intrusion Detection System</title>
   <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
   <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/app.css') }}">
@@ -15,6 +16,7 @@
     <ul class="nav-menu" id="navMenu">
       <li class="nav-item"><a href="/dynamic_ids" class="nav-link">Dynamic Intrusion Detection System</a></li>
       <li class="nav-item"><a href="/scan" class="nav-link">Port Scanner</a></li>
+      <li class="nav-item"><a href="/runs" class="nav-link">Saved Runs</a></li>
       <li class="nav-item"><button type="button" id="themeToggle" class="nav-link theme-toggle" hidden>Theme: Auto</button></li>
     </ul>
   </nav>
@@ -58,6 +60,31 @@
         <a href="/scan" class="custom-btn">Start a Scan</a>
       </div>
     </div>
+    {% if other_computers %}
+
+    <!-- HS1: on this computer only, while the toolkit is open to the network -->
+    <section class="section" id="otherComputers" aria-labelledby="otherComputersTitle">
+      <h2 id="otherComputersTitle">Other computers</h2>
+      <p>This toolkit is open to your network. Anyone with the access token has your rights over the saved runs, bundles and scans, not only a view of the pages: they can upload data, train models and run port scans from this computer.</p>
+      <p class="field-hint">A new token locks every other computer out at once, without stopping the toolkit: the jobs they asked for that still wait are cancelled, a running one goes on and can be stopped below. The new token is shown in the terminal where the toolkit was started.</p>
+      <div class="button-group">
+        <button type="button" id="newToken" class="btn">New token</button>
+        <button type="button" id="refreshJobs" class="btn btn-secondary">Refresh</button>
+      </div>
+      <div id="accessStatus" class="message" role="status" tabindex="-1"></div>
+      <h3>Their jobs</h3>
+      <div id="otherJobsBox" class="table-container" tabindex="0" role="region" aria-label="Jobs of other computers" hidden>
+        <table id="otherJobs" class="metrics-table">
+          <thead>
+            <tr><th scope="col">Computer</th><th scope="col">Job</th><th scope="col">Where it is</th><th scope="col">Time</th><th scope="col">Stop</th></tr>
+          </thead>
+          <tbody id="otherJobsRows"></tbody>
+        </table>
+      </div>
+      <p id="noOtherJobs" class="field-hint">No jobs from other computers.</p>
+    </section>
+    <script type="module" src="{{ url_for('static', filename='js/othercomputers.js') }}"></script>
+    {% endif %}
   </div>
 </body>
 </html>

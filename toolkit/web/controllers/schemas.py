@@ -209,6 +209,32 @@ class UnlockRequest:
 
 
 @dataclasses.dataclass(frozen=True)
+class RunsRequest:
+    """``GET /runs``: the list starts after this run id (the next page); empty: the newest."""
+    before: str = ""
+
+
+@dataclasses.dataclass(frozen=True)
+class CompareRequest:
+    """``GET /runs/compare``: the two saved runs, by run id."""
+    a: str
+    b: str
+
+
+@dataclasses.dataclass(frozen=True)
+class DeleteRunRequest:
+    """``POST /runs/<run id>/delete``: also delete the run's bundle (else it is kept)."""
+    with_bundle: bool = False
+
+
+@dataclasses.dataclass(frozen=True)
+class ImportanceRequest:
+    """``POST /jobs/importance``: the model whose importance to calculate (default: the
+    selected one)."""
+    model: str = ""
+
+
+@dataclasses.dataclass(frozen=True)
 class ConfusionRequest:
     """``GET /run/confusion``: the model whose confusion matrix to show."""
     model: str = ""

@@ -21,18 +21,18 @@ from flask import Flask
 
 from ...core.services.ids.exports import BundleStore
 from ...core.data.settings import WebConfig, instance_dir, web_config
-from . import access, bundles, datasets, jobs, pages, resume, scan, training, workspace
+from . import access, bundles, datasets, jobs, pages, resume, runs, scan, training, workspace
 from .api import register_error_handlers
 from ..services.datasets import prepare_uploads
 from ..services.access import Access, is_this_computer
-from ..services.jobs import SCAN, TRAINING, JobRunner
+from ..services.jobs import IMPORTANCE, SCAN, TRAINING, JobRunner, instance_journal
 from .security import register_security
 from .state import WebState
 from ..services.workspace import WorkspaceStore
 from .. import ui as page
 
 BLUEPRINTS = (pages.bp, access.bp, datasets.bp, training.bp, jobs.bp, scan.bp, bundles.bp,
-              workspace.bp, resume.bp)
+              workspace.bp, resume.bp, runs.bp)
 
 
 def network_banner(config: WebConfig) -> str:
@@ -64,6 +64,11 @@ def create_app(config: WebConfig | None = None) -> Flask:
     )
     upload_dir = instance_dir() / "uploads"
     prepare_uploads(upload_dir)  # without the files a crash left (S11)
+    # other computers type a token, made new at every start (v5.2 step 2.4f); a job they asked
+    # for under an older unlock never starts (HS1)
+    access = None if is_this_computer(config.host) else Access()
+    refusal = access.refusal if access is not None else None
+    journal = instance_journal()  # each job's start and end, read at the next start (HR3c)
     app.extensions["toolkit"] = WebState(
         config=config,
         workspaces=WorkspaceStore(config.workspace_idle_minutes * 60,
@@ -71,10 +76,9 @@ def create_app(config: WebConfig | None = None) -> Flask:
                                   max_data_bytes=config.max_data_mb * 2**20),
         model_store=BundleStore(),
         upload_dir=upload_dir,
-        training_jobs=JobRunner(TRAINING),
-        scan_jobs=JobRunner(SCAN),
-        # other computers type a token, made new at every start (v5.2 step 2.4f)
-        access=None if is_this_computer(config.host) else Access(),
+        training_jobs=JobRunner(TRAINING, refusal, journal, also=(IMPORTANCE,)),  # RD2
+        scan_jobs=JobRunner(SCAN, refusal, journal),
+        access=access,
     )
     register_error_handlers(app)
     register_security(app, config.port)

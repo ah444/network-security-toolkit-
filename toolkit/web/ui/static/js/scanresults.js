@@ -9,13 +9,19 @@ import { code, quiet, statTile, summaryPanel } from "./summary.js";
 const CVES_SHOWN = 10;
 const SEVERITY_CLASS = { CRITICAL: "critical", HIGH: "high", MEDIUM: "medium", LOW: "low",
                          "NO KNOWN CVE": "none", UNKNOWN: "unknown" };
+const MATCH_LABEL = { version: "version match", name: "name match, unconfirmed" };
 const HOST_STATES = { scanned: "scanned", skipped: "skipped: it didn't answer ping",
                       failed: "the engine couldn't scan it" };
 
 // "cvss-" + the level: the card's edge and the level's colour (app.css); the word is always
-// written too, so the level never rests on the colour alone
+// written too, so the level never rests on the colour alone. NOT CHECKED has UNKNOWN's
 function severityClass(severity) {
   return "cvss-" + (SEVERITY_CLASS[severity] || "unknown");
+}
+
+// The severity, marked when its worst CVE was found by the product's name only
+function severityText(found) {
+  return found.severity + (found.severity_unconfirmed ? " (unconfirmed)" : "");
 }
 
 function plural(count, word) {
@@ -28,6 +34,17 @@ function sentText(sent) {
   const names = order.filter(name => name in sent).concat(
     Object.keys(sent).filter(name => !order.includes(name)));
   return names.map(name => name + " " + sent[name]).join(", ");
+}
+
+// The services that failed during the scan and were not asked again, and why (HS4b, RD5)
+function unavailableText(unavailable) {
+  return Object.entries(unavailable).map(([name, why]) => name + ": unavailable, " + why)
+    .join("; ");
+}
+
+// A port whose CVEs were not looked up (NVD off, failed or unavailable): never shown as clean
+function notChecked(entry) {
+  return entry.severity === "NOT CHECKED";
 }
 
 function summary(answer) {
@@ -45,6 +62,8 @@ function summary(answer) {
       statTile("Sent online", sentText(totals.sent) || "nothing"),
       statTile("Failed lookups", String(totals.failed_lookups.length),
                totals.failed_lookups.join("; ") || null),
+      Object.keys(totals.unavailable || {}).length > 0 ?
+        statTile("Unavailable", unavailableText(totals.unavailable)) : null,
     ],
     foot: online && "What could go online: NVD " + online.nvd + "; AI " + online.ai +
       "; AbuseIPDB " + online.abuseipdb + ".",
@@ -70,11 +89,12 @@ function detail(label, value) {
 function cveList(entry) {
   const cves = entry.cves;
   if (cves.length === 0) {
-    return entry.software ? "none found" : null;
+    return !entry.software ? null : notChecked(entry) ? "not checked" : "none found";
   }
   return el("ul", { class: "cve-list" },
     cves.slice(0, CVES_SHOWN).map(cve => el("li", {}, el("span", { class: "mono" }, cve.id),
-      " · CVSS " + (cve.cvss === null ? "?" : cve.cvss) + " · " + cve.severity)),
+      " · CVSS " + (cve.cvss === null ? "?" : cve.cvss) + " · " + cve.severity + " · " +
+      (MATCH_LABEL[cve.match] || "match unknown"))),
     cves.length > CVES_SHOWN && el("li", { class: "quiet" }, "and " + (cves.length - CVES_SHOWN) +
       " more: all of them are in the downloaded report"));
 }
@@ -87,8 +107,8 @@ function portCard(entry, manyHosts) {
       el("span", { class: "mono" }, (manyHosts ? entry.target + " " : "") + entry.port + "/" +
          entry.protocol),
       " ", entry.service, " · ", software, " · ",
-      el("span", { class: "cvss-level " + level }, entry.software ? entry.severity : "no lookup"),
-      entry.software && " · " + plural(entry.cves.length, "CVE")),
+      el("span", { class: "cvss-level " + level }, entry.software ? severityText(entry) : "no lookup"),
+      entry.software && !notChecked(entry) && " · " + plural(entry.cves.length, "CVE")),
     el("dl", { class: "port-details" },
       detail("Banner", entry.banner && code(entry.banner)),
       detail("CPE (nmap)", entry.cpe.length > 0 && code(entry.cpe.join(" "))),
@@ -96,7 +116,7 @@ function portCard(entry, manyHosts) {
         quiet(entry.engine === "nmap" ? "not recognised by nmap or in the banner (no CVE lookup)" :
               "not recognised in the banner (no CVE lookup)")),
       detail("CVEs (NVD)", cveList(entry)),
-      detail("Severity (from CVSS)", entry.software && entry.severity +
+      detail("Severity (from CVSS)", entry.software && severityText(entry) +
         (entry.max_cvss === null ? "" : " (highest CVSS " + entry.max_cvss + ")")),
       detail("CVE source", entry.cve_source),
       detail("AI explanation (may be wrong)", entry.ai_explanation &&

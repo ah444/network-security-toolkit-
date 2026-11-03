@@ -164,6 +164,24 @@ def whole_number(environ: Mapping[str, str], variable: str, default: int) -> int
     return value
 
 
+STORAGE_WARN_MB = 20_480  # the storage report warns past this size of the instance (HR4c)
+MIN_FREE_MB = 1024  # a new file is refused when the disk would keep less free than this
+
+
+def storage_warn_mb(environ: Mapping[str, str] | None = None) -> int:
+    """``TOOLKIT_STORAGE_WARN_MB``: past this size, the storage report warns (HR4c); it never
+    deletes anything."""
+    return whole_number(os.environ if environ is None else environ,
+                        "TOOLKIT_STORAGE_WARN_MB", STORAGE_WARN_MB)
+
+
+def min_free_mb(environ: Mapping[str, str] | None = None) -> int:
+    """``TOOLKIT_MIN_FREE_MB``: a new file is refused when the disk would keep less free
+    space than this (HR4c)."""
+    return whole_number(os.environ if environ is None else environ,
+                        "TOOLKIT_MIN_FREE_MB", MIN_FREE_MB)
+
+
 def switch(environ: Mapping[str, str], variable: str) -> bool:
     """An on/off setting: ``1`` is on, ``0`` or unset is off.
 
@@ -226,6 +244,22 @@ class EvaluationConfig:
     # Re-running a TrainingRun: metrics must match exactly with one worker; with more,
     # thread scheduling in some libraries (e.g. LightGBM) may change the last digits.
     parallel_metric_tolerance: float = 0.005
+
+
+@dataclass(frozen=True)
+class ExplainConfig:
+    """What a model relies on (v5.3 F3): permutation importance on the test split, and why one
+    prediction came out as it did."""
+
+    # Above this many test rows, a stratified sample of them (at least min_per_class each).
+    importance_max_rows: int = 5_000
+    importance_min_per_class: int = 3
+    importance_repeats: int = 5
+    # One feature with more than this share of the summed positive drops: the importance
+    # concentration warning (a copy of the label is one possible cause).
+    concentration_share: float = 0.5
+    # One prediction: the features that push most toward the class, and most away from it.
+    local_top: int = 5
 
 
 @dataclass(frozen=True)
@@ -316,7 +350,7 @@ def nmap_path(environ: Mapping[str, str] | None = None) -> str:
 
 # The TOOLKIT_* settings each command reads, checked before it starts (v5.1 step 1.5e).
 # TOOLKIT_INSTANCE_DIR and TOOLKIT_SECRET_KEY take any value.
-SHARED_SETTINGS = ("TOOLKIT_LOG_LEVEL",)
+SHARED_SETTINGS = ("TOOLKIT_LOG_LEVEL", "TOOLKIT_STORAGE_WARN_MB", "TOOLKIT_MIN_FREE_MB")
 COMMAND_SETTINGS = {
     "scan": (*SHARED_SETTINGS, "TOOLKIT_SCAN_MAX_HOSTS", "TOOLKIT_SCAN_MAX_PROBES",
              "TOOLKIT_SCAN_MAX_MIN", "TOOLKIT_NMAP_PATH"),

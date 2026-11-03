@@ -11,12 +11,13 @@ from typing import Any
 
 from flask import Blueprint, jsonify, request, send_file
 
-from ...core.services.ids.exports import write_run
+from ...core.services.ids.exports import INCOMPLETE, BundleExists
 from ...core.services.ids import registry
 from ...core.services.ids.bundle import Bundle, BundleError, BundleVersionWarning
 from ...core.services.ids.pipeline import FittedModel
 from ...core.services.ids.runs import TrainingRun
-from ..services.errors import NO_MODEL_LOADED, NOT_FOUND, NOT_TRAINED, TOO_LARGE
+from ...core.services.storage import NoSpace
+from ..services.errors import NO_MODEL_LOADED, NO_SPACE, NOT_FOUND, NOT_TRAINED, TOO_LARGE
 from ..services import prediction
 from .api import Answer, error_response, json_body
 from .schemas import ExportRequest, PredictRequest, load
@@ -38,8 +39,9 @@ def predict(ws: Workspace) -> Answer:
     req = load(PredictRequest, json_body())
     if ws.run is None:
         return error_response("Models not trained yet. Train a model first.", code=NOT_TRAINED)
+    training = {"typical_values": dict(ws.run.evaluation.training.typical)}
     return jsonify(prediction.predict_one(ws.run.evaluation.training.models, ws.run.evaluation.selected,
-                               req.values, req.model))
+                               req.values, req.model, training))
 
 
 @bp.route("/bundle/predict", methods=["POST"])
@@ -51,7 +53,7 @@ def predict_loaded(ws: Workspace) -> Answer:
         return error_response("No model loaded. Load a bundle exported by this toolkit first.",
                               code=NO_MODEL_LOADED)
     return jsonify(prediction.predict_one(ws.loaded.models, ws.loaded.selected,
-                               req.values, req.model))
+                               req.values, req.model, ws.loaded.run.get("training")))
 
 
 # --- Batch prediction: a whole CSV file (plan F1, step 1.4f) ---------------------------------
@@ -121,6 +123,16 @@ def download_predictions(ws: Workspace) -> Answer:
                      mimetype="text/csv")
 
 
+def _exists_message(error: FileExistsError) -> str:
+    """What blocks an export: an incomplete bundle of the run (HR3d), never removed on its own,
+    or a whole one, never overwritten. The file's name, not its path."""
+    if isinstance(error, BundleExists) and error.state == INCOMPLETE:
+        return (f"An incomplete bundle of this run is in the bundles folder: its export was "
+                f"interrupted. Remove {error.path.name} from instance/bundles, then export "
+                "again (it is never removed on its own).")
+    return "A bundle for this run already exists; it was not overwritten."
+
+
 def _bundle_refused(error: BundleError) -> Answer:
     """BundleError messages are written for users and never contain paths (tested)."""
     return error_response(str(error), code=error.code)
@@ -129,8 +141,9 @@ def _bundle_refused(error: BundleError) -> Answer:
 @bp.route("/run/export", methods=["POST"])
 @with_workspace()
 def export(ws: Workspace) -> Answer:
-    """Save the session's run as a signed bundle in instance/bundles/ (never overwritten)
-    and its TrainingRun in instance/runs/; the browser downloads it from /api/v1/run/bundle."""
+    """Save the session's run as a signed bundle in instance/bundles/ (never overwritten);
+    the browser downloads it from /api/v1/run/bundle. Its record was saved by its training
+    (HR5): Export never touches it."""
     req = load(ExportRequest, json_body())
     try:
         name = safe_model_basename(req.name)
@@ -141,12 +154,12 @@ def export(ws: Workspace) -> Answer:
     if ws.export is None:
         try:
             saved = state().model_store.save(ws.run)
-            write_run(saved.run)
         except BundleError as error:
             return _bundle_refused(error)
-        except FileExistsError:
-            return error_response("A bundle for this run already exists; it was not overwritten.",
-                                  409)
+        except FileExistsError as error:
+            return error_response(_exists_message(error), 409)
+        except NoSpace as error:  # HR4c: the disk is too full to save it
+            return error_response(str(error), 507, NO_SPACE)
         ws.export = ExportedBundle(saved, name)
     ws.export.name = name
     return jsonify(export_answer(ws.export))

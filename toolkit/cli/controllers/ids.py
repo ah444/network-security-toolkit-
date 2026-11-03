@@ -9,6 +9,12 @@ project: train one in the web trainer and click Export (saved in instance/bundle
     python -m toolkit ids --list              list the exports
     python -m toolkit ids --csv flows.csv     label every row (newest export)
     python -m toolkit ids --bundle my.bundle --json '{"Flow Duration": 3, ...}'
+    python -m toolkit ids --runs              list the saved runs (v5.3 F2)
+    python -m toolkit ids --compare A B       two saved runs side by side
+    python -m toolkit ids --delete RUN_ID     delete a saved run after naming its files
+                                              (its bundle too with --with-bundle; HR4a)
+    python -m toolkit ids --storage           what is kept, by kind (only shows; HR4b)
+    python -m toolkit ids --register RUN_ID   a deleted run back from its kept bundle
 
 (from the project folder; ``toolkit ids`` once installed; moved from
 tools/IDS/IDS_CLI - CIC-2017/ in v5.1 step 1.4a; the predictions are
@@ -23,10 +29,16 @@ import sys
 import warnings
 from collections.abc import Sequence
 from pathlib import Path
+from typing import Any
 
 from ...core.services.ids.bundle import Bundle, BundleError, BundleVersionWarning
+from ...core.services.ids.comparison import NotARun, compare_saved, saved_runs
 from ...core.services.ids.datasets import DatasetError
-from ...core.services.ids.exports import BundleStore
+from ...core.services.ids.exports import EXPORTED, BundleStore
+from ...core.services.ids.registration import register_bundle
+from ...core.services.ids.run_removal import not_removed, remove_run, run_files
+from ...core.services.ids.saved_importance import NotAnImportance, saved_importances
+from ...core.services.storage import NoSpace, storage_report
 from ...core.services.ids.prediction import (
     json_rows,
     label_column,
@@ -37,17 +49,18 @@ from ...core.services.ids.prediction import (
 from ...core.data.logs import setup_logging
 from ...core.services.ports import ModelStore
 from ..ui import ids as screen
+from ..ui import runs as runs_screen
 
 MODEL_STORE: ModelStore = BundleStore()  # this install's exports (instance/bundles)
 LARGE_BUNDLE = 500 * 2**20  # bytes: say that loading takes a while
 
 
 def load_model(bundle_path: str | Path | None = None) -> Bundle:
-    """A bundle signed by this install: ``bundle_path``, else the newest export.
+    """A bundle signed by this install: ``bundle_path``, else the newest whole export.
 
     Raises BundleError (with a message for the user) for anything else."""
     if bundle_path is None:
-        exports = MODEL_STORE.list_bundles()
+        exports = [info for info in MODEL_STORE.list_bundles() if info.state == EXPORTED]
         if not exports:
             raise BundleError("NO_EXPORT", screen.NO_EXPORT)
         bundle_path = exports[0].path
@@ -73,6 +86,73 @@ def list_exports() -> int:
     return 0
 
 
+def list_runs(before: str | None = None) -> int:
+    """``--runs``: the saved runs, newest first, 50 at a time (``--before``: the older ones);
+    their records only, no model is opened. Exit code 0."""
+    runs_screen.runs_list(saved_runs(before))
+    return 0
+
+
+def compare_runs(a: str, b: str) -> int:
+    """``--compare A B``: two saved runs side by side, Δ = B − A when they scored the same
+    test rows. Exit code 0."""
+    runs_screen.comparison(compare_saved(a, b))
+    return 0
+
+
+def delete_run(run_id: str, with_bundle: bool) -> int:
+    """``--delete RUN_ID``: names the run's files and asks; only a yes removes them (the
+    bundle only ``with_bundle``). Exit code 0, or 2 when a file could not be removed (the
+    run is kept)."""
+    runs_screen.delete_files(run_id, run_files(run_id), with_bundle)
+    if not runs_screen.confirm_delete():
+        runs_screen.deleted(run_id, None)
+        return 0
+    removal = remove_run(run_id, with_bundle)
+    if removal.failed is not None:
+        screen.error(OSError(not_removed(removal)))
+        return 2
+    runs_screen.deleted(run_id, len(removal.removed))
+    return 0
+
+
+def register_run(run_id: str) -> int:
+    """``--register RUN_ID``: the record its kept bundle carries saved again, once the
+    bundle's signature is checked. Exit code 0, or 2 with why not."""
+    try:
+        register_bundle(run_id)
+    except FileNotFoundError:
+        screen.error(FileNotFoundError(f"There is no bundle of run {run_id} in instance/bundles."))
+        return 2
+    except (FileExistsError, BundleError, NoSpace) as error:
+        screen.error(error)
+        return 2
+    runs_screen.registered(run_id)
+    return 0
+
+
+def listing(args: argparse.Namespace) -> int:
+    """``--list``, ``--runs``, ``--compare``, ``--delete``, ``--storage`` or ``--register``,
+    which open no model; exit code 2 with the message for a bad run id, a file that is not a
+    run, or a run that isn't saved."""
+    if args.list:
+        return list_exports()
+    if args.storage:
+        runs_screen.storage(storage_report())
+        return 0
+    try:
+        if args.register:
+            return register_run(args.register)
+        if args.delete:
+            return delete_run(args.delete, args.with_bundle)
+        return list_runs(args.before) if args.runs else compare_runs(*args.compare)
+    except NotARun as error:
+        screen.error(error)
+    except FileNotFoundError as error:
+        screen.error(FileNotFoundError(f"There is no saved run {error}."))
+    return 2
+
+
 def run_csv(bundle: Bundle, csv_path: str | Path, output: str | Path | None = None,
             model: str | None = None) -> int:
     """Label every row of a CSV file; the result file is never overwritten."""
@@ -89,10 +169,19 @@ def run_json(bundle: Bundle, text: str, model: str | None = None) -> int:
     return 0
 
 
+def saved_results(bundle: Bundle) -> dict[str, Any]:
+    """What the bundle's models rely on, as saved by the web trainer (F3f; read only): none
+    for a run id no result file can be named after (an older bundle's)."""
+    try:
+        return saved_importances(bundle.run_id)
+    except NotAnImportance:
+        return {"importances": [], "left_out": 0}
+
+
 def interactive(bundle: Bundle, model: str | None = None) -> int:
     """The menu: the model card, the model to use, then predictions until Exit. A bad value, a
     missing file or a result file that already exists is shown and the menu goes on."""
-    screen.card(bundle)
+    screen.card(bundle, saved_results(bundle))
     model = screen.choose_model(bundle, model or bundle.selected)
     screen.ready(model)
     while True:
@@ -130,7 +219,22 @@ def build_parser(prog: str | None = None) -> argparse.ArgumentParser:
         prog=prog, description="Intrusion detection with a model bundle exported by the web trainer.")
     parser.add_argument("--bundle", help="a .bundle exported on this computer "
                         "(default: choose one; without a prompt, the newest export)")
-    parser.add_argument("--list", action="store_true", help="list the exports and exit")
+    listing = parser.add_mutually_exclusive_group()
+    listing.add_argument("--list", action="store_true", help="list the exports and exit")
+    listing.add_argument("--runs", action="store_true",
+                         help="list the saved runs (newest first, 50 at a time) and exit")
+    listing.add_argument("--compare", nargs=2, metavar="RUN_ID",
+                         help="compare two saved runs (A then B; differences are B - A) and exit")
+    listing.add_argument("--delete", metavar="RUN_ID",
+                         help="delete a saved run: names its files and asks first")
+    listing.add_argument("--storage", action="store_true",
+                         help="show what is kept, by kind (only shows: deletes nothing) and exit")
+    listing.add_argument("--register", metavar="RUN_ID",
+                         help="bring a deleted run back from its kept bundle and exit")
+    parser.add_argument("--with-bundle", action="store_true",
+                        help="with --delete: delete the run's bundle too (default: kept)")
+    parser.add_argument("--before", metavar="RUN_ID",
+                        help="with --runs: the runs saved before this one")
     parser.add_argument("--model", help="which model of the bundle (default: its best)")
     parser.add_argument("--csv", help="label every row of this CSV file")
     parser.add_argument("--output", help="where --csv writes its result "
@@ -143,17 +247,23 @@ def build_parser(prog: str | None = None) -> argparse.ArgumentParser:
 
 def parse_args(argv: Sequence[str] | None, prog: str | None = None) -> argparse.Namespace:
     """The flags of ``argv`` (``prog``: the command the help shows)."""
-    return build_parser(prog).parse_args(argv)
+    parser = build_parser(prog)
+    args = parser.parse_args(argv)
+    if args.before is not None and not args.runs:
+        parser.error("--before goes with --runs")
+    if args.with_bundle and not args.delete:
+        parser.error("--with-bundle goes with --delete")
+    return args
 
 
 def main(argv: Sequence[str] | None = None, prog: str | None = None) -> int:
-    """The command, without exiting: ``--list``, the model card (``--info``), ``--csv``, ``--json``,
-    or the menu. Only a bundle signed by this install is opened. Exit code 0, or 2 with the message
-    for a bundle that is refused, a bad value or a file problem; Ctrl+C or the end of input says
-    goodbye (0)."""
+    """The command, without exiting: ``--list``, ``--runs``, ``--compare``, ``--delete``, the model card
+    (``--info``), ``--csv``, ``--json``, or the menu. Only a bundle signed by this install is
+    opened. Exit code 0, or 2 with the message for a bundle that is refused, a bad value or a
+    file problem; Ctrl+C or the end of input says goodbye (0)."""
     args = parse_args(argv, prog)
-    if args.list:
-        return list_exports()
+    if args.list or args.runs or args.compare or args.delete or args.storage or args.register:
+        return listing(args)
     interactive_mode = not (args.csv or args.json or args.info)
     if interactive_mode:
         screen.header()
@@ -166,7 +276,7 @@ def main(argv: Sequence[str] | None = None, prog: str | None = None) -> int:
             raise ValueError(f"Unknown model {args.model!r}; this bundle has "
                              f"{', '.join(bundle.models)}")
         if args.info:
-            screen.card(bundle)
+            screen.card(bundle, saved_results(bundle))
             return 0
         if args.csv:
             return run_csv(bundle, args.csv, args.output, args.model)

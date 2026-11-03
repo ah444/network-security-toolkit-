@@ -1,7 +1,8 @@
 """TrainingRun records on disk, as dicts (the ML core itself never writes files).
 
 Runs live in ``instance/runs/<run id>.json`` (gitignored; ``TOOLKIT_INSTANCE_DIR`` moves
-``instance/``). A record is written once and never overwritten. Which schema versions
+``instance/``). A record is written once and never overwritten, and is published whole or
+not at all (``toolkit.core.data.publish``, HR3a). Which schema versions
 are understood is ``toolkit.core.services.ids.exports.read_run``.
 """
 
@@ -12,7 +13,9 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
+from ..publish import publish_text
 from ..settings import instance_dir
+from .importance_files import is_importance_name
 
 
 def runs_dir(environ: Mapping[str, str] | None = None) -> Path:
@@ -24,12 +27,8 @@ def write_record(run_id: str, record: Mapping[str, Any],
                  directory: str | Path | None = None) -> Path:
     """Write ``<run id>.json``; raises FileExistsError rather than replace a record."""
     directory = Path(directory) if directory is not None else runs_dir()
-    directory.mkdir(parents=True, exist_ok=True)
-    path = directory / f"{run_id}.json"
-    with path.open("x", encoding="utf-8", newline="\n") as handle:
-        json.dump(record, handle, indent=1, ensure_ascii=False, allow_nan=False)
-        handle.write("\n")
-    return path
+    text = json.dumps(record, indent=1, ensure_ascii=False, allow_nan=False) + "\n"
+    return publish_text(directory / f"{run_id}.json", text)
 
 
 def read_record(path: str | Path) -> Any:
@@ -37,7 +36,24 @@ def read_record(path: str | Path) -> Any:
     return json.loads(Path(path).read_text(encoding="utf-8"))
 
 
+def file_size(path: Path) -> int | None:
+    """The size of one of a run's files in bytes; None when there is none."""
+    try:
+        return path.stat().st_size if path.is_file() else None
+    except OSError:
+        return None
+
+
+def remove_file(path: Path) -> None:
+    """Removes one of a run's files (HR4a): its record, an importance result or its bundle;
+    nothing when it is already gone. Any other OSError is raised (on Windows: a file another
+    program has open)."""
+    path.unlink(missing_ok=True)
+
+
 def list_runs(directory: str | Path | None = None) -> list[Path]:
-    """The ``*.json`` files of ``directory`` (default ``runs_dir``), sorted by name."""
+    """The ``*.json`` files of ``directory`` (default ``runs_dir``) but the importance
+    results beside the records (HR2), sorted by name."""
     directory = Path(directory) if directory is not None else runs_dir()
-    return sorted(directory.glob("*.json")) if directory.is_dir() else []
+    found = directory.glob("*.json") if directory.is_dir() else ()
+    return sorted(path for path in found if not is_importance_name(path.name))

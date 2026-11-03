@@ -67,7 +67,7 @@ def network(monkeypatch):
     cves = Cves()
     real_intel = Intel
 
-    def offline_intel(keys, use_ai=False, stop=None):
+    def offline_intel(keys, use_ai=False, stop=None, nvd=True):
         return real_intel(keys, use_ai, providers=[cves], stop=stop)
 
     monkeypatch.setattr(scan_service, "Intel", offline_intel)
@@ -215,8 +215,9 @@ def test_intel_gives_nvd_its_stop():
 
 def _entries():
     found = {"cves": [{"id": "CVE-2021-41773", "cvss": 9.8, "cvss_version": "3.1",
-                       "severity": "CRITICAL"}],
+                       "severity": "CRITICAL", "match": "version"}],
              "max_cvss": 9.8, "severity": "CRITICAL", "ai_explanation": "", "errors": [],
+             "severity_unconfirmed": False,
              "cve_source": "version match (cpe:2.3:a:apache:http_server:2.4.49)"}
     result = PortResult(8080, "tcp", "open", "http-alt", "=cmd|' /C calc'!A0 Apache/2.4.49 café")
     return [report.make_entry("127.0.0.1", result, "Apache 2.4.49", found, "Windows", "builtin")]

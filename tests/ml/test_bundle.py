@@ -236,9 +236,7 @@ def test_save_and_load_bundle(monkeypatch, tmp_path, run):
     saved = core_exports.save_bundle(run)
     assert saved.path == tmp_path / "bundles" / f"{run.run_id}.bundle"
     assert saved.sha256 == hashlib.sha256(saved.path.read_bytes()).hexdigest()
-    assert saved.run.bundle_sha256 == saved.sha256 and run.bundle_sha256 is None
-    record = core_exports.read_run(core_exports.write_run(saved.run))  # caller saves the record
-    assert record["bundle_sha256"] == saved.sha256
+    assert saved.run is run and run.bundle_sha256 is None, "the record is its training's (HR5)"
     with pytest.raises(FileExistsError):
         core_exports.save_bundle(run)  # never overwritten
     loaded = core_exports.load_bundle(saved.path)

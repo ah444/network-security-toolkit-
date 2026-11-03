@@ -58,7 +58,7 @@ def test_no_ai_request_without_consent_or_key(fake_session, nvd_openssh,
 def test_ai_consent_is_asked_in_the_scan(fake_ports, scan_service, scanner, monkeypatch, capsys):
     monkeypatch.setenv("OPENROUTER_API_KEY", "or-test-key")
     prompts = []
-    answers = iter(["127.0.0.1", "1", "1", "tcp", "yes", "n", "n"])
+    answers = iter(["127.0.0.1", "1", "1", "tcp", "yes", "n", "y", "n"])  # NVD yes, AI no
 
     def answer(prompt=""):
         prompts.append(prompt)

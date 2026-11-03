@@ -78,6 +78,7 @@ class Workspace:
         # (key, SplitResult): last training split used by the previews
         self.split: tuple[tuple[int, str, float], SplitResult] | None = None
         self.run: TrainingRun | None = None  # TrainingRun of the last training
+        self.not_saved: str | None = None  # why its record isn't saved (HR5); None once it is
         self.export: ExportedBundle | None = None  # once the run was exported
         self.loaded: Bundle | None = None  # bundle loaded back from a file
         self.predictions: BatchPredictions | None = None  # the last "Predict a CSV file"
@@ -186,6 +187,14 @@ class WorkspaceStore:
     def values(self) -> list[Workspace]:
         """The workspaces now kept (a copy of the list)."""
         return list(self._workspaces.values())
+
+    def forget_export(self, run_id: str) -> None:
+        """The workspaces holding the export of ``run_id`` forget it once its bundle was
+        deleted (HR4a): their Export saves the run again."""
+        for ws in self.values():
+            with ws.lock:
+                if ws.export is not None and ws.export.saved.run.run_id == run_id:
+                    ws.export = None
 
     def _drop_idle(self, now: float) -> int:
         """Drops the workspaces unused for ``idle_seconds``, never a leased one; how many. The

@@ -34,7 +34,8 @@ class LookupResult(TypedDict):
     cves: list[CveEntry]  # worst first
     cve_source: str  # how they were found: "version match (...)" or "keyword search (...)"
     max_cvss: float | None
-    severity: str  # of the worst CVE; "NO KNOWN CVE" if none, "UNKNOWN" if no source answered
+    severity: str  # of the worst CVE; "NO KNOWN CVE" if none; "NOT CHECKED" if no source answered
+    severity_unconfirmed: bool  # no CVE matched by version has the worst score
     ai_explanation: str
     errors: list[str]  # one per failed lookup: "<provider>: <reason>"
 
@@ -44,8 +45,10 @@ class Intel:
     INTEL_WORKERS at a time (step 1.4e). A failed lookup is recorded and the scan goes on;
     a product looked up without an error is not sent again in this scan.
 
-    The sources are IntelProviders: by default NVD, plus OpenRouter after consent and
-    AbuseIPDB when there is a key; ``providers`` replaces them (offline sources, tests).
+    The sources are IntelProviders: by default NVD (unless ``nvd`` is False), plus OpenRouter
+    when asked for and AbuseIPDB, each with its key; ``providers`` replaces them (offline
+    sources, tests). A provider that fails is not asked again by this Intel, so for the rest of
+    its scan (HS4): ``unavailable`` says which and why.
 
     Once ``stop`` is set (v5.2 step 2.4c: the web scan's Cancel) no provider is asked again
     and NVD stops waiting for its slot: ScanStopped. A request already sent ends within its
@@ -55,7 +58,7 @@ class Intel:
     def __init__(self, keys: Mapping[str, str], use_ai: bool = False,
                  session: Session | None = None, timeout: float = INTEL_TIMEOUT,
                  providers: Iterable[IntelProvider] | None = None,
-                 stop: threading.Event | None = None) -> None:
+                 stop: threading.Event | None = None, nvd: bool = True) -> None:
         self.keys = keys
         self.use_ai = bool(use_ai and keys.get("openrouter"))
         self.session = session or Session()
@@ -64,7 +67,7 @@ class Intel:
         self.model = ai_model()
         if providers is None:
             defaults: list[IntelProvider] = [
-                NvdProvider(self.session, keys.get("nvd", ""), timeout, self.stop)]
+                NvdProvider(self.session, keys.get("nvd", ""), timeout, self.stop)] if nvd else []
             if self.use_ai:
                 defaults.append(OpenRouterProvider(self.session, keys["openrouter"],
                                                    self.model, timeout))
@@ -73,6 +76,7 @@ class Intel:
             providers = defaults
         self.providers = list(providers)
         self._done: dict[str, LookupResult] = {}  # products looked up without an error
+        self._off: dict[str, str] = {}  # a provider that failed in this scan: why
         self._lock = threading.Lock()
 
     def _ask(self, kind: str, subject: str, errors: list[str]) -> list[IntelFinding]:
@@ -82,11 +86,21 @@ class Intel:
         for provider in (p for p in self.providers if p.kind == kind):
             if self.stop.is_set():
                 raise ScanStopped("the scan was stopped before its lookups ended")
+            with self._lock:
+                if provider.name in self._off:
+                    continue
             try:
                 found.append(provider.lookup(subject))
             except LOOKUP_ERRORS as error:
                 errors.append(f"{provider.name}: {describe(error)}")
+                with self._lock:
+                    self._off.setdefault(provider.name, describe(error))
         return found
+
+    def unavailable(self) -> dict[str, str]:
+        """The services that failed in this scan and were not asked again: name → why."""
+        with self._lock:
+            return dict(self._off)
 
     def lookup(self, software: str) -> LookupResult:
         """CVEs, worst CVSS severity and the optional AI text for one product; once per
@@ -95,7 +109,8 @@ class Intel:
             if software in self._done:
                 return self._done[software]
         result: LookupResult = {"cves": [], "cve_source": "", "max_cvss": None,
-                                "severity": "UNKNOWN", "ai_explanation": "", "errors": []}
+                                "severity": "NOT CHECKED", "severity_unconfirmed": False,
+                                "ai_explanation": "", "errors": []}
         answers = self._ask("cves", software, result["errors"])
         if answers:
             cves = [cve for answer in answers for cve in answer.cves]
@@ -104,6 +119,8 @@ class Intel:
             worst = result["cves"][0] if result["cves"] else None
             result["max_cvss"] = worst["cvss"] if worst else None
             result["severity"] = worst["severity"] if worst else "NO KNOWN CVE"
+            result["severity_unconfirmed"] = worst is not None and not any(
+                c["match"] == "version" and (c["cvss"] or 0) >= (worst["cvss"] or 0) for c in cves)
         texts = self._ask("explanation", software, result["errors"])
         result["ai_explanation"] = "\n\n".join(t.text for t in texts if t.text)
         if not result["errors"]:
@@ -147,4 +164,7 @@ class Intel:
         if not any(p.kind == "ip_reputation" for p in self.providers):
             return None, "AbuseIPDB: no API key"
         found = self._ask("ip_reputation", ip, errors)
-        return (dict(found[0].data), None) if found else (None, errors[0])
+        if found:
+            return dict(found[0].data), None
+        return None, errors[0] if errors else (
+            f"AbuseIPDB: unavailable, {self.unavailable().get('AbuseIPDB', 'not asked')}")
