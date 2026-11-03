@@ -8,29 +8,19 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from typing import Any
 
+from ...core.services.recon.saved_scans import HOST_STATES, ONLINE, when
 from ...core.services.recon.scan import one_line
 from .scan import print_entry
 
 NO_SCANS = ("No saved scans yet: each scan that finishes, here or on the web page, is saved in "
             "instance/scan_history.")
 ENGINES = {"builtin": "built-in", "nmap": "nmap"}
-HOST_STATES = {"scanned": "scanned", "skipped": "skipped: it didn't answer ping",
-               "failed": "the engine couldn't scan it"}
 STATUS = {"opened": "opened", "closed": "closed", "changed": "changed", "same": "the same",
           "not_scanned_in_a": "open in B; A didn't check this port",
           "not_scanned_in_b": "open in A; B didn't check this port"}
 CHANGE_NAMES = {"service": "service", "software": "software", "severity": "severity",
                 "max_cvss": "highest CVSS"}
-ONLINE = (("nvd", "NVD (CVEs, services.nvd.nist.gov)"), ("ai", "AI explanation (OpenRouter)"),
-          ("abuseipdb", "IP reputation (AbuseIPDB)"))  # as a scan's opening notice says them
 YES = ("y", "yes")
-
-
-def when(started: str) -> str:
-    """``2026-11-03T10:15:00Z`` as ``2026-11-03 10:15 UTC``."""
-    if len(started) >= 16 and started[10] == "T":
-        return f"{started[:10]} {started[11:16]} UTC"
-    return started
 
 
 def protocols(names: Sequence[str]) -> str:

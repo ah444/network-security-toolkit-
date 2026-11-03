@@ -37,6 +37,8 @@ CONTROLLER_DATA = ("toolkit.core.data.settings", "toolkit.core.data.keys",
                    "toolkit.core.data.logs", "toolkit.web.data.net",
                    "toolkit.web.data.instance_lock", "toolkit.cli.data.processes")
 ARGPARSE_OUTSIDE_CLI = ("toolkit.web.controllers.command",)  # the web command's flags
+# Jinja2 outside the web: only the scan report's HTML, a file (DECISIONS F5). No other module.
+JINJA2_OUTSIDE_WEB = ("toolkit.core.data.recon.report_render",)
 WEB_FRAMEWORK = {"flask", "werkzeug", "jinja2", "waitress"}
 OUTSIDE = {"socket", "ssl", "requests", "urllib", "http", "subprocess", "webbrowser"}
 FILE_METHODS = {"read_text", "read_bytes", "write_text", "write_bytes", "unlink", "mkdir",
@@ -140,7 +142,8 @@ def _import_violations(module, is_package, tree):
         if top == "toolkit":
             found += [f"{module}:{line} {problem}"
                       for problem in _import_problems(module, here, name)]
-        if top in WEB_FRAMEWORK and (interface, layer) != ("web", "controllers"):
+        if top in WEB_FRAMEWORK and (interface, layer) != ("web", "controllers") and not (
+                top == "jinja2" and module in JINJA2_OUTSIDE_WEB):
             found.append(f"{module}:{line} imports the web framework ({name})")
         if top == "argparse" and (interface, layer) != ("cli", "controllers") and \
                 module not in ARGPARSE_OUTSIDE_CLI:
@@ -224,6 +227,8 @@ def test_each_rule_is_detected(tmp_path):
         "toolkit/core/data/settings.py": "from ..services import ids\n",
         "toolkit/core/data/recon/__init__.py": "",
         "toolkit/core/data/recon/nvd.py": "from ..ids import bundle_files\n",
+        "toolkit/core/data/recon/report_render.py": "import jinja2\nimport flask\n",
+        "toolkit/core/data/recon/scan_files.py": "from jinja2 import Template\n",
         "toolkit/core/data/ids/__init__.py": "",
         "toolkit/core/data/ids/bundle_files.py": "import socket\nprint('x')\n",
         "toolkit/core/services/__init__.py": "",
@@ -262,6 +267,8 @@ def test_each_rule_is_detected(tmp_path):
         "toolkit.core.data.recon.nvd:1 imports toolkit.core.data.ids.bundle_files (recon and "
         "ids are",
         "toolkit.core.data.ids.bundle_files:2 calls print()",
+        "toolkit.core.data.recon.report_render:2 imports the web framework (flask)",
+        "toolkit.core.data.recon.scan_files:1 imports the web framework (jinja2.Template)",
         "toolkit.core.services.ids.split:1 imports the web framework (flask)",
         "toolkit.core.services.ids.split:2 imports requests: only the data layer goes outside",
         "toolkit.core.services.ids.split:3 imports the old name toolkit.ids_core",
@@ -290,6 +297,7 @@ def test_each_rule_is_detected(tmp_path):
     assert "toolkit.cli.controllers.scan:3" not in found  # settings: allowed
     assert "toolkit.web.controllers:1" not in found  # the web routes use Flask
     assert "toolkit.web.controllers.command" not in found  # the web command's flags
+    assert "toolkit.core.data.recon.report_render:1" not in found  # the report's Jinja2 only
     assert "toolkit.start:1" not in found and "toolkit.start:2" not in found  # it picks one
     assert "toolkit.web.services.jobs:1" not in found  # web uses core
 

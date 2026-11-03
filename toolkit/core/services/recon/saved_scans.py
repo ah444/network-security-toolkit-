@@ -26,6 +26,12 @@ PROTOCOL_CHOICE = {("tcp",): "tcp", ("udp",): "udp", ("tcp", "udp"): "both"}
 DEFAULT_SWITCHES = {"scan_unresponsive": False, "nvd": True, "ai": True, "abuseipdb": True}
 NMAP_DEFAULTS = {"service_detection": "normal", "timing": "normal", "scripts": "",
                  "os_detect": False}
+# What the user reads about a saved scan, said once for the CLI (cli/ui/scans.py) and the
+# report (scan_report.py); the web pages say the same in scanresults.js and scancompare.js.
+HOST_STATES = {"scanned": "scanned", "skipped": "skipped: it didn't answer ping",
+               "failed": "the engine couldn't scan it"}
+ONLINE = (("nvd", "NVD (CVEs, services.nvd.nist.gov)"), ("ai", "AI explanation (OpenRouter)"),
+          ("abuseipdb", "IP reputation (AbuseIPDB)"))  # as a scan's opening notice says them
 _FIELDS: dict[str, type | tuple[type, ...]] = {
     "started": str, "seconds": (int, float), "source": str, "target": str, "addresses": list,
     "ports": str, "protocols": list, "engine": str, "online": dict, "hosts": list,
@@ -34,6 +40,13 @@ _FIELDS: dict[str, type | tuple[type, ...]] = {
 
 class NotAScan(ValueError):
     """A scan id in the wrong form, or a file that is not a scan record this toolkit can show."""
+
+
+def when(started: str) -> str:
+    """``2026-11-03T10:15:00Z`` as ``2026-11-03 10:15 UTC``."""
+    if len(started) >= 16 and started[10] == "T":
+        return f"{started[:10]} {started[11:16]} UTC"
+    return started
 
 
 def _path(scan_id: str, directory: str | Path | None) -> Path:

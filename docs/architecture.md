@@ -110,6 +110,7 @@ no Flask, no argparse. Read by `cli/` and `web/`, it imports neither
 | `toolkit/core/services/recon/report.py` | services | one report entry per open port, its network text cleaned |
 | `toolkit/core/services/recon/record.py` | services | the record of every scan (HS3): a JSON line in the tool's log when `run_scan` starts and one when it ends, with the request's source |
 | `toolkit/core/services/recon/saved_scans.py` | services | the saved scans read back (F6b): the list, newest first and 50 at a time, a file that isn't a scan record left out and counted; one scan as the scan page shows it, with the choices to scan again; its report; its delete; the id checked before a path is made |
+| `toolkit/core/services/recon/scan_report.py` | services | a saved scan's HTML report (F5a), as plain data: the scan, the summary, the ports to look at first, each host and port with its CVEs and how each was found, the advice tied to each port, what the report can't say; an NVD link only from a real CVE id |
 | `toolkit/core/services/recon/scan_comparison.py` | services | two saved scans compared (F6c), address by address and port by port: opened or closed only when the other scan checked the port, CVEs only when both looked them up, a host one scan didn't scan not compared, different targets on their common addresses |
 | `toolkit/core/services/recon/history.py` | services | the scan history (F6a): `ScanNotes`, the view `run_scan` reports to, which notes how each host ended; every finished scan's record saved under its log id; a stopped one saves nothing |
 | `toolkit/core/data/__init__.py` | data | the shared data: files, the network, the environment |
@@ -138,6 +139,7 @@ no Flask, no argparse. Read by `cli/` and `web/`, it imports neither
 | `toolkit/core/data/recon/local.py` | data | whether an address is this computer's own (nothing sent), and its OS |
 | `toolkit/core/data/recon/text.py` | data | makes text from the network safe to show and export |
 | `toolkit/core/data/recon/scan_records.py` | data | the scan history's records, `instance/scan_history/<scan id>.json`: written once (HR3a), read, listed, removed when the user deletes one |
+| `toolkit/core/data/recon/report_render.py` | data | the scan report's HTML (F5a), the only module outside the web that uses Jinja2 (DECISIONS F5): `scan_report.html` (the page's order) and `scan_report.css` (its look, light, dark and A4 print) filled with every value escaped, one file with its CSS inside and a CSP that allows that style only: no script, nothing loaded |
 | `toolkit/core/data/recon/scan_files.py` | data | scan reports as JSON, CSV or TXT: as text (`report_text`, for a download) or a file in `instance/scans/` (with the engine and nmap's CPE names) |
 | `toolkit/core/data/recon/findings.py` | data | what the intel gateways return (`CveEntry`, `IntelFinding`) |
 | `toolkit/core/data/recon/nvd.py` | data | CVEs and CVSS scores from the NVD API, by version (CPE names) or by keyword (an `IntelProvider`); each CVE carries its `match`, "version" or "name" |
@@ -638,7 +640,7 @@ The plan's §2 "Target structure" was written before the code. What was built di
 | `ids_core/ports.py` | `toolkit/core/services/ports.py` | the ports serve the scanner too, not only the ML core |
 | `ids_core/explain.py` (feature importance, SHAP) | not built | explainability (F3) is planned for v5.3 |
 | `recon/probes/` with one file per service | one `toolkit/core/data/recon/probes.py` with a registry | each probe is a table entry plus a few shared readers |
-| `recon/report.py` with HTML/PDF | `toolkit/core/services/recon/report.py` (the entries) and `toolkit/core/data/recon/scan_files.py` (JSON, CSV, TXT) | HTML/PDF reports (F5) are later features |
+| `recon/report.py` with HTML/PDF | `toolkit/core/services/recon/report.py` (the entries), `toolkit/core/data/recon/scan_files.py` (JSON, CSV, TXT), and the HTML report of a saved scan (`scan_report.py`, `report_render.py`, v5.4 F5) | the PDF comes from the browser's Print, with no PDF library |
 | `.github/workflows/ci.yml` | none | checks run locally (`python -m pytest`, ruff, mypy, the pre-commit hook), as plan D19 decided |
 | a `train` command in the CLI | none | models are trained in the web trainer (plan D12) |
 

@@ -1,0 +1,68 @@
+/* The scan report's look (v5.4 F5): light, dark on screen when the system is, and black on
+   white on A4 when printed. See also: scan_report.html (the page), report_render.py (puts
+   this file inside the page, allowed by its hash). */
+:root {
+  --bg: #ffffff; --text: #1f2933; --muted: #52606d; --line: #d9e2ec; --panel: #f4f7fa;
+  --link: #0b5cad; --critical: #8b1a1a; --high: #a3390c; --medium: #7a5600; --low: #2f6b3c;
+  --unchecked: #5b4b8a; --badge-text: #ffffff;
+  color-scheme: light dark;
+}
+@media screen and (prefers-color-scheme: dark) {
+  :root { --bg: #12161c; --text: #e4e7eb; --muted: #a6b0bb; --line: #323a45; --panel: #1b2129;
+          --link: #7ab8ff; }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0 auto; max-width: 64rem; padding: 1.5rem 16px 3rem; background: var(--bg);
+  color: var(--text); font: 15px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  overflow-wrap: anywhere;
+}
+h1 { font-size: 1.6rem; margin: 0 0 .25rem; }
+h2 { font-size: 1.25rem; margin: 2rem 0 .75rem; padding-bottom: .3rem;
+     border-bottom: 1px solid var(--line); }
+h3 { font-size: 1.05rem; margin: 1.25rem 0 .5rem; }
+a { color: var(--link); }
+a:focus-visible { outline: 3px solid var(--link); outline-offset: 2px; }
+code { font: .9em/1.4 ui-monospace, Consolas, "Courier New", monospace; }
+.how-to-print, .note { color: var(--muted); }
+.facts { display: grid; grid-template-columns: max-content 1fr; gap: .3rem 1rem; margin: 1rem 0; }
+.facts dt { font-weight: 600; }
+.facts dd { margin: 0; }
+.plain { list-style: none; margin: 0; padding: 0; }
+.plain li + li { margin-top: .25rem; }
+.table-wrap { overflow-x: auto; margin: .5rem 0 1rem; }
+table { border-collapse: collapse; width: 100%; min-width: 32rem; }
+th, td { text-align: left; vertical-align: top; padding: .4rem .6rem;
+         border-bottom: 1px solid var(--line); overflow-wrap: break-word; }
+thead th { background: var(--panel); }
+td:first-child { white-space: nowrap; }  /* a host's address, a CVE id */
+.level { display: inline-block; padding: 0 .45rem; border-radius: .3rem; font-size: .85em;
+         font-weight: 600; color: var(--badge-text); white-space: nowrap; }
+.level.critical { background: var(--critical); }
+.level.high { background: var(--high); }
+.level.medium { background: var(--medium); }
+.level.low { background: var(--low); }
+.level.unchecked { background: var(--unchecked); }
+.level.none { color: var(--text); border: 1px solid var(--line); }
+.port { margin-top: 2.5rem; }
+.ai { border-left: 4px solid var(--unchecked); background: var(--panel); padding: .1rem 1rem;
+      margin: 1rem 0; }
+footer { margin-top: 3rem; color: var(--muted); font-size: .9em; }
+@media (max-width: 30rem) {
+  .facts { grid-template-columns: 1fr; gap: 0; }
+  .facts dd { margin-bottom: .5rem; }
+}
+@page { size: A4; margin: 14mm; }
+@media print {
+  :root { --bg: #ffffff; --text: #000000; --muted: #333333; --line: #999999; --panel: #eeeeee;
+          --link: #000000; }
+  body { max-width: none; padding: 0; font-size: 10.5pt; }
+  .how-to-print { display: none; }
+  a { text-decoration: none; }
+  .table-wrap { overflow: visible; }
+  table { min-width: 0; }
+  thead { display: table-header-group; }
+  tr, .port, .ai, li { break-inside: avoid; }
+  h2, h3 { break-after: avoid; }
+  .level { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+}

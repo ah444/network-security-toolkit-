@@ -1,0 +1,124 @@
+<!doctype html>
+{#- The scan report's page (v5.4 F5): its order only. The words and every decision come from
+    services/recon/scan_report.py; the look from scan_report.css; report_render.py fills it,
+    every value escaped. No script, nothing loaded. -#}
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src '{{ style_hash }}'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<title>Scan report {{ report.scan_id }}</title>
+<style>{{ css }}</style>
+</head>
+<body>
+<header class="head">
+  <h1>Scan report {{ report.scan_id }}</h1>
+  <p class="how-to-print">To keep it as a PDF: Print (Ctrl+P), then Save as PDF.</p>
+  <dl class="facts">
+    <dt>When</dt><dd>Started {{ report.started }}, asked from {{ report.source }}, took {{ report.seconds }} s</dd>
+    <dt>Target</dt><dd>{{ report.target }} ({{ report.addresses }})</dd>
+    <dt>Ports</dt><dd>{{ report.ports }} ({{ report.port_count }} ports, {{ report.protocols }})</dd>
+    <dt>Engine</dt><dd>{{ report.engine }}</dd>
+    <dt>Online</dt><dd><ul class="plain">
+      {%- for name, state in report.online %}<li>{{ name }}: {{ state }}</li>{% endfor -%}
+    </ul></dd>
+  </dl>
+</header>
+
+<main>
+<section aria-labelledby="summary-title">
+  <h2 id="summary-title">Summary</h2>
+  <p>Hosts: {{ report.host_counts or "none" }}.</p>
+  <p>Ports: {{ report.by_severity }}.</p>
+  <p>Requests sent online: {{ report.sent }}</p>
+  {%- if report.failed_lookups %}<p>Failed lookups: {{ report.failed_lookups | join("; ") }}</p>{% endif %}
+  {%- if report.unavailable %}<p>Unavailable: {{ report.unavailable | join("; ") }}</p>{% endif %}
+  {%- if report.first %}
+  <h3>Look at these first</h3>
+  <ol>
+    {%- for port in report.first %}
+    <li><a href="#{{ port.anchor }}">{{ port.target }} {{ port.port }}/{{ port.protocol }}</a>: {{ port.software }}, <span class="level {{ port.level }}">{{ port.severity }}</span>{% if port.max_cvss is not none %}, highest CVSS {{ port.max_cvss }}{% endif %}{% if port.unconfirmed %} (unconfirmed){% endif %}</li>
+    {%- endfor %}
+  </ol>
+  {%- endif %}
+</section>
+
+<section aria-labelledby="hosts-title">
+  <h2 id="hosts-title">Hosts</h2>
+  <ul class="plain">
+    {%- for host in report.hosts %}
+    <li><strong>{{ host.address }}</strong> {{ host.state }}{% if host.why %} ({{ host.why }}){% endif %}{% if host.os %}; OS: {{ host.os }}{% endif %}{% if host.reputation %}; {{ host.reputation }}{% endif %}</li>
+    {%- endfor %}
+  </ul>
+</section>
+
+<section aria-labelledby="ports-title">
+  <h2 id="ports-title">Open ports</h2>
+  {%- if not report.ports_found %}
+  <p>No open port was found.</p>
+  {%- else %}
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th scope="col">Host</th><th scope="col">Port</th><th scope="col">Service</th><th scope="col">Software</th><th scope="col">Severity</th><th scope="col">Highest CVSS</th></tr></thead>
+    <tbody>
+    {%- for port in report.ports_found %}
+    <tr><td>{{ port.target }}</td><td><a href="#{{ port.anchor }}">{{ port.port }}/{{ port.protocol }}</a></td><td>{{ port.service or "–" }}</td><td>{{ port.software or "not recognised" }}</td><td><span class="level {{ port.level }}">{{ port.severity }}</span>{% if port.unconfirmed %} (unconfirmed){% endif %}</td><td>{{ port.max_cvss if port.max_cvss is not none else "–" }}</td></tr>
+    {%- endfor %}
+    </tbody>
+  </table>
+  </div>
+  {%- endif %}
+</section>
+
+{%- for port in report.ports_found %}
+<section class="port" id="{{ port.anchor }}" aria-labelledby="{{ port.anchor }}-title">
+  <h2 id="{{ port.anchor }}-title">{{ port.target }} {{ port.port }}/{{ port.protocol }} <span class="level {{ port.level }}">{{ port.severity }}</span>{% if port.unconfirmed %} (unconfirmed){% endif %}</h2>
+  <dl class="facts">
+    <dt>Service</dt><dd>{{ port.service or "–" }}</dd>
+    <dt>Banner</dt><dd><code>{{ port.banner or "–" }}</code></dd>
+    <dt>Software</dt><dd>{{ port.software or "not recognised (no CVE lookup)" }}</dd>
+    {%- if port.cpe %}<dt>CPE (nmap)</dt><dd><code>{{ port.cpe | join(" ") }}</code></dd>{% endif %}
+    {%- if port.cve_source %}<dt>CVE source</dt><dd>{{ port.cve_source }}</dd>{% endif %}
+  </dl>
+  {%- if port.cves %}
+  <h3>CVEs</h3>
+  <p class="note">Found in NVD during the scan, {{ report.started }}. A version match is a possible match to check, not a confirmed vulnerability; a name match is unconfirmed.</p>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th scope="col">CVE</th><th scope="col">CVSS</th><th scope="col">Severity</th><th scope="col">How it was found</th></tr></thead>
+    <tbody>
+    {%- for cve in port.cves %}
+    <tr><td>{% if cve.url %}<a href="{{ cve.url }}" rel="noreferrer noopener">{{ cve.id }}</a>{% else %}{{ cve.id }}{% endif %}</td><td>{% if cve.cvss is not none %}CVSS {{ cve.cvss }} (v{{ cve.cvss_version }}){% else %}?{% endif %}</td><td>{{ cve.severity }}</td><td>{{ cve.how }}</td></tr>
+    {%- endfor %}
+    </tbody>
+  </table>
+  </div>
+  {%- if port.more_cves %}<p class="note">And {{ port.more_cves }} more: the JSON export lists them all.</p>{% endif %}
+  {%- elif port.severity == "NOT CHECKED" %}
+  <p>CVEs: not checked.</p>
+  {%- endif %}
+  {%- if port.ai %}
+  <div class="ai"><p><strong>AI explanation (may be wrong):</strong> {{ port.ai }}</p></div>
+  {%- endif %}
+  {%- for error in port.errors %}<p class="note">Lookup failed: {{ error }}</p>{% endfor %}
+  <h3>Advice</h3>
+  <ul>
+    {%- for advice in port.advice %}<li>{{ advice }}</li>{% endfor %}
+  </ul>
+</section>
+{%- endfor %}
+
+<section aria-labelledby="limits-title">
+  <h2 id="limits-title">What this report can't say</h2>
+  <ul>
+    {%- for limit in report.limits %}<li>{{ limit }}</li>{% endfor %}
+  </ul>
+</section>
+</main>
+
+<footer>
+  <p>Made by the Network Security Toolkit from the saved scan {{ report.scan_id }} (instance/scan_history/{{ report.scan_id }}.json). It is a copy: deleting the scan doesn't delete this report.</p>
+</footer>
+</body>
+</html>
