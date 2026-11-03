@@ -250,6 +250,23 @@
           </div>
           <div id="confusionMatrixDisplay" class="confusion-matrix-container"></div>
         </div>
+
+        <!-- v5.3 F3e: what a model relies on, calculated only when Calculate is clicked (explain.js) -->
+        <div id="importanceSection" class="subsection" hidden>
+          <h3>What the model relies on</h3>
+          <p class="field-hint">Each feature's values are shuffled in turn on the test rows, and the drop in macro-F1 is measured: the bigger the drop, the more the model relies on that feature. It takes about as long as a training of that model. Nothing starts until you click Calculate.</p>
+          <div class="form-group">
+            <label for="importanceModel" class="label">Model:</label>
+            <select id="importanceModel" name="importanceModel"></select>
+            <button type="button" id="importanceBtn" class="btn btn-sm">Calculate</button>
+          </div>
+          <div id="importanceProgress" class="training-progress" hidden aria-live="polite" tabindex="-1">
+            <progress id="importanceProgressBar" max="100" value="0" aria-label="Calculation progress"></progress>
+            <span id="importanceProgressText"></span>
+            <button type="button" id="cancelImportanceBtn" class="btn" disabled>Cancel</button>
+          </div>
+          <div id="importanceResult" class="message" role="status" tabindex="-1"></div>
+        </div>
       </div>
       <div class="step-actions">
         <button type="button" class="btn btn-sm btn-secondary step-back">Back</button>

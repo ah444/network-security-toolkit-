@@ -627,6 +627,22 @@ its own box, and the class names stay in view.
 
 ![The confusion matrix](user-guide/13-confusion-matrix.jpg)
 
+**What the model relies on** (under the matrix) shows which columns a model uses most.
+Choose the model (the selected one at first) and click **Calculate**: nothing starts until
+you do. Each column's values are shuffled in turn on the test rows (5,000 of them at most,
+5 times), and the drop in macro-F1 is measured: the bigger the drop, the more the model
+relies on that column. It takes about as long as training that model, with a progress bar
+and **Cancel**; if a training is running, it waits for it. The chart shows the 15 columns
+with the biggest drop (the bar: the mean drop; the line: how much it varied). A drop below 0
+means shuffling that column helped a little: the model doesn't need it.
+
+- If one column carries more than half of the effect, a yellow note says so: check that it
+  is not a copy of the label before trusting the scores.
+- It is a diagnosis of this run, not a way to choose columns or models, and it shows what
+  the model relies on, not what causes an attack.
+- The result is saved with the run, and **Saved Runs** shows it. It can only be calculated
+  here, right after the training: a saved run doesn't keep its test rows.
+
 ### 4.6 Step 6: Use
 
 **Make a Prediction** takes one row: choose the model and fill in each feature under
@@ -667,7 +683,9 @@ there, and no model is loaded.
 - **Bundle** says whether the run was exported: **Exported**, **Not exported** (it can still
   be shown, compared and deleted; to predict with it later, export it from its training's
   session), or an incomplete or unreadable bundle.
-- **Show** opens one run: what it was trained on, its leaderboard and its charts.
+- **Show** opens one run: what it was trained on, its leaderboard, its charts, and what its
+  models rely on when it was calculated in the trainer (section 4.5); otherwise it says it
+  was not calculated.
 - Tick two runs and click **Compare the two ticked runs**. A is the older one, B the newer.
   Each model of both runs gets a table with every score of A and B and, per class, the test
   recall.

@@ -1,10 +1,11 @@
 // What the saved runs' page (/runs, v5.3 F2) shows, made from the answers of /api/v1/runs: a
-// line per run, one run with its leaderboard and charts, and two runs side by side. A
+// line per run, one run with its leaderboard, its charts and what its models rely on (F3e),
+// and two runs side by side. A
 // difference (Δ = B − A) only when both scored the same test rows; otherwise the numbers side
 // by side and why. Every value goes in as text (dom.js), so a name from a file stays text.
 
 import { el, scrollBox } from "./dom.js";
-import { leaderboardTable, runCharts, seconds } from "./charts.js";
+import { importanceView, leaderboardTable, runCharts, seconds } from "./charts.js";
 import { balancingName, fmt } from "./format.js";
 import { chips, code, quiet, statTile, summaryPanel } from "./summary.js";
 
@@ -145,14 +146,24 @@ function runPanel(id, title, run) {
   ] });
 }
 
-// One saved run: what it was, its leaderboard and its charts
-export function runView(view) {
+// One saved run: what it was, its leaderboard, its charts, and what its models rely on as
+// it was saved (F3e; read only: a saved run's test rows are not kept, so nothing is computed)
+export function runView(view, saved) {
+  const titles = Object.fromEntries(view.leaderboard.map(row => [row.model, row.title]));
+  const left = saved.left_out;
   return [
     runPanel("savedRun", "Run " + view.summary.run_id, view.summary),
     el("h3", {}, "Leaderboard"),
     el("p", {}, "Ranked by CV macro-F1; ★ = the selected model."),
     leaderboardTable(view.leaderboard),
     runCharts(view.leaderboard, view.folds),
+    el("h3", {}, "What the models rely on"),
+    saved.importances.length > 0 ?
+      saved.importances.map(result => importanceView(result, titles[result.model] || result.model)) :
+      el("p", {}, "Not calculated for this run. Calculate it on the Dynamic IDS page right after " +
+                  "a training: a saved run's test rows are not kept."),
+    left > 0 && el("p", { class: "warning-message" },
+      `${left} file${left === 1 ? "" : "s"} under this run's name could not be read and ${left === 1 ? "was" : "were"} left out.`),
   ];
 }
 

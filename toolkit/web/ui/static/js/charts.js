@@ -223,3 +223,59 @@ export function runCharts(leaderboard, folds) {
     foldsChart(leaderboard, folds || {}), cvTestChart(leaderboard), recallTable(leaderboard),
     timeChart(leaderboard));
 }
+
+// --- What a model relies on (v5.3 F3e) ---------------------------------------------------------
+
+const TOP_FEATURES = 15;  // the features with the biggest drop that the chart shows
+const NAME_CHARS = 28;  // a longer name is cut, so it never runs into the bars (its whole
+                        // name is in the drawing's name)
+const drop = value => value.toFixed(4);
+
+// The drop in macro-F1 when each feature's values are shuffled (the bar: its mean, from 0; the
+// line: ± its std over the repeats); a negative drop (shuffling helped) goes left of 0
+function importanceChart(features, title) {
+  const low = Math.min(0, ...features.map(f => f.mean - f.std));
+  const high = Math.max(...features.map(f => f.mean + f.std), low + 0.001);
+  const at = value => PLOT_START + (value - low) / (high - low) * (PLOT_END - PLOT_START);
+  const scale = { at, ticks: low < 0 ? [low, 0, high] : [0, high / 2, high],
+                  label: value => fmt(value, 3) };
+  const marks = features.map((f, i) => {
+    const y = rowMiddle(i);
+    const name = f.feature.length > NAME_CHARS ? f.feature.slice(0, NAME_CHARS - 1).trimEnd() + "…" : f.feature;
+    return [
+      modelName(i, name),
+      svg("rect", { class: "chart-drop", x: Math.min(at(0), at(f.mean)), y: y - 7,
+                    width: Math.abs(at(f.mean) - at(0)), height: 14 }),
+      svg("line", { class: "chart-spread", x1: at(f.mean - f.std), x2: at(f.mean + f.std), y1: y, y2: y }),
+      rowValue(i, `${drop(f.mean)} ± ${drop(f.std)}`),
+    ];
+  });
+  const bottom = TOP + features.length * ROW;
+  const legend = svg("text", { class: "chart-tick", x: PLOT_START, y: 18 },
+                     "bar: the mean drop; line: ± std over the repeats");
+  const zero = svg("line", { class: "chart-zero", x1: at(0), x2: at(0), y1: TOP, y2: bottom });
+  const description = "The drop in macro-F1 when each feature's values are shuffled, mean ± std " +
+    "over the repeats. " + features.map(f => `${f.feature}: ${drop(f.mean)} ± ${drop(f.std)}`).join(". ") + ".";
+  return figure(title, description, features.length, [legend, axis(scale, features.length), zero, marks]);
+}
+
+// One importance result (a job's, or a saved file's: its repeats and seed in ``settings``):
+// the chart of the features with the biggest drop, what the numbers are, the concentration
+// warning (HC2), and why it was not saved
+export function importanceView(result, title) {
+  const shown = result.features.slice(0, TOP_FEATURES);
+  const settings = result.settings || result;
+  const count = number => number.toLocaleString("en-US");
+  return el("div", { class: "importance-result" },
+    importanceChart(shown, `What ${title} relies on`),
+    el("p", { class: "chart-note" },
+       `Scored on ${count(result.rows)} of ${count(result.test_rows)} test rows, ${settings.repeats} repeats, seed ${settings.seed}; ` +
+       `the ${shown.length} of ${result.features.length} features with the biggest drop are shown.`),
+    el("p", { class: "chart-note" },
+       "A diagnosis of this run on its test rows, not a way to choose features or models; " +
+       "it shows what the model relies on, not causes."),
+    result.concentrated && el("div", { class: "warning-message" },
+      `⚠️ ${result.concentrated} carries more than half of the effect. Check that it is not a ` +
+      "copy of the label (one possible cause) before trusting the scores."),
+    result.saved === false && el("div", { class: "warning-message" }, result.not_saved));
+}

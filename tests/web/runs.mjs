@@ -69,7 +69,8 @@ console.log(JSON.stringify({
   row_cells: runRow(run(A, { test_dataset: "KDDTest+.csv" })).children.map(cell => cell.textContent),
   bundle_cells: [null, "exported", "incomplete", "unreadable"].map(bundle =>
     runRow(run(A, { bundle })).children[8].textContent),
-  view: shown(runView({ summary: run(A), leaderboard: board, folds: { random_forest: [0.91, 0.912, 0.914] } })),
+  view: shown(runView({ summary: run(A), leaderboard: board, folds: { random_forest: [0.91, 0.912, 0.914] } },
+                     { importances: [], left_out: 0 })),
   comparable: shown(comparisonView(answer(true))),
   apart: shown(comparisonView(answer(false))),
   no_common: shown(comparisonView({ ...answer(true), models: [], settings: [] })),

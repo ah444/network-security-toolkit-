@@ -1542,6 +1542,17 @@ textarea:focus-visible,
   fill: var(--chart-test);
 }
 
+/* what a model relies on (v5.3 F3e): the mean drop as a bar from 0, the 0 line in the text's
+   colour */
+.chart-drop {
+  fill: var(--chart-cv);
+}
+
+.chart-zero {
+  stroke: var(--text);
+  stroke-width: 1.5;
+}
+
 /* ---------- Saved runs (v5.3 F2e) ---------- */
 /* runs.html: the list scrolls in its box; two runs' panels and each model's numbers sit side
    by side where there is room, one under the other on a narrow screen */

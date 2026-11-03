@@ -5,6 +5,7 @@
 // comes before its run), and steps last; then the page resumes from the server.
 
 import { setup as setupData } from "./data.js";
+import { setup as setupExplain } from "./explain.js";
 import { setup as setupExplore } from "./explore.js";
 import { setup as setupPredict } from "./predict.js";
 import { resume } from "./resume.js";
@@ -14,6 +15,7 @@ import { setup as setupTrain } from "./train.js";
 setupData();
 setupExplore();
 setupTrain();
+setupExplain();
 setupPredict();
 setupSteps();
 resume();

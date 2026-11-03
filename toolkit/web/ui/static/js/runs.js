@@ -93,9 +93,11 @@ function showView(section, heading, title, content) {
 async function showRun(runId) {
   message(byId("runsStatus"), "info", "Reading run " + runId + "...");
   try {
-    const view = await getJSON("/api/v1/runs/" + encodeURIComponent(runId));
+    const [view, saved] = await Promise.all([
+      getJSON("/api/v1/runs/" + encodeURIComponent(runId)),
+      getJSON("/api/v1/runs/" + encodeURIComponent(runId) + "/importance")]);
     setContent(byId("runsStatus"), listedText);
-    showView("runSection", "runTitle", "Run " + runId, runView(view));
+    showView("runSection", "runTitle", "Run " + runId, runView(view, saved));
   } catch (error) {
     message(byId("runsStatus"), "error", "Error: " + error.message);
   }

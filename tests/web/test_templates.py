@@ -83,6 +83,7 @@ def test_status_messages_are_announced(repo_root):
     """Step 1.3e (plan §8, accessibility): every message area is a polite live region."""
     html = (repo_root / TEMPLATES / "dynamic_ids.html").read_text(encoding="utf-8")
     areas = re.findall(r'<div id="(\w+)" class="message"([^>]*)>', html)
-    assert len(areas) == 13  # + the two "Predict a CSV file" results (step 1.4f)
+    assert len(areas) == 14  # + the two "Predict a CSV file" results (step 1.4f), the importance
+    # (v5.3 F3e)
     assert [name for name, attrs in areas if 'role="status"' not in attrs] == []
     assert re.search(r'id="trainingProgress"[^>]*aria-live="polite"', html)
