@@ -49,7 +49,8 @@ function metric(value, key) {
   return key === "fit_seconds" ? seconds(value) : fmt(value, 3);
 }
 
-// One line of the list: a box to choose it for the comparison, and a button to show it
+// One line of the list: a box to choose it for the comparison, a button to show it and one
+// to delete it (the page then names its files and asks, HR4a)
 export function runRow(run) {
   return el("tr", {},
     el("td", {}, el("label", { class: "choice run-pick" },
@@ -63,8 +64,35 @@ export function runRow(run) {
        quiet(`of ${run.models.length} model${run.models.length === 1 ? "" : "s"}`)),
     el("td", {}, run.cv_macro_f1_mean === null ? "–" : fmt(run.cv_macro_f1_mean, 3)),
     el("td", {}, run.test_macro_f1 === null ? "–" : fmt(run.test_macro_f1, 3)),
-    el("td", {}, el("button", { type: "button", class: "btn btn-sm", "data-run": run.run_id,
-                                "aria-label": "Show run " + run.run_id }, "Show")));
+    el("td", {}, el("div", { class: "button-group" },
+      el("button", { type: "button", class: "btn btn-sm", "data-run": run.run_id,
+                     "aria-label": "Show run " + run.run_id }, "Show"),
+      el("button", { type: "button", class: "btn btn-sm btn-secondary", "data-delete": run.run_id,
+                     "aria-label": "Delete run " + run.run_id }, "Delete"))));
+}
+
+// A file's size as the CLI writes it: "812 bytes", "2.1 KB", "38.9 MB", "1.8 GB" (1 KB = 1024)
+export function fileSize(bytes) {
+  const units = [["GB", 2 ** 30], ["MB", 2 ** 20], ["KB", 2 ** 10]];
+  const [unit, size] = units.find(([, size]) => bytes >= size) || ["bytes", 1];
+  return unit === "bytes" ? `${bytes} bytes` : `${(bytes / size).toFixed(1)} ${unit}`;
+}
+
+const KINDS = { importance: "importance result", record: "record" };
+
+// What deleting a run removes, before the user says yes (GET /api/v1/runs/<id>/files): each
+// file in the order it goes, and its bundle as a box that is not ticked, so it is kept unless
+// the user asks (kept, it stays as an unregistered bundle)
+export function deleteView(answer) {
+  const bundle = answer.files.find(item => item.kind === "bundle");
+  const others = answer.files.filter(item => item.kind !== "bundle");
+  return [
+    el("p", {}, `Deleting run ${answer.run_id} removes these files from this computer, in this order; it can't be undone:`),
+    el("ul", {}, others.map(item => el("li", {}, code(item.name), `: ${KINDS[item.kind] || item.kind}, ${fileSize(item.size)}`))),
+    bundle && el("label", { class: "choice" },
+      el("input", { type: "checkbox", name: "with_bundle" }),
+      `Also delete its bundle, ${bundle.name} (${fileSize(bundle.size)}). Kept, it stays in instance/bundles as an unregistered bundle.`),
+  ];
 }
 
 // What a run was trained on and how, as tiles

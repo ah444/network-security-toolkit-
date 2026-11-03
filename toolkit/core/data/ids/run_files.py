@@ -36,6 +36,21 @@ def read_record(path: str | Path) -> Any:
     return json.loads(Path(path).read_text(encoding="utf-8"))
 
 
+def file_size(path: Path) -> int | None:
+    """The size of one of a run's files in bytes; None when there is none."""
+    try:
+        return path.stat().st_size if path.is_file() else None
+    except OSError:
+        return None
+
+
+def remove_file(path: Path) -> None:
+    """Removes one of a run's files (HR4a): its record, an importance result or its bundle;
+    nothing when it is already gone. Any other OSError is raised (on Windows: a file another
+    program has open)."""
+    path.unlink(missing_ok=True)
+
+
 def list_runs(directory: str | Path | None = None) -> list[Path]:
     """The ``*.json`` files of ``directory`` (default ``runs_dir``) but the importance
     results beside the records (HR2), sorted by name."""

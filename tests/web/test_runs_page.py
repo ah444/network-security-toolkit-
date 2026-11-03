@@ -55,10 +55,13 @@ def test_the_export_links_to_the_saved_run():
             '"See it in Saved Runs")') in code, "a 44 px button-like link next to Download"
 
 
-def test_the_page_reads_the_records_only():
-    """No upload, no training, no bundle: GETs to /api/v1/runs and nothing else."""
+def test_the_page_reads_the_records_and_only_deletes():
+    """No upload, no training, no bundle loaded: GETs to /api/v1/runs, and its one change is
+    a run's delete (HR4a), a POST with the session's token."""
     code = js_sources()["runs.js"] + js_sources()["runsview.js"]
-    assert "send(" not in code and "FormData" not in code
+    assert "FormData" not in code
+    assert re.findall(r"send\(([^,]+), \"(\w+)\"", code) == [
+        ('"/api/v1/runs/" + encodeURIComponent(runId) + "/delete"', "POST")]
     urls = set(re.findall(r'"(/api/v1/[^"]*)"', code))
     assert urls == {"/api/v1/runs", "/api/v1/runs/", "/api/v1/runs/compare"}
     assert "encodeURIComponent(runId)" in code
@@ -89,14 +92,42 @@ def test_a_row_of_the_list(rendered):
     assert cells[1:] == ["2026-10-30 12:05 UTC20261030T120509Z-0000000a",
                          f"{XSS}12,345 rowstest file: KDDTest+.csv", "Label",
                          "stratified8,641 / 3,704", "★ Random Forestof 2 models", "0.912",
-                         "0.944", "Show"]
+                         "0.944", "ShowDelete"]
     box = next(item for item in rendered["row"] if item["tag"] == "INPUT")
     assert box["attributes"]["aria-label"] == "Compare run 20261030T120509Z-0000000a"
     assert next(item for item in rendered["row"] if item["tag"] == "LABEL")["class"] == \
         "choice run-pick", "a 44 px target"
-    button = next(item for item in rendered["row"] if item["tag"] == "BUTTON")
-    assert button["attributes"]["data-run"] == "20261030T120509Z-0000000a"
-    assert button["attributes"]["aria-label"] == "Show run 20261030T120509Z-0000000a"
+    show, delete = [item for item in rendered["row"] if item["tag"] == "BUTTON"]
+    assert show["attributes"]["data-run"] == "20261030T120509Z-0000000a"
+    assert show["attributes"]["aria-label"] == "Show run 20261030T120509Z-0000000a"
+    assert delete["attributes"]["data-delete"] == "20261030T120509Z-0000000a"
+    assert delete["attributes"]["aria-label"] == "Delete run 20261030T120509Z-0000000a"
+    assert delete["class"] == "btn btn-sm btn-secondary" and delete["text"] == "Delete"
+
+
+def test_the_delete_names_every_file_and_keeps_the_bundle_by_default(rendered):
+    """HR4a (IA8): the files in the order they go, with their sizes; the bundle is a box,
+    not ticked, so it is kept unless the user asks."""
+    items = [item["text"] for item in rendered["deleting"] if item["tag"] == "LI"]
+    assert items == ["20261030T120509Z-0000000a.importance.knn.json: importance result, 2.1 KB",
+                     f"{XSS}: record, 812 bytes"]
+    box = next(item for item in rendered["deleting"] if item["tag"] == "INPUT")
+    assert box["attributes"]["type"] == "checkbox" and "checked" not in box["attributes"]
+    assert box["attributes"]["name"] == "with_bundle"
+    label = next(item for item in rendered["deleting"] if item["tag"] == "LABEL")
+    assert label["text"] == ("Also delete its bundle, 20261030T120509Z-0000000a.bundle (1.8 GB). "
+                             "Kept, it stays in instance/bundles as an unregistered bundle.")
+    assert label["class"] == "choice", "a 44 px target"
+    assert "can't be undone" in rendered["deleting"][0]["text"]
+    assert not any(item["tag"] == "INPUT" for item in rendered["deleting_no_bundle"])
+    assert not any(item["tag"] == "IMG" for item in rendered["deleting"]), "text stays text"
+
+
+def test_sizes_as_the_cli_writes_them(rendered):
+    from toolkit.cli.ui.runs import file_size
+    values = [0, 812, 1024, 2100, 40749566, 1980268869]
+    assert rendered["sizes"] == ["0 bytes", "812 bytes", "1.0 KB", "2.1 KB", "38.9 MB", "1.8 GB"]
+    assert [file_size(value) for value in values] == rendered["sizes"]
 
 
 def test_one_run_shows_its_leaderboard_and_charts(rendered):
@@ -164,7 +195,11 @@ def test_text_from_a_run_stays_text(rendered):
 
 def test_the_template():
     html = RUNS_TEMPLATE.read_text(encoding="utf-8")
-    assert 'name="csrf-token"' not in html, "the page only reads: no token to keep"
+    assert '<meta name="csrf-token" content="{{ csrf_token() }}">' in html, "for the delete"
+    for part in ('id="deleteSection" aria-labelledby="deleteTitle" hidden',
+                 'id="deleteTitle" tabindex="-1"', 'id="deleteConfirm" class="btn btn-danger"',
+                 'id="deleteCancel" class="btn btn-secondary"'):
+        assert part in html, part
     for region in ('id="runsStatus" class="message" role="status"',
                    'id="runTitle" tabindex="-1"', 'id="comparisonTitle" tabindex="-1"',
                    'id="runsBox" class="table-container" tabindex="0" role="region"'):

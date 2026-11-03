@@ -11,6 +11,8 @@ project: train one in the web trainer and click Export (saved in instance/bundle
     python -m toolkit ids --bundle my.bundle --json '{"Flow Duration": 3, ...}'
     python -m toolkit ids --runs              list the saved runs (v5.3 F2)
     python -m toolkit ids --compare A B       two saved runs side by side
+    python -m toolkit ids --delete RUN_ID     delete a saved run after naming its files
+                                              (its bundle too with --with-bundle; HR4a)
 
 (from the project folder; ``toolkit ids`` once installed; moved from
 tools/IDS/IDS_CLI - CIC-2017/ in v5.1 step 1.4a; the predictions are
@@ -30,6 +32,7 @@ from ...core.services.ids.bundle import Bundle, BundleError, BundleVersionWarnin
 from ...core.services.ids.comparison import NotARun, compare_saved, saved_runs
 from ...core.services.ids.datasets import DatasetError
 from ...core.services.ids.exports import EXPORTED, BundleStore
+from ...core.services.ids.run_removal import not_removed, remove_run, run_files
 from ...core.services.ids.prediction import (
     json_rows,
     label_column,
@@ -91,12 +94,30 @@ def compare_runs(a: str, b: str) -> int:
     return 0
 
 
+def delete_run(run_id: str, with_bundle: bool) -> int:
+    """``--delete RUN_ID``: names the run's files and asks; only a yes removes them (the
+    bundle only ``with_bundle``). Exit code 0, or 2 when a file could not be removed (the
+    run is kept)."""
+    runs_screen.delete_files(run_id, run_files(run_id), with_bundle)
+    if not runs_screen.confirm_delete():
+        runs_screen.deleted(run_id, None)
+        return 0
+    removal = remove_run(run_id, with_bundle)
+    if removal.failed is not None:
+        screen.error(OSError(not_removed(removal)))
+        return 2
+    runs_screen.deleted(run_id, len(removal.removed))
+    return 0
+
+
 def listing(args: argparse.Namespace) -> int:
-    """``--list``, ``--runs`` or ``--compare``, which open no model; exit code 2 with the message
-    for a bad run id, a file that is not a run, or a run that isn't saved."""
+    """``--list``, ``--runs``, ``--compare`` or ``--delete``, which open no model; exit code 2
+    with the message for a bad run id, a file that is not a run, or a run that isn't saved."""
     if args.list:
         return list_exports()
     try:
+        if args.delete:
+            return delete_run(args.delete, args.with_bundle)
         return list_runs(args.before) if args.runs else compare_runs(*args.compare)
     except NotARun as error:
         screen.error(error)
@@ -168,6 +189,10 @@ def build_parser(prog: str | None = None) -> argparse.ArgumentParser:
                          help="list the saved runs (newest first, 50 at a time) and exit")
     listing.add_argument("--compare", nargs=2, metavar="RUN_ID",
                          help="compare two saved runs (A then B; differences are B - A) and exit")
+    listing.add_argument("--delete", metavar="RUN_ID",
+                         help="delete a saved run: names its files and asks first")
+    parser.add_argument("--with-bundle", action="store_true",
+                        help="with --delete: delete the run's bundle too (default: kept)")
     parser.add_argument("--before", metavar="RUN_ID",
                         help="with --runs: the runs saved before this one")
     parser.add_argument("--model", help="which model of the bundle (default: its best)")
@@ -186,16 +211,18 @@ def parse_args(argv: Sequence[str] | None, prog: str | None = None) -> argparse.
     args = parser.parse_args(argv)
     if args.before is not None and not args.runs:
         parser.error("--before goes with --runs")
+    if args.with_bundle and not args.delete:
+        parser.error("--with-bundle goes with --delete")
     return args
 
 
 def main(argv: Sequence[str] | None = None, prog: str | None = None) -> int:
-    """The command, without exiting: ``--list``, ``--runs``, ``--compare``, the model card
+    """The command, without exiting: ``--list``, ``--runs``, ``--compare``, ``--delete``, the model card
     (``--info``), ``--csv``, ``--json``, or the menu. Only a bundle signed by this install is
     opened. Exit code 0, or 2 with the message for a bundle that is refused, a bad value or a
     file problem; Ctrl+C or the end of input says goodbye (0)."""
     args = parse_args(argv, prog)
-    if args.list or args.runs or args.compare:
+    if args.list or args.runs or args.compare or args.delete:
         return listing(args)
     interactive_mode = not (args.csv or args.json or args.info)
     if interactive_mode:

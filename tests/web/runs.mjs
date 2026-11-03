@@ -10,7 +10,7 @@ import { installFakeDom } from "./fake_dom.mjs";
 installFakeDom();
 
 const folder = process.argv[2];
-const { comparisonView, delta, runRow, runView, when } =
+const { comparisonView, deleteView, delta, fileSize, runRow, runView, when } =
   await import(pathToFileURL(path.join(folder, "runsview.js")).href);
 
 const XSS = "<img src=x onerror=alert(1)>";
@@ -73,4 +73,11 @@ console.log(JSON.stringify({
   no_common: shown(comparisonView({ ...answer(true), models: [], settings: [] })),
   deltas: [[0.012], [-0.004], [0], [0.0002], [-0.0004], [1.2, "fit_seconds"], [-4414, "fit_seconds"]].map(([value, key]) => delta(value, key)),
   when: [when("2026-10-30T12:05:09Z"), when("not a time")],
+  deleting: shown(deleteView({ run_id: A, files: [
+    { kind: "importance", name: `${A}.importance.knn.json`, size: 2100 },
+    { kind: "bundle", name: `${A}.bundle`, size: 1980268869 },
+    { kind: "record", name: XSS, size: 812 }] })),
+  deleting_no_bundle: shown(deleteView({ run_id: A, files: [
+    { kind: "record", name: `${A}.json`, size: 812 }] })),
+  sizes: [0, 812, 1024, 2100, 40749566, 1980268869].map(fileSize),
 }));

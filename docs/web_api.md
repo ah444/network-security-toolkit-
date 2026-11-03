@@ -75,6 +75,8 @@ the network").
 | GET | `/api/v1/runs` | `before`: a run id (the next page; default: the newest) | the saved runs' summaries, newest first, 50 at a time (see Saved runs) |
 | GET | `/api/v1/runs/<run_id>` | none | one saved run: its summary, its leaderboard and each model's CV folds |
 | GET | `/api/v1/runs/compare` | `a`, `b`: two run ids | the two runs side by side; the differences only when they scored the same test rows |
+| GET | `/api/v1/runs/<run_id>/files` | none | what deleting the run removes, in the order it goes: `files`, each `{kind, name, size}` (`importance`, `bundle`, `record`) |
+| POST | `/api/v1/runs/<run_id>/delete` | `with_bundle`: true or false (default false: the bundle is kept) | the run deleted (HR4a): `removed` (in order) and `kept` (the bundle, or null); 409 `NOT_REMOVED` naming a file that couldn't be removed, the run kept |
 
 ## Dataset upload
 
@@ -343,6 +345,7 @@ Every error answer has the same shape; `details` is present only when there is m
 | `TOO_MANY_TRIES` | 429 | five wrong access tokens from one address within a minute |
 | `THIS_COMPUTER_ONLY` | 403 | a new access token, or the other computers' jobs, asked for from another computer |
 | `NOT_FOUND` | 404 | no such API route, or no such job in this session |
+| `NOT_REMOVED` | 409 | deleting a run stopped at a file that couldn't be removed (on Windows: open in another program); the run is kept and still listed |
 | `METHOD_NOT_ALLOWED` | 405 | the route exists, the method doesn't |
 | `BUSY` | 409 | a training run is in progress in this workspace: a second training, an upload, a class filter or clearing the workspace has to wait for it; or a scan is: a second scan or clearing the workspace has to wait for it |
 | `TOO_LARGE` | 413 | the upload is above `TOOLKIT_MAX_UPLOAD_MB` |

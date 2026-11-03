@@ -665,6 +665,11 @@ there, and no model is loaded.
   stand side by side and the page says why they can't be compared.
 - Below: the models of one run only, and the settings that differ (features, models,
   balancing, feature selection).
+- **Delete** removes a run, only when you ask. The page first lists every file it removes
+  and its size, and asks: nothing is deleted before you click **Delete** there, and nothing
+  is ever deleted on its own. The run's bundle (the large file) is kept unless you tick
+  **Also delete its bundle**. If a file can't be removed (another program has it open), the
+  run stays listed: close that program and delete it again.
 
 Here the two runs of the same NSL-KDD files differ only in balancing, none (A) and class
 weights (B): Random Forest's CV macro-F1 is the same, its test macro-F1 is 0.010 lower.
@@ -869,6 +874,9 @@ newest first (50 at a time; its last line gives the `--before` for the older one
 2. 20261102T020103Z-6bec0a5e  2026-11-02 02:01 UTC  KDDTrain+_sample.txt (2,000 rows), test file KDDTest+_sample.txt  label attack, official 2,000/1,000  ★ Random Forest of 3: CV 0.707, test 0.245
 3. 20261102T020053Z-8c45b90b  2026-11-02 02:00 UTC  KDDTrain+_sample.txt (2,000 rows), test file KDDTest+_sample.txt  label attack, official 2,000/1,000  ★ Random Forest of 3: CV 0.707, test 0.254
 ```
+
+`--delete RUN_ID` deletes one, as the page's **Delete** does: it lists the files and asks
+`[y/N]` first, and keeps the bundle unless you add `--with-bundle`.
 
 `--compare A B` prints the two side by side, as the page does. The 23 classes and the other
 two models are shortened here:

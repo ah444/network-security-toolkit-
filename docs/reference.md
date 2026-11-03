@@ -141,6 +141,10 @@ refused).
   settings and scores) and open no model; they exit with 2 and the message for a bad run id
   or a run that isn't saved. The importance results beside the records
   (`<run id>.importance.<model id>.json`, HR2) are not runs and are not counted.
+- `--delete RUN_ID` (HR4a) names the run's files and their sizes, then asks
+  `Delete these files? [y/N]`; only `y` or `yes` deletes, anything else (or the end of the
+  input) deletes nothing. Its bundle is kept unless `--with-bundle` is given. A file that
+  can't be removed exits with 2 and its name; the run is kept and can be deleted again.
 
 | Flag | Default | What it does |
 |---|---|---|
@@ -149,6 +153,8 @@ refused).
 | `--runs` | | lists the saved runs, newest first and 50 at a time, then exits |
 | `--before RUN_ID` | | with `--runs`: the runs saved before this one (the list's last line names it) |
 | `--compare RUN_ID RUN_ID` | | the two saved runs A and B side by side, then exits: each model of both, with Δ = B − A only when both scored the same test rows (otherwise why not), the models of one run only and the settings that differ |
+| `--delete RUN_ID` | | deletes a saved run after naming its files and asking: its importance results, then its bundle with `--with-bundle`, its record last |
+| `--with-bundle` | the bundle is kept | with `--delete`: delete the run's bundle too |
 | `--model MODEL` | the bundle's best | which model of the bundle |
 | `--csv CSV` | | labels every row of this CSV file |
 | `--output OUTPUT` | `<file>.predictions.csv` | where `--csv` writes (a new file, never overwritten) |
@@ -161,6 +167,7 @@ python -m toolkit ids --csv traffic.csv --model random_forest
 python -m toolkit ids --json rows.json
 python -m toolkit ids --runs
 python -m toolkit ids --compare 20261030T120509Z-a75da585 20261031T090000Z-1738e0a0
+python -m toolkit ids --delete 20261030T120509Z-a75da585
 ```
 
 A bundle above 500 MB says first that loading takes a while: large models can take minutes

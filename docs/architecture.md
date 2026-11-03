@@ -93,6 +93,7 @@ no Flask, no argparse. Read by `cli/` and `web/`, it imports neither
 | `toolkit/core/services/ids/bundle.py` | services | packs and checks signed bundles (bytes only) |
 | `toolkit/core/services/ids/legacy_names.py` | services | the old names (`toolkit.ids_core`, before step 1.5d; `toolkit.services.ids`, until v5.2 step 2.3a), only while a bundle saved with them loads |
 | `toolkit/core/services/ids/exports.py` | services | saves, lists and loads runs and bundles, each bundle with its state (HR3d); `BundleStore` is the `ModelStore` |
+| `toolkit/core/services/ids/run_removal.py` | services | deleting a saved run when the user asks (HR4a): its importance results, then its bundle if asked, its record last, under the run files' lock; a file that can't be removed keeps the record |
 | `toolkit/core/services/ids/saved_importance.py` | services | an importance result as a file of its own (HR2): named from checked ids, published once under the run files' lock while the record lists the model, read back as untrusted data |
 | `toolkit/core/services/ids/comparison.py` | services | the saved runs (records only, never a bundle): a run's summary, the view its charts need, whether two runs scored the same test rows, two runs side by side |
 | `toolkit/core/services/ids/batch.py` | services | labels every row of a table: the CLI's `--csv` and the web's "Predict a CSV file" |
@@ -511,11 +512,19 @@ names it and why. Ctrl+C stops the scan with exit code 130.
   any path is made. It holds its run and model, its schema and the method's version, the
   settings (rows, per class, repeats, seed, metric), the numbers and the library versions.
   It is computed outside any lock and published under the one lock of the run files
-  (`importance_files.PUBLISHING`, which the delete of HR4 takes too) only while the record
+  (`importance_files.PUBLISHING`, which a record's write and a delete take too) only while the record
   lists that model, and never replaced. Read back, a file larger than 1 MiB, not JSON, of a
   newer schema, whose ids are not its name's or whose values are not a result's is left out
   and counted. The saved runs' list skips these names. Until every training has a record
   (HR5), only an exported run's results are saved; the job says "Not saved" otherwise.
+- A saved run is deleted only when the user asks, after the page or the CLI named its
+  files and their sizes (HR4a, `toolkit/core/services/ids/run_removal.py`; nothing is ever
+  deleted on its own). Under the one lock of the run files, its importance results go first,
+  then its bundle if the user ticked it (kept, it is an unregistered bundle on purpose), its
+  record last. A file that can't be removed (on Windows: open in another program) stops the
+  delete: the record stays, the run is still listed, and the delete can be tried again. An
+  importance result computed meanwhile finds no record and is not published. A workspace
+  holding the run's export forgets it once its bundle is gone, so Export saves it again.
 - A bundle's state comes from its header (HR3d, `bundle.header_state`): the format records
   its lengths, so its first bytes and the file's size say whether it is whole, with no HMAC
   and nothing unpickled, and no length is read past the file's size. **Exported**: the

@@ -25,6 +25,7 @@ from ...data.ids.bundle_files import (
     stored_bundles,
     write_new,
 )
+from ...data.ids.importance_files import PUBLISHING
 from ...data.ids.run_files import read_record, write_record
 from .bundle import EXPORTED as EXPORTED  # the states, for the callers
 from .bundle import INCOMPLETE as INCOMPLETE
@@ -196,8 +197,10 @@ def _identity(path: str | Path) -> tuple[str, int, int]:
 
 
 def write_run(run: TrainingRun, directory: str | Path | None = None) -> Path:
-    """Write ``<run id>.json``; raises FileExistsError rather than replace a record."""
-    return write_record(run.run_id, run.to_dict(), directory)
+    """Write ``<run id>.json``; raises FileExistsError rather than replace a record. Under
+    the one lock of the run files, so publishing it and deleting a run take turns (IA7)."""
+    with PUBLISHING:
+        return write_record(run.run_id, run.to_dict(), directory)
 
 
 def read_run(path: str | Path) -> dict[str, Any]:

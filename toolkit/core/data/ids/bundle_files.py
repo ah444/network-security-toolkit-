@@ -68,10 +68,14 @@ def signing_key(path: str | Path | None = None, *, create: bool = False) -> byte
     return key
 
 
+def bundle_path(run_id: str, directory: str | Path | None = None) -> Path:
+    """``<directory>/<run id>.bundle`` (the run id already checked)."""
+    return (Path(directory) if directory is not None else bundles_dir()) / f"{run_id}.bundle"
+
+
 def new_bundle_path(run_id: str, directory: str | Path | None = None) -> Path:
     """Where ``<run id>.bundle`` goes; raises FileExistsError rather than replace one."""
-    directory = Path(directory) if directory is not None else bundles_dir()
-    path = directory / f"{run_id}.bundle"
+    path = bundle_path(run_id, directory)
     if path.exists():
         raise FileExistsError(path)
     return path

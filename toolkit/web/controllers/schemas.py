@@ -222,6 +222,12 @@ class CompareRequest:
 
 
 @dataclasses.dataclass(frozen=True)
+class DeleteRunRequest:
+    """``POST /runs/<run id>/delete``: also delete the run's bundle (else it is kept)."""
+    with_bundle: bool = False
+
+
+@dataclasses.dataclass(frozen=True)
 class ConfusionRequest:
     """``GET /run/confusion``: the model whose confusion matrix to show."""
     model: str = ""

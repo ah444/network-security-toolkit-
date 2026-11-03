@@ -1,10 +1,11 @@
 """What ``toolkit ids --runs`` and ``--compare`` print (v5.3 F2): the saved runs' TrainingRun
-records, never a model, in the words and numbers of the web page's saved runs (runsview.js)."""
+records, never a model, in the words and numbers of the web page's saved runs (runsview.js).
+``--delete`` (HR4a) names a run's files and asks before anything is removed."""
 
 from __future__ import annotations
 
 import math
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from typing import Any
 
 
@@ -27,6 +28,8 @@ REASONS = {
 SETTING_NAMES = {"features": "Features", "models": "Models", "balancing": "Balancing",
                  "selection": "Feature selection"}
 NAME_WIDTH = 28  # the first column of a model's numbers
+KINDS = {"importance": "importance result", "bundle": "bundle", "record": "record"}
+YES = ("y", "yes")
 
 
 def when(created_at: str) -> str:
@@ -81,6 +84,43 @@ def runs_list(answer: Mapping[str, Any]) -> None:
               "show (edited, or from a newer version): left out.")
     if answer["more"] and runs:
         print(f"Older runs: add --before {runs[-1]['run_id']}")
+
+
+def file_size(size: int) -> str:
+    """A file's size as the page writes it (runsview.js): "812 bytes", "2.1 KB", "1.8 GB"."""
+    for unit, bytes_ in (("GB", 2**30), ("MB", 2**20), ("KB", 2**10)):
+        if size >= bytes_:
+            return f"{size / bytes_:.1f} {unit}"
+    return f"{size} bytes"
+
+
+def delete_files(run_id: str, files: Sequence[Any], with_bundle: bool) -> None:
+    """``--delete``: the files that go, in order, and the bundle kept unless asked."""
+    gone = [item for item in files if with_bundle or item.kind != "bundle"]
+    print(f"Deleting run {run_id} removes these files from this computer, in this order; "
+          "it can't be undone:")
+    for i, item in enumerate(gone, 1):
+        print(f"  {i}. {item.name}: {KINDS.get(item.kind, item.kind)}, {file_size(item.size)}")
+    for item in files:
+        if item.kind == "bundle" and not with_bundle:
+            print(f"Its bundle {item.name} ({file_size(item.size)}) is kept: it becomes an "
+                  "unregistered bundle in instance/bundles (add --with-bundle to delete it too).")
+
+
+def confirm_delete() -> bool:
+    """The user's yes; anything else, or the end of the input, is no."""
+    try:
+        return input("Delete these files? [y/N] ").strip().lower() in YES
+    except EOFError:
+        return False
+
+
+def deleted(run_id: str, count: int | None) -> None:
+    """After ``--delete``: how many files went, or that nothing did (``count`` None)."""
+    if count is None:
+        print("Nothing deleted.")
+    else:
+        print(f"✅ Deleted run {run_id}: {count} file(s) removed.")
 
 
 def _setting(item: Mapping[str, Any], side: str, titles: Mapping[str, str]) -> str:

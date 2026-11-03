@@ -156,3 +156,75 @@ def test_the_reasons_are_the_pages():
     page = js_sources()["runsview.js"]
     for code, words in REASONS.items():
         assert f'{code}: "{words}"' in page, code
+
+
+# ---- v5.3 step HR4a: --delete RUN_ID [--with-bundle] ----
+
+def _answer(monkeypatch, text):
+    """What the user types at the question (None: the end of the input)."""
+    def ask(_prompt=""):
+        if text is None:
+            raise EOFError
+        return text
+    monkeypatch.setattr("builtins.input", ask)
+
+
+def _run_files(run_id):
+    from toolkit.core.data.ids.bundle_files import bundles_dir
+    return [runs_dir() / f"{run_id}.json", bundles_dir() / f"{run_id}.bundle"]
+
+
+def test_delete_names_the_files_and_asks(cli_module, capsys, exported, no_model, monkeypatch):
+    run_id = exported["run_id"]
+    _answer(monkeypatch, "y")
+    code, out = _run(cli_module, capsys, "--delete", run_id)
+    assert code == 0
+    assert f"{run_id}.json" in out and f"{run_id}.bundle" in out
+    assert "kept: it becomes an unregistered bundle" in out
+    record, bundle = _run_files(run_id)
+    assert not record.exists() and bundle.exists()
+    assert f"Deleted run {run_id}" in out
+
+
+def test_delete_with_its_bundle(cli_module, capsys, exported, no_model, monkeypatch):
+    run_id = exported["run_id"]
+    _answer(monkeypatch, "yes")
+    code, out = _run(cli_module, capsys, "--delete", run_id, "--with-bundle")
+    assert code == 0 and not any(path.exists() for path in _run_files(run_id))
+
+
+@pytest.mark.parametrize("typed", ["", "n", "no", None])
+def test_anything_but_yes_deletes_nothing(cli_module, capsys, exported, no_model, monkeypatch,
+                                          typed):
+    _answer(monkeypatch, typed)
+    code, out = _run(cli_module, capsys, "--delete", exported["run_id"], "--with-bundle")
+    assert code == 0 and "Nothing deleted." in out
+    assert all(path.exists() for path in _run_files(exported["run_id"]))
+
+
+def test_delete_a_bad_or_missing_run(cli_module, capsys, no_model):
+    code, out = _run(cli_module, capsys, "--delete", "../x")
+    assert code == 2 and "That is not a run id." in capsys.readouterr().err + out
+    code, out = _run(cli_module, capsys, "--delete", OTHER_ID)
+    assert code == 2
+
+
+def test_a_file_that_cant_be_removed(cli_module, capsys, exported, no_model, monkeypatch):
+    from toolkit.core.services.ids import run_removal
+    real = run_removal.remove_file
+
+    def remove(path):
+        if path.suffix == ".bundle":
+            raise PermissionError(13, "used by another process", str(path))
+        real(path)
+    monkeypatch.setattr(run_removal, "remove_file", remove)
+    _answer(monkeypatch, "y")
+    code, _out = _run(cli_module, capsys, "--delete", exported["run_id"], "--with-bundle")
+    assert code == 2
+    assert all(path.exists() for path in _run_files(exported["run_id"]))
+
+
+def test_with_bundle_goes_with_delete(cli_module):
+    with pytest.raises(SystemExit) as stopped:
+        cli_module.main(["--with-bundle"])
+    assert stopped.value.code == 2

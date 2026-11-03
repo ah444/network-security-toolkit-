@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
   <title>Saved Runs - Intrusion Detection System</title>
   <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
   <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/app.css') }}">
@@ -47,6 +48,16 @@
       <div id="compareControls" hidden>
         <button type="button" id="compareRuns" class="btn" disabled aria-describedby="compareHint">Compare the two ticked runs</button>
         <p id="compareHint" class="field-hint" aria-live="polite"></p>
+      </div>
+    </section>
+
+    <!-- HR4a: a run is deleted only after this names its files and the user says yes -->
+    <section class="section" id="deleteSection" aria-labelledby="deleteTitle" hidden>
+      <h2 class="section-title" id="deleteTitle" tabindex="-1">Delete run</h2>
+      <div id="deleteView"></div>
+      <div class="button-group">
+        <button type="button" id="deleteConfirm" class="btn btn-danger">Delete</button>
+        <button type="button" id="deleteCancel" class="btn btn-secondary">Cancel</button>
       </div>
     </section>
 

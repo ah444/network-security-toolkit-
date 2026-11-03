@@ -59,6 +59,7 @@ def test_each_session_gets_its_own_token(web_app):
     ("post", "/api/v1/bundle/predict-file"),
     ("delete", "/api/v1/workspace"),
     ("delete", "/api/v1/jobs/abc"),
+    ("post", "/api/v1/runs/20261030T120000Z-0000000a/delete"),
 ])
 def test_state_change_without_token_refused(client, method, url):
     _page_token(client)  # the session has a token; the request just doesn't send it

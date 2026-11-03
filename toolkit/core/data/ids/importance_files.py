@@ -6,7 +6,8 @@ record, published once and never replaced (``toolkit.core.data.publish``). The c
 both ids before a name is made (``toolkit.core.services.ids.saved_importance``). A file is
 read only up to ``MAX_BYTES``. ``PUBLISHING`` is the one lock of the process that orders
 publishing and deleting the run files (IA7): the record checked and the result published
-under it, so a run deleted meanwhile gets nothing (the delete is HR4).
+under it, so a run deleted meanwhile gets nothing; a record is written and a run deleted
+under it too (``exports.write_run``, ``run_removal``, HR4a).
 """
 
 from __future__ import annotations

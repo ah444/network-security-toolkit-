@@ -1,11 +1,12 @@
 // The saved runs' page (/runs, v5.3 F2), loaded as an ES module: the runs exported from the
 // trainer, 50 at a time and newest first (GET /api/v1/runs), one of them with its charts, or
 // two compared. It reads the runs' records only: nothing is uploaded or trained, and no model
-// is loaded. A run's id after the # (the trainer's export links to it) shows that run.
+// is loaded. A run's id after the # (the trainer's export links to it) shows that run. Its one
+// change: a run is deleted when the user asks, after the page named its files (HR4a).
 
-import { getJSON } from "./api.js";
+import { getJSON, send } from "./api.js";
 import { byId, message, setContent, show } from "./dom.js";
-import { RUN_ID, comparisonView, runRow, runView } from "./runsview.js";
+import { RUN_ID, comparisonView, deleteView, runRow, runView } from "./runsview.js";
 
 let last = null;  // the oldest run listed: "Older runs" asks for the ones before it
 let leftOut = 0;
@@ -82,6 +83,58 @@ async function compare() {
   }
 }
 
+let deleting = null;  // the run whose files the delete section names
+
+// Delete: first its files, then the user's yes; nothing is removed before that
+async function askDelete(runId) {
+  message(byId("runsStatus"), "info", "Reading the files of run " + runId + "...");
+  try {
+    const answer = await getJSON("/api/v1/runs/" + encodeURIComponent(runId) + "/files");
+    setContent(byId("runsStatus"), listedText);
+    deleting = runId;
+    byId("deleteTitle").textContent = "Delete run " + runId + "?";
+    setContent(byId("deleteView"), deleteView(answer));
+    show(byId("deleteSection"));
+    byId("deleteTitle").focus();
+  } catch (error) {
+    message(byId("runsStatus"), "error", "Error: " + error.message);
+  }
+}
+
+function closeDelete() {
+  show(byId("deleteSection"), false);
+  deleting = null;
+}
+
+// The list without a deleted run's line, and neither view (it may have shown that run)
+function dropRow(runId) {
+  byId("runsRows").querySelector(`button[data-delete="${runId}"]`).closest("tr").remove();
+  show(byId("runSection"), false);
+  show(byId("comparisonSection"), false);
+  const listed = byId("runsRows").children.length;
+  show(byId("runsBox"), listed > 0);
+  show(byId("compareControls"), listed > 1);
+  choiceChanged();
+  listedText = `${listed} run${listed === 1 ? "" : "s"} listed.`;
+}
+
+async function confirmDelete() {
+  const runId = deleting;
+  const box = byId("deleteView").querySelector("input[name=with_bundle]");
+  closeDelete();
+  try {
+    const answer = await send("/api/v1/runs/" + encodeURIComponent(runId) + "/delete", "POST",
+                              { with_bundle: box !== null && box.checked });
+    dropRow(runId);
+    const count = answer.removed.length;
+    message(byId("runsStatus"), "success", `Run ${runId} deleted (${count} file${count === 1 ? "" : "s"} removed)` +
+      (answer.kept ? `; its bundle ${answer.kept.name} is kept in instance/bundles.` : "."));
+  } catch (error) {
+    message(byId("runsStatus"), "error", "Error: " + error.message);
+  }
+  byId("runsStatus").focus();
+}
+
 function showFromHash() {
   const runId = window.location.hash.slice(1);
   if (RUN_ID.test(runId)) {
@@ -97,7 +150,13 @@ async function setup() {
       window.location.replace("#" + button.dataset.run);  // the address names the run shown
       showRun(button.dataset.run);
     }
+    const remove = event.target.closest("button[data-delete]");
+    if (remove) {
+      askDelete(remove.dataset.delete);
+    }
   });
+  byId("deleteConfirm").addEventListener("click", confirmDelete);
+  byId("deleteCancel").addEventListener("click", closeDelete);
   byId("runsOlder").addEventListener("click", load);
   byId("compareRuns").addEventListener("click", compare);
   await load();

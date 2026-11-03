@@ -187,6 +187,14 @@ class WorkspaceStore:
         """The workspaces now kept (a copy of the list)."""
         return list(self._workspaces.values())
 
+    def forget_export(self, run_id: str) -> None:
+        """The workspaces holding the export of ``run_id`` forget it once its bundle was
+        deleted (HR4a): their Export saves the run again."""
+        for ws in self.values():
+            with ws.lock:
+                if ws.export is not None and ws.export.saved.run.run_id == run_id:
+                    ws.export = None
+
     def _drop_idle(self, now: float) -> int:
         """Drops the workspaces unused for ``idle_seconds``, never a leased one; how many. The
         caller holds the lock."""
