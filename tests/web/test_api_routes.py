@@ -27,8 +27,8 @@ def _served(web_app):
 def test_routes_match_the_documentation(repo_root, web_app):
     # + the scan's 4 (2.4d), the unlock (2.4f), the saved runs' 3 (v5.3 F2c), the access 3 (HS1),
     # a run's files and its delete (HR4a), the storage report and a bundle registered (HR4b),
-    # a run saved again (HR5a)
-    assert len(_documented(repo_root)) == 38
+    # a run saved again (HR5a), the importance job and a saved run's results (F3d)
+    assert len(_documented(repo_root)) == 40
     assert _served(web_app) == _documented(repo_root)
 
 

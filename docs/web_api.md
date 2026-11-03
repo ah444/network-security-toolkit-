@@ -51,16 +51,17 @@ the network").
 | POST | `/api/v1/dataset/feature-scores` | `target`, `k` (1-10,000, default 10), `test_size` | feature scores on the training split (`"inf"` for a feature with one value per class: JSON has no infinity) |
 | GET | `/api/v1/models` | none | the models that can be trained here |
 | POST | `/api/v1/jobs/training` | `target`, `features`, `models`, `balancing`, `test_size` | **202** and the job (see below) |
+| POST | `/api/v1/jobs/importance` | `model` (default: the selected one) | **202** and the job: the permutation importance of one of the session's models (see Explanations) |
 | GET | `/api/v1/jobs/<job_id>` | `since` (a scan's log from this line on, default 0) | the job's state and progress; when done, the result: leaderboard, split, CV, leakage findings, confusion matrices and `saved`/`not_saved` (a training: its record saved, or why not), or the scan's answer |
 | DELETE | `/api/v1/jobs/<job_id>` | none | **202**: a queued job is cancelled at once, a running one at its next step |
 | GET | `/api/v1/run/confusion` | `model` (default: the selected one) | test-split confusion matrix |
-| POST | `/api/v1/run/predict` | `values`: {feature: value}, `model` | prediction |
+| POST | `/api/v1/run/predict` | `values`: {feature: value}, `model` | `prediction`, `model` and `why` (see Explanations) |
 | POST | `/api/v1/run/predict-file` | multipart `file` (`.csv`/`.txt`), `model` | every row predicted: counts per class, matches, download (see below) |
 | POST | `/api/v1/run/save` | none | the session's run saved again when its training couldn't save its record (HR5), under the same run id: `run_id`, `saved`; 409 `ALREADY_SAVED` once it is saved, 507 `NO_SPACE` while the disk is too full |
 | POST | `/api/v1/run/export` | `name` (letters, digits, `_`, `-`; max 80) | signed bundle saved in `instance/bundles/` (the run's record was saved by its training and isn't touched); 507 `NO_SPACE` when the disk would keep less than `TOOLKIT_MIN_FREE_MB` free |
 | GET | `/api/v1/run/bundle` | none | the exported bundle as a download |
 | POST | `/api/v1/bundle` | multipart `file`: a `.bundle` exported by this install | the loaded models and their scores |
-| POST | `/api/v1/bundle/predict` | `values`, `model` | prediction with the loaded bundle |
+| POST | `/api/v1/bundle/predict` | `values`, `model` | prediction with the loaded bundle, with `why` |
 | POST | `/api/v1/bundle/predict-file` | multipart `file`, `model` | the same with the loaded bundle |
 | GET | `/api/v1/predictions` | none | the last predicted file's labelled CSV as a download (404 `NOT_FOUND` before any) |
 | GET | `/api/v1/workspace` | none | what the session holds, to resume after a reload (see below) |
@@ -75,6 +76,7 @@ the network").
 | GET | `/api/v1/scan/report` | `format`: `txt` (default), `json` or `csv` | the last finished scan as a download (404 `NO_SCAN` before one) |
 | GET | `/api/v1/runs` | `before`: a run id (the next page; default: the newest) | the saved runs' summaries, newest first, 50 at a time (see Saved runs) |
 | GET | `/api/v1/runs/<run_id>` | none | one saved run: its summary, its leaderboard and each model's CV folds |
+| GET | `/api/v1/runs/<run_id>/importance` | none | a saved run's importance results: `run_id`, `importances` (one per model, as saved), `left_out`; read only, nothing computed |
 | GET | `/api/v1/runs/compare` | `a`, `b`: two run ids | the two runs side by side; the differences only when they scored the same test rows |
 | GET | `/api/v1/runs/<run_id>/files` | none | what deleting the run removes, in the order it goes: `files`, each `{kind, name, size}` (`importance`, `bundle`, `record`) |
 | GET | `/api/v1/storage` | none | what is kept, by kind (HR4b): `kinds`, each `{kind, title, count, bytes, files, leftover}` (`files` names the leftovers), `total_bytes`, `free_bytes`, `warn_bytes`, `floor_bytes` and `warnings` (past `TOOLKIT_STORAGE_WARN_MB`, under `TOOLKIT_MIN_FREE_MB`); it deletes nothing |
@@ -195,6 +197,49 @@ A session without a workspace gets all `null`s; nothing is created. The page use
 route on every load; results of the explore routes (distribution, previews, scores) are
 not kept and are asked for again.
 
+## Explanations (v5.3 F3)
+
+Both are worked out on this computer from the run's own rows; nothing is sent anywhere.
+They are approximations that show what the model relies on, not causes.
+
+**What a model relies on** (`POST /api/v1/jobs/importance`, `{"model": "..."}`): the
+permutation importance on the test split (a sample of 5,000 rows above that, 5 repeats, the
+run's seed): each feature's values are shuffled and the drop in macro-F1 measured. It is a
+job of the kind `importance`, in the training's queue (one heavy job at a time: it waits for
+a training and a training waits for it), followed and cancelled through `/api/v1/jobs/<id>`
+like a training, one step per feature. It is bound when asked for to the session's run and
+that model; asked again for the same ones, it answers the same job (unless that one failed
+or was cancelled). Only the session's run can be calculated: a saved run's test split is not
+in memory. Its `result`: `run_id`, `model`, `rows` (scored), `test_rows`, `repeats`, `seed`,
+`baseline_macro_f1`, `features` (each `{feature, mean, std}`: the drop, ranked),
+`concentrated` (the feature that carries more than half of the summed positive drops, else
+null: a reason to check it, a copy of the label being one possible cause), and
+`saved`, `not_saved`: it is saved as a file of its own beside the run's record
+(`<run id>.importance.<model id>.json`), read back with `GET /api/v1/runs/<run_id>/importance`
+until the run is deleted.
+
+**Why one prediction** (`why` in `/api/v1/run/predict` and `/api/v1/bundle/predict`; a CSV
+prediction has none): each feature's value is replaced by its typical value in the training
+split (the median of a number, the most frequent category) and the change in the predicted
+class's probability measured.
+
+```json
+{"prediction": "DDoS", "probability": 0.97, "source": "training", "problem": null,
+ "toward": [{"feature": "...", "value": 1480.0, "typical": 0.0, "effect": 0.41}],
+ "away": [], "without_typical": []}
+```
+
+- `toward` and `away`: at most 5 each, the features that raised (`effect` > 0) or lowered the
+  predicted class's probability most; a feature already at its typical value is no reason.
+- `source`: `training` (the typical values in the run's record), or `pipeline` (a bundle
+  saved before v5.3 F3: the medians its pipeline learnt, numbers only; its categories are in
+  `without_typical`).
+- `problem`: `NO_PROBABILITIES` for a model without probabilities (the linear SVM): no
+  reasons, and the prediction stands. `why` is null if the explanation itself failed (in the
+  server log).
+- Its limits: approximate, not causal; correlated features share their effect; one feature
+  changed alone can make a row that never occurs; the probabilities are not calibrated.
+
 ## Training jobs
 
 A training runs in the background as a **job**. The server runs one training at a time
@@ -210,7 +255,7 @@ session can read and predict, but not change its dataset or start a second train
  "total": 22, "percent": 32, "phase": "Cross-validation, fold 2 of 3", "elapsed_seconds": 72.4}
 ```
 
-- `kind`: `training` (or `scan`); the job routes answer for either kind.
+- `kind`: `training` (or `importance`, or `scan`); the job routes answer for every kind.
 - `state`: `queued` (with `queue_position`: jobs of its kind that run first; at 0 the phase is
   `Starting`, as the worker is about to pick it up), `running`, `cancelling`
   (cancel asked, waiting for the current model's fit to end), `done` (with `result`),

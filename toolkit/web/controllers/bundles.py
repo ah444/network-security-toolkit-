@@ -39,8 +39,9 @@ def predict(ws: Workspace) -> Answer:
     req = load(PredictRequest, json_body())
     if ws.run is None:
         return error_response("Models not trained yet. Train a model first.", code=NOT_TRAINED)
+    training = {"typical_values": dict(ws.run.evaluation.training.typical)}
     return jsonify(prediction.predict_one(ws.run.evaluation.training.models, ws.run.evaluation.selected,
-                               req.values, req.model))
+                               req.values, req.model, training))
 
 
 @bp.route("/bundle/predict", methods=["POST"])
@@ -52,7 +53,7 @@ def predict_loaded(ws: Workspace) -> Answer:
         return error_response("No model loaded. Load a bundle exported by this toolkit first.",
                               code=NO_MODEL_LOADED)
     return jsonify(prediction.predict_one(ws.loaded.models, ws.loaded.selected,
-                               req.values, req.model))
+                               req.values, req.model, ws.loaded.run.get("training")))
 
 
 # --- Batch prediction: a whole CSV file (plan F1, step 1.4f) ---------------------------------

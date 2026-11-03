@@ -1,10 +1,12 @@
-"""Predictions with the session's trained or loaded models: one row, or every row of an
-uploaded CSV file (step 1.4f; the labelled CSV is the CLI's, ``toolkit.core.services.ids.batch``)."""
+"""Predictions with the session's trained or loaded models: one row, with why (F3d), or every
+row of an uploaded CSV file (step 1.4f; the labelled CSV is the CLI's,
+``toolkit.core.services.ids.batch``)."""
 
 from __future__ import annotations
 
 import logging
 from collections.abc import Mapping
+from dataclasses import asdict
 from pathlib import Path, PurePath
 from typing import IO, Any
 
@@ -15,6 +17,7 @@ from ..data import uploads
 from ...core.services.ids import registry
 from ...core.services.ids.batch import missing_features, prediction_csv, prediction_summary, prediction_table
 from ...core.services.ids.datasets import load_dataset
+from ...core.services.ids.explanation import explain, typical_values
 from ...core.services.ids.pipeline import FittedModel
 from .errors import TOO_LARGE, UNKNOWN_COLUMN, UNREADABLE_FILE, Failed, ServiceError
 from .workspace import BatchPredictions, Workspace
@@ -23,8 +26,10 @@ log = logging.getLogger(__name__)
 
 
 def predict_one(models: Mapping[str, FittedModel], default: str | None,
-                values: Mapping[str, Any] | None, model: str | None) -> dict[str, Any]:
-    """Predict one row with ``models[model]`` through its saved pipeline (B2)."""
+                values: Mapping[str, Any] | None, model: str | None,
+                training: Mapping[str, Any] | None) -> dict[str, Any]:
+    """Predict one row with ``models[model]`` through its saved pipeline (B2), and why: the
+    local explanation (F3d), with the typical values of the record's ``training`` part."""
     if not values:
         raise ServiceError("No input values provided.")
     algorithm = model or default or ""
@@ -41,7 +46,20 @@ def predict_one(models: Mapping[str, FittedModel], default: str | None,
     except Exception:
         log.exception("Prediction error")
         raise Failed("Prediction failed for these input values.") from None
-    return {"prediction": str(prediction), "model": algorithm}
+    return {"prediction": str(prediction), "model": algorithm, "why": why(fitted, row, training)}
+
+
+def why(fitted: FittedModel, row: pd.DataFrame,
+        training: Mapping[str, Any] | None) -> dict[str, Any] | None:
+    """Why ``fitted`` predicts what it does for ``row`` (F3c): an approximation, not SHAP; its
+    ``problem`` is NO_PROBABILITIES for a model without probabilities. None when it fails
+    (logged): the prediction stands without it."""
+    try:
+        typical, source = typical_values(fitted, training)
+        return asdict(explain(fitted, row, typical, source))
+    except Exception:
+        log.exception("Explanation error")
+        return None
 
 
 def model_title(name: str) -> str:

@@ -4,7 +4,8 @@ training's (HR5), and for the list each run's bundle's state from its first byte
 never a model, and need no session: a saved run belongs to this install, not to a workspace. A run
 is deleted only when the user asks, after the page named its files (HR4a,
 ``toolkit.core.services.ids.run_removal``). The storage report only reads; registering a kept
-bundle again adds its record and deletes nothing (HR4b)."""
+bundle again adds its record and deletes nothing (HR4b). A saved run's importance results
+are read, never computed (F3d: a saved run has no test split in memory)."""
 
 from __future__ import annotations
 
@@ -14,6 +15,7 @@ from ...core.services.ids.bundle import BundleError
 from ...core.services.ids.comparison import NotARun, compare_saved, saved_run, saved_runs, view
 from ...core.services.ids.registration import register_bundle
 from ...core.services.ids.run_removal import BUNDLE, not_removed, remove_run, run_files
+from ...core.services.ids.saved_importance import saved_importances
 from ...core.services.storage import NoSpace, storage_report
 from ..services.errors import ALREADY_SAVED, NO_SPACE, NOT_FOUND, NOT_REMOVED
 from .api import Answer, error_response, json_body, query
@@ -104,6 +106,19 @@ def register(run_id: str) -> Answer:
     except BundleError as error:
         return error_response(str(error), code=error.code)
     return jsonify({"run_id": run_id, "record": record.name})
+
+
+@bp.route("/runs/<run_id>/importance", methods=["GET"])
+def importances(run_id: str) -> Answer:
+    """A saved run's importance results, by model (F3d), read only: ``{"run_id",
+    "importances", "left_out"}``; the run must be saved."""
+    try:
+        saved_run(run_id)
+    except NotARun as error:
+        return error_response(str(error))
+    except FileNotFoundError:
+        return error_response(NO_SUCH_RUN, 404, NOT_FOUND)
+    return jsonify({"run_id": run_id, **saved_importances(run_id)})
 
 
 @bp.route("/runs/<run_id>", methods=["GET"])

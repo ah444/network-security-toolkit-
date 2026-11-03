@@ -120,6 +120,7 @@ INTEGRATION = (
     "web/test_isolation.py",
     "web/test_job_journal.py",
     "web/test_importance_jobs.py",
+    "web/test_importance_routes.py",
     "web/test_job_kinds.py",
     "web/test_jobs.py",
     "web/test_js_modules.py",

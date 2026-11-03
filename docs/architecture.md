@@ -190,14 +190,14 @@ The page, its routes and jobs, and the `web` command; it never imports the comma
 | `toolkit/web/services/__init__.py` | services | the web trainer's services |
 | `toolkit/web/services/workspace.py` | services | one in-memory workspace per browser session, with memory caps |
 | `toolkit/web/services/jobs.py` | services | the background jobs: two queues (the heavy jobs: training and importance, RD2; the scan), one job of a queue at a time, progress, cancel; where each job was asked for (`Origin`, HS1) |
-| `toolkit/web/services/importance.py` | services | the permutation importance of a model of the workspace's run, as a job on the training's queue, bound when asked for to its run and model, one per run and model (HR1) |
+| `toolkit/web/services/importance.py` | services | the permutation importance of a model of the workspace's run, as a job on the training's queue, bound when asked for to its run and model, one per run and model (HR1); asked for by `POST /api/v1/jobs/importance` (F3d) |
 | `toolkit/web/services/errors.py` | services | the error codes and `ServiceError` |
 | `toolkit/web/services/datasets.py` | services | uploads read, files combined, the class filter, the training split |
 | `toolkit/web/services/training.py` | services | training settings checked, the job queued, the run kept |
 | `toolkit/web/services/scan.py` | services | the web port scan: the choices checked (the authorization first, nothing sent before it), the scan queued as a job, the last scan kept for the download |
 | `toolkit/web/services/access.py` | services | the access token of a start (`--host`): made, checked (five wrong tries a minute per address), loopback told apart; a new one made on this computer locks every other computer out and cancels their waiting jobs (`lock_out`, HS1) |
 | `toolkit/web/services/scan_view.py` | services | `WebScan`, the page's `ScanView`: a running scan's log, its progress host by host and its answer, no path of this computer shown |
-| `toolkit/web/services/prediction.py` | services | one row or a whole file predicted |
+| `toolkit/web/services/prediction.py` | services | one row or a whole file predicted; a row's `why`, the local explanation (F3d) |
 | `toolkit/web/data/__init__.py` | data | the web trainer's files and sockets |
 | `toolkit/web/data/uploads.py` | data | uploads on disk, only while they are read |
 | `toolkit/web/data/journal.py` | data | the jobs journal: a line when a job is asked for, starts and ends; the unfinished ones read at the next start (HR3c) |

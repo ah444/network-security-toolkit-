@@ -1,6 +1,6 @@
-"""Training routes: the models that can be trained, a training job started, its results, and
-its run saved again when its training couldn't save it (HR5; the job's state and cancel:
-``jobs.py``)."""
+"""Training routes: the models that can be trained, a training job started, its results, its
+run saved again when its training couldn't save it (HR5), and the importance of one of its
+models as a job (F3d; the jobs' state and cancel: ``jobs.py``)."""
 
 from __future__ import annotations
 
@@ -19,8 +19,9 @@ from ..services.errors import ALREADY_SAVED, NOT_TRAINED, TRAINING_FAILED, Servi
 from .access import origin
 from .api import Answer, ApiError, error_response, json_body, query
 from .jobs import job_view
+from ..services.importance import start_importance
 from ..services.training import save_run, start_job, training_settings
-from .schemas import ConfusionRequest, TrainRequest, load
+from .schemas import ConfusionRequest, ImportanceRequest, TrainRequest, load
 from .state import state
 from ..services.workspace import Workspace
 from .workspace import with_workspace, workspace
@@ -58,6 +59,19 @@ def start_training() -> Answer:
         job = start_job(ws, data, settings, state().training_jobs,
                         state().config.job_max_minutes * 60,
                         lambda run: run_result(run, ws.not_saved), origin())
+        return jsonify(job_view(job, state().training_jobs)), 202
+
+
+@bp.route("/jobs/importance", methods=["POST"])
+def start_importance_job() -> Answer:
+    """Queue the permutation importance of one of the session's models (F3d; the selected one
+    by default): 202 + the job. It waits in the training's queue (RD2), bound now to the run
+    and the model; asked again, it is the same job. Its result is saved as a file of its own
+    beside the run's record (HR2)."""
+    req = load(ImportanceRequest, json_body())
+    with workspace() as ws:
+        job = start_importance(ws, req.model or None, state().training_jobs,
+                               state().config.job_max_minutes * 60, origin())
         return jsonify(job_view(job, state().training_jobs)), 202
 
 

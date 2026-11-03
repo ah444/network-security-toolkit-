@@ -228,6 +228,13 @@ class DeleteRunRequest:
 
 
 @dataclasses.dataclass(frozen=True)
+class ImportanceRequest:
+    """``POST /jobs/importance``: the model whose importance to calculate (default: the
+    selected one)."""
+    model: str = ""
+
+
+@dataclasses.dataclass(frozen=True)
 class ConfusionRequest:
     """``GET /run/confusion``: the model whose confusion matrix to show."""
     model: str = ""

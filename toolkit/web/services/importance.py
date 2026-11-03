@@ -8,7 +8,8 @@ memory until it ends). One job per run and model: asked again, it is the same jo
 that one failed or was cancelled. Only the workspace's run can be calculated (RD3): a saved
 run has no test split in memory. At its end the result is published as a file of its own
 beside the run's record (HR2, ``saved_importance``), when the record exists; the job's result
-says whether it was saved, and why not. The route is F3d's.
+says whether it was saved, and why not. It is asked for by ``POST /api/v1/jobs/importance``
+(F3d).
 """
 
 from __future__ import annotations
