@@ -7,7 +7,7 @@ Windows, a hard link (``os.link``) on Linux and macOS, whose ``rename`` would re
 that already exists is a ``FileExistsError`` and the file under it is left alone.
 
 The guarantee: after a crash of the process, the file is under its name whole or not at all
-(a temporary file may be left; clearing those is HR3b's). After a power cut it is best
+(a temporary file may be left: the web server clears them at its start, HR3b). After a power cut it is best
 effort: the disk may not have written what it said it had. A file system without hard links
 (on Linux and macOS: some FAT and network drives) is refused with a message rather than
 published unsafely.
@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import errno
 import os
+import re
 import secrets
 import sys
 from pathlib import Path
@@ -24,6 +25,7 @@ from pathlib import Path
 HARD_LINKS = sys.platform != "win32"  # how a file is published without replacing one
 # what a hard link is refused with (ENOTSUP and EOPNOTSUPP differ on macOS)
 NO_LINKS = {errno.EPERM, errno.EOPNOTSUPP, errno.ENOTSUP, errno.ENOSYS}
+LEFTOVER = re.compile(r".+\.[0-9a-f]{8}\.tmp")  # the temporary file's name (token_hex(4))
 
 
 def publish_bytes(path: str | Path, data: bytes) -> Path:
@@ -51,6 +53,18 @@ def publish_bytes(path: str | Path, data: bytes) -> Path:
 def publish_text(path: str | Path, text: str) -> Path:
     """``publish_bytes`` of ``text`` in UTF-8, its line ends exactly as given."""
     return publish_bytes(path, text.encode("utf-8"))
+
+
+def clear_leftovers(folder: str | Path) -> int:
+    """Removes the temporary files a stopped process left in ``folder`` (only theirs:
+    ``<name>.<8 hex digits>.tmp``); how many. Only the instance's lock holder calls it
+    (HR3b), so no live publish loses its file."""
+    folder = Path(folder)
+    found = [path for path in folder.iterdir() if LEFTOVER.fullmatch(path.name)] \
+        if folder.is_dir() else []
+    for path in found:
+        path.unlink(missing_ok=True)
+    return len(found)
 
 
 def _finish(temporary: Path, path: Path) -> None:

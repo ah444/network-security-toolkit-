@@ -227,7 +227,8 @@ python -m toolkit web --port 5001 --no-browser
 The page is `http://127.0.0.1:5000/` (the address is always printed), the port scanner
 `http://127.0.0.1:5000/scan`; Ctrl+C stops the server.
 If the port is already in use (for example, the trainer is already running), it says so and
-stops: start it on another port with `--port`. `TOOLKIT_NO_BROWSER=1` never opens the browser.
+stops: start it on another port with `--port`. One trainer runs per data folder: a second one
+on the same `instance/` says which one holds it and stops. `TOOLKIT_NO_BROWSER=1` never opens the browser.
 
 ---
 

@@ -208,7 +208,13 @@ plain HTTP, so someone who can read the network's traffic could take over a sess
 - An address this computer doesn't have is a message and exit code 2. On Windows the
   firewall may ask, the first time, whether to let Python accept connections.
 
-A port already in use is a message naming the next port to try. Its settings are
+A port already in use is a message naming the next port to try. One web server runs per
+data folder (HR3b): a second one on the same `instance/` stops at once with a message naming
+the first one's process and address (exit code 2); give it its own folder with
+`TOOLKIT_INSTANCE_DIR`. The lock is `instance/web.lock`, released by the system when the
+server ends, however it ends; at its start the server removes the temporary files a stopped
+export left in `instance/runs/` and `instance/bundles/`. The command line takes no lock: it
+writes neither. Its settings are
 `TOOLKIT_*` variables (section 7); the pages and API are in [`web_api.md`](web_api.md).
 
 ## 6. Exit codes

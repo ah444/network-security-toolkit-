@@ -193,6 +193,7 @@ The page, its routes and jobs, and the `web` command; it never imports the comma
 | `toolkit/web/services/prediction.py` | services | one row or a whole file predicted |
 | `toolkit/web/data/__init__.py` | data | the web trainer's files and sockets |
 | `toolkit/web/data/uploads.py` | data | uploads on disk, only while they are read |
+| `toolkit/web/data/instance_lock.py` | data | one web server per instance: the OS lock on `instance/web.lock`, and the clearing of a stopped export's temporary files (HR3b) |
 | `toolkit/web/data/net.py` | data | the listening socket, and opening the page in the browser |
 
 ## 3. Dependency rules
@@ -491,6 +492,12 @@ names it and why. Ctrl+C stops the scan with exit code 130.
   would replace). After a crash of the process the file is whole or absent, and a `.tmp`
   file may be left (no listing reads it); after a power cut it is best effort. A file
   system without hard links (on Linux and macOS) is refused with a message.
+- One web server per instance (`toolkit/web/data/instance_lock.py`, HR3b): an operating-system
+  lock on `instance/web.lock` (`msvcrt`, `fcntl`), taken before the port and released by the
+  system when the process ends; the holder writes its process id and address after the
+  locked byte, so a second server says which one holds the folder. Only the holder clears
+  publish's temporary files in `runs/` and `bundles/`, at its start. The command line takes
+  no lock: it writes in neither.
 
 ```
  this computer                                  the internet

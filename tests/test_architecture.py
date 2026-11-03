@@ -15,8 +15,8 @@ are the same:
     data/         files, the network, the environment (no database)
 
 Each layer imports only the layers below it: controllers use ui, services and, from data,
-only the settings, logs and the plumbing that starts things (the server's socket, child
-processes); ui may import services' types to show them, never data or controllers;
+only the settings, logs and the plumbing that starts things (the server's socket and its
+instance lock, child processes); ui may import services' types to show them, never data or controllers;
 services use data; data imports nothing above it. Inside core the tools stay apart (``ids``
 and ``recon`` never import each other). Only ui prints or asks; only the web's controllers
 use Flask, only the CLI's controllers and the ``web`` command use argparse; only data opens
@@ -34,7 +34,8 @@ INTERFACES = ("core", "cli", "web")
 LAYERS = ("ui", "controllers", "services", "data")
 V51_FOLDERS = ("ui", "controllers", "services", "data")  # toolkit/<folder>, gone since 2.3d
 CONTROLLER_DATA = ("toolkit.core.data.settings", "toolkit.core.data.keys",
-                   "toolkit.core.data.logs", "toolkit.web.data.net", "toolkit.cli.data.processes")
+                   "toolkit.core.data.logs", "toolkit.web.data.net",
+                   "toolkit.web.data.instance_lock", "toolkit.cli.data.processes")
 ARGPARSE_OUTSIDE_CLI = ("toolkit.web.controllers.command",)  # the web command's flags
 WEB_FRAMEWORK = {"flask", "werkzeug", "jinja2", "waitress"}
 OUTSIDE = {"socket", "ssl", "requests", "urllib", "http", "subprocess", "webbrowser"}

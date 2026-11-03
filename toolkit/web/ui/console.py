@@ -1,8 +1,19 @@
 """What the web trainer's command prints (``toolkit/ui/cli/web.py`` until v5.2 step 2.3d)."""
 
+from pathlib import Path
+
 PORT_IN_USE = ("Port {port} is already in use on this computer: the web trainer may already be "
                "running (open {url}), or another program uses it.\nStart on another port: "
                "python -m toolkit web --port {other} (or TOOLKIT_PORT={other}).")
+
+
+def instance_in_use(folder: Path, pid: int | None, url: str) -> None:
+    """HR3b: another web server holds this data folder: which one (when it said), and what
+    to do."""
+    who = f" (process {pid}, at {url})" if pid is not None else ""
+    print(f"Another toolkit web server is already using the data folder {folder}{who}.\n"
+          "Open that one, or stop it first (Ctrl+C in its window). To run a second one, give "
+          "it a folder of its own with TOOLKIT_INSTANCE_DIR.")
 
 
 def running(url: str) -> None:

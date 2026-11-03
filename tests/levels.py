@@ -109,6 +109,7 @@ INTEGRATION = (
     "web/test_api_routes.py",
     "web/test_batch_predict.py",
     "web/test_charts.py",
+    "web/test_instance_lock.py",
     "web/test_isolation.py",
     "web/test_job_kinds.py",
     "web/test_jobs.py",
