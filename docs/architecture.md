@@ -103,6 +103,7 @@ no Flask, no argparse. Read by `cli/` and `web/`, it imports neither
 | `toolkit/core/services/recon/__init__.py` | services | the scanner's logic |
 | `toolkit/core/services/recon/targets.py` | services | targets, port lists and scan limits |
 | `toolkit/core/services/recon/scan.py` | services | a scan, start to end, through a `ScanView` (what it shows and asks); a set `stop` event ends it (`ScanStopped`), nothing more sent |
+| `toolkit/core/services/recon/online.py` | services | `online_plan`: what a scan may send to each online service, or why it sends nothing (no key, turned off, the answer no, no public address) |
 | `toolkit/core/services/recon/intel.py` | services | `Intel`: the lookups for open ports, in parallel, each product once; none asked once the scan is stopped |
 | `toolkit/core/services/recon/engines.py` | services | the scan engines by name: the built-in one (the toolkit's own scanner) and nmap (`NmapEngine`; `NmapProgress`: nmap's phases as one bar); `engine_problem` (why an engine can't do a scan here, asked before the authorization) and `describe` (the opening notice's lines) |
 | `toolkit/core/services/recon/os_guess.py` | services | the OS guess from the TTL, the banners, the open ports and nmap's OS match, with its evidence; this computer said |
@@ -150,7 +151,8 @@ The menu, `scan` and `ids`; it never imports the web trainer
 | `toolkit/cli/__init__.py` | - | the command line (v5.2 step 2.3c): the menu, `scan`, `ids`; it never imports the web trainer |
 | `toolkit/cli/ui/__init__.py` | ui | the command line's prompts and printing |
 | `toolkit/cli/ui/menu.py` | ui | the banner, the menu and its prompt |
-| `toolkit/cli/ui/scan.py` | ui | the scanner's questions, authorization, progress line, tables and report; `ConsoleScan` is the scan's `ScanView` |
+| `toolkit/cli/ui/scan.py` | ui | the scanner's questions, authorization, tables and report; `ConsoleScan` is the scan's `ScanView` |
+| `toolkit/cli/ui/progress.py` | ui | `ConsoleProgress`: the progress line of a verbose scan |
 | `toolkit/cli/ui/ids.py` | ui | the IDS command's export list, model card, predictions, interactive menu and prompts |
 | `toolkit/cli/ui/runs.py` | ui | what `ids --runs` and `--compare` print: the saved runs, and two of them side by side |
 | `toolkit/cli/controllers/__init__.py` | controllers | the command line's commands |
@@ -312,7 +314,7 @@ Interfaces exist only where an implementation really is swapped or faked in test
 |---|---|---|---|
 | `ModelStore` | web trainer, IDS command line | `BundleStore` (`toolkit/core/services/ids/exports.py`, over `toolkit/core/data/ids/bundle_files.py`): signed bundles in `instance/bundles/` | a scratch instance folder |
 | `IntelProvider` | `Intel` in the scanner | `NvdProvider`, `OpenRouterProvider`, `AbuseIpdbProvider` (`toolkit/core/data/recon/`) | fake providers; recorded NVD answers in `tests/fixtures/` |
-| `ProgressSink` | `train()`, `evaluate()`, `scan_ports()` | a web job (`toolkit/web/services/jobs.py`), the scanner's verbose line (`toolkit/cli/ui/scan.py`) | `NullProgress` or a recorder |
+| `ProgressSink` | `train()`, `evaluate()`, `scan_ports()` | a web job (`toolkit/web/services/jobs.py`), the scanner's verbose line (`toolkit/cli/ui/progress.py`) | `NullProgress` or a recorder |
 | `ScanEngine` | `scan_target` in the scanner, by the request's `engine` name | `BuiltinEngine` (`toolkit/core/services/recon/engines.py`, over `scan_ports` in `toolkit/core/data/recon/scanner.py`); `NmapEngine` (the same module, over `toolkit/core/data/recon/nmap.py`, `nmap_run.py`, `nmap_xml.py`) when nmap is installed | the `fake_ports` fixture (`tests/recon/conftest.py`), an engine put in `ENGINES` |
 
 Everything else is plain functions and dict registries.
@@ -595,7 +597,7 @@ names it and why. Ctrl+C stops the scan with exit code 130.
 
 "or no" is the scanner's question when it runs without flags (yes on Enter). Each scan
 prints, before the first target, what it may send to each service or why it sends nothing
-(`online_plan` in `toolkit/core/services/recon/scan.py`: no key, turned off, the answer no,
+(`online_plan` in `toolkit/core/services/recon/online.py`: no key, turned off, the answer no,
 no public address), and in its summary how many requests went to each (`Intel.sent`, counted by the
 scan's `Session` in `toolkit/core/data/recon/lookup.py`).
 

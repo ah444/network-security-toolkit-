@@ -7,7 +7,8 @@ It uses [`core/`](../core/README.md) and never imports [`web/`](../web/README.md
 cli/
   ui/
     menu.py         the banner, the menu and its prompt
-    scan.py         the scanner's questions, the authorization question, progress, tables
+    scan.py         the scanner's questions, the authorization question, tables
+    progress.py     the progress line of a verbose scan
     ids.py          the IDS command's export list, model card, predictions and prompts
     runs.py         what ids --runs and --compare print: the saved runs, two side by side
   controllers/
