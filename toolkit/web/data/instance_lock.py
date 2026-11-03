@@ -6,7 +6,8 @@ it ends (Ctrl+C, the launcher menu, a crash), so it never needs clearing by hand
 The holder writes who it is (its process id and address) after the locked first byte, so a
 second server can say which one holds the folder. Only the holder clears the temporary files
 a crash left in ``runs/`` and ``bundles/`` (``publish.clear_leftovers``), at its start: the
-command line takes no lock, as it writes neither (HR3b, decided with the user).
+command line takes no lock, as it writes neither (HR3b, decided with the user). The holder
+also reads the jobs journal the last server left (``journal.recover``, HR3c).
 """
 
 from __future__ import annotations
@@ -24,6 +25,7 @@ from ...core.data.ids.bundle_files import bundles_dir
 from ...core.data.ids.run_files import runs_dir
 from ...core.data.publish import clear_leftovers
 from ...core.data.settings import instance_dir
+from .journal import Interrupted, journal_path, recover
 
 LOCK_NAME = "web.lock"
 log = logging.getLogger(__name__)
@@ -46,10 +48,12 @@ class InstanceBusy(Exception):
 
 
 class InstanceLock:
-    """The lock while it is held; ``release`` (or the end of the process) gives it back."""
+    """The lock while it is held; ``release`` (or the end of the process) gives it back.
+    ``interrupted``: the jobs the last server on this instance didn't finish (HR3c)."""
 
-    def __init__(self, handle: IO[bytes]):
+    def __init__(self, handle: IO[bytes], interrupted: list[Interrupted]):
         self._handle: IO[bytes] | None = handle
+        self.interrupted = interrupted
 
     def release(self) -> None:
         """Gives the lock back (closing the file releases it)."""
@@ -60,7 +64,8 @@ class InstanceLock:
 
 def take(url: str, environ: Mapping[str, str] | None = None) -> InstanceLock:
     """The instance's lock for this web server at ``url``, then the leftovers of a crash
-    cleared; InstanceBusy when another server holds it."""
+    cleared and the last server's unfinished jobs read; InstanceBusy when another server
+    holds it."""
     folder = instance_dir(environ)
     folder.mkdir(parents=True, exist_ok=True)
     path = folder / LOCK_NAME
@@ -77,7 +82,7 @@ def take(url: str, environ: Mapping[str, str] | None = None) -> InstanceLock:
     cleared = sum(clear_leftovers(where) for where in (runs_dir(environ), bundles_dir(environ)))
     if cleared:
         log.info("Removed %d temporary file(s) a stopped export left in %s", cleared, folder)
-    return InstanceLock(handle)
+    return InstanceLock(handle, recover(journal_path(environ)))
 
 
 def holder(path: Path) -> Holder | None:

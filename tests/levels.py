@@ -111,6 +111,7 @@ INTEGRATION = (
     "web/test_charts.py",
     "web/test_instance_lock.py",
     "web/test_isolation.py",
+    "web/test_job_journal.py",
     "web/test_job_kinds.py",
     "web/test_jobs.py",
     "web/test_js_modules.py",

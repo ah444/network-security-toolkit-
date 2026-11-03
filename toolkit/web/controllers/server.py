@@ -9,6 +9,7 @@ import errno
 import ipaddress
 import logging
 import threading
+import time
 
 from ...core.data.logs import setup_logging
 from ...core.data.settings import WebConfig, web_config
@@ -76,13 +77,20 @@ def run_server(config: WebConfig | None = None) -> int:
         messages.instance_in_use(busy.folder, holder.pid if holder else None,
                                  holder.url if holder else "")
         return 2
+    interrupted: dict[str, list[str]] = {}
+    for job in lock.interrupted:  # HR3c: said in the terminal now, on its page once
+        line = messages.interrupted_line(job.kind, time.strftime("%Y-%m-%d %H:%M",
+                                                                 time.localtime(job.asked)),
+                                         job.source, job.ran)
+        messages.interrupted(line)
+        interrupted.setdefault(job.kind, []).append(line)
     try:
-        return _serve(config, host, url)
+        return _serve(config, host, url, interrupted)
     finally:
         lock.release()
 
 
-def _serve(config: WebConfig, host: str, url: str) -> int:
+def _serve(config: WebConfig, host: str, url: str, interrupted: dict[str, list[str]]) -> int:
     """``run_server`` once the instance is held: the port bound, the app served until it
     stops; the exit code."""
     port, local = config.port, is_this_computer(config.host)
@@ -97,6 +105,7 @@ def _serve(config: WebConfig, host: str, url: str) -> int:
         return 2
     try:
         app = create_app(config)
+        app.extensions["toolkit"].interrupted = interrupted
         start_idle_sweep(app.extensions["toolkit"].workspaces)  # frees memory without requests
         messages.running(url)
         access = app.extensions["toolkit"].access

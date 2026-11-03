@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from flask import Blueprint, Response, make_response, render_template, request
+from flask import Blueprint, Response, make_response, render_template, request, session
 
 from ..services.access import is_this_computer
 from .state import state
@@ -22,16 +22,29 @@ def homepage() -> Response:
     return response
 
 
+def interrupted_once(kind: str) -> list[str]:
+    """The last server's unfinished jobs of ``kind`` (HR3c), the first time this session
+    opens their page; after that, none."""
+    lines = state().interrupted.get(kind, [])
+    if not lines or session.get(f"seen_interrupted_{kind}"):
+        return []
+    session[f"seen_interrupted_{kind}"] = True
+    return lines
+
+
 @bp.route("/dynamic_ids")
 def dynamic_ids_page() -> str:
-    """``GET /dynamic_ids``: the trainer's page, told when an idle workspace expires."""
-    return render_template("dynamic_ids.html", idle_minutes=state().config.workspace_idle_minutes)
+    """``GET /dynamic_ids``: the trainer's page, told when an idle workspace expires, and once
+    of a training the last server cut off."""
+    return render_template("dynamic_ids.html", idle_minutes=state().config.workspace_idle_minutes,
+                           interrupted=interrupted_once("training"))
 
 
 @bp.route("/scan")
 def scan_page() -> str:
-    """``GET /scan``: the port scanner's page (v5.2 step 2.4e)."""
-    return render_template("scan.html")
+    """``GET /scan``: the port scanner's page (v5.2 step 2.4e), and once of a scan the last
+    server cut off."""
+    return render_template("scan.html", interrupted=interrupted_once("scan"))
 
 
 @bp.route("/runs")

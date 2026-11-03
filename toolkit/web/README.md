@@ -45,6 +45,7 @@ web/
     uploads.py       uploads on disk, only while they are read
     net.py           the listening socket, and opening the page in the browser
     instance_lock.py one web server per instance (HR3b)
+    journal.py       the jobs journal, so a stop says what it cut off (HR3c)
 ```
 
 Rules that matter here:

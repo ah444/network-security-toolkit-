@@ -16,6 +16,20 @@ def instance_in_use(folder: Path, pid: int | None, url: str) -> None:
           "it a folder of its own with TOOLKIT_INSTANCE_DIR.")
 
 
+def interrupted_line(kind: str, asked: str, source: str, ran: bool) -> str:
+    """HR3c: a job the last server cut off, and what is lost (the page shows the same)."""
+    how = "while it ran" if ran else "before it started"
+    lost = ("The data uploaded to its workspace is gone: upload it again." if kind == "training"
+            else "Nothing of it was kept: start it again.")
+    return (f"INTERRUPTED: a {kind} asked for at {asked} from {source or 'an unknown place'} "
+            f"was cut off {how}, when the web server stopped. {lost}")
+
+
+def interrupted(line: str) -> None:
+    """A job the last server cut off, said once as this one starts."""
+    print(line)
+
+
 def running(url: str) -> None:
     """The address the trainer is served at, and how to stop it."""
     print(f"IDS web app running at {url}  (press Ctrl+C to stop)")

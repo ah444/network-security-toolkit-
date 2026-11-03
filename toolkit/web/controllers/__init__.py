@@ -25,7 +25,7 @@ from . import access, bundles, datasets, jobs, pages, resume, runs, scan, traini
 from .api import register_error_handlers
 from ..services.datasets import prepare_uploads
 from ..services.access import Access, is_this_computer
-from ..services.jobs import SCAN, TRAINING, JobRunner
+from ..services.jobs import SCAN, TRAINING, JobRunner, instance_journal
 from .security import register_security
 from .state import WebState
 from ..services.workspace import WorkspaceStore
@@ -68,6 +68,7 @@ def create_app(config: WebConfig | None = None) -> Flask:
     # for under an older unlock never starts (HS1)
     access = None if is_this_computer(config.host) else Access()
     refusal = access.refusal if access is not None else None
+    journal = instance_journal()  # each job's start and end, read at the next start (HR3c)
     app.extensions["toolkit"] = WebState(
         config=config,
         workspaces=WorkspaceStore(config.workspace_idle_minutes * 60,
@@ -75,8 +76,8 @@ def create_app(config: WebConfig | None = None) -> Flask:
                                   max_data_bytes=config.max_data_mb * 2**20),
         model_store=BundleStore(),
         upload_dir=upload_dir,
-        training_jobs=JobRunner(TRAINING, refusal),
-        scan_jobs=JobRunner(SCAN, refusal),
+        training_jobs=JobRunner(TRAINING, refusal, journal),
+        scan_jobs=JobRunner(SCAN, refusal, journal),
         access=access,
     )
     register_error_handlers(app)

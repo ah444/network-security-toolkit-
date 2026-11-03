@@ -9,7 +9,9 @@ scans twice at once, while a scan doesn't wait for a training. A job is its own
 cancel or the time limit takes effect, so the current step (a model's fit) always
 finishes first (cooperative cancel). A job that doesn't end in ``done`` leaves nothing
 behind. Each job keeps where it was asked for (``Origin``, HS1): a runner can be given the
-reason a queued job may no longer start, checked as the worker takes it.
+reason a queued job may no longer start, checked as the worker takes it, and a journal (HR3c)
+where each job's start and end are written, so a server that stops can say at its next start
+which jobs it cut off.
 """
 
 from __future__ import annotations
@@ -24,6 +26,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from ...core.services.recon.record import THIS_COMPUTER as THIS_COMPUTER  # a job asked for here
+from ..data.journal import JobJournal, journal_path
 from .errors import CANCELLED, INTERNAL, TIME_LIMIT, ServiceError
 
 log = logging.getLogger(__name__)
@@ -164,15 +167,23 @@ class Job:
         return (self.ended or time.monotonic()) - self.started
 
 
+def instance_journal() -> JobJournal:
+    """The journal of this instance's jobs (``instance/jobs.journal``, HR3c)."""
+    return JobJournal(journal_path())
+
+
 class JobRunner:
     """One kind's job queue and its one worker thread (started with the first job).
     ``refusal`` (HS1) says why a queued job may no longer start, or None: the worker asks it
-    as it takes each job, and cancels the job with that reason instead of running it."""
+    as it takes each job, and cancels the job with that reason instead of running it.
+    ``journal`` (HR3c), when given, gets a line when each job is asked for, starts and ends."""
 
     def __init__(self, kind: JobKind,
-                 refusal: Callable[[Job], str | None] | None = None) -> None:
+                 refusal: Callable[[Job], str | None] | None = None,
+                 journal: JobJournal | None = None) -> None:
         self.kind = kind
         self._refusal = refusal
+        self._journal = journal or JobJournal(None)  # None: writes nothing
         self._queue: queue.Queue[Job] = queue.Queue()
         self._lock = threading.Lock()
         self._waiting: list[Job] = []
@@ -190,6 +201,7 @@ class JobRunner:
                 self._thread = threading.Thread(target=self._work,
                                                 name=f"{self.kind.name}-jobs", daemon=True)
                 self._thread.start()
+        self._journal.asked(job.id, job.kind.name, job.origin.source)
         self._queue.put(job)
 
     def position(self, job: Job) -> int:
@@ -218,6 +230,7 @@ class JobRunner:
             self._waiting.remove(job)
             job.state, job.ended = STOPPED, time.monotonic()
             job.error = {"code": CANCELLED, "message": message}
+        self._journal.ended(job.id, STOPPED)
         job.on_end()
         return True
 
@@ -239,6 +252,7 @@ class JobRunner:
             if reason is not None:
                 self.cancel_waiting(job, reason)
                 continue
+            self._journal.started(job.id)
             ended = FAILED
             result: dict[str, Any] | None = None
             error: dict[str, Any] | None = None
@@ -263,4 +277,5 @@ class JobRunner:
                     job.on_end()
                 except Exception:
                     log.exception("Releasing a finished job's workspace failed")
+                self._journal.ended(job.id, ended)
                 job.result, job.error, job.state = result, error, ended

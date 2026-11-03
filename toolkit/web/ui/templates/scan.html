@@ -23,6 +23,7 @@
   </nav>
   <script src="{{ url_for('static', filename='js/navbar.js') }}"></script>
   {% if network_banner %}<p class="network-banner" role="note">{{ network_banner }}</p>{% endif %}
+  {% for line in interrupted %}<p class="warning-message interrupted-notice" role="status">{{ line }}</p>{% endfor %}
 
   <div class="container">
     <h1>Port Scanner</h1>

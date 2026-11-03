@@ -193,6 +193,7 @@ The page, its routes and jobs, and the `web` command; it never imports the comma
 | `toolkit/web/services/prediction.py` | services | one row or a whole file predicted |
 | `toolkit/web/data/__init__.py` | data | the web trainer's files and sockets |
 | `toolkit/web/data/uploads.py` | data | uploads on disk, only while they are read |
+| `toolkit/web/data/journal.py` | data | the jobs journal: a line when a job is asked for, starts and ends; the unfinished ones read at the next start (HR3c) |
 | `toolkit/web/data/instance_lock.py` | data | one web server per instance: the OS lock on `instance/web.lock`, and the clearing of a stopped export's temporary files (HR3b) |
 | `toolkit/web/data/net.py` | data | the listening socket, and opening the page in the browser |
 
@@ -498,6 +499,12 @@ names it and why. Ctrl+C stops the scan with exit code 130.
   locked byte, so a second server says which one holds the folder. Only the holder clears
   publish's temporary files in `runs/` and `bundles/`, at its start. The command line takes
   no lock: it writes in neither.
+- The jobs and the workspaces are in the server's memory, so a stop loses them; the jobs
+  journal says which (`toolkit/web/data/journal.py`, HR3c): `JobRunner` writes a JSON line
+  to `instance/jobs.journal` when a job is asked for, starts and ends (flushed, `fsync`;
+  a failure is a warning, never a stop). The lock holder reads it at its start: a job asked
+  for and never ended is `INTERRUPTED`, said in the terminal and once per session on its
+  page, and the journal starts again empty. A torn line is not JSON and is left out.
 
 ```
  this computer                                  the internet

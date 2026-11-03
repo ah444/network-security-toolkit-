@@ -974,6 +974,7 @@ bundles saved with that key won't load once your old key is back.
 
 | What you see | What to do |
 |---|---|
+| `INTERRUPTED: a training asked for at ... was cut off ...` (in the terminal as the trainer starts, and once on its page) | The last trainer stopped while that job ran or waited: its workspace is gone with it. Upload the dataset again and start the training again (for a scan: start it again) |
 | `Another toolkit web server is already using the data folder ...` | The trainer is already running (the message says its process and address): open that one, or stop it with Ctrl+C in its window. A second one needs a folder of its own: `TOOLKIT_INSTANCE_DIR` |
 | `Port 5000 is already in use on this computer: ...` | The trainer may already be running: open the printed address. Or start it on another port: `python -m toolkit web --port 5001` |
 | `TOOLKIT_... must be ...` and the command stops | A setting has a wrong value: fix it or remove it ([reference.md, section 7.1](reference.md#71-toolkit_-settings)) |

@@ -214,7 +214,11 @@ the first one's process and address (exit code 2); give it its own folder with
 `TOOLKIT_INSTANCE_DIR`. The lock is `instance/web.lock`, released by the system when the
 server ends, however it ends; at its start the server removes the temporary files a stopped
 export left in `instance/runs/` and `instance/bundles/`. The command line takes no lock: it
-writes neither. Its settings are
+writes neither. Each job's ask, start and end are a line in `instance/jobs.journal` (HR3c): at
+the next start the server tells every job the last one cut off, in the terminal and once in
+each browser session on that kind's page (`INTERRUPTED: a training asked for at ... was cut
+off while it ran ...`), then empties the journal. A line cut off by a crash counts for
+nothing. Its settings are
 `TOOLKIT_*` variables (section 7); the pages and API are in [`web_api.md`](web_api.md).
 
 ## 6. Exit codes

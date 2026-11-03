@@ -5,7 +5,7 @@ Nothing lives in module globals, so two apps (two tests, say) never share a work
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -31,6 +31,9 @@ class WebState:
     training_jobs: JobRunner  # one training at a time for the whole server, others queued
     scan_jobs: JobRunner  # one scan at a time for the whole server, next to a training
     access: Access | None = None  # the access token when opened to the network (--host)
+    # the last server's unfinished jobs, by kind ("training", "scan"): a line each, shown once
+    # in each session on that kind's page (HR3c)
+    interrupted: dict[str, list[str]] = field(default_factory=dict)
 
     def runner(self, kind: JobKind) -> JobRunner:
         """The runner whose queue holds the jobs of ``kind``."""
