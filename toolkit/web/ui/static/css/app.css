@@ -1553,9 +1553,17 @@ textarea:focus-visible,
   stroke-width: 1.5;
 }
 
-/* a prediction's "Why?" (F3e): its lists' bullets inside the card */
+/* a prediction's "Why?" (F3e): its lists' bullets inside the card; its summary a 44 px
+   target (F3g) */
 .why ul {
   padding-left: 1.5rem;
+}
+
+.why > summary {
+  min-height: 44px;
+  padding: 0.625rem 0;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 /* ---------- Saved runs (v5.3 F2e) ---------- */

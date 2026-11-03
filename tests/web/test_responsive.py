@@ -241,6 +241,11 @@ def test_the_one_row_form_is_columns_and_its_summary_easy_to_tap(css):
     assert _top_level(css, ".row-entry > summary")["min-height"] == "44px"
 
 
+def test_why_is_easy_to_tap(css):
+    """F3g: "Why?" under a prediction was 26 px high, measured at the 8 sizes."""
+    assert _top_level(css, ".why > summary")["min-height"] == "44px"
+
+
 def test_every_scroll_box_can_be_reached_with_the_keyboard(css):
     """A box that scrolls needs focus to scroll with the arrow keys, and a name to be told apart."""
     dom = js_sources()["dom.js"]
