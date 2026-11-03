@@ -7,16 +7,34 @@ All notable changes to this project. Versions follow the roadmap in
 [docs/V5.1_CHECKLIST.md](docs/V5.1_CHECKLIST.md) (v5.1) and
 [docs/V5.0_CHECKLIST.md](docs/V5.0_CHECKLIST.md) (v5.0).
 
-## [Unreleased]
+## [5.3] — 2026-11-03
 
-v5.3 started with F2, the full leaderboard ([checklist](docs/V5.3_CHECKLIST.md)).
+v5.3 "impressive features", the first part: the full leaderboard and Saved Runs (F2), what a
+model relies on and why it predicts what it does (F3), and the hardening an outside review
+asked for (section H of the [checklist](docs/V5.3_CHECKLIST.md)): what the evaluation and the
+explanations can and can't say, remote access, the outside services, files published whole,
+one web server per data folder, deleting and storage. Project version: `5.3.0`. Scan reports,
+the history and the dashboard (F5, F6, F10) come in 5.4.
+
+**Test result:** 1,864 automated tests pass; `ruff`, `mypy` and `pip-audit` are clean. The
+gate ([record](docs/release/5.3-gate.md)): the review's conditions (1), (2) and (6) checked
+again on the real server; the full NSL-KDD files through the trainer with the keyboard only,
+with a cancel, what the model relies on and **Why?**, and the web and the CLI label `KDDTest+`
+the same, byte for byte; the ML report on the v5.3 code gives the 5.0 numbers (six cases, all
+1,246 values equal); a fresh install on Windows passes every menu path; every page, Saved Runs
+included, at 8 sizes from 320 × 568 to 1920 × 1080 in both themes, with no contrast failure.
+Windows 10 Enterprise LTSC 2021, Python 3.14.3, scikit-learn 1.8.0.
+
+**Not done:** the review's condition (7), real use shown (a user who is not the developer,
+Linux and macOS, CI; HV1–HV3), was moved after 5.4 by the owner. Until then the toolkit is
+tested on Windows only, and Linux and macOS are not called supported.
 
 ### Added
 - **Charts of a run** (F2d) under the trainer's leaderboard: each model's CV macro-F1 fold by
   fold, CV against test macro-F1, the test recall of each class, and the fit time. Drawn by
   the page itself (no library), every number also written out, in both themes.
 - **Saved Runs** (F2e), a page (`/runs`) and a link in every navbar and after an export: the
-  runs you exported, newest first, 50 at a time; one shown with its leaderboard and charts,
+  saved runs, newest first, 50 at a time; one shown with its leaderboard and charts,
   or two compared. A difference (Δ = B − A) only when both runs scored the same test rows;
   otherwise the numbers side by side and why. It reads the runs' records only: nothing is
   uploaded or trained, no model is loaded ([user guide 4.8](docs/user_guide.md#48-compare-saved-runs)).
@@ -43,10 +61,81 @@ v5.3 started with F2, the full leaderboard ([checklist](docs/V5.3_CHECKLIST.md))
   gives every result's `why` ([reference](docs/reference.md#4-ids-intrusion-detection-with-an-export)).
 - **Web API** (F3): `POST /api/v1/jobs/importance`, `GET /api/v1/runs/<run id>/importance`,
   and `why` in each one-row prediction's answer ([web_api.md](docs/web_api.md#explanations-v53-f3)).
+- **Delete a run** (HR4) on Saved Runs and with `toolkit ids --delete RUN_ID`: it first names
+  every file it removes and its size, and removes nothing before you say yes. The bundle is
+  kept unless you tick it; kept, it is listed as an unregistered bundle and **Register again**
+  brings the run back from the signed copy of the record it carries.
+- **Storage** (HR4) on Saved Runs and `toolkit ids --storage`: what the toolkit keeps on this
+  computer, by kind, the free space, and any leftovers by name. It only shows: nothing is ever
+  deleted on its own.
+- **Other computers** (HS1) on the home page of this computer while the toolkit is open to
+  the network: what a holder of the token can do, **New token** (every other computer is
+  locked out at once, and their waiting jobs are cancelled), and their jobs with **Stop**.
+- **A switch for each outside service** (HS4) on the scan page and in `toolkit scan`
+  (`--no-nvd`, `--no-ai`, `--no-abuseipdb`): NVD, the AI explanation (OpenRouter) and
+  AbuseIPDB.
+- **Save again** (HR5) when a finished training couldn't save its record (a full disk): the
+  same run, under the same run id.
+
+### Changed
+- **Every finished training is saved** (HR5) on this computer when it ends: its record (the
+  scores, the class names, the column names and each column's typical value, not your rows).
+  Saved Runs, `--runs` and `--compare` list every training, not only the exported ones; each
+  run says whether it was exported. **Export** writes the bundle only.
+- **The outside services are on by default** (HS4, RD5): NVD always; the AI and AbuseIPDB
+  when their key is in `.env` (putting it there is the choice to use them). A service that
+  fails in a scan is not asked again in it: the summary says "Unavailable" and why, and its
+  ports say `NOT CHECKED`, never "no known CVE".
+- **Each CVE says how it was matched** (HC3): **version match**, or **name match,
+  unconfirmed**, in the CLI, on the page, in the CSV and in the reports.
+- **One web server per data folder** (HR3): a second `toolkit web` on the same `instance/`
+  stops and says which one holds it. Records, importance results and bundles are written to a
+  temporary file and published whole, or not at all. A job cut off by a stop is shown once as
+  `INTERRUPTED` at the next start, in the terminal and on its page.
+- **A disk floor and a size warning** (HR4): a new file is refused when the disk would keep
+  less than `TOOLKIT_MIN_FREE_MB` free (1 GB), and the storage report warns past
+  `TOOLKIT_STORAGE_WARN_MB` (20 GB). Nothing is deleted.
+- The docs say what the test split is used for, what the explanations can't say, what the
+  toolkit is (a local IDS model trainer and port scanner with optional outside services, not
+  a live network IDS), and each test's level (HC1, HC2, HC4).
+
+### Security
+- **Remote access** (HS1): a new access token on this computer locks every other computer out
+  at once; each job keeps where it came from; the terminal and the unlock page say that a
+  holder of the token has your rights over the runs, bundles and scans.
+- **A record of every scan** (HS3) in the log: when it starts and ends, the targets, the
+  ports, where it was asked from and what may be sent outside, each value escaped.
+- **`instance/` and `.env` limited to your account** (HS5): on Windows, at every start, the
+  folder and the file get your account, SYSTEM and Administrators only, nothing inherited. The
+  signing key is kept, so every bundle made here still loads.
+- HTTPS for `--host` (HS2) was dropped by the owner: the toolkit is a local tool; `--host` is
+  for a trusted network only, and says so.
 
 ### Fixed
 - The trainer's leaderboard table had no style of its own (its cells had no padding and
   touched); it now looks like the data preview's table (F2g).
+- **Why?** under a prediction was a 26 px target; it is 44 px, like the others (F3g).
+- On Saved Runs, a long file name (an importance result's) ran past a phone's screen in the
+  Delete panel; it wraps, there and in Storage (gate 5.3).
+
+### Upgrading from 5.2
+- Nothing to migrate. Bundles and records made with 5.2 still load and list. A bundle saved
+  before 5.3 has no typical values for its categories: **Why?** explains its numbers only.
+- A run you trained with 5.2 and never exported has no record; it can't be listed.
+- With an AI or AbuseIPDB key in `.env`, those services are now on by default for a scan:
+  turn each off with its switch or `--no-` flag, or remove the key.
+- At its first start, 5.3 limits `instance/` and `.env` to your account (Windows).
+
+### Known limitations
+See **Known limitations** in the [README](README.md). New in this release:
+- The review's condition (7) is open (above): no user who is not the developer has tried it,
+  and there is no CI.
+- What a model relies on, and **Why?**, are a diagnosis of one run and an approximation, not
+  causes: features that go together share their effect, and the probabilities are not
+  calibrated.
+- "Published whole or not at all" holds after a crash of the process; after a power cut it is
+  best effort.
+- The full CIC-IDS2017 file was not part of the gate (see its record).
 
 ## [5.2] — 2026-10-30
 

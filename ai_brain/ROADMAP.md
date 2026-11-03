@@ -44,66 +44,35 @@ Every tag is shippable: the app starts, every menu path works, the README lists 
 | 5.0, 5.0.1 | 2026-10-21 | The first release | The ML report comparing v4 and v5 (three runs per case); a fresh install walked through every menu path; 5.0.1 updated `certifi` for an advisory published after rc2 | 419 |
 | 5.1 | 2026-10-25 | Clean architecture | `python -m toolkit`; the `/api/v1` API with one error shape; training as a job with progress and Cancel; the page restored after a reload; Predict a CSV; CSRF; `mypy --strict`; packaging with `pyproject.toml`; the full docs | 803 |
 | 5.2 | 2026-10-30 | The user's improvements | The theme button; every page at every size; the code arranged as `core`, `cli`, `web` with the same layers inside; the scanner reading banners, versions and OS evidence; optional nmap; the scan on the web; `--host` with a token | 1,484 |
+| 5.3 | 2026-11-03 | Impressive features, the first part, and the review's hardening | Saved Runs and the comparison; what a model relies on and **Why?**; a new token ends every remote session; a switch for each outside service; files published whole; one web server per data folder; `INTERRUPTED` after a stop; delete and storage; a record for every training | 1,864 |
 
-### v5.3 so far
+### v5.3 in detail
 | Item | State |
 |---|---|
 | **F2** The full leaderboard: Saved Runs, the comparison, the charts, the CLI | Done, F2a–F2g (2026-10-30 to 2026-11-02) |
-| **F3** Explainability | F3a–F3c done in the core (permutation importance; the explanation of one prediction); F3d–F3g open |
+| **F3** Explainability: what a model relies on, **Why?**, the CLI | Done, F3a–F3g (2026-11-02 to 2026-11-03) |
 | **The outside review** | 2026-11-02: three reviews of the documents and a committee of five reviewers (security, architecture, reliability, ML, product). Result: the hardening section H of the checklist, and four design decisions (RD1–RD4); RD5 followed on 2026-11-03 |
 | **H Phase 1** Correctness (HC1–HC4) | Done |
 | **H Phase 2** Security | Done: HS1 (a new token ends every remote session), HS3 (a record of every scan), HS4 (each outside service on by default with its own switch, RD5), HS5 (`instance/` and `.env` limited to this account). HS2 (HTTPS) dropped by the owner on 2026-11-02: the toolkit is a local tool |
+| **H Phase 3** Reliability (HR1–HR5) | Done: the importance on the training's queue and in a file of its own; files published whole; one web server per data folder; `INTERRUPTED` after a stop; delete, storage, register again, disk limits; a record for every training |
+| **Gate 5.3** | 2026-11-03, [record](../docs/release/5.3-gate.md): the review's conditions (1)–(6) met; (7) open |
 
 ---
 
-## 4. Next: the rest of v5.3, in this order
+## 4. Left from v5.3: the review's condition (7), after 5.4
 
-The order is the review's: **correctness → security → reliability → usability → features.** No new feature before the risks below are closed.
+Decided by the owner on 2026-11-03: these depend on things outside the project (a tester, a
+virtual machine that downloads from the internet, a push), so they no longer hold the
+features back. Until HV3, Linux and macOS are never called supported.
 
-### Phase 1. Correctness (mostly documentation)
-| Task | What |
-|---|---|
-| HC1 | Say how the test split is used: never to train or choose; reused afterwards by the permutation importance as a diagnosis; a validation split for any feature or setting chosen from it |
-| HC2 | The limits of both explanations shown beside them; "importance concentration warning" instead of a hint of leakage |
-| HC3 | How each CVE was matched: by version, or by name only (unconfirmed) |
-| HC4 | One description everywhere: local-first with optional outside services; an IDS model trainer and predictor; no claim of generalization; Linux and macOS not tested; the tests marked by level |
-
-### Phase 2. Security
-| Task | What |
-|---|---|
-| HS1 | A new token on demand (from this computer only) that ends every remote session; what happens to each job; the statement that a token holder has the owner's rights |
-| ~~HS2~~ | Dropped by the owner (2026-11-02): the toolkit is a local tool with some outside services |
-| HS3 | A record of every scan with the source of its request |
-| HS4 | Each outside service (NVD, AI, AbuseIPDB) on by default, the key in `.env` being the consent, with its own switch and no switch for all (RD5); "CVEs not checked" when NVD is off or fails |
-| HS5 | The permissions of `instance/` and the key on Windows; backup and restore, tested on a clean install |
-
-### Phase 3. Reliability
-| Task | What |
-|---|---|
-| HR3 (first) | One module that publishes every saved file safely (temporary file, then a publish that replaces nothing); one web server per instance (an OS lock); a journal so a cut-off job shows as `INTERRUPTED`; a bundle's state from its header |
-| HR1 | The permutation importance on the training queue, bound to the run it was asked for |
-| HR2 | Each importance result a file of its own per run and model |
-| HR4 | Deleting a run and its files in a safe order; a storage report; registering an orphaned bundle again; disk limits |
-| HR5 | A record for every successful training; Saved Runs list every training, exported or not |
-
-### Phase 4. Usability and validation
 | Task | What |
 |---|---|
 | HV1 | A user who is not the developer installs and uses every tool on a clean machine; each problem written as action, expected, actual, severity, fix, retest |
-| HV2 | CI on Windows, Ubuntu and macOS. **Needs a push, the user's decision** |
 | HV3 | A real run on a Linux VM, and on a Mac when one is available |
+| HV2 (last) | CI on Windows, Ubuntu and macOS. **Needs a push, the user's decision**, made with it |
 | HV4 | Later, not a gate condition: training on some days of CIC-IDS2017 and testing on others; leaving one attack out of training |
 
-### Phase 5. Features
-| Item | What |
-|---|---|
-| F3d | The routes: the importance job, `why` with a single prediction |
-| F3e | The page: the top features chart, "Why?" with its limits, Calculate only for the workspace's run |
-| F3f | The CLI: `ids --info`, the top reasons, `why` in `--json` |
-| F3g | The docs, and the browser check at 8 sizes, both themes, keyboard only |
-
-### Gate 5.3, then the tag
-The review's conditions: remote access kept and its risks closed; real control of the outside connections; the limits of the evaluation and the explanations written; the importance kept with its run; one heavy job at a time; a defined behaviour on a sudden stop and a managed history; real use shown by a user who is not the developer, and no claim of Linux or macOS support before a real run. Then the usual gate (full files, fresh install, browser audits, the same numbers) and tag `5.3`, after the user approves it.
+The order: 5.4 (section 5) and its gate, then HV1, then HV3, and last HV2 with the push.
 
 ---
 

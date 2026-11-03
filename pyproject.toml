@@ -10,7 +10,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "network-security-toolkit"
-version = "5.2.0"
+version = "5.3.0"
 description = "Network reconnaissance + ML intrusion detection toolkit"
 requires-python = ">=3.11"
 # The code's licence (step 1.5g); the datasets keep their own terms (docs/datasets.md).
