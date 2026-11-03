@@ -1,4 +1,5 @@
-"""Saved scans (v5.4 F6b): the list, one scan, its report, two compared (F6c), and its delete.
+"""Saved scans (v5.4 F6b): the list, one scan, its report (HTML too, F5b), two compared (F6c),
+and its delete.
 They only read the scan history (``instance/scan_history/``,
 ``toolkit.core.services.recon.saved_scans``), every finished scan's (F6a), and need no session:
 a saved scan belongs to this install, not to a workspace. A scan is deleted only when the user
@@ -17,6 +18,7 @@ from ...core.services.recon.saved_scans import (
     scan_view,
 )
 from ...core.services.recon.scan_comparison import compare_saved
+from ...core.services.recon.scan_report import saved_report_html
 from ..services.errors import NOT_FOUND, NOT_REMOVED
 from ..services.scan import MIME_TYPES
 from .api import Answer, error_response, query
@@ -25,6 +27,7 @@ from .schemas import CompareScansRequest, ScanReportRequest, ScansRequest, load
 bp = Blueprint("scans", __name__, url_prefix="/api/v1")
 
 NO_SUCH_SCAN = "There is no saved scan with that id."
+SAVED_REPORT_TYPES = {**MIME_TYPES, "html": "text/html"}  # a saved scan has the HTML report too
 
 
 @bp.route("/scans", methods=["GET"])
@@ -62,17 +65,18 @@ def one(scan_id: str) -> Answer:
 
 @bp.route("/scans/<scan_id>/report", methods=["GET"])
 def report(scan_id: str) -> Answer:
-    """The saved scan's report as a TXT, JSON or CSV file to save."""
+    """The saved scan's report as a TXT, JSON, CSV or HTML file to save (HTML: one file that
+    stands alone, F5b)."""
     fmt = load(ScanReportRequest, query()).format
-    if fmt not in MIME_TYPES:
-        return error_response(f"'format' must be one of {', '.join(MIME_TYPES)}.")
+    if fmt not in SAVED_REPORT_TYPES:
+        return error_response(f"'format' must be one of {', '.join(SAVED_REPORT_TYPES)}.")
     try:
-        text = saved_report(scan_id, fmt)
+        text = saved_report_html(scan_id) if fmt == "html" else saved_report(scan_id, fmt)
     except NotAScan as error:
         return error_response(str(error))
     except FileNotFoundError:
         return error_response(NO_SUCH_SCAN, 404, NOT_FOUND)
-    return Response(text, content_type=f"{MIME_TYPES[fmt]}; charset=utf-8",
+    return Response(text, content_type=f"{SAVED_REPORT_TYPES[fmt]}; charset=utf-8",
                     headers={"Content-Disposition": f'attachment; filename="scan-{scan_id}.{fmt}"'})
 
 

@@ -114,7 +114,9 @@ async function showScan(scanId) {
     byId("scanResultsTitle").textContent = "Scan " + scanId;
     byId("scanAbout").textContent = about(scan);
     byId("scanAgain").href = "/scan#again=" + scanId;
-    for (const [id, fmt] of [["reportTxt", "txt"], ["reportJson", "json"], ["reportCsv", "csv"]]) {
+    byId("reportOpen").href = "/scans/" + encodeURIComponent(scanId) + "/report";
+    for (const [id, fmt] of [["reportHtml", "html"], ["reportTxt", "txt"], ["reportJson", "json"],
+                             ["reportCsv", "csv"]]) {
       byId(id).href = "/api/v1/scans/" + encodeURIComponent(scanId) + "/report?format=" + fmt;
     }
     show(byId("comparisonSection"), false);

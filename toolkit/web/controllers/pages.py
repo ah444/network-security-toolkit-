@@ -1,9 +1,12 @@
-"""The HTML pages: home, the trainer, the port scanner, the saved runs and the saved scans."""
+"""The HTML pages: home, the trainer, the port scanner, the saved runs, the saved scans and a
+saved scan's report."""
 
 from __future__ import annotations
 
-from flask import Blueprint, Response, make_response, render_template, request, session
+from flask import Blueprint, Response, make_response, render_template, request, session, url_for
 
+from ...core.services.recon.saved_scans import NotAScan
+from ...core.services.recon.scan_report import report_stylesheet, saved_report_html
 from ..services.access import is_this_computer
 from .state import state
 
@@ -58,3 +61,23 @@ def runs_page() -> str:
 def scans_page() -> str:
     """``GET /scans``: the saved scans, one shown (v5.4 F6b)."""
     return render_template("scans.html")
+
+
+@bp.route("/scans/<scan_id>/report")
+def scan_report_page(scan_id: str) -> Response:
+    """``GET /scans/<id>/report``: a saved scan's report to read and print (v5.4 F5b).
+    A bad id is a 400, an unknown one a 404, as a line of text.
+    See also: core/services/recon/scan_report.py (what it says)."""
+    try:
+        page = saved_report_html(scan_id, stylesheet_url=url_for("pages.scan_report_css"))
+    except NotAScan as error:
+        return Response(f"{error}\n", 400, mimetype="text/plain")
+    except FileNotFoundError:
+        return Response("There is no saved scan with that id.\n", 404, mimetype="text/plain")
+    return Response(page, mimetype="text/html")
+
+
+@bp.route("/scans/report.css")
+def scan_report_css() -> Response:
+    """``GET /scans/report.css``: the report's look, for the page above."""
+    return Response(report_stylesheet(), mimetype="text/css")

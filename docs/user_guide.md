@@ -524,7 +524,12 @@ the hosts ended, the open ports, the worst severity among the ports whose softwa
 up ("no lookup" when none was), and where it was asked from. Then, for one scan:
 
 - **Show** opens it with the Port Scanner's own summary, hosts and port cards, when it
-  started and the ports asked for, and its report as TXT, JSON or CSV.
+  started and the ports asked for, and its report: **Open the report** shows it in a tab of
+  its own, to read or print (Print, then Save as PDF, for a PDF); **HTML** downloads the same
+  report as one file that opens in any browser, without the toolkit or the internet; TXT,
+  JSON and CSV as before. The report lists the ports to look at first, each CVE with how it
+  was found, the advice for each port, and what the report can't say. The Port Scanner's
+  "Saved in the scan history" line has **Open its report** too.
 - **Scan again** opens the Port Scanner with that scan's choices filled in: the target, the
   ports, the protocol, the engine and nmap's choices, and the switches. The authorization is
   unticked: tick it for this scan, as for any target. A choice this computer can't make now

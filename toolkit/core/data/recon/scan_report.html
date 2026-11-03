@@ -1,15 +1,22 @@
 <!doctype html>
 {#- The scan report's page (v5.4 F5): its order only. The words and every decision come from
     services/recon/scan_report.py; the look from scan_report.css; report_render.py fills it,
-    every value escaped. No script, nothing loaded. -#}
+    every value escaped. No script. As a file: the CSS inside, allowed by its hash. In the
+    web app (stylesheet_url): the CSS linked, under the app's own policy. -#}
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+{%- if stylesheet_url %}
+<link rel="stylesheet" href="{{ stylesheet_url }}">
+{%- else %}
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src '{{ style_hash }}'; base-uri 'none'; form-action 'none'">
+{%- endif %}
 <meta name="referrer" content="no-referrer">
 <title>Scan report {{ report.scan_id }}</title>
+{%- if not stylesheet_url %}
 <style>{{ css }}</style>
+{%- endif %}
 </head>
 <body>
 <header class="head">

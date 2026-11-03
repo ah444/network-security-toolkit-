@@ -31,11 +31,14 @@ def stylesheet() -> str:
     return STYLESHEET.read_text(encoding="utf-8")
 
 
-def report_html(report: Mapping[str, Any]) -> str:
-    """The report page as one file: the CSS inside, allowed by its hash; no script."""
+def report_html(report: Mapping[str, Any], stylesheet_url: str | None = None) -> str:
+    """The report page, no script:
+    - without ``stylesheet_url``: one file, the CSS inside, allowed by its hash;
+    - with it (the web app, F5b): the CSS linked, the app's own policy applies."""
     css = stylesheet()
     digest = base64.b64encode(hashlib.sha256(css.encode("utf-8")).digest()).decode("ascii")
     pages = ImmutableSandboxedEnvironment(autoescape=True, undefined=StrictUndefined)
     page = pages.from_string(TEMPLATE.read_text(encoding="utf-8"))
     # Markup: our own CSS file put in as it is (escaping would break it); never data
-    return page.render(report=report, css=Markup(css), style_hash=f"sha256-{digest}")
+    return page.render(report=report, css=Markup(css), style_hash=f"sha256-{digest}",
+                       stylesheet_url=stylesheet_url)

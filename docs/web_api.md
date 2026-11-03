@@ -85,7 +85,7 @@ the network").
 | GET | `/api/v1/scans` | `before`: a scan id (the next page; default: the newest) | the saved scans' summaries, newest first, 50 at a time (see Saved scans) |
 | GET | `/api/v1/scans/<scan_id>` | none | one saved scan, as a finished scan's answer, with `scan_id`, `started`, `source`, `port_list` and `again` (the choices to scan it again) |
 | GET | `/api/v1/scans/compare` | `a`, `b`: two scan ids | the two scans compared, address by address and port by port (see Saved scans) |
-| GET | `/api/v1/scans/<scan_id>/report` | `format`: `txt` (default), `json` or `csv` | the saved scan's report as a download |
+| GET | `/api/v1/scans/<scan_id>/report` | `format`: `txt` (default), `json`, `csv` or `html` | the saved scan's report as a download; `html` is one file that stands alone (its CSS inside, no script, F5b); the page `/scans/<scan_id>/report` shows the same report to read and print |
 | POST | `/api/v1/scans/<scan_id>/delete` | none | the saved scan deleted: `{scan_id, removed}` (its record's name); 409 `NOT_REMOVED` when it couldn't be removed, the scan kept |
 
 ## Dataset upload

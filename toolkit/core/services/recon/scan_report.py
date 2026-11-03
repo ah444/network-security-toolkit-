@@ -172,6 +172,14 @@ def report_model(record: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
-def saved_report_html(scan_id: str, directory: str | Path | None = None) -> str:
-    """The report page of a saved scan; the errors of ``saved_scans.saved_scan``."""
-    return report_render.report_html(report_model(saved_scan(scan_id, directory)))
+def saved_report_html(scan_id: str, directory: str | Path | None = None,
+                      stylesheet_url: str | None = None) -> str:
+    """The report page of a saved scan (``report_render.report_html``: one file, or with
+    ``stylesheet_url`` the web app's page); the errors of ``saved_scans.saved_scan``."""
+    return report_render.report_html(report_model(saved_scan(scan_id, directory)),
+                                     stylesheet_url)
+
+
+def report_stylesheet() -> str:
+    """The report's CSS, for the web app's page."""
+    return report_render.stylesheet()

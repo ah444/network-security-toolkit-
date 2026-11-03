@@ -121,14 +121,18 @@ function request() {
   return body;
 }
 
-// Where a finished scan was saved (F6a), with a 44 px button-like link to it, or why it wasn't
+// Where a finished scan was saved (F6a), with 44 px button-like links to it and to its report
+// (F5b, a tab of its own), or why it wasn't saved
 function showSaved(answer) {
   const saved = answer.saved || {};
   const line = byId("scanSaved");
   if (saved.scan_id) {
     setContent(line, el("p", {}, "Saved in the scan history as " + saved.scan_id + "."),
                el("a", { href: "/scans#" + answer.saved.scan_id, class: "btn btn-secondary btn-sm" },
-                  "See it in Saved Scans"));
+                  "See it in Saved Scans"), " ",
+               el("a", { href: "/scans/" + encodeURIComponent(saved.scan_id) + "/report",
+                         target: "_blank", rel: "noopener", class: "btn btn-secondary btn-sm" },
+                  "Open its report"));
   } else {
     setContent(line, saved.error ? el("p", {}, "Not saved in the scan history: " + saved.error) : "");
   }
