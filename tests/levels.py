@@ -101,6 +101,7 @@ INTEGRATION = (
     "test_portability.py",
     "test_ports.py",
     "test_protect.py",
+    "test_publish.py",
     "test_repo.py",
     "test_smoke.py",
     "web/test_access.py",

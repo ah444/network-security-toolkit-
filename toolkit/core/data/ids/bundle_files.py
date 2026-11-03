@@ -2,7 +2,8 @@
 
 The key is created once, on the first save, in ``instance/signing.key`` (gitignored;
 ``TOOLKIT_INSTANCE_DIR`` moves ``instance/``). Loading never creates a key. Bundles live in
-``instance/bundles/<run id>.bundle`` and are never overwritten. What the bytes mean (format,
+``instance/bundles/<run id>.bundle`` and are never overwritten; each is published whole or not
+at all (``toolkit.core.data.publish``, HR3a). What the bytes mean (format,
 signature, models) is ``toolkit.core.services.ids.bundle``; saving, listing and loading runs is
 ``toolkit.core.services.ids.exports``.
 """
@@ -15,6 +16,7 @@ from collections.abc import Mapping
 from pathlib import Path
 
 from ..protect import protect
+from ..publish import publish_bytes
 from ..settings import instance_dir
 
 KEY_BYTES = 32
@@ -76,10 +78,8 @@ def new_bundle_path(run_id: str, directory: str | Path | None = None) -> Path:
 
 
 def write_new(path: Path, data: bytes) -> None:
-    """Write a new file (FileExistsError if it appeared meanwhile)."""
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("xb") as handle:
-        handle.write(data)
+    """Publish a new file, whole or not at all (FileExistsError if it appeared meanwhile)."""
+    publish_bytes(path, data)
 
 
 def read_start(path: str | Path, size: int) -> bytes:

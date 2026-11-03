@@ -109,6 +109,7 @@ no Flask, no argparse. Read by `cli/` and `web/`, it imports neither
 | `toolkit/core/data/logs.py` | data | one rotating log file per tool, secrets redacted |
 | `toolkit/core/data/keys.py` | data | API keys and the AI model setting, from the environment or `.env` |
 | `toolkit/core/data/files.py` | data | the text files the commands read and write |
+| `toolkit/core/data/publish.py` | data | a new file published whole or not at all, never replacing one (HR3a): a record, a bundle |
 | `toolkit/core/data/protect.py` | data | `instance/` and `.env` limited to this account (HS5): on Windows the ACL with `icacls`, elsewhere `chmod` |
 | `toolkit/core/data/ids/__init__.py` | data | the IDS's files |
 | `toolkit/core/data/ids/bundle_files.py` | data | the signing key and the bundle files, as bytes |
@@ -483,6 +484,13 @@ names it and why. Ctrl+C stops the scan with exit code 130.
   `~/Library/Application Support` on macOS, `$XDG_DATA_HOME` or `~/.local/share` on Linux;
   then `network-security-toolkit`. `toolkit --help` prints the folder in use
   (`toolkit/core/data/settings.py`).
+- A record and a bundle are published whole or not at all, and never replace a file
+  (`toolkit/core/data/publish.py`, HR3a): the bytes go to `<name>.<random>.tmp` in the same
+  folder, are flushed to the disk (`fsync`) and their size checked, then the file is
+  published with `os.rename` on Windows or a hard link on Linux and macOS (whose `rename`
+  would replace). After a crash of the process the file is whole or absent, and a `.tmp`
+  file may be left (no listing reads it); after a power cut it is best effort. A file
+  system without hard links (on Linux and macOS) is refused with a message.
 
 ```
  this computer                                  the internet
