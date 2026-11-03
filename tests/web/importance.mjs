@@ -1,4 +1,5 @@
-// Runs the page's importance view (charts.js) and a saved run's view (runsview.js) in Node
+// Runs the page's importance view (charts.js), a saved run's view (runsview.js) and a
+// prediction's "Why?" (explain.js) in Node
 // with the minimal DOM of fake_dom.mjs, and prints what they show as JSON for
 // tests/web/test_importance_page.py.
 // Usage: node importance.mjs <the js folder>
@@ -13,6 +14,7 @@ installFakeDom();
 const folder = process.argv[2];
 const { importanceView } = await import(pathToFileURL(path.join(folder, "charts.js")).href);
 const { runView } = await import(pathToFileURL(path.join(folder, "runsview.js")).href);
+const { whyView } = await import(pathToFileURL(path.join(folder, "explain.js")).href);
 
 const XSS = "<img src=x onerror=alert(1)>";
 const LONG = "Total Length of Bwd Packets Per Second Averaged";
@@ -60,7 +62,23 @@ const view = { summary, leaderboard, folds: { random_forest: [0.91, 0.912, 0.914
 const { repeats, seed, ...file } = result({ concentrated: "feature 3" });
 const saved = { ...file, settings: { max_rows: 5000, min_per_class: 3, repeats, seed, metric: "macro-F1" } };
 
+const why = (extra = {}) => ({
+  prediction: "DDoS", probability: 0.97, source: "training", problem: null, without_typical: [],
+  toward: [{ feature: XSS, value: 1480, typical: 0, effect: 0.41 },
+           { feature: "Flow IAT Max", value: 3128082.202, typical: 7698.2715, effect: 0.0204 }],
+  away: [{ feature: "Idle Min", value: null, typical: 12, effect: -0.12 }], ...extra,
+});
+const read = view => ({ tag: view.tagName, open: "open" in describe(view).attributes,
+  text: view.textContent,
+  items: view.all().filter(item => item.tagName === "LI").map(item => item.textContent),
+  all: view.all().map(describe) });
+
 console.log(JSON.stringify({
+  why: read(whyView(why())),
+  why_none_toward: read(whyView(why({ toward: [], away: [] }))),
+  why_old_bundle: read(whyView(why({ source: "pipeline", without_typical: ["proto", "service"] }))),
+  why_no_probabilities: read(whyView(why({ problem: "NO_PROBABILITIES", probability: null, toward: [], away: [] }))),
+  why_failed: read(whyView(null)),
   plain: shown(importanceView(result({ saved: true, not_saved: null }), "Random Forest")),
   concentrated: shown(importanceView(result({ concentrated: XSS }), "Random Forest")),
   not_saved: shown(importanceView(result({ saved: false, not_saved: "Not saved: only 10 MB free" }), "Random Forest")),

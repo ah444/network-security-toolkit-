@@ -652,6 +652,21 @@ real `neptune` row from `KDDTest+`, predicted as `neptune`.
 
 ![A prediction for one row](user-guide/14-predict-row.jpg)
 
+**Why?** under the prediction (open at first; click it to close) says which values pushed
+the model toward the predicted class and which pushed it away. Each value is swapped, alone,
+for that column's typical value in the training rows (the median of a number, the most
+common category), and the probability of the predicted class is measured again: a value
+that raised it pushed toward the class (+), one that lowered it pushed away (−). At most 5 of
+each are shown, with the value and the typical value.
+
+- It is an approximation, not the cause: columns that go together share their effect, a row
+  with one value swapped may never occur in real traffic, and the probabilities are not
+  calibrated. The page says so under it.
+- A model without probabilities (the linear SVM) still predicts, but has no **Why?**.
+- A bundle saved before version 5.3 has typical values for its numbers only: its categories
+  are listed as not explained.
+- A whole CSV file gets no **Why?**: it is for one row.
+
 **Predict a CSV File** labels every row of a file that has the model's feature columns. If
 the file also has the label column, the predictions are compared with it. Here 300 other
 `KDDTest+` rows: 71.3% match. **Download** saves the file with a prediction per row.

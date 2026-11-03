@@ -1553,6 +1553,11 @@ textarea:focus-visible,
   stroke-width: 1.5;
 }
 
+/* a prediction's "Why?" (F3e): its lists' bullets inside the card */
+.why ul {
+  padding-left: 1.5rem;
+}
+
 /* ---------- Saved runs (v5.3 F2e) ---------- */
 /* runs.html: the list scrolls in its box; two runs' panels and each model's numbers sit side
    by side where there is room, one under the other on a narrow screen */

@@ -1,11 +1,12 @@
-// What the model relies on (v5.3 F3e), in the Train step: the permutation importance of one of
-// the session's models, calculated only when Calculate is clicked. It is a job in the
-// training's queue, followed and cancelled like a training; asked again for the same model,
-// the server answers the same job, so after a reload Calculate picks it up again.
+// The explanations on the trainer page (v5.3 F3e). What the model relies on, in the Train step:
+// the permutation importance of one of the session's models, calculated only when Calculate
+// is clicked. It is a job in the training's queue, followed and cancelled like a training;
+// asked again for the same model, the server answers the same job, so after a reload
+// Calculate picks it up again. And "Why?" under a single prediction (whyView).
 
 import { getJSON, send } from "./api.js";
 import { importanceView } from "./charts.js";
-import { byId, fillSelect, message, setContent, show } from "./dom.js";
+import { byId, el, fillSelect, message, setContent, show } from "./dom.js";
 import { modelTitle, on } from "./state.js";
 
 let jobUrl = null;
@@ -105,4 +106,34 @@ export function setup() {
   byId("importanceBtn").addEventListener("click", calculate);
   byId("cancelImportanceBtn").addEventListener("click", cancel);
   on("run:ready", runReady);
+}
+
+// Why one prediction came out as it did (F3e, the answer's `why`): the values that raised or
+// lowered the predicted class's probability against each feature's typical value, with its
+// limits beside them (HC2). Every value goes in as text.
+export function whyView(why) {
+  if (!why) {
+    return el("p", { class: "chart-note" }, "No explanation for this prediction (details in the server log).");
+  }
+  if (why.problem === "NO_PROBABILITIES") {
+    return el("p", { class: "chart-note" }, "This model gives no probabilities, so it can't say why. The prediction stands.");
+  }
+  const value = item => item === null ? "missing" : String(item);
+  const effect = number => (number > 0 ? "+" : "") + number.toFixed(3);
+  const list = (reasons, none) => reasons.length === 0 ? el("p", {}, none) :
+    el("ul", {}, reasons.map(r => el("li", {}, `${r.feature} = ${value(r.value)} (typical ${value(r.typical)}): ${effect(r.effect)}`)));
+  return el("details", { class: "why", open: true },
+    el("summary", {}, "Why?"),
+    el("p", {}, `Probability of ${why.prediction}: ${why.probability.toFixed(3)}. Each value below was swapped, ` +
+                "alone, for its typical value in the training split, and the probability measured again."),
+    el("p", {}, el("strong", {}, `Pushed toward ${why.prediction}`)),
+    list(why.toward, "No value pushed toward it more than its typical value would."),
+    el("p", {}, el("strong", {}, "Pushed away from it")),
+    list(why.away, "No value pushed away from it."),
+    why.without_typical.length > 0 && el("p", { class: "chart-note" },
+      "Not explained (no typical value: a bundle saved before version 5.3 has none for its categories): " +
+      why.without_typical.join(", ") + "."),
+    el("p", { class: "chart-note" },
+      "An approximation, not causes: features that go together share their effect, a row with one " +
+      "value swapped may never occur in real traffic, and the probabilities are not calibrated."));
 }

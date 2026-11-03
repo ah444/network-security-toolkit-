@@ -4,6 +4,8 @@
   job's progress and Cancel, then the chart of the 15 features with the biggest drop, the
   concentration warning (HC2) and what the numbers are.
 - The saved runs' page: a run's saved results, read only; none calculated says where to.
+- "Why?" under a single prediction (the session's run and a loaded bundle): the values that
+  pushed toward the predicted class and away from it, with the limits beside them (HC2).
 Rendered by the page's modules in Node (``importance.mjs``), skipped where Node is not
 installed; the page itself is checked in the browser (F3g)."""
 
@@ -138,5 +140,51 @@ def test_the_trainer_has_calculate_and_nothing_starts_on_its_own():
 
 def test_the_styles():
     css = APP_CSS.read_text(encoding="utf-8")
-    for cls in ("chart-drop", "chart-zero"):
+    for cls in ("chart-drop", "chart-zero", "why ul"):
         assert f".{cls} {{" in css, cls
+
+
+def test_why_lists_what_pushed_toward_and_away(rendered):
+    why = rendered["why"]
+    assert why["tag"] == "DETAILS" and why["open"]
+    assert why["text"].startswith("Why?Probability of DDoS: 0.970.")
+    assert why["items"] == [f"{XSS} = 1480 (typical 0): +0.410",
+                            "Flow IAT Max = 3128082.202 (typical 7698.2715): +0.020",
+                            "Idle Min = missing (typical 12): -0.120"]
+    assert "Pushed toward DDoS" in why["text"] and "Pushed away from it" in why["text"]
+    assert all(item["tag"] != "IMG" for item in why["all"])
+
+
+def test_why_says_its_limits(rendered):
+    assert ("An approximation, not causes: features that go together share their effect, a "
+            "row with one value swapped may never occur in real traffic, and the probabilities "
+            "are not calibrated.") in rendered["why"]["text"]
+
+
+def test_why_with_nothing_on_one_side(rendered):
+    text = rendered["why_none_toward"]["text"]
+    assert "No value pushed toward it more than its typical value would." in text
+    assert "No value pushed away from it." in text
+
+
+def test_why_names_what_it_cant_explain(rendered):
+    assert ("Not explained (no typical value: a bundle saved before version 5.3 has none for "
+            "its categories): proto, service.") in rendered["why_old_bundle"]["text"]
+
+
+def test_a_model_without_probabilities_says_so(rendered):
+    no = rendered["why_no_probabilities"]
+    assert no["tag"] == "P" and no["text"] == ("This model gives no probabilities, so it can't "
+                                               "say why. The prediction stands.")
+    assert rendered["why_failed"]["text"] == ("No explanation for this prediction (details in "
+                                              "the server log).")
+
+
+def test_why_is_under_both_one_row_predictions():
+    html = TEMPLATE.read_text(encoding="utf-8")
+    for result, why in (("predictionResult", "predictionWhy"),
+                        ("loadedPredictionResult", "loadedPredictionWhy")):
+        assert html.index(f'id="{result}"') < html.index(f'<div id="{why}"></div>')
+    code = js_sources()["predict.js"]
+    assert 'import { whyView } from "./explain.js";' in code
+    assert code.count("whyView(result.why)") == 1, "one place, for both forms"
